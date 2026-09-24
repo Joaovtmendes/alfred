@@ -1,5 +1,5 @@
 [build]
-dockerfilePath = "Dockerfile"
+dockerfilePath = "alfred/Dockerfile"
 
 [deploy]
 startCommand = "alembic upgrade head && uvicorn alfred.main:app --host 0.0.0.0 --port $PORT"

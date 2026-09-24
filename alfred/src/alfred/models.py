@@ -1,9 +1,12 @@
-"""SQLAlchemy ORM models — M1 baseline (household / member / message).
+"""SQLAlchemy ORM models.
+
+M1 — household / member / message (baseline)
+M2 — expense table + preferred_name / language on member
 
 Design decisions:
 - All PKs are UUID generated server-side (no auto-increment)
 - wa_message_id has a UNIQUE constraint → idempotency key for deduplication
-- member.consent_state: pending | accepted | rejected
+- member.consent_state: pending | pending_response | accepted | rejected
 - message.direction: inbound | outbound
 - All timestamps in UTC (timestamptz)
 """
@@ -15,6 +18,7 @@ from datetime import datetime
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     String,
     Text,
@@ -40,6 +44,7 @@ class Household(Base):
 
     members: Mapped[list[Member]] = relationship(back_populates="household")
     messages: Mapped[list[Message]] = relationship(back_populates="household")
+    expenses: Mapped[list[Expense]] = relationship(back_populates="household")
 
 
 class Member(Base):
@@ -55,10 +60,14 @@ class Member(Base):
     wa_phone: Mapped[str] = mapped_column(String(20), nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(255))
 
+    # M2 — user profile
+    preferred_name: Mapped[str | None] = mapped_column(String(100))
+    language: Mapped[str] = mapped_column(String(10), nullable=False, default="pt")
+
     # AVG consent + EU AI Act Art. 50 disclosure
     consent_state: Mapped[str] = mapped_column(
         String(20), nullable=False, default="pending"
-    )  # pending | accepted | rejected
+    )  # pending | pending_response | accepted | rejected
     disclosure_accepted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
@@ -70,13 +79,14 @@ class Member(Base):
 
     household: Mapped[Household] = relationship(back_populates="members")
     messages: Mapped[list[Message]] = relationship(back_populates="author")
+    expenses: Mapped[list[Expense]] = relationship(back_populates="member")
 
 
 class Message(Base):
     """Inbound and outbound WhatsApp messages.
 
     wa_message_id is the Meta-assigned ID — unique constraint ensures
-    idempotency: re-delivered webhooks are silently ignored via INSERT … ON CONFLICT DO NOTHING.
+    idempotency: re-delivered webhooks are silently ignored.
     """
 
     __tablename__ = "message"
@@ -100,10 +110,48 @@ class Message(Base):
     body: Mapped[str | None] = mapped_column(Text)
     wa_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    raw: Mapped[dict | None] = mapped_column(JSONB)  # full Meta payload
+    raw: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     household: Mapped[Household] = relationship(back_populates="messages")
     author: Mapped[Member | None] = relationship(back_populates="messages")
+
+
+class Expense(Base):
+    """A financial transaction recorded by a member via natural language."""
+
+    __tablename__ = "expense"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id"), nullable=False
+    )
+    household_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("household.id"), nullable=False
+    )
+
+    # expense | income
+    transaction_type: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="expense"
+    )
+
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="EUR")
+    merchant: Mapped[str | None] = mapped_column(String(255))
+    category: Mapped[str | None] = mapped_column(String(50))
+    description: Mapped[str | None] = mapped_column(Text)
+
+    # The date the expense actually happened (defaults to now if not extracted)
+    expense_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    member: Mapped[Member] = relationship(back_populates="expenses")
+    household: Mapped[Household] = relationship(back_populates="expenses")
