@@ -19,6 +19,8 @@ RUN pip install --upgrade pip && \
 
 # Copy actual source (overwrites the placeholder)
 COPY --chown=alfred:alfred src/ ./src/
+COPY --chown=alfred:alfred alembic/ ./alembic/
+COPY --chown=alfred:alfred alembic.ini ./
 
 USER alfred
 
