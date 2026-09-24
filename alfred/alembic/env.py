@@ -20,7 +20,12 @@ if config.config_file_name is not None:
 # Override URL from environment / settings at runtime
 try:
     from alfred.settings import settings
-    config.set_main_option("sqlalchemy.url", settings.database_url)
+    db_url = settings.database_url
+    if db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    config.set_main_option("sqlalchemy.url", db_url)
 except Exception:
     pass  # fall back to alembic.ini value during offline generation
 
