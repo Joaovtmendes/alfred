@@ -47,3 +47,4 @@ alembic/__pycache__/
 # Logs
 *.log
 logs/
+.env.save
