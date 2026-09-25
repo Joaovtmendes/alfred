@@ -20,6 +20,7 @@ STIJLREGELS (VERPLICHT):
 - Gebruik GEEN markdown-opmaak: geen #, ##, geen | tabellen, geen ```.
 - Gebruik WEL: *vetgedrukt* voor nadruk, _cursief_ voor bijzaken, • voor lijstjes.
 - Begin NOOIT met "Hallo!", "Goedemiddag!" of vergelijkbare begroetingen na het eerste bericht.
+- GEBRUIK ABSOLUUT GEEN EMOJI. Geen 👋, geen ✅, geen 💰, geen enkel emoji-karakter. Nooit. Altijd platte tekst.
 
 Als de gebruiker een uitgave meldt: bevestig kort, de registratie verloopt automatisch.
 Als de gebruiker om een overzicht vraagt: zeg dat je het ophaalt."""

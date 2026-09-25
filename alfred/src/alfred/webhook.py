@@ -78,10 +78,29 @@ async def _process_value(
         from_phone: str = msg.get("from", "")
         msg_type: str = msg.get("type", "unknown")
 
-        # Resolve body text (text messages only for M1)
-        body: str | None = None
-        if msg_type == "text":
-            body = msg.get("text", {}).get("body")
+        # Only process text messages for now (M18/M19 will add image/audio).
+        # Reactions, system notifications, delivery receipts in messages[] all
+        # have body=None and must NOT reach handle_inbound.
+        if msg_type != "text":
+            log.info(
+                "webhook.non_text_ignored",
+                wa_message_id=wa_message_id,
+                from_phone=from_phone,
+                msg_type=msg_type,
+            )
+            continue
+
+        body: str | None = msg.get("text", {}).get("body")
+
+        # Skip if body is empty/None even for text type (safety net)
+        if not body:
+            log.warning(
+                "webhook.empty_body_ignored",
+                wa_message_id=wa_message_id,
+                from_phone=from_phone,
+                msg_type=msg_type,
+            )
+            continue
 
         # Timestamp (Unix epoch → datetime)
         import datetime

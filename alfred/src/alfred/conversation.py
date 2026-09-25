@@ -9,6 +9,7 @@ State machine:
   accepted         → commands or LLM reply with conversation history
 """
 from __future__ import annotations
+import unicodedata
 
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -306,7 +307,7 @@ async def handle_inbound(
 ) -> None:
     """Decide what to reply based on consent state and message content."""
     to = member.wa_phone
-    body = (message.body or "").strip().lower()
+    body = unicodedata.normalize("NFC", (message.body or "").strip()).lower()
 
     # ── 1. First contact: send disclosure ───────────────────────────────────
     if member.consent_state == "pending":
