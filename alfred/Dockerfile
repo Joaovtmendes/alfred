@@ -5,6 +5,7 @@ RUN groupadd --gid 1001 alfred && \
     useradd --uid 1001 --gid alfred --shell /bin/bash --create-home alfred
 
 WORKDIR /app
+ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
@@ -26,7 +27,7 @@ RUN chmod +x /app/start.sh
 
 USER alfred
 
-EXPOSE 8000
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
