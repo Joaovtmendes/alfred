@@ -21,12 +21,14 @@ RUN pip install --upgrade pip && \
 COPY --chown=alfred:alfred src/ ./src/
 COPY --chown=alfred:alfred alembic/ ./alembic/
 COPY --chown=alfred:alfred alembic.ini ./
+COPY --chown=alfred:alfred start.sh ./
+RUN chmod +x /app/start.sh
 
 USER alfred
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["uvicorn", "alfred.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]
+CMD ["bash", "/app/start.sh"]
