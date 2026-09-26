@@ -74,6 +74,11 @@ class Member(Base):
     )
     disclosure_version: Mapped[str | None] = mapped_column(String(20))
 
+    # M11 — Dashboard
+    dashboard_token: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True, unique=True, default=None
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -152,6 +157,10 @@ class Expense(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # M14 — Viagem
+    trip_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trip.id"), nullable=True, default=None
     )
 
     member: Mapped[Member] = relationship(back_populates="expenses")
@@ -392,6 +401,31 @@ class Task(Base):
     done_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    member: Mapped["Member"] = relationship()
+
+
+# ── M14 — Viagem ─────────────────────────────────────────────────────────────
+
+
+class Trip(Base):
+    """Registo de uma viagem do utilizador."""
+
+    __tablename__ = "trip"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
+    )
+    destination: Mapped[str] = mapped_column(String(200), nullable=False)
+    started_at: Mapped[date] = mapped_column(Date, nullable=False)
+    ended_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

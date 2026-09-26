@@ -31,6 +31,7 @@ from alfred.models import (
     Message,
     Note,
     Task,
+    Trip,
     WorkoutSession,
 )
 from alfred.whatsapp import send_text
@@ -698,6 +699,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": "Aucune entree pour *{activity}* cette semaine.",
         "de": "Keine Eintraege fuer *{activity}* diese Woche.",
     },
+    "habit_streak": {
+        "pt": "O teu streak de *{activity}* e de *{n} dia(s)* consecutivos! 🔥",
+        "nl": "Jouw streak voor *{activity}* is *{n} dag(en)* op rij! 🔥",
+        "en": "Your *{activity}* streak is *{n} day(s)* in a row! 🔥",
+        "fr": "Ta serie pour *{activity}* est de *{n} jour(s)* consecutifs ! 🔥",
+        "de": "Deine Serie fuer *{activity}* betraegt *{n} Tag(e)* in Folge! 🔥",
+    },
+    "habit_streak_none": {
+        "pt": "Nao encontrei registos recentes de *{activity}*. Comeca hoje! 💪",
+        "nl": "Geen recente registraties gevonden voor *{activity}*. Begin vandaag! 💪",
+        "en": "No recent entries found for *{activity}*. Start today! 💪",
+        "fr": "Aucune entree recente pour *{activity}*. Commence aujourd'hui ! 💪",
+        "de": "Keine aktuellen Eintraege fuer *{activity}*. Fang heute an! 💪",
+    },
     # ── M10 — extras ──────────────────────────────────────────────────────────
     "notes_list_header": {
         "pt": "As tuas ultimas notas ({n}):",
@@ -740,6 +755,71 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "• {n}. \u26a0\ufe0f {body}{due}",
         "fr": "• {n}. \u26a0\ufe0f {body}{due}",
         "de": "• {n}. \u26a0\ufe0f {body}{due}",
+    },
+    # M11 — Dashboard
+    "dashboard_link": {
+        "pt": "\U0001f4ca O teu dashboard pessoal:\n{url}",
+        "nl": "\U0001f4ca Jouw persoonlijk dashboard:\n{url}",
+        "en": "\U0001f4ca Your personal dashboard:\n{url}",
+        "fr": "\U0001f4ca Ton tableau de bord personnel :\n{url}",
+        "de": "\U0001f4ca Dein pers\u00f6nliches Dashboard:\n{url}",
+    },
+    "dashboard_no_base_url": {
+        "pt": "O dashboard ainda nao esta configurado. Fala com o administrador.",
+        "nl": "Het dashboard is nog niet geconfigureerd. Neem contact op met de beheerder.",
+        "en": "The dashboard is not configured yet. Contact the administrator.",
+        "fr": "Le tableau de bord n'est pas encore configure. Contacte l'administrateur.",
+        "de": "Das Dashboard ist noch nicht konfiguriert. Kontaktiere den Administrator.",
+    },
+    # M14 — Viagem
+    "trip_started": {
+        "pt": "Viagem para {dest} iniciada! As despesas serao associadas automaticamente.",
+        "nl": "Reis naar {dest} gestart! Uitgaven worden automatisch gekoppeld.",
+        "en": "Trip to {dest} started! Expenses will be tagged automatically.",
+        "fr": "Voyage a {dest} commence! Les depenses seront associees automatiquement.",
+        "de": "Reise nach {dest} gestartet! Ausgaben werden automatisch zugeordnet.",
+    },
+    "trip_ended": {
+        "pt": "Viagem para {dest} terminada. Total gasto: {total} ({count} despesas).",
+        "nl": "Reis naar {dest} beeindigd. Totaal: {total} ({count} uitgaven).",
+        "en": "Trip to {dest} ended. Total spent: {total} ({count} expenses).",
+        "fr": "Voyage a {dest} termine. Total: {total} ({count} depenses).",
+        "de": "Reise nach {dest} beendet. Gesamt: {total} ({count} Ausgaben).",
+    },
+    "trip_already_active": {
+        "pt": "Tens uma viagem activa para {dest}. Diz 'voltei' para terminar primeiro.",
+        "nl": "Je hebt een actieve reis naar {dest}. Zeg 'terug' om die eerst te beeindigen.",
+        "en": "You have an active trip to {dest}. Say 'back home' to end it first.",
+        "fr": "Tu as un voyage actif vers {dest}. Dis 'de retour' pour le terminer d'abord.",
+        "de": "Du hast eine aktive Reise nach {dest}. Sage 'zuhause' um sie zuerst zu beenden.",
+    },
+    "trip_none_active": {
+        "pt": "Nao tens nenhuma viagem activa.",
+        "nl": "Je hebt geen actieve reis.",
+        "en": "You have no active trip.",
+        "fr": "Tu n'as pas de voyage actif.",
+        "de": "Du hast keine aktive Reise.",
+    },
+    "trip_no_expenses": {
+        "pt": "Nenhuma despesa registada nesta viagem ainda.",
+        "nl": "Nog geen uitgaven geregistreerd voor deze reis.",
+        "en": "No expenses recorded for this trip yet.",
+        "fr": "Aucune depense enregistree pour ce voyage.",
+        "de": "Keine Ausgaben fuer diese Reise erfasst.",
+    },
+    "trip_list_empty": {
+        "pt": "Ainda nao tens viagens registadas.",
+        "nl": "Je hebt nog geen reizen geregistreerd.",
+        "en": "You have no trips recorded yet.",
+        "fr": "Tu n'as pas encore de voyages enregistres.",
+        "de": "Du hast noch keine Reisen erfasst.",
+    },
+    "trip_active_tag": {
+        "pt": " [viagem: {dest}]",
+        "nl": " [reis: {dest}]",
+        "en": " [trip: {dest}]",
+        "fr": " [voyage: {dest}]",
+        "de": " [Reise: {dest}]",
     },
 }
 
@@ -1067,6 +1147,21 @@ _HABIT_FREQ_RE = re.compile(
     r"meditei|meditated|li|leste|estudei|corri|ran|nadei)\s*(.+)?",
     re.IGNORECASE,
 )
+_HABIT_STREAK_RE = re.compile(
+    r"(?:"
+    r"quantos\s+dias\s+(?:seguidos|consecutivos|em\s+sequencia)"
+    r"|streak\s+de\b"
+    r"|how\s+many\s+days\s+in\s+a\s+row"
+    r"|current\s+streak"
+    r"|dagen\s+op\s+rij"
+    r"|(?:hoeveel|mijn)\s+streak\b"
+    r"|combien\s+de\s+jours\s+cons[ée]cutifs"
+    r"|ma\s+s[ée]rie"
+    r"|wie\s+viele\s+tage\s+in\s+folge"
+    r"|meine\s+serie\b"
+    r")\s*(.+)?",
+    re.IGNORECASE,
+)
 
 # ── M10 — notes list + task delete ────────────────────────────────────────────
 _NOTES_QUERY_WORDS = {
@@ -1074,9 +1169,63 @@ _NOTES_QUERY_WORDS = {
     "my notes", "mijn notities", "mes notes", "meine notizen",
     "lista de notas", "notes list",
 }
+
+# \u2500\u2500 M11 \u2014 Dashboard keywords \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+_DASHBOARD_WORDS: set[str] = {
+    "meu dashboard", "o meu dashboard", "dashboard",
+    "my dashboard", "mijn dashboard", "mon tableau de bord", "mein dashboard",
+    "link dashboard", "dashboard link",
+}
 _TASK_DELETE_RE = re.compile(
     r"(?:apaga|apagar|delete|verwijder|supprimer|losch)\s+"
     r"(?:a\s+)?(?:tarefa|task|taak|aufgabe|tache)\s+(.+)",
+    re.IGNORECASE,
+)
+
+# ── M14 — Viagem patterns ────────────────────────────────────────────────────
+
+_TRIP_START_RE = re.compile(
+    r"(?:"
+    r"(?:em\s+)?viagem\s+(?:a|para|em)\s+(.+)"
+    r"|trip[:\s]+(.+)"
+    r"|op\s+reis\s+naar\s+(.+)"
+    r"|voyage\s+(?:\xc0|a|en|au|aux)\s+(.+)"
+    r"|reise\s+nach\s+(.+)"
+    r"|(?:vou|estou)\s+(?:de\s+)?viagem\s+(?:para|a)\s+(.+)"
+    r")",
+    re.IGNORECASE,
+)
+
+_TRIP_END_RE = re.compile(
+    r"\b(?:"
+    r"voltei|cheguei\s+(?:a\s+casa|de\s+volta)|viagem\s+terminada|fim\s+da\s+viagem"
+    r"|trip\s+(?:end(?:ed)?|done|finished?)|back\s+(?:home|to\s+amsterdam)"
+    r"|(?:ik\s+ben\s+)?terug(?:\s+thuis)?"
+    r"|rentr[e\xe9][e]?|de\s+retour"
+    r"|(?:wieder\s+)?zuhause|zur\xfcck"
+    r")\b",
+    re.IGNORECASE,
+)
+
+_TRIP_QUERY_RE = re.compile(
+    r"\b(?:"
+    r"quanto\s+gastei\s+(?:n[ao]\s+)?viagem|resumo\s+(?:da\s+)?viagem|despesas\s+(?:da\s+)?viagem"
+    r"|trip\s+(?:summary|expenses?|total|spending)"
+    r"|reis(?:kosten)?(?:\s+overzicht)?"
+    r"|d[e\xe9]penses?\s+(?:du\s+)?voyage|r[e\xe9]sum[e\xe9]\s+(?:du\s+)?voyage"
+    r"|reisekosten(?:\s+(?:zusammenfassung|\xfcberblick))?"
+    r")\b",
+    re.IGNORECASE,
+)
+
+_TRIP_LIST_RE = re.compile(
+    r"\b(?:"
+    r"(?:as\s+minhas\s+)?viagens(?:\s+anteriores)?|lista\s+(?:de\s+)?viagens"
+    r"|(?:my\s+)?trip(?:s|\s+history)"
+    r"|mijn\s+reizen?"
+    r"|mes\s+voyages?"
+    r"|meine\s+reisen?"
+    r")\b",
     re.IGNORECASE,
 )
 
@@ -1116,6 +1265,155 @@ def _is_command(body: str, keywords: set[str]) -> bool:
         if body == kw or body.startswith(kw + " ") or body.startswith(kw + "?") or body.startswith(kw + "!"):
             return True
     return False
+
+
+# ── M14 — Viagem handler ─────────────────────────────────────────────────────
+
+
+async def _handle_trip(
+    body: str,
+    member: "Member",
+    lang: str,
+    session: "AsyncSession",
+) -> str | None:
+    """Return a reply if the message is trip-related, else None."""
+    from decimal import Decimal
+    from sqlalchemy import select, func as sqlfunc
+
+    # ── start trip ────────────────────────────────────────────────────────
+    m = _TRIP_START_RE.search(body)
+    if m:
+        dest = next((g.strip().title() for g in m.groups() if g), None)
+        if not dest:
+            return None
+
+        active = await session.scalar(
+            select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
+        )
+        if active:
+            return _t("trip_already_active", lang, dest=active.destination)
+
+        trip = Trip(
+            id=uuid.uuid4(),
+            member_id=member.id,
+            destination=dest,
+            started_at=datetime.now(timezone.utc).date(),
+            active=True,
+        )
+        session.add(trip)
+        return _t("trip_started", lang, dest=dest)
+
+    # ── end trip ──────────────────────────────────────────────────────────
+    if _TRIP_END_RE.search(body):
+        active = await session.scalar(
+            select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
+        )
+        if not active:
+            return _t("trip_none_active", lang)
+
+        active.ended_at = datetime.now(timezone.utc).date()
+        active.active = False
+
+        row = (
+            await session.execute(
+                select(
+                    sqlfunc.sum(Expense.amount).label("total"),
+                    sqlfunc.count(Expense.id).label("cnt"),
+                ).where(
+                    Expense.trip_id == active.id,
+                    Expense.transaction_type == "expense",
+                )
+            )
+        ).one()
+        total = row.total or Decimal("0")
+        count = row.cnt or 0
+        return _t("trip_ended", lang, dest=active.destination,
+                  total=_fmt_eur(total), count=count)
+
+    # ── trip summary ──────────────────────────────────────────────────────
+    if _TRIP_QUERY_RE.search(body):
+        trip = await session.scalar(
+            select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
+        )
+        if not trip:
+            trip = await session.scalar(
+                select(Trip)
+                .where(Trip.member_id == member.id)
+                .order_by(Trip.created_at.desc())
+                .limit(1)
+            )
+        if not trip:
+            return _t("trip_none_active", lang)
+
+        rows = (
+            await session.execute(
+                select(
+                    Expense.merchant,
+                    Expense.category,
+                    Expense.amount,
+                    Expense.expense_date,
+                )
+                .where(
+                    Expense.trip_id == trip.id,
+                    Expense.transaction_type == "expense",
+                )
+                .order_by(Expense.expense_date.asc())
+            )
+        ).all()
+
+        if not rows:
+            return _t("trip_no_expenses", lang)
+
+        total = sum(r.amount for r in rows)
+        end_str = trip.ended_at.strftime("%d/%m") if trip.ended_at else "hoje"
+        lines = [
+            f"Viagem: {trip.destination} "
+            f"({trip.started_at.strftime('%d/%m')} \u2192 {end_str})"
+        ]
+        for r in rows:
+            lines.append(
+                f"  {r.expense_date.strftime('%d/%m')}  {r.merchant or r.category}"
+                f" ({r.category})  {_fmt_eur(r.amount)}"
+            )
+        lines.append(f"Total: {_fmt_eur(total)}  ({len(rows)} despesas)")
+        return "\n".join(lines)
+
+    # ── trip list ─────────────────────────────────────────────────────────
+    if _TRIP_LIST_RE.search(body):
+        trips = (
+            await session.execute(
+                select(Trip)
+                .where(Trip.member_id == member.id)
+                .order_by(Trip.started_at.desc())
+                .limit(10)
+            )
+        ).scalars().all()
+
+        if not trips:
+            return _t("trip_list_empty", lang)
+
+        from decimal import Decimal as _D
+        lines_out: list[str] = []
+        for t in trips:
+            row = (
+                await session.execute(
+                    select(sqlfunc.sum(Expense.amount)).where(
+                        Expense.trip_id == t.id,
+                        Expense.transaction_type == "expense",
+                    )
+                )
+            ).scalar()
+            total = row or _D("0")
+            status = "\u25b6" if t.active else "\u2713"
+            end_str = t.ended_at.strftime("%d/%m/%y") if t.ended_at else "em curso"
+            lines_out.append(
+                f"{status} {t.destination}  "
+                f"{t.started_at.strftime('%d/%m/%y')} \u2192 {end_str}  "
+                f"{_fmt_eur(total)}"
+            )
+        return "\n".join(lines_out)
+
+    return None
 
 
 # ── History window ────────────────────────────────────────────────────────────
@@ -1378,12 +1676,102 @@ async def _upsert_merchant_override(
 
 
 
+
+
+async def handle_flow_onboarding(
+    member: "Member",
+    message: "Message",
+    session: "AsyncSession",
+) -> bool:
+    """Process a completed WhatsApp Flow onboarding nfm_reply.
+
+    Returns True if the message was a Flow response and was handled,
+    False if it is a regular text message (caller continues normally).
+    """
+    import json as _json
+
+    raw = message.raw or {}
+    interactive = raw.get("interactive") or {}
+    if interactive.get("type") != "nfm_reply":
+        return False
+
+    nfm = interactive.get("nfm_reply", {})
+    try:
+        payload = _json.loads(nfm.get("response_json", "{}"))
+    except (_json.JSONDecodeError, TypeError):
+        logger.warning("conversation.flow_invalid_json", wa_phone=member.wa_phone)
+        return True  # consumed but invalid — ignore
+
+    preferred_name = (payload.get("preferred_name") or "").strip()
+    language_raw = payload.get("language")
+    gdpr = payload.get("gdpr_consent") or []
+
+    # Dropdown returns id as string; list form also accepted.
+    if isinstance(language_raw, list):
+        language = language_raw[0] if language_raw else "en"
+    else:
+        language = language_raw or "en"
+    language = language if language in ("pt", "nl", "en", "fr", "de") else "en"
+
+    consent_given = "accepted" in gdpr
+
+    logger.info(
+        "conversation.flow_onboarding_received",
+        wa_phone=member.wa_phone,
+        preferred_name=preferred_name,
+        language=language,
+        consent_given=consent_given,
+    )
+
+    if not consent_given:
+        member.consent_state = "rejected"
+        session.add(member)
+        await send_text(member.wa_phone, _t("consent_rejected", language))
+        return True
+
+    # Update member profile
+    member.preferred_name = preferred_name or None
+    member.language = language
+    member.consent_state = "accepted"
+    member.disclosure_accepted_at = datetime.now(timezone.utc)
+    member.disclosure_version = "flow-1.0"
+    session.add(member)
+
+    # Personalised welcome confirmation
+    name_part = f", {preferred_name}" if preferred_name else ""
+    greeting_map = {
+        "pt": f"Olá{name_part}! Conta activada.",
+        "nl": f"Hallo{name_part}! Account geactiveerd.",
+        "en": f"Hi{name_part}! Account activated.",
+        "fr": f"Bonjour{name_part} ! Compte activé.",
+        "de": f"Hallo{name_part}! Konto aktiviert.",
+    }
+    reply = f"{greeting_map.get(language, greeting_map['en'])}\n\n{_t('consent_accepted', language)}"
+    await send_text(member.wa_phone, reply)
+
+    # Persist outbound message
+    session.add(Message(
+        id=uuid.uuid4(),
+        wa_message_id=f"out-{uuid.uuid4()}",
+        household_id=member.household_id,
+        author_id=member.id,
+        direction="outbound",
+        body=reply,
+        wa_timestamp=datetime.now(timezone.utc),
+        processed=True,
+    ))
+    return True
+
 async def handle_inbound(
     member: Member,
     message: Message,
     session: AsyncSession,
 ) -> None:
     """Decide what to reply based on consent state and message content."""
+    # M6 — WhatsApp Flow onboarding: intercept nfm_reply before consent checks
+    if await handle_flow_onboarding(member, message, session):
+        return
+
     to = member.wa_phone
     body = unicodedata.normalize("NFC", (message.body or "").strip()).lower()
 
@@ -1753,6 +2141,24 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        # 4e-5d. M11 — dashboard link: "meu dashboard"
+        if _is_command(body, _DASHBOARD_WORDS):
+            import uuid as _uuid
+            from alfred.settings import settings as _settings
+            # Generate token if member doesn't have one
+            if member.dashboard_token is None:
+                member.dashboard_token = _uuid.uuid4()
+                await session.flush()
+            base_url = getattr(_settings, "base_url", "").rstrip("/")
+            if not base_url:
+                reply = _t("dashboard_no_base_url", lang)
+            else:
+                url = f"{base_url}/d/{member.dashboard_token}"
+                reply = _t("dashboard_link", lang, url=url)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
         # 4e-6. M9 — criar meta: "meta: quero X"
         m_goal = _GOAL_CREATE_RE.match(body)
         if m_goal:
@@ -1836,6 +2242,57 @@ async def handle_inbound(
                 reply = _t("habit_frequency", lang, activity=activity_label, n=len(matched))
             else:
                 reply = _t("habit_frequency_empty", lang, activity=freq_kw)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+        # 4e-7d. V1.1 — habit streak: "quantos dias seguidos meditei"
+        m_hstreak = _HABIT_STREAK_RE.search(body)
+        if m_hstreak:
+            streak_raw = (m_hstreak.group(1) or "").strip()
+            streak_kw = streak_raw.lower() if streak_raw else ""
+            from sqlalchemy import select as _sel
+            from datetime import date as _date, timedelta as _td
+            res_hs = await session.execute(
+                _sel(HabitLog.log_date, HabitLog.activity)
+                .where(HabitLog.member_id == member.id)
+                .order_by(HabitLog.log_date.desc())
+            )
+            all_logs = res_hs.all()  # list of (log_date, activity)
+            # Filter by activity keyword if provided
+            if streak_kw:
+                filtered = [(d, a) for d, a in all_logs if streak_kw in a.lower() or a.lower() in streak_kw]
+            else:
+                filtered = list(all_logs)
+            # Deduplicate dates, keep sorted desc
+            seen_dates: set = set()
+            unique_dates = []
+            activity_label = streak_kw or "hábito"
+            for log_date, activity in filtered:
+                if log_date not in seen_dates:
+                    seen_dates.add(log_date)
+                    unique_dates.append(log_date)
+                    if not streak_kw:
+                        activity_label = activity  # use first (most recent) activity
+            if not unique_dates:
+                reply = _t("habit_streak_none", lang, activity=streak_kw or "hábito")
+            else:
+                from datetime import date as _date2, timedelta as _td2
+                today = _date2.today()
+                yesterday = today - _td2(days=1)
+                most_recent = unique_dates[0]
+                if most_recent < yesterday:
+                    streak_count = 0
+                else:
+                    streak_count = 1
+                    for i in range(1, len(unique_dates)):
+                        if (unique_dates[i - 1] - unique_dates[i]).days == 1:
+                            streak_count += 1
+                        else:
+                            break
+                if streak_count == 0:
+                    reply = _t("habit_streak_none", lang, activity=activity_label)
+                else:
+                    reply = _t("habit_streak", lang, activity=activity_label, n=streak_count)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -2208,7 +2665,14 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-                # 4e. Try to extract an expense or income from the message
+                # 4e-pre. M14 — trip commands
+        trip_reply = await _handle_trip(body, member, lang, session)
+        if trip_reply is not None:
+            await send_text(to, trip_reply)
+            await _save_outbound(member, trip_reply, session)
+            return
+
+        # 4e. Try to extract an expense or income from the message
         expense_data = await extract_expense(message.body or "", merchant_overrides=member_overrides)
         if expense_data:
             txn_type = expense_data.get("type", "expense")
@@ -2228,6 +2692,13 @@ async def handle_inbound(
                 expense_date=expense_date,
             )
             session.add(expense)
+
+            # M14 — auto-tag with active trip
+            active_trip = await session.scalar(
+                select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
+            )
+            if active_trip:
+                expense.trip_id = active_trip.id
 
             name = expense_data["merchant"] or expense_data["category"] or expense_data["description"]
             amt_fmt = _fmt_eur(expense_data["amount"])
