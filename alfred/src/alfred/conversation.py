@@ -20,8 +20,19 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from alfred.llm import classify_query, extract_expense, generate_reply
-from alfred.models import Expense, Member, MerchantCategoryOverride, Message
+from alfred.llm import classify_query, extract_expense, extract_health_log, extract_workout, generate_reply
+from alfred.models import (
+    Expense,
+    Goal,
+    HabitLog,
+    HealthLog,
+    Member,
+    MerchantCategoryOverride,
+    Message,
+    Note,
+    Task,
+    WorkoutSession,
+)
 from alfred.whatsapp import send_text
 
 logger = structlog.get_logger()
@@ -378,6 +389,157 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": "semaine dernière",
         "de": "letzte Woche",
     },
+    # ── M7 — Treino ─────────────────────────────────────────────────────────
+    "workout_saved": {
+        "pt": "Treino registado: {activity} — {duration}",
+        "nl": "Training opgeslagen: {activity} — {duration}",
+        "en": "Workout logged: {activity} — {duration}",
+        "fr": "Entraînement enregistré : {activity} — {duration}",
+        "de": "Training gespeichert: {activity} — {duration}",
+    },
+    "workout_summary_header": {
+        "pt": "Treinos desta semana ({n} sessoes):",
+        "nl": "Trainingen deze week ({n} sessies):",
+        "en": "Workouts this week ({n} sessions):",
+        "fr": "Entraînements cette semaine ({n} séances) :",
+        "de": "Trainings diese Woche ({n} Einheiten):",
+    },
+    "workout_summary_row": {
+        "pt": "• {date}: {activity} {duration}",
+        "nl": "• {date}: {activity} {duration}",
+        "en": "• {date}: {activity} {duration}",
+        "fr": "• {date} : {activity} {duration}",
+        "de": "• {date}: {activity} {duration}",
+    },
+    "workout_summary_empty": {
+        "pt": "Nenhum treino registado esta semana.",
+        "nl": "Geen trainingen geregistreerd deze week.",
+        "en": "No workouts logged this week.",
+        "fr": "Aucun entraînement enregistré cette semaine.",
+        "de": "Kein Training diese Woche eingetragen.",
+    },
+    # ── M8 — Saúde ───────────────────────────────────────────────────────────
+    "health_saved_medication": {
+        "pt": "Medicacao registada: {value}",
+        "nl": "Medicatie gelogd: {value}",
+        "en": "Medication logged: {value}",
+        "fr": "Médicament enregistré : {value}",
+        "de": "Medikament eingetragen: {value}",
+    },
+    "health_saved_mood": {
+        "pt": "Humor registado: {value}/10",
+        "nl": "Stemming gelogd: {value}/10",
+        "en": "Mood logged: {value}/10",
+        "fr": "Humeur enregistrée : {value}/10",
+        "de": "Stimmung eingetragen: {value}/10",
+    },
+    "health_saved_sleep": {
+        "pt": "Sono registado: {value}h",
+        "nl": "Slaap gelogd: {value}h",
+        "en": "Sleep logged: {value}h",
+        "fr": "Sommeil enregistré : {value}h",
+        "de": "Schlaf eingetragen: {value}h",
+    },
+    "health_saved_water": {
+        "pt": "Agua registada: {value}L",
+        "nl": "Water gelogd: {value}L",
+        "en": "Water logged: {value}L",
+        "fr": "Eau enregistrée : {value}L",
+        "de": "Wasser eingetragen: {value}L",
+    },
+    # ── M9 — Metas & Hábitos ─────────────────────────────────────────────────
+    "goal_created": {
+        "pt": "Meta criada: *{title}*",
+        "nl": "Doel aangemaakt: *{title}*",
+        "en": "Goal created: *{title}*",
+        "fr": "Objectif créé : *{title}*",
+        "de": "Ziel erstellt: *{title}*",
+    },
+    "habit_logged": {
+        "pt": "Habito registado: {activity}",
+        "nl": "Gewoonte gelogd: {activity}",
+        "en": "Habit logged: {activity}",
+        "fr": "Habitude enregistrée : {activity}",
+        "de": "Gewohnheit eingetragen: {activity}",
+    },
+    "goals_list_header": {
+        "pt": "As tuas metas activas ({n}):",
+        "nl": "Jouw actieve doelen ({n}):",
+        "en": "Your active goals ({n}):",
+        "fr": "Tes objectifs actifs ({n}) :",
+        "de": "Deine aktiven Ziele ({n}):",
+    },
+    "goals_list_empty": {
+        "pt": "Ainda nao tens metas. Cria uma com: *meta: quero X*",
+        "nl": "Nog geen doelen. Maak er een met: *doel: ik wil X*",
+        "en": "No goals yet. Create one with: *goal: I want to X*",
+        "fr": "Pas encore d'objectifs. Crée-en un avec : *objectif : je veux X*",
+        "de": "Noch keine Ziele. Erstelle eines mit: *Ziel: Ich will X*",
+    },
+    "goals_list_row": {
+        "pt": "• {title}",
+        "nl": "• {title}",
+        "en": "• {title}",
+        "fr": "• {title}",
+        "de": "• {title}",
+    },
+    # ── M10 — Produtividade ───────────────────────────────────────────────────
+    "note_saved": {
+        "pt": "Nota guardada.",
+        "nl": "Notitie opgeslagen.",
+        "en": "Note saved.",
+        "fr": "Note enregistrée.",
+        "de": "Notiz gespeichert.",
+    },
+    "task_saved": {
+        "pt": "Tarefa adicionada: *{body}*",
+        "nl": "Taak toegevoegd: *{body}*",
+        "en": "Task added: *{body}*",
+        "fr": "Tâche ajoutée : *{body}*",
+        "de": "Aufgabe hinzugefügt: *{body}*",
+    },
+    "task_done": {
+        "pt": "Tarefa concluida.",
+        "nl": "Taak afgerond.",
+        "en": "Task done.",
+        "fr": "Tâche terminée.",
+        "de": "Aufgabe erledigt.",
+    },
+    "task_not_found": {
+        "pt": "Nao encontrei essa tarefa em aberto.",
+        "nl": "Ik kon die openstaande taak niet vinden.",
+        "en": "I couldn't find that open task.",
+        "fr": "Je n'ai pas trouvé cette tâche ouverte.",
+        "de": "Ich konnte diese offene Aufgabe nicht finden.",
+    },
+    "tasks_list_header": {
+        "pt": "As tuas tarefas em aberto ({n}):",
+        "nl": "Jouw openstaande taken ({n}):",
+        "en": "Your open tasks ({n}):",
+        "fr": "Tes tâches ouvertes ({n}) :",
+        "de": "Deine offenen Aufgaben ({n}):",
+    },
+    "tasks_list_empty": {
+        "pt": "Nao tens tarefas em aberto.",
+        "nl": "Geen openstaande taken.",
+        "en": "No open tasks.",
+        "fr": "Pas de tâches ouvertes.",
+        "de": "Keine offenen Aufgaben.",
+    },
+    "tasks_list_row": {
+        "pt": "• {n}. {body}{due}",
+        "nl": "• {n}. {body}{due}",
+        "en": "• {n}. {body}{due}",
+        "fr": "• {n}. {body}{due}",
+        "de": "• {n}. {body}{due}",
+    },
+    "tasks_list_due": {
+        "pt": " (prazo: {date})",
+        "nl": " (deadline: {date})",
+        "en": " (due: {date})",
+        "fr": " (échéance : {date})",
+        "de": " (fällig: {date})",
+    },
 }
 
 
@@ -503,6 +665,83 @@ def _canonical_category(raw: str) -> str | None:
     if lower in {c for c in _VALID_CATEGORIES if not _CAT_ALIAS.get(lower)}:
         return lower
     return None
+
+# ── M7 — Treino keywords ────────────────────────────────────────────────────
+_WORKOUT_WORDS = {
+    "corri", "correr", "treino", "treinar", "ginásio", "ginasio", "gym",
+    "exercício", "exercicio", "yoga", "pilates", "caminhei", "caminhada",
+    "natação", "natacao", "ciclismo", "hiit", "alongamento", "musculação",
+    "musculacao",
+    "ran", "run", "walked", "walk", "trained", "workout", "exercise",
+    "swam", "swim", "cycling", "jogged",
+    "joggen", "fietste", "zwom", "trainde", "liep", "sportde",
+    "couru", "marché", "nagé", "cyclisme", "gelaufen", "geschwommen",
+}
+
+# ── M8 — Saúde keywords ──────────────────────────────────────────────────────
+_HEALTH_WORDS = {
+    "tomei", "tomi", "took", "nam", "pris", "eingenommen",   # medication
+    "humor", "mood", "humeur", "stimmung",                    # mood
+    "dormi", "slept", "sliep", "geschlafen", "dormido",       # sleep
+    "bebi", "drank", "dronk", "bu",                           # water
+}
+
+_SLEEP_RE = re.compile(
+    r"(?:dormi|slept|sliep|geschlafen|dormido)\s+(\d+(?:[.,]\d+)?)\s*"
+    r"(?:h(?:oras?|ours?|)?|uur|stunden?)?",
+    re.IGNORECASE,
+)
+_MOOD_RE = re.compile(
+    r"(?:humor|mood|humeur|stimmung)[:\s]+(\d{1,2})(?:\s*/\s*10)?",
+    re.IGNORECASE,
+)
+_WATER_RE = re.compile(
+    r"(?:bebi|drank|dronk|bu)\s+(\d+(?:[.,]\d+)?)\s*[Ll](?:\s+(?:de\s+)?(?:água|agua|water|wasser|eau))?",
+    re.IGNORECASE,
+)
+_MED_RE = re.compile(
+    r"(?:tomei|took|nam|pris|eingenommen|genommen)\s+(.+)",
+    re.IGNORECASE,
+)
+
+# ── M9 — Metas & Hábitos keywords ────────────────────────────────────────────
+_GOAL_CREATE_RE = re.compile(
+    r"(?:meta|objetivo|goal|doel|ziel|objectif)\s*[:]\s*(.+)",
+    re.IGNORECASE,
+)
+_GOALS_QUERY_WORDS = {
+    "minhas metas", "as minhas metas", "meus objetivos",
+    "my goals", "mijn doelen", "meine ziele", "mes objectifs",
+    "como vão as metas", "como vai",
+}
+_HABIT_WORDS = {
+    "meditei", "meditated", "mediteerde", "meditiert",
+    "bebi água", "drank water", "leste", "li", "estudei", "estudied",
+}
+_HABIT_LOG_RE = re.compile(
+    r"(?P<activity>meditei|meditated|mediteerde|meditiert|li|leste|estudei|fiz yoga|"
+    r"bebi água|drank water|fiz pilates|fiz alongamento)\s*(?:hoje|today|vandaag|heute|aujourd'hui)?",
+    re.IGNORECASE,
+)
+
+# ── M10 — Produtividade keywords ─────────────────────────────────────────────
+_NOTE_RE = re.compile(
+    r"^(?:nota|note|notitie|notiz|remarque|anotação|anotacao)\s*[:]\s*(.+)",
+    re.IGNORECASE,
+)
+_TASK_RE = re.compile(
+    r"^(?:tarefa|task|taak|aufgabe|tâche|tarefa:)\s*[:]\s*(.+)",
+    re.IGNORECASE,
+)
+_DONE_RE = re.compile(
+    r"^(?:feito|done|klaar|erledigt|fait|concluido|concluído)\s*[:]\s*(.+)",
+    re.IGNORECASE,
+)
+_TASKS_QUERY_WORDS = {
+    "minhas tarefas", "as minhas tarefas", "o que tenho para fazer",
+    "my tasks", "mijn taken", "meine aufgaben", "mes tâches",
+    "lista de tarefas", "task list",
+}
 
 _JOB_TYPE_MAP: dict[str, str] = {
     "medicamento": "medication_reminder",
@@ -965,7 +1204,250 @@ async def handle_inbound(
                 await _save_outbound(member, reply, session)
                 return
 
-        # 4e. Try to extract an expense or income from the message
+        # 4e-2. M10 — nota rápida: "nota: X"
+        m_note = _NOTE_RE.match(body)
+        if m_note:
+            note_body = m_note.group(1).strip()
+            note = Note(id=uuid.uuid4(), member_id=member.id, body=note_body)
+            session.add(note)
+            reply = _t("note_saved", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-3. M10 — tarefa: "tarefa: X" / "tarefa: X até sexta"
+        m_task = _TASK_RE.match(body)
+        if m_task:
+            import re as _re
+            raw_task = m_task.group(1).strip()
+            # try to extract due_date ("até <date>" / "by <date>" / "voor <date>")
+            due_m = _re.search(
+                r"(?:até|by|voor|bis|avant)\s+(.+)$", raw_task, _re.IGNORECASE
+            )
+            task_body = raw_task
+            due_date_val = None
+            if due_m:
+                task_body = raw_task[: due_m.start()].strip()
+                try:
+                    from dateutil import parser as _dp
+                    due_date_val = _dp.parse(due_m.group(1), default=datetime.now()).date()
+                except Exception:
+                    pass
+            task = Task(
+                id=uuid.uuid4(),
+                member_id=member.id,
+                body=task_body,
+                due_date=due_date_val,
+            )
+            session.add(task)
+            reply = _t("task_saved", lang, body=task_body)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-4. M10 — done: "feito: X"
+        m_done = _DONE_RE.match(body)
+        if m_done:
+            done_text = m_done.group(1).strip().lower()
+            from sqlalchemy import select as _sel, func as _func
+            result = await session.execute(
+                _sel(Task)
+                .where(Task.member_id == member.id)
+                .where(Task.done_at.is_(None))
+                .where(Task.body.ilike(f"%{done_text}%"))
+                .order_by(Task.created_at.desc())
+                .limit(1)
+            )
+            task_row = result.scalar_one_or_none()
+            if task_row:
+                task_row.done_at = datetime.now(timezone.utc)
+                session.add(task_row)
+                reply = _t("task_done", lang)
+            else:
+                reply = _t("task_not_found", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-5. M10 — lista de tarefas: "minhas tarefas"
+        if _is_command(body, _TASKS_QUERY_WORDS):
+            from sqlalchemy import select as _sel
+            result = await session.execute(
+                _sel(Task)
+                .where(Task.member_id == member.id)
+                .where(Task.done_at.is_(None))
+                .order_by(Task.created_at.asc())
+            )
+            open_tasks = result.scalars().all()
+            if not open_tasks:
+                reply = _t("tasks_list_empty", lang)
+            else:
+                lines = [_t("tasks_list_header", lang, n=len(open_tasks))]
+                for i, t in enumerate(open_tasks, 1):
+                    due_str = (
+                        _t("tasks_list_due", lang, date=str(t.due_date))
+                        if t.due_date else ""
+                    )
+                    lines.append(_t("tasks_list_row", lang, n=i, body=t.body, due=due_str))
+                reply = "\n".join(lines)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-6. M9 — criar meta: "meta: quero X"
+        m_goal = _GOAL_CREATE_RE.match(body)
+        if m_goal:
+            goal_title = m_goal.group(1).strip()
+            goal = Goal(id=uuid.uuid4(), member_id=member.id, title=goal_title, active=True)
+            session.add(goal)
+            reply = _t("goal_created", lang, title=goal_title)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-7. M9 — query de metas: "minhas metas"
+        if _is_command(body, _GOALS_QUERY_WORDS):
+            from sqlalchemy import select as _sel
+            result = await session.execute(
+                _sel(Goal)
+                .where(Goal.member_id == member.id)
+                .where(Goal.active.is_(True))
+                .order_by(Goal.created_at.asc())
+            )
+            active_goals = result.scalars().all()
+            if not active_goals:
+                reply = _t("goals_list_empty", lang)
+            else:
+                lines = [_t("goals_list_header", lang, n=len(active_goals))]
+                for g in active_goals:
+                    lines.append(_t("goals_list_row", lang, title=g.title))
+                reply = "\n".join(lines)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-8. M9 — log de hábito: "meditei hoje"
+        m_habit = _HABIT_LOG_RE.search(body)
+        if m_habit:
+            habit_activity = m_habit.group("activity").strip()
+            habit_log = HabitLog(
+                id=uuid.uuid4(),
+                member_id=member.id,
+                activity=habit_activity,
+                log_date=datetime.now(timezone.utc).date(),
+            )
+            session.add(habit_log)
+            reply = _t("habit_logged", lang, activity=habit_activity)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-9. M8 — health log: medicação, humor, sono, água
+        if _is_command(body, _HEALTH_WORDS):
+            from datetime import date as _date
+            today = datetime.now(timezone.utc).date()
+            health_data = await extract_health_log(body)
+            if health_data:
+                log_date = today
+                if health_data.get("days_ago", 0) > 0:
+                    from datetime import timedelta as _td
+                    log_date = (datetime.now(timezone.utc) - _td(days=health_data["days_ago"])).date()
+                hlog = HealthLog(
+                    id=uuid.uuid4(),
+                    member_id=member.id,
+                    log_type=health_data["log_type"],
+                    value=health_data["value"],
+                    unit=health_data.get("unit"),
+                    notes=health_data.get("notes"),
+                    log_date=log_date,
+                )
+                session.add(hlog)
+                lt = health_data["log_type"]
+                val = health_data["value"]
+                if lt == "medication":
+                    reply = _t("health_saved_medication", lang, value=val)
+                elif lt == "mood":
+                    reply = _t("health_saved_mood", lang, value=val)
+                elif lt == "sleep":
+                    reply = _t("health_saved_sleep", lang, value=val)
+                else:
+                    reply = _t("health_saved_water", lang, value=val)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
+
+        # 4e-10. M7 — treino: "corri 30 min"
+        if _is_command(body, _WORKOUT_WORDS):
+            from datetime import date as _date
+            today = datetime.now(timezone.utc).date()
+            workout_data = await extract_workout(body)
+            if workout_data:
+                from datetime import timedelta as _td
+                wo_date = today
+                if workout_data.get("days_ago", 0) > 0:
+                    wo_date = (datetime.now(timezone.utc) - _td(days=workout_data["days_ago"])).date()
+                ws = WorkoutSession(
+                    id=uuid.uuid4(),
+                    member_id=member.id,
+                    activity_type=workout_data["activity_type"],
+                    duration_minutes=workout_data.get("duration_minutes"),
+                    distance_km=workout_data.get("distance_km"),
+                    notes=workout_data.get("notes"),
+                    workout_date=wo_date,
+                )
+                session.add(ws)
+                dur_str = (
+                    f"{workout_data['duration_minutes']}min"
+                    if workout_data.get("duration_minutes")
+                    else (
+                        f"{workout_data['distance_km']}km"
+                        if workout_data.get("distance_km")
+                        else ""
+                    )
+                )
+                reply = _t("workout_saved", lang,
+                           activity=workout_data["activity_type"],
+                           duration=dur_str)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                logger.info(
+                    "conversation.workout_recorded",
+                    wa_phone=to,
+                    activity=workout_data["activity_type"],
+                )
+                return
+
+        # 4e-11. M7 — query de treinos: "treinos desta semana"
+        if _is_command(body, {"treinos", "workouts", "trainingen", "trainings", "mes treinos",
+                               "my workouts", "treinos desta semana", "workouts this week"}):
+            from sqlalchemy import select as _sel
+            from datetime import timedelta as _td
+            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+            result = await session.execute(
+                _sel(WorkoutSession)
+                .where(WorkoutSession.member_id == member.id)
+                .where(WorkoutSession.workout_date >= week_ago)
+                .order_by(WorkoutSession.workout_date.desc())
+            )
+            sessions_list = result.scalars().all()
+            if not sessions_list:
+                reply = _t("workout_summary_empty", lang)
+            else:
+                lines = [_t("workout_summary_header", lang, n=len(sessions_list))]
+                for ws in sessions_list:
+                    dur = f"{ws.duration_minutes}min" if ws.duration_minutes else (
+                        f"{ws.distance_km}km" if ws.distance_km else ""
+                    )
+                    lines.append(_t("workout_summary_row", lang,
+                                    date=str(ws.workout_date),
+                                    activity=ws.activity_type,
+                                    duration=dur))
+                reply = "\n".join(lines)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+                # 4e. Try to extract an expense or income from the message
         expense_data = await extract_expense(message.body or "", merchant_overrides=member_overrides)
         if expense_data:
             txn_type = expense_data.get("type", "expense")

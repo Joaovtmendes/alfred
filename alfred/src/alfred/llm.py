@@ -415,3 +415,106 @@ User: "resumo"
     except Exception as exc:
         logger.warning("llm.extract_expense_failed", error=str(exc))
         return None
+
+
+# ── M7 — extract_workout ────────────────────────────────────────────────────
+
+_WORKOUT_SYSTEM = """You extract workout/exercise session data from a user message.
+Return JSON only, no markdown fences. Fields:
+- is_workout: bool (true if this describes an exercise/workout session)
+- activity_type: string (e.g. "running", "strength", "cycling", "yoga", "swimming", "walking", "football", "basketball", "pilates", "hiit", "other")
+- duration_minutes: integer or null
+- distance_km: float or null
+- notes: string or null (any extra detail)
+- days_ago: integer (0=today, 1=yesterday, etc.)
+If not a workout entry, return {"is_workout": false}.
+"""
+
+async def extract_workout(text: str) -> dict | None:
+    """Extract workout session data from natural language text."""
+    try:
+        from alfred.settings import get_settings
+        settings = get_settings()
+        client = anthropic.AsyncAnthropic(api_key=settings.llm_api_key)
+        model = settings.llm_model
+
+        response = await client.messages.create(
+            model=model,
+            max_tokens=256,
+            system=_WORKOUT_SYSTEM,
+            messages=[{"role": "user", "content": text}],
+        )
+        raw = response.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw.strip())
+
+        if not data.get("is_workout"):
+            return None
+
+        return {
+            "activity_type": data.get("activity_type", "other"),
+            "duration_minutes": data.get("duration_minutes"),
+            "distance_km": data.get("distance_km"),
+            "notes": data.get("notes"),
+            "days_ago": int(data.get("days_ago", 0)),
+        }
+    except Exception as exc:
+        logger.warning("llm.extract_workout_failed", error=str(exc))
+        return None
+
+
+# ── M8 — extract_health_log ─────────────────────────────────────────────────
+
+_HEALTH_SYSTEM = """You extract health log data from a user message.
+Return JSON only, no markdown fences. Fields:
+- is_health: bool (true if this is a health/medication/mood/sleep/water log)
+- log_type: string — one of: "medication", "mood", "sleep", "water"
+- value: string (the main value: medication name, mood score, hours slept, litres drunk)
+- unit: string or null ("/10" for mood, "hours" for sleep, "L" for water, null for medication)
+- notes: string or null
+- days_ago: integer (0=today, 1=yesterday)
+If not a health log, return {"is_health": false}.
+Examples:
+- "tomei omeprazol" → {is_health:true, log_type:"medication", value:"omeprazol", unit:null}
+- "humor 7/10" → {is_health:true, log_type:"mood", value:"7", unit:"/10"}
+- "dormi 6h" → {is_health:true, log_type:"sleep", value:"6", unit:"hours"}
+- "bebi 2L de água" → {is_health:true, log_type:"water", value:"2", unit:"L"}
+"""
+
+async def extract_health_log(text: str) -> dict | None:
+    """Extract health log entry from natural language text."""
+    try:
+        from alfred.settings import get_settings
+        settings = get_settings()
+        client = anthropic.AsyncAnthropic(api_key=settings.llm_api_key)
+        model = settings.llm_model
+
+        response = await client.messages.create(
+            model=model,
+            max_tokens=256,
+            system=_HEALTH_SYSTEM,
+            messages=[{"role": "user", "content": text}],
+        )
+        raw = response.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw.strip())
+
+        if not data.get("is_health"):
+            return None
+
+        return {
+            "log_type": data.get("log_type", "medication"),
+            "value": str(data.get("value", "")),
+            "unit": data.get("unit"),
+            "notes": data.get("notes"),
+            "days_ago": int(data.get("days_ago", 0)),
+        }
+    except Exception as exc:
+        logger.warning("llm.extract_health_log_failed", error=str(exc))
+        return None
