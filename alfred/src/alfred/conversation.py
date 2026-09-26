@@ -20,7 +20,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from alfred.llm import classify_query, extract_expense, extract_health_log, extract_workout, generate_reply
+from alfred.llm import classify_query, extract_expense, extract_habit, extract_health_log, extract_workout, generate_reply
 from alfred.models import (
     Expense,
     Goal,
@@ -540,6 +540,207 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": " (échéance : {date})",
         "de": " (fällig: {date})",
     },
+    # ── M5 — Lembretes list/cancel ────────────────────────────────────────────
+    "lembretes_list_header": {
+        "pt": "Os teus lembretes activos ({n}):",
+        "nl": "Jouw actieve herinneringen ({n}):",
+        "en": "Your active reminders ({n}):",
+        "fr": "Tes rappels actifs ({n}) :",
+        "de": "Deine aktiven Erinnerungen ({n}):",
+    },
+    "lembretes_list_empty": {
+        "pt": "Nao tens lembretes activos.",
+        "nl": "Geen actieve herinneringen.",
+        "en": "No active reminders.",
+        "fr": "Pas de rappels actifs.",
+        "de": "Keine aktiven Erinnerungen.",
+    },
+    "lembretes_list_row": {
+        "pt": "• {time} — {text} [{days}]",
+        "nl": "• {time} — {text} [{days}]",
+        "en": "• {time} — {text} [{days}]",
+        "fr": "• {time} — {text} [{days}]",
+        "de": "• {time} — {text} [{days}]",
+    },
+    "lembrete_cancelled": {
+        "pt": "Lembrete cancelado: *{text}*",
+        "nl": "Herinnering geannuleerd: *{text}*",
+        "en": "Reminder cancelled: *{text}*",
+        "fr": "Rappel annule : *{text}*",
+        "de": "Erinnerung abgebrochen: *{text}*",
+    },
+    "lembrete_cancel_not_found": {
+        "pt": "Nao encontrei esse lembrete activo.",
+        "nl": "Ik kon die actieve herinnering niet vinden.",
+        "en": "I couldn't find that active reminder.",
+        "fr": "Je n'ai pas trouve ce rappel actif.",
+        "de": "Ich konnte diese aktive Erinnerung nicht finden.",
+    },
+    # ── M7 — Treino extras ────────────────────────────────────────────────────
+    "workout_deleted": {
+        "pt": "Treino apagado.",
+        "nl": "Training verwijderd.",
+        "en": "Workout deleted.",
+        "fr": "Entrainement supprime.",
+        "de": "Training geloscht.",
+    },
+    "workout_delete_not_found": {
+        "pt": "Nao encontrei treino recente para apagar.",
+        "nl": "Geen recente training gevonden om te verwijderen.",
+        "en": "No recent workout found to delete.",
+        "fr": "Aucun entrainement recent trouve a supprimer.",
+        "de": "Kein aktuelles Training zum Loschen gefunden.",
+    },
+    "workout_activity_summary": {
+        "pt": "Fizeste *{activity}* {n}x nos ultimos 7 dias.",
+        "nl": "Je deed *{activity}* {n}x in de afgelopen 7 dagen.",
+        "en": "You did *{activity}* {n}x in the last 7 days.",
+        "fr": "Tu as fait *{activity}* {n}x ces 7 derniers jours.",
+        "de": "Du hast *{activity}* {n}x in den letzten 7 Tagen gemacht.",
+    },
+    "workout_month_header": {
+        "pt": "Treinos de {month} — {n} sessoes, {km}km, {min}min:",
+        "nl": "Trainingen {month} — {n} sessies, {km}km, {min}min:",
+        "en": "Workouts {month} — {n} sessions, {km}km, {min}min:",
+        "fr": "Entrainements {month} — {n} seances, {km}km, {min}min :",
+        "de": "Trainings {month} — {n} Einheiten, {km}km, {min}min:",
+    },
+    # ── M8 — Saude queries ────────────────────────────────────────────────────
+    "health_mood_history": {
+        "pt": "Humor esta semana: {entries}",
+        "nl": "Stemming deze week: {entries}",
+        "en": "Mood this week: {entries}",
+        "fr": "Humeur cette semaine : {entries}",
+        "de": "Stimmung diese Woche: {entries}",
+    },
+    "health_mood_empty": {
+        "pt": "Sem registos de humor esta semana.",
+        "nl": "Geen stemmingsregistraties deze week.",
+        "en": "No mood entries this week.",
+        "fr": "Pas d'entrees d'humeur cette semaine.",
+        "de": "Keine Stimmungseintraege diese Woche.",
+    },
+    "health_sleep_avg": {
+        "pt": "Dormes em media *{avg}h* (ultimos 7 dias, {n} registos).",
+        "nl": "Je slaapt gemiddeld *{avg}u* (laatste 7 dagen, {n} registraties).",
+        "en": "You sleep an average of *{avg}h* (last 7 days, {n} entries).",
+        "fr": "Tu dors en moyenne *{avg}h* (7 derniers jours, {n} entrees).",
+        "de": "Du schlaefst im Schnitt *{avg}h* (letzte 7 Tage, {n} Eintraege).",
+    },
+    "health_sleep_empty": {
+        "pt": "Sem registos de sono esta semana.",
+        "nl": "Geen slaapregistraties deze week.",
+        "en": "No sleep entries this week.",
+        "fr": "Pas d'entrees de sommeil cette semaine.",
+        "de": "Keine Schlafeintraege diese Woche.",
+    },
+    "health_medication_adherence": {
+        "pt": "Medicacao: tomaste em {n}/{total} dias esta semana.",
+        "nl": "Medicatie: je nam het {n}/{total} dagen deze week.",
+        "en": "Medication: you took it {n}/{total} days this week.",
+        "fr": "Medicament : tu l'as pris {n}/{total} jours cette semaine.",
+        "de": "Medikament: Du hast es {n}/{total} Tage diese Woche genommen.",
+    },
+    "health_medication_empty": {
+        "pt": "Sem registos de medicacao esta semana.",
+        "nl": "Geen medicatieregistraties deze week.",
+        "en": "No medication entries this week.",
+        "fr": "Pas d'entrees de medicament cette semaine.",
+        "de": "Keine Medikamenteneintraege diese Woche.",
+    },
+    "health_water_today": {
+        "pt": "Agua hoje: *{total}L* ({n} registos).",
+        "nl": "Water vandaag: *{total}L* ({n} registraties).",
+        "en": "Water today: *{total}L* ({n} entries).",
+        "fr": "Eau aujourd'hui : *{total}L* ({n} entrees).",
+        "de": "Wasser heute: *{total}L* ({n} Eintraege).",
+    },
+    "health_water_empty": {
+        "pt": "Sem registos de agua hoje.",
+        "nl": "Geen waterregistraties vandaag.",
+        "en": "No water entries today.",
+        "fr": "Pas d'entrees d'eau aujourd'hui.",
+        "de": "Keine Wassereintraege heute.",
+    },
+    # ── M9 — extras ───────────────────────────────────────────────────────────
+    "habit_logged_with_goal": {
+        "pt": "Habito registado: *{activity}* (meta: {goal})",
+        "nl": "Gewoonte gelogd: *{activity}* (doel: {goal})",
+        "en": "Habit logged: *{activity}* (goal: {goal})",
+        "fr": "Habitude enregistree : *{activity}* (objectif : {goal})",
+        "de": "Gewohnheit protokolliert: *{activity}* (Ziel: {goal})",
+    },
+    "goal_completed": {
+        "pt": "Meta concluida: *{title}* \U0001f389",
+        "nl": "Doel bereikt: *{title}* \U0001f389",
+        "en": "Goal completed: *{title}* \U0001f389",
+        "fr": "Objectif atteint : *{title}* \U0001f389",
+        "de": "Ziel erreicht: *{title}* \U0001f389",
+    },
+    "goal_complete_not_found": {
+        "pt": "Nao encontrei essa meta activa.",
+        "nl": "Ik kon dat actieve doel niet vinden.",
+        "en": "I couldn't find that active goal.",
+        "fr": "Je n'ai pas trouve cet objectif actif.",
+        "de": "Ich konnte dieses aktive Ziel nicht finden.",
+    },
+    "habit_frequency": {
+        "pt": "Registaste *{activity}* {n}x nos ultimos 7 dias.",
+        "nl": "Je registreerde *{activity}* {n}x in de afgelopen 7 dagen.",
+        "en": "You logged *{activity}* {n}x in the last 7 days.",
+        "fr": "Tu as enregistre *{activity}* {n}x ces 7 derniers jours.",
+        "de": "Du hast *{activity}* {n}x in den letzten 7 Tagen protokolliert.",
+    },
+    "habit_frequency_empty": {
+        "pt": "Nenhum registo de *{activity}* esta semana.",
+        "nl": "Geen registraties van *{activity}* deze week.",
+        "en": "No entries for *{activity}* this week.",
+        "fr": "Aucune entree pour *{activity}* cette semaine.",
+        "de": "Keine Eintraege fuer *{activity}* diese Woche.",
+    },
+    # ── M10 — extras ──────────────────────────────────────────────────────────
+    "notes_list_header": {
+        "pt": "As tuas ultimas notas ({n}):",
+        "nl": "Jouw laatste notities ({n}):",
+        "en": "Your recent notes ({n}):",
+        "fr": "Tes dernieres notes ({n}) :",
+        "de": "Deine letzten Notizen ({n}):",
+    },
+    "notes_list_empty": {
+        "pt": "Ainda nao tens notas guardadas.",
+        "nl": "Nog geen opgeslagen notities.",
+        "en": "No notes saved yet.",
+        "fr": "Pas encore de notes enregistrees.",
+        "de": "Noch keine gespeicherten Notizen.",
+    },
+    "notes_list_row": {
+        "pt": "• {body}",
+        "nl": "• {body}",
+        "en": "• {body}",
+        "fr": "• {body}",
+        "de": "• {body}",
+    },
+    "task_deleted": {
+        "pt": "Tarefa apagada: *{body}*",
+        "nl": "Taak verwijderd: *{body}*",
+        "en": "Task deleted: *{body}*",
+        "fr": "Tache supprimee : *{body}*",
+        "de": "Aufgabe geloscht: *{body}*",
+    },
+    "task_delete_not_found": {
+        "pt": "Nao encontrei essa tarefa.",
+        "nl": "Ik kon die taak niet vinden.",
+        "en": "I couldn't find that task.",
+        "fr": "Je n'ai pas trouve cette tache.",
+        "de": "Ich konnte diese Aufgabe nicht finden.",
+    },
+    "tasks_list_overdue": {
+        "pt": "• {n}. \u26a0\ufe0f {body}{due}",
+        "nl": "• {n}. \u26a0\ufe0f {body}{due}",
+        "en": "• {n}. \u26a0\ufe0f {body}{due}",
+        "fr": "• {n}. \u26a0\ufe0f {body}{due}",
+        "de": "• {n}. \u26a0\ufe0f {body}{due}",
+    },
 }
 
 
@@ -742,6 +943,142 @@ _TASKS_QUERY_WORDS = {
     "my tasks", "mijn taken", "meine aufgaben", "mes tâches",
     "lista de tarefas", "task list",
 }
+
+
+# ── M5 — days_mask NL parsing + list/cancel ──────────────────────────────────
+_DAY_BITS: dict[str, int] = {
+    # Monday = 1
+    "segunda": 1, "segunda-feira": 1, "monday": 1, "maandag": 1, "lundi": 1, "montag": 1,
+    # Tuesday = 2
+    "terca": 2, "terca-feira": 2, "tuesday": 2, "dinsdag": 2, "mardi": 2, "dienstag": 2,
+    # Wednesday = 4
+    "quarta": 4, "quarta-feira": 4, "wednesday": 4, "woensdag": 4, "mercredi": 4, "mittwoch": 4,
+    # Thursday = 8
+    "quinta": 8, "quinta-feira": 8, "thursday": 8, "donderdag": 8, "jeudi": 8, "donnerstag": 8,
+    # Friday = 16
+    "sexta": 16, "sexta-feira": 16, "friday": 16, "vrijdag": 16, "vendredi": 16, "freitag": 16,
+    # Saturday = 32
+    "sabado": 32, "saturday": 32, "zaterdag": 32, "samedi": 32, "samstag": 32,
+    # Sunday = 64
+    "domingo": 64, "sunday": 64, "zondag": 64, "dimanche": 64, "sonntag": 64,
+}
+
+_DAYS_LABEL: dict[int, str] = {
+    1: "Mon", 2: "Tue", 4: "Wed", 8: "Thu", 16: "Fri", 32: "Sat", 64: "Sun",
+}
+
+
+def _parse_days_mask(text: str) -> int:
+    """Parse days bitmask from free-text. Returns 127 (all days) if no days specified."""
+    lower = unicodedata.normalize("NFD", text.lower())
+    lower = "".join(c for c in lower if unicodedata.category(c) != "Mn")
+    if any(w in lower for w in ("todos os dias", "every day", "elke dag", "tous les jours", "jeden tag", "diariamente", "daily")):
+        return 127
+    if any(w in lower for w in ("dias uteis", "dias de semana", "weekdays", "werkdagen", "jours ouvrables", "werktage")):
+        return 31  # Mon–Fri
+    if any(w in lower for w in ("fim de semana", "weekend", "wochenende")):
+        return 96  # Sat+Sun
+    mask = 0
+    for day, bit in _DAY_BITS.items():
+        day_norm = unicodedata.normalize("NFD", day)
+        day_norm = "".join(c for c in day_norm if unicodedata.category(c) != "Mn")
+        if day_norm in lower:
+            mask |= bit
+    return mask if mask else 127
+
+
+def _mask_to_label(mask: int) -> str:
+    """Convert days_mask int to human-readable short label."""
+    if mask == 127:
+        return "daily"
+    if mask == 31:
+        return "weekdays"
+    if mask == 96:
+        return "weekend"
+    return ",".join(v for k, v in sorted(_DAYS_LABEL.items()) if mask & k)
+
+
+_LIST_LEMBRETES_WORDS = {
+    "os meus lembretes", "meus lembretes", "lembretes activos",
+    "my reminders", "mijn herinneringen", "mes rappels", "meine erinnerungen",
+    "ver lembretes", "lista de lembretes",
+}
+_CANCEL_LEMBRETE_RE = re.compile(
+    r"(?:cancela|cancel|annuler|abbrechen|annuleer)\s+(?:lembrete|reminder|herinnering|rappel|erinnerung)\s+(?:de|of|van|du|von|sobre)?\s*(.+)",
+    re.IGNORECASE,
+)
+
+# ── M7 — extra workout patterns ──────────────────────────────────────────────
+_WORKOUT_DELETE_RE = re.compile(
+    r"(?:apaga|delete|verwijder|supprimer|losch|apagar)\s+"
+    r"(?:o\s+)?(?:treino|workout|training|entrainement)\s*"
+    r"(?:de\s+hoje|today|vandaag|heute|aujourd.hui|ultimo|last|laatste)?",
+    re.IGNORECASE,
+)
+_WORKOUT_ACTIVITY_RE = re.compile(
+    r"(?:quantas\s+vezes|how\s+many\s+times|hoe\s+vaak|combien\s+de\s+fois|wie\s+oft)\s+"
+    r"(?:corri|ran|liep|couru|gelaufen|fui\s+ao\s+ginasio|went\s+to\s+gym|"
+    r"nadei|swam|zwom|nage|geschwommen|treinei|trained|trainde)",
+    re.IGNORECASE,
+)
+_WORKOUT_MONTH_RE = re.compile(
+    r"(?:treinos|workouts|trainingen|trainings)\s+"
+    r"(?:de\s+)?(?:este\s+mes|this\s+month|deze\s+maand|ce\s+mois|diesen\s+monat|"
+    r"mes\s+passado|last\s+month|vorige\s+maand|mois\s+dernier|letzten\s+monat|"
+    r"janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|"
+    r"january|february|march|april|may|june|july|august|september|october|november|december)",
+    re.IGNORECASE,
+)
+
+# ── M8 — health history query patterns ────────────────────────────────────────
+_HEALTH_MOOD_QUERY_RE = re.compile(
+    r"(?:como\s+(?:foi|esta)\s+o\s+(?:meu\s+)?humor|humor\s+(?:esta\s+semana|this\s+week)|"
+    r"my\s+mood\s+(?:this\s+week|history)|mood\s+(?:this\s+week|history)|"
+    r"stemming\s+deze\s+week|humeur\s+(?:cette\s+semaine)|stimmung\s+(?:diese\s+woche))",
+    re.IGNORECASE,
+)
+_HEALTH_SLEEP_QUERY_RE = re.compile(
+    r"(?:quantas\s+horas\s+dormi|sono\s+medio|average\s+sleep|gem(?:iddelde)?\s+slaap|"
+    r"how\s+(?:many\s+hours|much)\s+(?:did\s+i\s+sleep|sleep)|"
+    r"sommeil\s+moyen|durchschnittlicher\s+schlaf)",
+    re.IGNORECASE,
+)
+_HEALTH_MED_QUERY_RE = re.compile(
+    r"(?:tomei\s+(?:a\s+)?medicacao\s+todos\s+os\s+dias|aderencia\s+(?:da\s+)?medicacao|"
+    r"medication\s+adherence|medicatie\s+bijgehouden|took\s+medication\s+(?:every\s+day|all\s+week)|"
+    r"observance\s+medicament|medikamenten\s+einhaltung)",
+    re.IGNORECASE,
+)
+_HEALTH_WATER_QUERY_RE = re.compile(
+    r"(?:bebi\s+agua\s+suficiente|agua\s+(?:de\s+)?hoje|water\s+(?:today|intake)|"
+    r"hoeveel\s+water|water\s+vandaag|eau\s+(?:aujourd.hui|d.aujourd.hui)|wasser\s+heute)",
+    re.IGNORECASE,
+)
+
+# ── M9 — goal completion + habit frequency ────────────────────────────────────
+_GOAL_COMPLETE_RE = re.compile(
+    r"(?:meta|objetivo|goal|doel|ziel|objectif)\s+(?:de\s+)?(.+?)\s+"
+    r"(?:concluida|concluido|feita|feito|done|klaar|erledigt|fait|accomplie?)",
+    re.IGNORECASE,
+)
+_HABIT_FREQ_RE = re.compile(
+    r"(?:quantas\s+vezes|how\s+many\s+times|hoe\s+vaak|combien\s+de\s+fois|wie\s+oft)\s+"
+    r"(?:(?:eu\s+)?fiz|did\s+i\s+do|deed\s+ik|ai-je\s+fait|habe\s+ich\s+gemacht|"
+    r"meditei|meditated|li|leste|estudei|corri|ran|nadei)\s*(.+)?",
+    re.IGNORECASE,
+)
+
+# ── M10 — notes list + task delete ────────────────────────────────────────────
+_NOTES_QUERY_WORDS = {
+    "as minhas notas", "minhas notas", "as notas", "ver notas",
+    "my notes", "mijn notities", "mes notes", "meine notizen",
+    "lista de notas", "notes list",
+}
+_TASK_DELETE_RE = re.compile(
+    r"(?:apaga|apagar|delete|verwijder|supprimer|losch)\s+"
+    r"(?:a\s+)?(?:tarefa|task|taak|aufgabe|tache)\s+(.+)",
+    re.IGNORECASE,
+)
 
 _JOB_TYPE_MAP: dict[str, str] = {
     "medicamento": "medication_reminder",
@@ -1149,7 +1486,7 @@ async def handle_inbound(
                     member_id=member.id,
                     job_type=job_type,
                     time_of_day=time_str,
-                    days_mask=127,  # every day
+                    days_mask=_parse_days_mask(body),
                     payload={"text": reminder_text},
                     active=True,
                 )
@@ -1165,6 +1502,60 @@ async def handle_inbound(
                 # Bare "lembrete" without full syntax → show format hint
                 reply = _t("lembrete_invalid", lang)
 
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+
+        # 4e-0b. M5 — list active reminders
+        if _is_command(body, _LIST_LEMBRETES_WORDS):
+            from alfred.models import ScheduledJob as _SJ
+            from sqlalchemy import select as _sel
+            res = await session.execute(
+                _sel(_SJ)
+                .where(_SJ.member_id == member.id)
+                .where(_SJ.active.is_(True))
+                .order_by(_SJ.time_of_day.asc())
+            )
+            jobs = res.scalars().all()
+            if not jobs:
+                reply = _t("lembretes_list_empty", lang)
+            else:
+                lines = [_t("lembretes_list_header", lang, n=len(jobs))]
+                for j in jobs:
+                    days_label = _mask_to_label(j.days_mask)
+                    text_label = (j.payload or {}).get("text", j.job_type)
+                    lines.append(_t("lembretes_list_row", lang, time=j.time_of_day, text=text_label, days=days_label))
+                reply = "\n".join(lines)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-0c. M5 — cancel reminder
+        m_cancel = _CANCEL_LEMBRETE_RE.search(body)
+        if m_cancel:
+            cancel_kw = m_cancel.group(1).strip().lower()
+            from alfred.models import ScheduledJob as _SJ
+            from sqlalchemy import select as _sel
+            res = await session.execute(
+                _sel(_SJ)
+                .where(_SJ.member_id == member.id)
+                .where(_SJ.active.is_(True))
+            )
+            jobs = res.scalars().all()
+            matched = None
+            for j in jobs:
+                text_label = (j.payload or {}).get("text", j.job_type).lower()
+                if cancel_kw in text_label or text_label in cancel_kw:
+                    matched = j
+                    break
+            if matched:
+                matched.active = False
+                session.add(matched)
+                text_label = (matched.payload or {}).get("text", matched.job_type)
+                reply = _t("lembrete_cancelled", lang, text=text_label)
+            else:
+                reply = _t("lembrete_cancel_not_found", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -1245,16 +1636,36 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-        # 4e-4. M10 — done: "feito: X"
+        # 4e-4. M10 — done: "feito: X" or "feito: 2" (by number)
         m_done = _DONE_RE.match(body)
         if m_done:
-            done_text = m_done.group(1).strip().lower()
-            from sqlalchemy import select as _sel, func as _func
+            done_text = m_done.group(1).strip()
+            from sqlalchemy import select as _sel
+            if done_text.isdigit():
+                idx = int(done_text)
+                res_all = await session.execute(
+                    _sel(Task)
+                    .where(Task.member_id == member.id)
+                    .where(Task.done_at.is_(None))
+                    .order_by(Task.created_at.asc())
+                )
+                open_list = res_all.scalars().all()
+                task_row = open_list[idx - 1] if 0 < idx <= len(open_list) else None
+                if task_row:
+                    task_row.done_at = datetime.now(timezone.utc)
+                    session.add(task_row)
+                    reply = _t("task_done", lang)
+                else:
+                    reply = _t("task_not_found", lang)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
+            done_text_lower = done_text.lower()
             result = await session.execute(
                 _sel(Task)
                 .where(Task.member_id == member.id)
                 .where(Task.done_at.is_(None))
-                .where(Task.body.ilike(f"%{done_text}%"))
+                .where(Task.body.ilike(f"%{done_text_lower}%"))
                 .order_by(Task.created_at.desc())
                 .limit(1)
             )
@@ -1283,12 +1694,60 @@ async def handle_inbound(
                 reply = _t("tasks_list_empty", lang)
             else:
                 lines = [_t("tasks_list_header", lang, n=len(open_tasks))]
+                today_date = datetime.now(timezone.utc).date()
                 for i, t in enumerate(open_tasks, 1):
                     due_str = (
                         _t("tasks_list_due", lang, date=str(t.due_date))
                         if t.due_date else ""
                     )
-                    lines.append(_t("tasks_list_row", lang, n=i, body=t.body, due=due_str))
+                    is_overdue = bool(t.due_date and t.due_date < today_date)
+                    tpl_key = "tasks_list_overdue" if is_overdue else "tasks_list_row"
+                    lines.append(_t(tpl_key, lang, n=i, body=t.body, due=due_str))
+                reply = "\n".join(lines)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+
+        # 4e-5b. M10 — delete task: "apaga tarefa X"
+        m_tdel = _TASK_DELETE_RE.match(body)
+        if m_tdel:
+            del_kw = m_tdel.group(1).strip().lower()
+            from sqlalchemy import select as _sel
+            res_del = await session.execute(
+                _sel(Task)
+                .where(Task.member_id == member.id)
+                .where(Task.body.ilike(f"%{del_kw}%"))
+                .order_by(Task.created_at.desc())
+                .limit(1)
+            )
+            del_task = res_del.scalar_one_or_none()
+            if del_task:
+                del_body = del_task.body
+                await session.delete(del_task)
+                reply = _t("task_deleted", lang, body=del_body)
+            else:
+                reply = _t("task_delete_not_found", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-5c. M10 — list notes: "as minhas notas"
+        if _is_command(body, _NOTES_QUERY_WORDS):
+            from sqlalchemy import select as _sel
+            res_notes = await session.execute(
+                _sel(Note)
+                .where(Note.member_id == member.id)
+                .order_by(Note.created_at.desc())
+                .limit(10)
+            )
+            notes_list = res_notes.scalars().all()
+            if not notes_list:
+                reply = _t("notes_list_empty", lang)
+            else:
+                lines = [_t("notes_list_header", lang, n=len(notes_list))]
+                for n_obj in notes_list:
+                    lines.append(_t("notes_list_row", lang, body=n_obj.body[:120]))
                 reply = "\n".join(lines)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
@@ -1326,21 +1785,135 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-        # 4e-8. M9 — log de hábito: "meditei hoje"
+
+        # 4e-7b. M9 — complete goal: "meta de correr concluida"
+        m_gcomplete = _GOAL_COMPLETE_RE.search(body)
+        if m_gcomplete:
+            kw = m_gcomplete.group(1).strip().lower()
+            from sqlalchemy import select as _sel
+            res_gc = await session.execute(
+                _sel(Goal)
+                .where(Goal.member_id == member.id)
+                .where(Goal.active.is_(True))
+                .where(Goal.title.ilike(f"%{kw}%"))
+                .order_by(Goal.created_at.desc())
+                .limit(1)
+            )
+            gc = res_gc.scalar_one_or_none()
+            if gc:
+                gc.active = False
+                session.add(gc)
+                reply = _t("goal_completed", lang, title=gc.title)
+            else:
+                reply = _t("goal_complete_not_found", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-7c. M9 — habit frequency: "quantas vezes meditei esta semana"
+        m_hfreq = _HABIT_FREQ_RE.search(body)
+        if m_hfreq:
+            freq_raw = (m_hfreq.group(1) or body).strip()
+            # extract the activity from the whole body
+            from sqlalchemy import select as _sel, func as _func
+            from datetime import timedelta as _td
+            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+            res_hf = await session.execute(
+                _sel(HabitLog)
+                .where(HabitLog.member_id == member.id)
+                .where(HabitLog.log_date >= week_ago)
+            )
+            all_habits = res_hf.scalars().all()
+            # Find best matching activity
+            freq_kw = freq_raw.lower() if freq_raw else body.lower()
+            matched = [h for h in all_habits if freq_kw in h.activity.lower() or h.activity.lower() in freq_kw]
+            if not matched and all_habits:
+                # fallback: count all
+                matched = all_habits
+                freq_kw = "habits"
+            if matched:
+                activity_label = matched[0].activity if matched else "?"
+                reply = _t("habit_frequency", lang, activity=activity_label, n=len(matched))
+            else:
+                reply = _t("habit_frequency_empty", lang, activity=freq_kw)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-8. M9 — log de hábito: "meditei hoje" (regex fast-path)
         m_habit = _HABIT_LOG_RE.search(body)
         if m_habit:
             habit_activity = m_habit.group("activity").strip()
+            # Try to link to a matching active goal
+            from sqlalchemy import select as _sel
+            res_hg = await session.execute(
+                _sel(Goal)
+                .where(Goal.member_id == member.id)
+                .where(Goal.active.is_(True))
+            )
+            linked_goal = None
+            for g in res_hg.scalars().all():
+                if any(w in g.title.lower() for w in habit_activity.lower().split()):
+                    linked_goal = g
+                    break
             habit_log = HabitLog(
                 id=uuid.uuid4(),
                 member_id=member.id,
+                goal_id=linked_goal.id if linked_goal else None,
                 activity=habit_activity,
                 log_date=datetime.now(timezone.utc).date(),
             )
             session.add(habit_log)
-            reply = _t("habit_logged", lang, activity=habit_activity)
+            if linked_goal:
+                reply = _t("habit_logged_with_goal", lang, activity=habit_activity, goal=linked_goal.title)
+            else:
+                reply = _t("habit_logged", lang, activity=habit_activity)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
+
+        # 4e-8b. M9 — log de hábito via LLM (free-form)
+        # Only attempt if message is short (< 80 chars) and doesn't look like expense/workout
+        _body_lower = body.lower()
+        _not_expense = not any(w in _body_lower for w in ("€", "$", "£", "gastei", "comprei", "paguei", "spent", "paid", "bought"))
+        _not_workout = not _is_command(body, _WORKOUT_WORDS)
+        _not_health = not _is_command(body, _HEALTH_WORDS)
+        if len(body) < 80 and _not_expense and _not_workout and _not_health:
+            habit_data = await extract_habit(body)
+            if habit_data:
+                h_activity = habit_data["activity"]
+                h_days_ago = habit_data.get("days_ago", 0)
+                from sqlalchemy import select as _sel
+                from datetime import timedelta as _td
+                h_date = (datetime.now(timezone.utc) - _td(days=h_days_ago)).date()
+                # Try to link to goal
+                res_hg2 = await session.execute(
+                    _sel(Goal)
+                    .where(Goal.member_id == member.id)
+                    .where(Goal.active.is_(True))
+                )
+                linked_goal2 = None
+                for g in res_hg2.scalars().all():
+                    if any(w in g.title.lower() for w in h_activity.lower().split()):
+                        linked_goal2 = g
+                        break
+                hlog2 = HabitLog(
+                    id=uuid.uuid4(),
+                    member_id=member.id,
+                    goal_id=linked_goal2.id if linked_goal2 else None,
+                    activity=h_activity,
+                    notes=habit_data.get("notes"),
+                    log_date=h_date,
+                )
+                session.add(hlog2)
+                if linked_goal2:
+                    reply = _t("habit_logged_with_goal", lang, activity=h_activity, goal=linked_goal2.title)
+                else:
+                    reply = _t("habit_logged", lang, activity=h_activity)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                logger.info("conversation.habit_recorded_llm", wa_phone=to, activity=h_activity)
+                return
 
         # 4e-9. M8 — health log: medicação, humor, sono, água
         if _is_command(body, _HEALTH_WORDS):
@@ -1375,6 +1948,100 @@ async def handle_inbound(
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
                 return
+
+
+        # 4e-9b. M8 — mood history query
+        if _HEALTH_MOOD_QUERY_RE.search(body):
+            from sqlalchemy import select as _sel
+            from datetime import timedelta as _td
+            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+            res_mq = await session.execute(
+                _sel(HealthLog)
+                .where(HealthLog.member_id == member.id)
+                .where(HealthLog.log_type == "mood")
+                .where(HealthLog.log_date >= week_ago)
+                .order_by(HealthLog.log_date.desc())
+            )
+            mood_rows = res_mq.scalars().all()
+            if not mood_rows:
+                reply = _t("health_mood_empty", lang)
+            else:
+                entries = ", ".join(f"{r.value}/10 ({r.log_date.strftime('%a')})" for r in mood_rows[:7])
+                reply = _t("health_mood_history", lang, entries=entries)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-9c. M8 — sleep average query
+        if _HEALTH_SLEEP_QUERY_RE.search(body):
+            from sqlalchemy import select as _sel
+            from datetime import timedelta as _td
+            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+            res_sq = await session.execute(
+                _sel(HealthLog)
+                .where(HealthLog.member_id == member.id)
+                .where(HealthLog.log_type == "sleep")
+                .where(HealthLog.log_date >= week_ago)
+            )
+            sleep_rows = res_sq.scalars().all()
+            if not sleep_rows:
+                reply = _t("health_sleep_empty", lang)
+            else:
+                try:
+                    total_h = sum(float(r.value.replace(",", ".")) for r in sleep_rows)
+                    avg = round(total_h / len(sleep_rows), 1)
+                except (ValueError, ZeroDivisionError):
+                    avg = 0.0
+                reply = _t("health_sleep_avg", lang, avg=avg, n=len(sleep_rows))
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-9d. M8 — medication adherence query
+        if _HEALTH_MED_QUERY_RE.search(body):
+            from sqlalchemy import select as _sel
+            from datetime import timedelta as _td
+            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+            res_medq = await session.execute(
+                _sel(HealthLog)
+                .where(HealthLog.member_id == member.id)
+                .where(HealthLog.log_type == "medication")
+                .where(HealthLog.log_date >= week_ago)
+            )
+            med_rows = res_medq.scalars().all()
+            if not med_rows:
+                reply = _t("health_medication_empty", lang)
+            else:
+                unique_days = len({r.log_date for r in med_rows})
+                total_days = min(7, (datetime.now(timezone.utc).date() - week_ago).days + 1)
+                day_labels = ", ".join(sorted({r.log_date.strftime("%a") for r in med_rows}))
+                reply = _t("health_medication_adherence", lang, n=unique_days, total=total_days, days=day_labels)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-9e. M8 — water intake query
+        if _HEALTH_WATER_QUERY_RE.search(body):
+            from sqlalchemy import select as _sel
+            today_wq = datetime.now(timezone.utc).date()
+            res_wq = await session.execute(
+                _sel(HealthLog)
+                .where(HealthLog.member_id == member.id)
+                .where(HealthLog.log_type == "water")
+                .where(HealthLog.log_date == today_wq)
+            )
+            water_rows = res_wq.scalars().all()
+            if not water_rows:
+                reply = _t("health_water_empty", lang)
+            else:
+                try:
+                    total_l = round(sum(float(r.value.replace(",", ".")) for r in water_rows), 1)
+                except ValueError:
+                    total_l = 0.0
+                reply = _t("health_water_today", lang, total=total_l, n=len(water_rows))
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
 
         # 4e-10. M7 — treino: "corri 30 min"
         if _is_command(body, _WORKOUT_WORDS):
@@ -1443,6 +2110,100 @@ async def handle_inbound(
                                     activity=ws.activity_type,
                                     duration=dur))
                 reply = "\n".join(lines)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+
+        # 4e-11b. M7 — delete workout: "apaga o treino de hoje"
+        if _WORKOUT_DELETE_RE.search(body):
+            from sqlalchemy import select as _sel
+            res_wd = await session.execute(
+                _sel(WorkoutSession)
+                .where(WorkoutSession.member_id == member.id)
+                .order_by(WorkoutSession.workout_date.desc(), WorkoutSession.created_at.desc())
+                .limit(1)
+            )
+            wo_del = res_wd.scalar_one_or_none()
+            if wo_del:
+                await session.delete(wo_del)
+                reply = _t("workout_deleted", lang)
+            else:
+                reply = _t("workout_delete_not_found", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-11c. M7 — workout monthly summary: "treinos deste mês"
+        if _WORKOUT_MONTH_RE.search(body):
+            from sqlalchemy import select as _sel
+            from datetime import timedelta as _td
+            now_wm = datetime.now(timezone.utc)
+            # Check if "mes passado" / "last month"
+            _bl = body.lower()
+            if any(w in _bl for w in ("mes passado", "last month", "vorige maand", "mois dernier", "letzten monat")):
+                first_this = now_wm.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                prev_last = first_this - _td(seconds=1)
+                start_wm = prev_last.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                end_wm = first_this.date()
+                month_label = prev_last.strftime("%B %Y")
+            else:
+                start_wm = now_wm.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                end_wm = None
+                month_label = now_wm.strftime("%B %Y")
+            q = _sel(WorkoutSession).where(
+                WorkoutSession.member_id == member.id,
+                WorkoutSession.workout_date >= start_wm.date(),
+            )
+            if end_wm:
+                q = q.where(WorkoutSession.workout_date < end_wm)
+            res_wm = await session.execute(q.order_by(WorkoutSession.workout_date.desc()))
+            wm_sessions = res_wm.scalars().all()
+            n_wm = len(wm_sessions)
+            total_km = round(sum(s.distance_km or 0 for s in wm_sessions), 1)
+            total_min = sum(s.duration_minutes or 0 for s in wm_sessions)
+            reply = _t("workout_month_header", lang, month=month_label, n=n_wm, km=total_km, min=total_min)
+            if wm_sessions:
+                lines = [reply]
+                for ws_m in wm_sessions[:5]:
+                    dur_m = f"{ws_m.duration_minutes}min" if ws_m.duration_minutes else (
+                        f"{ws_m.distance_km}km" if ws_m.distance_km else "")
+                    lines.append(_t("workout_summary_row", lang, date=str(ws_m.workout_date), activity=ws_m.activity_type, duration=dur_m))
+                reply = "\n".join(lines)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-11d. M7 — workout activity count: "quantas vezes corri esta semana"
+        if _WORKOUT_ACTIVITY_RE.search(body):
+            from sqlalchemy import select as _sel
+            from datetime import timedelta as _td
+            week_ago_wa = datetime.now(timezone.utc).date() - _td(days=7)
+            res_wa = await session.execute(
+                _sel(WorkoutSession)
+                .where(WorkoutSession.member_id == member.id)
+                .where(WorkoutSession.workout_date >= week_ago_wa)
+            )
+            wa_sessions = res_wa.scalars().all()
+            _bl2 = body.lower()
+            # Detect activity keyword
+            _act_map = {
+                "corri": "running", "ran": "running", "liep": "running", "couru": "running",
+                "nadei": "swimming", "swam": "swimming", "zwom": "swimming",
+                "ginasio": "strength", "gym": "strength", "treino": "strength",
+            }
+            matched_act = None
+            for kw, act in _act_map.items():
+                if kw in _bl2:
+                    matched_act = act
+                    break
+            if matched_act:
+                count = sum(1 for s in wa_sessions if matched_act in s.activity_type.lower())
+                activity_label = matched_act
+            else:
+                count = len(wa_sessions)
+                activity_label = "workout"
+            reply = _t("workout_activity_summary", lang, activity=activity_label, n=count)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return

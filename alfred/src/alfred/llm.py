@@ -518,3 +518,59 @@ async def extract_health_log(text: str) -> dict | None:
     except Exception as exc:
         logger.warning("llm.extract_health_log_failed", error=str(exc))
         return None
+
+
+# ── M9 — extract_habit ──────────────────────────────────────────────────────
+
+_HABIT_SYSTEM = """You extract habit/routine log data from a user message.
+Return JSON only, no markdown fences. Fields:
+- is_habit: bool (true if this describes completing a habit, routine or personal activity)
+- activity: string (short label, e.g. "meditação", "leitura", "exercício", "alemão")
+- notes: string or null
+- days_ago: integer (0=today, 1=yesterday)
+If this is a financial transaction, workout or health log, return {"is_habit": false}.
+Examples:
+- "meditei hoje" → {"is_habit":true,"activity":"meditação","days_ago":0}
+- "li 30 páginas" → {"is_habit":true,"activity":"leitura","notes":"30 páginas","days_ago":0}
+- "aprendi alemão" → {"is_habit":true,"activity":"aprender alemão","days_ago":0}
+- "gastei 50€" → {"is_habit":false}
+- "corri 5km" → {"is_habit":false}
+"""
+
+async def extract_habit(text: str) -> dict | None:
+    """Extract habit log entry from natural language text."""
+    try:
+        from alfred.settings import get_settings
+        settings = get_settings()
+        client = anthropic.AsyncAnthropic(api_key=settings.llm_api_key)
+        model = settings.llm_model
+
+        response = await client.messages.create(
+            model=model,
+            max_tokens=256,
+            system=_HABIT_SYSTEM,
+            messages=[{"role": "user", "content": text}],
+        )
+        raw = response.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw.strip())
+
+        if not data.get("is_habit"):
+            return None
+
+        activity = str(data.get("activity") or "").strip()
+        if not activity:
+            return None
+
+        return {
+            "activity": activity,
+            "notes": data.get("notes"),
+            "days_ago": int(data.get("days_ago", 0)),
+        }
+    except Exception as exc:
+        logger.warning("llm.extract_habit_failed", error=str(exc))
+        return None
+
