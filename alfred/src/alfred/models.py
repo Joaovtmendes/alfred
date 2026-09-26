@@ -198,3 +198,44 @@ class ScheduledJob(Base):
     )
 
     member: Mapped["Member"] = relationship()
+
+
+class MerchantCategoryOverride(Base):
+    """M12 — User-taught category corrections.
+
+    When a member corrects Alfred's category for a merchant
+    (e.g. "Jumbo is supermarkt, not restaurant"), Alfred stores the override
+    here and applies it automatically the next time that merchant appears.
+
+    merchant is normalised to lowercase for case-insensitive matching.
+    Unique constraint: one override per (member_id, merchant) pair.
+    """
+
+    __tablename__ = "merchant_category_overrides"
+    __table_args__ = (
+        UniqueConstraint(
+            "member_id", "merchant", name="uq_mco_member_merchant"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
+    )
+    merchant: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )  # normalised lowercase
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    member: Mapped["Member"] = relationship()

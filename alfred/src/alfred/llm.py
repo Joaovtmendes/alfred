@@ -288,16 +288,42 @@ EXAMPLES:
         return None
 
 
-async def extract_expense(text: str) -> dict | None:
+async def extract_expense(
+    text: str,
+    merchant_overrides: dict[str, str] | None = None,
+) -> dict | None:
     """Try to extract expense data from a message using Claude.
 
-    Returns a dict with keys: amount, currency, merchant, category, description
-    — or None if the message is not an expense.
+    Args:
+        text: The raw user message.
+        merchant_overrides: Optional dict mapping lowercase merchant name →
+            category, pre-fetched from merchant_category_overrides for this
+            member.  When provided, the LLM result's category is replaced with
+            the stored override if the merchant matches.
+
+    Returns a dict with keys: amount, currency, merchant, category,
+    description — or None if the message is not an expense.
     """
     provider = settings.llm_provider.lower()
     if provider in ("anthropic", "bedrock"):
-        return await _extract_expense_anthropic(text)
-    return None
+        result = await _extract_expense_anthropic(text)
+    else:
+        result = None
+
+    # M12 — apply member-specific merchant→category overrides
+    if result and merchant_overrides and result.get("merchant"):
+        key = result["merchant"].lower()
+        if key in merchant_overrides:
+            old_cat = result["category"]
+            result["category"] = merchant_overrides[key]
+            if old_cat != result["category"]:
+                logger.info(
+                    "llm.category_override_applied",
+                    merchant=result["merchant"],
+                    old=old_cat,
+                    new=result["category"],
+                )
+    return result
 
 
 async def _extract_expense_anthropic(text: str) -> dict | None:

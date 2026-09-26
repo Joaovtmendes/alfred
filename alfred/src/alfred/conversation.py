@@ -21,7 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.llm import classify_query, extract_expense, generate_reply
-from alfred.models import Expense, Member, Message
+from alfred.models import Expense, Member, MerchantCategoryOverride, Message
 from alfred.whatsapp import send_text
 
 logger = structlog.get_logger()
@@ -329,6 +329,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": "Revenu enregistré — {amount} de *{name}*",
         "de": "Einnahme erfasst — {amount} von *{name}*",
     },
+    "category_corrected": {
+        "pt": "✓ Percebido! {merchant} → *{category}*. Vou lembrar para a próxima.",
+        "nl": "✓ Begrepen! {merchant} → *{category}*. Ik onthoud dit voor de volgende keer.",
+        "en": "✓ Got it! {merchant} → *{category}*. I'll remember that.",
+        "fr": "✓ Compris ! {merchant} → *{category}*. Je m'en souviendrai.",
+        "de": "✓ Verstanden! {merchant} → *{category}*. Das merke ich mir.",
+    },
+    "category_corrected_no_merchant": {
+        "pt": "Não encontrei nenhuma despesa recente com esse comerciante para corrigir. Podes registar novamente?",
+        "nl": "Ik vond geen recente uitgave van die merchant om te corrigeren. Kun je het opnieuw invoeren?",
+        "en": "I couldn't find a recent expense from that merchant to correct. Can you re-enter it?",
+        "fr": "Je n'ai pas trouvé de dépense récente de ce marchand à corriger. Peux-tu la re-saisir ?",
+        "de": "Ich fand keine aktuelle Ausgabe von diesem Händler zum Korrigieren. Kannst du sie erneut eingeben?",
+    },
     "lembrete_set": {
         "pt": "⏰ Lembrete configurado: *{text}* às {time} UTC. Vou lembrar-te todos os dias.",
         "nl": "⏰ Herinnering ingesteld: *{text}* om {time} UTC. Ik herinner je elke dag.",
@@ -439,6 +453,56 @@ _LEMBRETE_RE = re.compile(
     r"[:\s]+(.+?)\s+(?:às|at|om|à|um|a)\s+(\d{1,2}:\d{2})\b",
     re.IGNORECASE,
 )
+
+
+# M12 — Category correction patterns
+# "Jumbo é supermarkt" / "Albert Heijn is not restaurant, is supermarkt" / "isso não é wonen, é transport"
+_CORRECTION_RE = re.compile(
+    r"(?:(?P<merchant>[\w\s\-&\'\.]+?)\s+)?(?:não\s+é|nao\s+e|is\s+not|niet|n\'?est\s+pas|ist\s+nicht|ist\s+kein)\s+"
+    r"[\w]+.*?(?:é|e|is|ist|est)\s+(?P<fix_cat>[\w]+)|"
+    r"(?:(?P<merchant2>[\w\s\-&\'\.]+?)\s+)?(?:é|e|is|ist|est)\s+(?P<cat2>[\w]+)\b",
+    re.IGNORECASE,
+)
+
+_VALID_CATEGORIES = frozenset({
+    "supermarkt", "restaurant", "transport", "gezondheid", "entertainment",
+    "wonen", "kleding", "abonnement", "inkomen", "overig",
+    # common aliases
+    "supermercado", "supermercaat", "supermarché", "supermarkt",
+    "alimentação", "food", "eten", "nourriture",
+    "reizen", "viagem", "voyage", "reise",
+    "gezondheidszorg", "saúde", "santé", "gesundheit",
+    "divertissement", "unterhaltung",
+    "wohnen", "loyer", "habitation", "moradia",
+    "kleren", "roupas", "vêtements", "kleidung",
+    "subscription", "abonnement", "assinatura", "abo",
+    "income", "inkomen", "renda", "revenu", "einkommen",
+    "other", "outros", "anderen", "autre",
+})
+
+# Canonical mapping for alias→canonical category
+_CAT_ALIAS: dict[str, str] = {
+    "supermercado": "supermarkt", "supermercaat": "supermarkt", "supermarché": "supermarkt",
+    "alimentação": "restaurant", "food": "restaurant", "eten": "restaurant", "nourriture": "restaurant",
+    "reizen": "transport", "viagem": "transport", "voyage": "transport", "reise": "transport",
+    "gezondheidszorg": "gezondheid", "saúde": "gezondheid", "santé": "gezondheid", "gesundheit": "gezondheid",
+    "divertissement": "entertainment", "unterhaltung": "entertainment",
+    "wohnen": "wonen", "loyer": "wonen", "habitation": "wonen", "moradia": "wonen",
+    "kleren": "kleding", "roupas": "kleding", "vêtements": "kleding", "kleidung": "kleding",
+    "subscription": "abonnement", "assinatura": "abonnement", "abo": "abonnement",
+    "income": "inkomen", "renda": "inkomen", "revenu": "inkomen", "einkommen": "inkomen",
+    "other": "overig", "outros": "overig", "anderen": "overig", "autre": "overig",
+}
+
+
+def _canonical_category(raw: str) -> str | None:
+    """Return canonical category for a raw user string, or None if not recognised."""
+    lower = raw.lower().strip()
+    if lower in _CAT_ALIAS:
+        return _CAT_ALIAS[lower]
+    if lower in {c for c in _VALID_CATEGORIES if not _CAT_ALIAS.get(lower)}:
+        return lower
+    return None
 
 _JOB_TYPE_MAP: dict[str, str] = {
     "medicamento": "medication_reminder",
@@ -699,6 +763,45 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
     return "\n".join(lines)
 
 
+async def _load_merchant_overrides(
+    member: "Member",
+    session: "AsyncSession",
+) -> dict[str, str]:
+    """Return {lowercase_merchant: category} for this member (M12)."""
+    result = await session.execute(
+        select(MerchantCategoryOverride).where(
+            MerchantCategoryOverride.member_id == member.id,
+        )
+    )
+    return {row.merchant: row.category for row in result.scalars().all()}
+
+
+async def _upsert_merchant_override(
+    member: "Member",
+    merchant: str,
+    category: str,
+    session: "AsyncSession",
+) -> None:
+    """Insert or update a merchant→category override for this member (M12)."""
+    from sqlalchemy.dialects.postgresql import insert as _pg_insert
+    key = merchant.lower().strip()
+    stmt = (
+        _pg_insert(MerchantCategoryOverride)
+        .values(
+            id=uuid.uuid4(),
+            member_id=member.id,
+            merchant=key,
+            category=category,
+        )
+        .on_conflict_do_update(
+            constraint="uq_mco_member_merchant",
+            set_={"category": category, "updated_at": datetime.now(timezone.utc)},
+        )
+    )
+    await session.execute(stmt)
+
+
+
 async def handle_inbound(
     member: Member,
     message: Message,
@@ -749,6 +852,9 @@ async def handle_inbound(
 
     # ── 4. Accepted — handle commands and LLM ────────────────────────────────
     if member.consent_state == "accepted":
+
+        # M12 — load member's merchant→category overrides once per message
+        member_overrides = await _load_merchant_overrides(member, session)
 
         # 4a. Stop — re-enter rejected state
         if body in _STOP_WORDS:
@@ -824,8 +930,43 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        # 4e-1. M12 — category correction: "Jumbo é supermarkt"
+        m_corr = _CORRECTION_RE.search(body)
+        if m_corr:
+            raw_merchant = (m_corr.group("merchant") or m_corr.group("merchant2") or "").strip()
+            raw_cat = (m_corr.group("fix_cat") or m_corr.group("cat2") or "").strip()
+            canonical = _canonical_category(raw_cat) if raw_cat else None
+
+            if raw_merchant and canonical:
+                await _upsert_merchant_override(member, raw_merchant, canonical, session)
+                # Patch the most recent expense with this merchant (last 7 days)
+                cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+                res = await session.execute(
+                    select(Expense)
+                    .where(
+                        Expense.member_id == member.id,
+                        Expense.merchant.ilike(f"%{raw_merchant}%"),
+                        Expense.created_at >= cutoff,
+                    )
+                    .order_by(Expense.created_at.desc())
+                    .limit(1)
+                )
+                last_expense = res.scalar_one_or_none()
+                if last_expense:
+                    last_expense.category = canonical
+                    session.add(last_expense)
+
+                reply = _t("category_corrected", lang, merchant=raw_merchant.title(), category=canonical)
+                logger.info(
+                    "conversation.category_override_saved",
+                    wa_phone=to, merchant=raw_merchant, category=canonical,
+                )
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
+
         # 4e. Try to extract an expense or income from the message
-        expense_data = await extract_expense(message.body or "")
+        expense_data = await extract_expense(message.body or "", merchant_overrides=member_overrides)
         if expense_data:
             txn_type = expense_data.get("type", "expense")
             days_ago = expense_data.get("days_ago", 0)
