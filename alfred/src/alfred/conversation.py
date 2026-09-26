@@ -24,36 +24,387 @@ from alfred.whatsapp import send_text
 
 logger = structlog.get_logger()
 
-# ── Consent strings ──────────────────────────────────────────────────────────
+# ── i18n ─────────────────────────────────────────────────────────────────────
 
-DISCLOSURE_NL = (
-    "*Alfred* — assistente pessoal via WhatsApp.\n\n"
-    "Sou uma inteligência artificial, não uma pessoa. "
-    "As tuas mensagens são processadas para te dar suporte.\n\n"
-    "Escreve *sim* para continuar ou *não* para cancelar."
-)
+_SUPPORTED_LANGS = ("pt", "nl", "en", "fr", "de")
 
-CONSENT_ACCEPTED_NL = (
-    "Tudo pronto. Podes começar agora.\n\n"
-    "• \"gastei €45 no Jumbo\" — registar despesa\n"
-    "• \"recebi €2.800 de salário\" — registar receita\n"
-    "• \"resumo\" — ver os gastos do mês\n"
-    "• \"ajuda\" — ver todos os comandos"
-)
+_STRINGS: dict[str, dict[str, str]] = {
+    "disclosure": {
+        "pt": (
+            "*Alfred* — assistente pessoal via WhatsApp.\n\n"
+            "Sou uma inteligência artificial, não uma pessoa. "
+            "As tuas mensagens são processadas para te dar suporte.\n\n"
+            "Escreve *sim* para continuar ou *não* para cancelar."
+        ),
+        "nl": (
+            "*Alfred* — persoonlijke assistent via WhatsApp.\n\n"
+            "Ik ben een kunstmatige intelligentie, geen mens. "
+            "Je berichten worden verwerkt om je te ondersteunen.\n\n"
+            "Schrijf *ja* om door te gaan of *nee* om te annuleren."
+        ),
+        "en": (
+            "*Alfred* — personal assistant via WhatsApp.\n\n"
+            "I am an artificial intelligence, not a person. "
+            "Your messages are processed to provide you support.\n\n"
+            "Write *yes* to continue or *no* to cancel."
+        ),
+        "fr": (
+            "*Alfred* — assistant personnel via WhatsApp.\n\n"
+            "Je suis une intelligence artificielle, pas une personne. "
+            "Tes messages sont traités pour t'apporter du soutien.\n\n"
+            "Écris *oui* pour continuer ou *non* pour annuler."
+        ),
+        "de": (
+            "*Alfred* — persönlicher Assistent via WhatsApp.\n\n"
+            "Ich bin eine künstliche Intelligenz, kein Mensch. "
+            "Deine Nachrichten werden verarbeitet, um dich zu unterstützen.\n\n"
+            "Schreib *ja* um fortzufahren oder *nein* zum Abbrechen."
+        ),
+    },
+    "consent_accepted": {
+        "pt": (
+            "Tudo pronto. Podes começar agora.\n\n"
+            "• \"gastei €45 no Jumbo\" — registar despesa\n"
+            "• \"recebi €2.800 de salário\" — registar receita\n"
+            "• \"resumo\" — ver os gastos do mês\n"
+            "• \"ajuda\" — ver todos os comandos"
+        ),
+        "nl": (
+            "Alles klaar. Je kunt nu beginnen.\n\n"
+            "• \"€45 uitgegeven bij Jumbo\" — uitgave registreren\n"
+            "• \"€2.800 salaris ontvangen\" — inkomsten registreren\n"
+            "• \"overzicht\" — uitgaven van de maand bekijken\n"
+            "• \"hulp\" — alle commando's bekijken"
+        ),
+        "en": (
+            "All set. You can start now.\n\n"
+            "• \"spent €45 at Jumbo\" — record expense\n"
+            "• \"received €2,800 salary\" — record income\n"
+            "• \"summary\" — view monthly expenses\n"
+            "• \"help\" — see all commands"
+        ),
+        "fr": (
+            "Tout est prêt. Tu peux commencer maintenant.\n\n"
+            "• \"dépensé €45 au Jumbo\" — enregistrer une dépense\n"
+            "• \"reçu €2 800 de salaire\" — enregistrer un revenu\n"
+            "• \"résumé\" — voir les dépenses du mois\n"
+            "• \"aide\" — voir toutes les commandes"
+        ),
+        "de": (
+            "Alles bereit. Du kannst jetzt beginnen.\n\n"
+            "• \"€45 bei Jumbo ausgegeben\" — Ausgabe erfassen\n"
+            "• \"€2.800 Gehalt erhalten\" — Einnahme erfassen\n"
+            "• \"übersicht\" — Monatsausgaben anzeigen\n"
+            "• \"hilfe\" — alle Befehle anzeigen"
+        ),
+    },
+    "consent_rejected": {
+        "pt": "Entendido. Se quiseres retomar, é só enviar uma mensagem.",
+        "nl": "Begrepen. Als je wilt hervatten, stuur gewoon een bericht.",
+        "en": "Understood. If you'd like to resume, just send a message.",
+        "fr": "Compris. Si tu veux reprendre, envoie simplement un message.",
+        "de": "Verstanden. Wenn du fortfahren möchtest, sende einfach eine Nachricht.",
+    },
+    "consent_unknown": {
+        "pt": "Responde *sim* para continuar ou *não* para cancelar.",
+        "nl": "Antwoord *ja* om door te gaan of *nee* om te annuleren.",
+        "en": "Reply *yes* to continue or *no* to cancel.",
+        "fr": "Réponds *oui* pour continuer ou *non* pour annuler.",
+        "de": "Antworte *ja* um fortzufahren oder *nein* zum Abbrechen.",
+    },
+    "help": {
+        "pt": (
+            "*Alfred* — o que posso fazer por ti:\n\n"
+            "*Registar despesas*\n"
+            "• \"gastei €45 no Jumbo\"\n"
+            "• \"Uber 12,50\"\n"
+            "• \"paguei €180 de renda\"\n\n"
+            "*Registar receitas*\n"
+            "• \"recebi €2.800 de salário\"\n\n"
+            "*Consultas*\n"
+            "• \"resumo\" — gastos do mês\n"
+            "• \"saldo\" — balanço receitas/despesas\n"
+            "• \"gastos desta semana\" — por período\n"
+            "• \"compara este mês com o mês passado\"\n"
+            "• \"ajuda\" — esta mensagem\n\n"
+            "_Para sair: \"stop\"_"
+        ),
+        "nl": (
+            "*Alfred* — wat ik voor je kan doen:\n\n"
+            "*Uitgaven registreren*\n"
+            "• \"€45 uitgegeven bij Jumbo\"\n"
+            "• \"Uber 12,50\"\n"
+            "• \"€180 huur betaald\"\n\n"
+            "*Inkomsten registreren*\n"
+            "• \"€2.800 salaris ontvangen\"\n\n"
+            "*Opvragen*\n"
+            "• \"overzicht\" — uitgaven van de maand\n"
+            "• \"saldo\" — inkomsten/uitgaven balans\n"
+            "• \"uitgaven deze week\" — per periode\n"
+            "• \"vergelijk deze maand met vorige maand\"\n"
+            "• \"hulp\" — dit bericht\n\n"
+            "_Om te stoppen: \"stoppen\"_"
+        ),
+        "en": (
+            "*Alfred* — what I can do for you:\n\n"
+            "*Record expenses*\n"
+            "• \"spent €45 at Jumbo\"\n"
+            "• \"Uber 12.50\"\n"
+            "• \"paid €180 rent\"\n\n"
+            "*Record income*\n"
+            "• \"received €2,800 salary\"\n\n"
+            "*Queries*\n"
+            "• \"summary\" — monthly expenses\n"
+            "• \"balance\" — income/expense balance\n"
+            "• \"expenses this week\" — by period\n"
+            "• \"compare this month with last month\"\n"
+            "• \"help\" — this message\n\n"
+            "_To stop: \"stop\"_"
+        ),
+        "fr": (
+            "*Alfred* — ce que je peux faire pour toi:\n\n"
+            "*Enregistrer des dépenses*\n"
+            "• \"dépensé €45 au Jumbo\"\n"
+            "• \"Uber 12,50\"\n"
+            "• \"payé €180 de loyer\"\n\n"
+            "*Enregistrer des revenus*\n"
+            "• \"reçu €2 800 de salaire\"\n\n"
+            "*Consultes*\n"
+            "• \"résumé\" — dépenses du mois\n"
+            "• \"solde\" — balance revenus/dépenses\n"
+            "• \"dépenses cette semaine\" — par période\n"
+            "• \"compare ce mois avec le mois dernier\"\n"
+            "• \"aide\" — ce message\n\n"
+            "_Pour arrêter: \"stop\"_"
+        ),
+        "de": (
+            "*Alfred* — was ich für dich tun kann:\n\n"
+            "*Ausgaben erfassen*\n"
+            "• \"€45 bei Jumbo ausgegeben\"\n"
+            "• \"Uber 12,50\"\n"
+            "• \"€180 Miete bezahlt\"\n\n"
+            "*Einnahmen erfassen*\n"
+            "• \"€2.800 Gehalt erhalten\"\n\n"
+            "*Abfragen*\n"
+            "• \"übersicht\" — Monatsausgaben\n"
+            "• \"bilanz\" — Einnahmen/Ausgaben-Balance\n"
+            "• \"ausgaben diese woche\" — nach Zeitraum\n"
+            "• \"vergleiche diesen monat mit letztem monat\"\n"
+            "• \"hilfe\" — diese Nachricht\n\n"
+            "_Zum Beenden: \"stop\"_"
+        ),
+    },
+    "no_records_scope": {
+        "pt": "Sem registos em *{category}* em {period_label}.",
+        "nl": "Geen registraties in *{category}* in {period_label}.",
+        "en": "No records in *{category}* in {period_label}.",
+        "fr": "Aucun enregistrement dans *{category}* en {period_label}.",
+        "de": "Keine Einträge in *{category}* in {period_label}.",
+    },
+    "no_records_period": {
+        "pt": "Sem registos em {period_label}.",
+        "nl": "Geen registraties in {period_label}.",
+        "en": "No records in {period_label}.",
+        "fr": "Aucun enregistrement en {period_label}.",
+        "de": "Keine Einträge in {period_label}.",
+    },
+    "no_records_month": {
+        "pt": "Sem registos este mês.",
+        "nl": "Geen registraties deze maand.",
+        "en": "No records this month.",
+        "fr": "Aucun enregistrement ce mois-ci.",
+        "de": "Keine Einträge diesen Monat.",
+    },
+    "summary_title": {
+        "pt": "*Gastos — {period_label}*",
+        "nl": "*Uitgaven — {period_label}*",
+        "en": "*Expenses — {period_label}*",
+        "fr": "*Dépenses — {period_label}*",
+        "de": "*Ausgaben — {period_label}*",
+    },
+    "category_title": {
+        "pt": "*{category} — {period_label}*",
+        "nl": "*{category} — {period_label}*",
+        "en": "*{category} — {period_label}*",
+        "fr": "*{category} — {period_label}*",
+        "de": "*{category} — {period_label}*",
+    },
+    "total_expenses": {
+        "pt": "*Total despesas: {amount}*",
+        "nl": "*Totaal uitgaven: {amount}*",
+        "en": "*Total expenses: {amount}*",
+        "fr": "*Total dépenses: {amount}*",
+        "de": "*Gesamtausgaben: {amount}*",
+    },
+    "category_total": {
+        "pt": "*Total: {amount}*",
+        "nl": "*Totaal: {amount}*",
+        "en": "*Total: {amount}*",
+        "fr": "*Total: {amount}*",
+        "de": "*Gesamt: {amount}*",
+    },
+    "income_line": {
+        "pt": "Receitas: {amount}",
+        "nl": "Inkomsten: {amount}",
+        "en": "Income: {amount}",
+        "fr": "Revenus: {amount}",
+        "de": "Einnahmen: {amount}",
+    },
+    "balance_line": {
+        "pt": "_Saldo: {sign}{amount}_",
+        "nl": "_Saldo: {sign}{amount}_",
+        "en": "_Balance: {sign}{amount}_",
+        "fr": "_Solde: {sign}{amount}_",
+        "de": "_Bilanz: {sign}{amount}_",
+    },
+    "transactions_count": {
+        "pt": "_{n} transação(ões)_",
+        "nl": "_{n} transactie(s)_",
+        "en": "_{n} transaction(s)_",
+        "fr": "_{n} transaction(s)_",
+        "de": "_{n} Transaktion(en)_",
+    },
+    "saldo_title": {
+        "pt": "*Saldo — {month}*",
+        "nl": "*Saldo — {month}*",
+        "en": "*Balance — {month}*",
+        "fr": "*Solde — {month}*",
+        "de": "*Bilanz — {month}*",
+    },
+    "saldo_income": {
+        "pt": "• Receitas: {amount}",
+        "nl": "• Inkomsten: {amount}",
+        "en": "• Income: {amount}",
+        "fr": "• Revenus: {amount}",
+        "de": "• Einnahmen: {amount}",
+    },
+    "saldo_expenses": {
+        "pt": "• Despesas: {amount}",
+        "nl": "• Uitgaven: {amount}",
+        "en": "• Expenses: {amount}",
+        "fr": "• Dépenses: {amount}",
+        "de": "• Ausgaben: {amount}",
+    },
+    "saldo_balance": {
+        "pt": "\n*Saldo: {sign}{amount}*",
+        "nl": "\n*Saldo: {sign}{amount}*",
+        "en": "\n*Balance: {sign}{amount}*",
+        "fr": "\n*Solde: {sign}{amount}*",
+        "de": "\n*Bilanz: {sign}{amount}*",
+    },
+    "comparison_title": {
+        "pt": "*Comparação de despesas*",
+        "nl": "*Vergelijking uitgaven*",
+        "en": "*Expense comparison*",
+        "fr": "*Comparaison des dépenses*",
+        "de": "*Ausgabenvergleich*",
+    },
+    "comparison_no_prev": {
+        "pt": "sem dados no mês anterior",
+        "nl": "geen gegevens vorige maand",
+        "en": "no data for previous month",
+        "fr": "pas de données le mois précédent",
+        "de": "keine Daten für den Vormonat",
+    },
+    "comparison_equal": {
+        "pt": "_igual ao mês anterior_",
+        "nl": "_gelijk aan vorige maand_",
+        "en": "_same as previous month_",
+        "fr": "_identique au mois précédent_",
+        "de": "_gleich wie letzter Monat_",
+    },
+    "expense_recorded": {
+        "pt": "Despesa registada — {amount} em *{name}*",
+        "nl": "Uitgave geregistreerd — {amount} bij *{name}*",
+        "en": "Expense recorded — {amount} at *{name}*",
+        "fr": "Dépense enregistrée — {amount} chez *{name}*",
+        "de": "Ausgabe erfasst — {amount} bei *{name}*",
+    },
+    "income_recorded": {
+        "pt": "Receita registada — {amount} de *{name}*",
+        "nl": "Inkomsten geregistreerd — {amount} van *{name}*",
+        "en": "Income recorded — {amount} from *{name}*",
+        "fr": "Revenu enregistré — {amount} de *{name}*",
+        "de": "Einnahme erfasst — {amount} von *{name}*",
+    },
+    "days_ago_suffix": {
+        "pt": " _(referente a {n}d atrás)_",
+        "nl": " _({n}d geleden)_",
+        "en": " _({n}d ago)_",
+        "fr": " _(il y a {n}j)_",
+        "de": " _(vor {n}T)_",
+    },
+    "period_current_week": {
+        "pt": "esta semana",
+        "nl": "deze week",
+        "en": "this week",
+        "fr": "cette semaine",
+        "de": "diese Woche",
+    },
+    "period_last_week": {
+        "pt": "semana passada",
+        "nl": "vorige week",
+        "en": "last week",
+        "fr": "semaine dernière",
+        "de": "letzte Woche",
+    },
+}
 
-CONSENT_REJECTED_NL = (
-    "Entendido. Se quiseres retomar, é só enviar uma mensagem."
-)
 
-CONSENT_UNKNOWN_NL = (
-    "Responde *sim* para continuar ou *não* para cancelar."
-)
+def _t(key: str, lang: str, **kwargs: object) -> str:
+    """Translate a string key to the given language, with optional format args."""
+    lang = lang if lang in _SUPPORTED_LANGS else "en"
+    tmpl = _STRINGS[key].get(lang) or _STRINGS[key]["en"]
+    return tmpl.format(**kwargs) if kwargs else tmpl
 
-# ── Command keywords ─────────────────────────────────────────────────────────
 
-_SUMMARY_WORDS = {"resumo", "overzicht", "summary", "samenvatting", "gastos"}
-_SALDO_WORDS = {"saldo", "balance", "balanço", "balancete", "balanso"}
-_HELP_WORDS = {"ajuda", "help", "hulp", "comandos", "commands"}
+def _detect_language(text: str) -> str:
+    """Heuristic: detect language from first-message keywords."""
+    t = unicodedata.normalize("NFC", text).lower()
+    if any(w in t for w in ["bonjour", "salut", "allô", "allo", "merci",
+                              "bilan", "solde", "aide", " oui", "oui ",
+                              "dépense", "depense", "résumé"]):
+        return "fr"
+    if any(w in t for w in ["guten", "danke", "bitte", "übersicht", "ubersicht",
+                              "ausgaben", "hilfe", "nein", "bezahlt", "erhalten"]):
+        return "de"
+    if any(w in t for w in ["oi ", " oi", "olá", "ola", "obrigad", "ajuda",
+                              "gastei", "paguei", "recebi", " sim", "sim ",
+                              "não", "nao", "resumo"]):
+        return "pt"
+    if any(w in t for w in [" dag", "dag ", "hallo", "bedankt", "overzicht",
+                              "hulp", "samenvatting", "uitgegeven", "ontvangen",
+                              "betaald", "hoi "]):
+        return "nl"
+    return "en"
+
+
+# ── Command keywords ──────────────────────────────────────────────────────────
+
+_SUMMARY_WORDS = {
+    "resumo", "overzicht", "summary", "samenvatting", "gastos",
+    "résumé", "resume", "bilan", "dépenses", "depenses",
+    "übersicht", "ubersicht", "zusammenfassung", "ausgaben",
+}
+_SALDO_WORDS = {
+    "saldo", "balance", "balanço", "balancete", "balanso",
+    "solde", "bilanz", "kontostand",
+}
+_HELP_WORDS = {
+    "ajuda", "help", "hulp", "comandos", "commands",
+    "aide", "commandes", "hilfe", "befehle",
+}
+_STOP_WORDS = {
+    "stop", "pare", "parar", "stoppen", "ophouden",
+    "arrêter", "arreter", "aufhören", "aufhoren",
+}
+_CONSENT_YES = {
+    "sim", "yes", "s", "y", "ok", "aceito", "aceitar",
+    "ja", "oui",
+}
+_CONSENT_NO = {
+    "não", "nao", "no", "n", "stop", "nee", "non", "nein",
+}
 
 
 def _is_command(body: str, keywords: set[str]) -> bool:
@@ -63,27 +414,8 @@ def _is_command(body: str, keywords: set[str]) -> bool:
             return True
     return False
 
-HELP_TEXT = (
-    "*Alfred* — o que posso fazer por ti:\n\n"
-    "*Registar despesas*\n"
-    "• \"gastei €45 no Jumbo\"\n"
-    "• \"Uber 12,50\"\n"
-    "• \"paguei €180 de renda\"\n"
-    "• \"esqueci de anotar o almoço de ontem, €39\"\n\n"
-    "*Registar receitas*\n"
-    "• \"recebi €2.800 de salário\"\n"
-    "• \"recebi €500 do freela\"\n\n"
-    "*Consultas*\n"
-    "• \"resumo\" — gastos detalhados do mês\n"
-    "• \"saldo\" — balanço receitas/despesas\n"
-    "• \"quanto gastei em supermercado?\" — por categoria\n"
-    "• \"gastos desta semana\" — por período\n"
-    "• \"compara este mês com o mês passado\" — comparação\n"
-    "• \"ajuda\" — esta mensagem\n\n"
-    "_Para sair: \"stop\"_"
-)
 
-# ── History window ───────────────────────────────────────────────────────────
+# ── History window ────────────────────────────────────────────────────────────
 
 _HISTORY_LIMIT = 10  # messages (pairs) to include in LLM context
 
@@ -131,7 +463,7 @@ def _fmt_eur(amount: float) -> str:
     return f"€{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def _period_range(period: str) -> tuple[datetime, datetime | None, str]:
+def _period_range(period: str, lang: str = "en") -> tuple[datetime, datetime | None, str]:
     """Return (start, end_exclusive, label).  end_exclusive=None means open (up to now)."""
     now = datetime.now(timezone.utc)
     if period == "last_month":
@@ -143,13 +475,13 @@ def _period_range(period: str) -> tuple[datetime, datetime | None, str]:
         start = (now - timedelta(days=now.weekday())).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        return start, None, "esta semana"
+        return start, None, _t("period_current_week", lang)
     if period == "last_week":
         start_this = (now - timedelta(days=now.weekday())).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
         start = start_this - timedelta(days=7)
-        return start, start_this, "semana passada"
+        return start, start_this, _t("period_last_week", lang)
     # default: current_month
     start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     return start, None, now.strftime("%B %Y").capitalize()
@@ -163,7 +495,8 @@ async def _build_summary(
     category: str | None = None,
 ) -> str:
     """Query expenses/income for a period (optionally filtered by category)."""
-    start, end_excl, period_label = _period_range(period)
+    lang = member.language or "en"
+    start, end_excl, period_label = _period_range(period, lang)
 
     filters = [
         Expense.member_id == member.id,
@@ -180,8 +513,9 @@ async def _build_summary(
     records = result.scalars().all()
 
     if not records:
-        scope = f"em *{category.capitalize()}*" if category else f"em {period_label}"
-        return f"Sem registos {scope}."
+        if category:
+            return _t("no_records_scope", lang, category=category.capitalize(), period_label=period_label)
+        return _t("no_records_period", lang, period_label=period_label)
 
     outflows = [e for e in records if e.transaction_type != "income"]
     inflows = [e for e in records if e.transaction_type == "income"]
@@ -190,14 +524,14 @@ async def _build_summary(
 
     if category:
         # Category view: list individual transactions
-        title = f"*{category.capitalize()} — {period_label}*"
+        title = _t("category_title", lang, category=category.capitalize(), period_label=period_label)
         lines = [f"{title}\n"]
         for e in outflows[:10]:
             date_str = e.expense_date.strftime("%d/%m")
             name = e.merchant or e.description or category
             lines.append(f"• {date_str} {name}: {_fmt_eur(e.amount)}")
-        lines.append(f"\n*Total: {_fmt_eur(total_out)}*")
-        lines.append(f"_{len(outflows)} transação(ões)_")
+        lines.append(f"\n{_t('category_total', lang, amount=_fmt_eur(total_out))}")
+        lines.append(_t("transactions_count", lang, n=len(outflows)))
     else:
         # Full summary: group by category
         by_cat: dict[str, float] = {}
@@ -205,25 +539,26 @@ async def _build_summary(
             cat = e.category or "overig"
             by_cat[cat] = by_cat.get(cat, 0) + e.amount
 
-        lines = [f"*Gastos — {period_label}*\n"]
+        lines = [f"{_t('summary_title', lang, period_label=period_label)}\n"]
         for cat, amt in sorted(by_cat.items(), key=lambda x: -x[1]):
             lines.append(f"• {cat.capitalize()}: {_fmt_eur(amt)}")
 
-        lines.append(f"\n*Total despesas: {_fmt_eur(total_out)}*")
+        lines.append(f"\n{_t('total_expenses', lang, amount=_fmt_eur(total_out))}")
 
         if inflows:
             balance = total_in - total_out
-            sign = "+" if balance >= 0 else ""
-            lines.append(f"Receitas: {_fmt_eur(total_in)}")
-            lines.append(f"_Saldo: {sign}{_fmt_eur(balance)}_")
+            sign = "+" if balance >= 0 else "-"
+            lines.append(_t("income_line", lang, amount=_fmt_eur(total_in)))
+            lines.append(_t("balance_line", lang, sign=sign, amount=_fmt_eur(abs(balance))))
 
-        lines.append(f"_{len(outflows)} transação(ões)_")
+        lines.append(_t("transactions_count", lang, n=len(outflows)))
 
     return "\n".join(lines)
 
 
 async def _build_saldo(member: Member, session: AsyncSession) -> str:
     """Show income/expense balance for the current month."""
+    lang = member.language or "en"
     now = datetime.now(timezone.utc)
     start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
@@ -236,25 +571,26 @@ async def _build_saldo(member: Member, session: AsyncSession) -> str:
     records = result.scalars().all()
 
     if not records:
-        return "Sem registos este mês."
+        return _t("no_records_month", lang)
 
     total_in = sum(e.amount for e in records if e.transaction_type == "income")
     total_out = sum(e.amount for e in records if e.transaction_type != "income")
     balance = total_in - total_out
-    sign = "+" if balance >= 0 else ""
+    sign = "+" if balance >= 0 else "-"
 
     month_label = now.strftime("%B %Y").capitalize()
     lines = [
-        f"*Saldo — {month_label}*\n",
-        f"• Receitas: {_fmt_eur(total_in)}",
-        f"• Despesas: {_fmt_eur(total_out)}",
-        f"\n*Saldo: {sign}{_fmt_eur(balance)}*",
+        f"{_t('saldo_title', lang, month=month_label)}\n",
+        _t("saldo_income", lang, amount=_fmt_eur(total_in)),
+        _t("saldo_expenses", lang, amount=_fmt_eur(total_out)),
+        _t("saldo_balance", lang, sign=sign, amount=_fmt_eur(abs(balance))),
     ]
     return "\n".join(lines)
 
 
 async def _build_comparison(member: Member, session: AsyncSession) -> str:
     """Compare current month vs previous month (expenses only)."""
+    lang = member.language or "en"
     now = datetime.now(timezone.utc)
     cur_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     prev_end = cur_start
@@ -281,9 +617,9 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
 
     diff = cur_total - prev_total
     if prev_total == 0:
-        diff_str = "sem dados no mês anterior"
+        diff_str = _t("comparison_no_prev", lang)
     elif diff == 0:
-        diff_str = "_igual ao mês anterior_"
+        diff_str = _t("comparison_equal", lang)
     elif diff > 0:
         pct = diff / prev_total * 100
         diff_str = f"_+{_fmt_eur(diff)} (+{pct:.0f}%) vs {prev_label}_"
@@ -292,9 +628,9 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
         diff_str = f"_{_fmt_eur(diff)} (-{pct:.0f}%) vs {prev_label}_"
 
     lines = [
-        "*Comparação de despesas*\n",
-        f"• {prev_label}: {_fmt_eur(prev_total)} ({prev_n} transações)",
-        f"• {cur_label}: {_fmt_eur(cur_total)} ({cur_n} transações)",
+        f"{_t('comparison_title', lang)}\n",
+        f"• {prev_label}: {_fmt_eur(prev_total)} ({prev_n})",
+        f"• {cur_label}: {_fmt_eur(cur_total)} ({cur_n})",
         f"\n{diff_str}",
     ]
     return "\n".join(lines)
@@ -309,46 +645,54 @@ async def handle_inbound(
     to = member.wa_phone
     body = unicodedata.normalize("NFC", (message.body or "").strip()).lower()
 
-    # ── 1. First contact: send disclosure ───────────────────────────────────
+    # ── 1. First contact: detect language, send disclosure ───────────────────
     if member.consent_state == "pending":
-        await send_text(to, DISCLOSURE_NL)
-        member.consent_state = "pending_response"
+        lang = _detect_language(body)
+        member.language = lang
         session.add(member)
-        logger.info("conversation.disclosure_sent", wa_phone=to)
+        disclosure = _t("disclosure", lang)
+        await send_text(to, disclosure)
+        member.consent_state = "pending_response"
+        logger.info("conversation.disclosure_sent", wa_phone=to, lang=lang)
         return
 
-    # ── 2. Awaiting consent response ────────────────────────────────────────
+    lang = member.language or "en"
+
+    # ── 2. Awaiting consent response ─────────────────────────────────────────
     if member.consent_state == "pending_response":
-        if body in ("sim", "yes", "s", "y", "ok", "aceito", "aceitar", "ja"):
+        if body in _CONSENT_YES:
             member.consent_state = "accepted"
             member.disclosure_accepted_at = datetime.now(timezone.utc)
             member.disclosure_version = "1.0"
             session.add(member)
-            await send_text(to, CONSENT_ACCEPTED_NL)
-            await _save_outbound(member, CONSENT_ACCEPTED_NL, session)
+            reply = _t("consent_accepted", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
             logger.info("conversation.consent_accepted", wa_phone=to)
-        elif body in ("não", "nao", "no", "n", "stop", "nee"):
+        elif body in _CONSENT_NO:
             member.consent_state = "rejected"
             session.add(member)
-            await send_text(to, CONSENT_REJECTED_NL)
+            reply = _t("consent_rejected", lang)
+            await send_text(to, reply)
             logger.info("conversation.consent_rejected", wa_phone=to)
         else:
-            await send_text(to, CONSENT_UNKNOWN_NL)
+            await send_text(to, _t("consent_unknown", lang))
         return
 
-    # ── 3. Rejected — honour their choice ───────────────────────────────────
+    # ── 3. Rejected — honour their choice ────────────────────────────────────
     if member.consent_state == "rejected":
         logger.info("conversation.rejected_member_ignored", wa_phone=to)
         return
 
-    # ── 4. Accepted — handle commands and LLM ───────────────────────────────
+    # ── 4. Accepted — handle commands and LLM ────────────────────────────────
     if member.consent_state == "accepted":
 
         # 4a. Stop — re-enter rejected state
-        if body in ("stop", "pare", "parar", "stoppen", "ophouden"):
+        if body in _STOP_WORDS:
             member.consent_state = "rejected"
             session.add(member)
-            await send_text(to, CONSENT_REJECTED_NL)
+            reply = _t("consent_rejected", lang)
+            await send_text(to, reply)
             logger.info("conversation.stop_requested", wa_phone=to)
             return
 
@@ -361,8 +705,9 @@ async def handle_inbound(
 
         # 4c. Help command
         if _is_command(body, _HELP_WORDS):
-            await send_text(to, HELP_TEXT)
-            await _save_outbound(member, HELP_TEXT, session)
+            help_text = _t("help", lang)
+            await send_text(to, help_text)
+            await _save_outbound(member, help_text, session)
             return
 
         # 4d. Summary command
@@ -393,12 +738,12 @@ async def handle_inbound(
             )
             session.add(expense)
 
-            label = "Receita" if txn_type == "income" else "Despesa"
             name = expense_data["merchant"] or expense_data["category"] or expense_data["description"]
             amt_fmt = _fmt_eur(expense_data["amount"])
-            reply = f"{label} registada — {amt_fmt} em *{name}*"
+            key = "income_recorded" if txn_type == "income" else "expense_recorded"
+            reply = _t(key, lang, amount=amt_fmt, name=name)
             if days_ago > 0:
-                reply += f" _(referente a {days_ago}d atrás)_"
+                reply += _t("days_ago_suffix", lang, n=days_ago)
 
             await send_text(to, reply)
             await _save_outbound(member, reply, session)

@@ -26,6 +26,23 @@ Als de gebruiker een uitgave meldt: bevestig kort, de registratie verloopt autom
 Als de gebruiker om een overzicht vraagt: zeg dat je het ophaalt."""
 
 
+
+_LLM_ERROR: dict[str, str] = {
+    "pt": "Não foi possível processar a tua mensagem. Tenta de novo.",
+    "nl": "Sorry, ik kan je bericht nu niet verwerken. Probeer het later opnieuw.",
+    "en": "Sorry, I couldn't process your message. Please try again.",
+    "fr": "Désolé, je n'ai pas pu traiter ton message. Réessaie.",
+    "de": "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten. Versuche es erneut.",
+}
+
+_LANG_INSTRUCTION: dict[str, str] = {
+    "pt": "Responde SEMPRE em português. Nunca mistures com inglês ou neerlandês, mesmo que o histórico contenha outras línguas.",
+    "nl": "Antwoord ALTIJD in het Nederlands. Gebruik nooit Engels of Portugees, ook niet als de geschiedenis andere talen bevat.",
+    "en": "ALWAYS respond in English. Never mix in Portuguese or Dutch, even if the conversation history contains other languages.",
+    "fr": "Réponds TOUJOURS em français. Ne mélange jamais avec l'anglais ou le néerlandais, même si l'historique contient d'autres langues.",
+    "de": "Antworte IMMER auf Deutsch. Vermische niemals mit Englisch oder Niederländisch, auch wenn der Gesprächsverlauf andere Sprachen enthält.",
+}
+
 def _bedrock_model_id(model: str) -> str:
     """Normalise model name for Bedrock (adds prefix if needed)."""
     if model.startswith("anthropic."):
@@ -81,7 +98,7 @@ async def _reply_anthropic(
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             logger.warning("llm.anthropic_key_missing")
-            return "Sorry, ik kan je bericht nu niet verwerken. Probeer het later opnieuw."
+            return _LLM_ERROR.get(getattr(member, "language", "en"), _LLM_ERROR["en"])
 
         model = _anthropic_model_id(settings.llm_model)
         client = anthropic.Anthropic(api_key=api_key)
@@ -89,10 +106,14 @@ async def _reply_anthropic(
         messages: list[dict] = list(history or [])
         messages.append({"role": "user", "content": message.body or ""})
 
+        lang = getattr(member, "language", "en") or "en"
+        lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
+        system_prompt = f"{_SYSTEM_PROMPT}\n\n{lang_instr}"
+
         response = client.messages.create(
             model=model,
             max_tokens=512,
-            system=_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=messages,
         )
 
@@ -113,7 +134,7 @@ async def _reply_anthropic(
         return f"[echo] {message.body}"
     except Exception as exc:
         logger.error("llm.error", error=str(exc))
-        return "Sorry, ik kan je bericht nu niet verwerken. Probeer het later opnieuw."
+        return _LLM_ERROR.get(getattr(member, "language", "en"), _LLM_ERROR["en"])
 
 
 async def _reply_bedrock(
@@ -131,10 +152,14 @@ async def _reply_bedrock(
         messages: list[dict] = list(history or [])
         messages.append({"role": "user", "content": message.body or ""})
 
+        lang = getattr(member, "language", "en") or "en"
+        lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
+        system_prompt = f"{_SYSTEM_PROMPT}\n\n{lang_instr}"
+
         body = json.dumps({
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 512,
-            "system": _SYSTEM_PROMPT,
+            "system": system_prompt,
             "messages": messages,
         })
 
@@ -164,7 +189,7 @@ async def _reply_bedrock(
         return f"[echo] {message.body}"
     except Exception as exc:
         logger.error("llm.error", error=str(exc))
-        return "Sorry, ik kan je bericht nu niet verwerken. Probeer het later opnieuw."
+        return _LLM_ERROR.get(getattr(member, "language", "en"), _LLM_ERROR["en"])
 
 
 async def classify_query(text: str) -> dict | None:
@@ -192,7 +217,7 @@ async def _classify_query_anthropic(text: str) -> dict | None:
         client = anthropic.Anthropic(api_key=api_key)
 
         system = """You are a financial query classifier for a WhatsApp assistant.
-The user writes in Portuguese, Dutch, or English.
+The user writes in Portuguese, Dutch, English, French, or German.
 
 Detect if the message is a financial QUERY (asking about past data). NOT a new transaction.
 
@@ -287,7 +312,7 @@ async def _extract_expense_anthropic(text: str) -> dict | None:
         client = anthropic.Anthropic(api_key=api_key)
 
         system = """You are a financial transaction parser for a WhatsApp assistant.
-The user writes in Portuguese, Dutch, or English — handle all three.
+The user writes in Portuguese, Dutch, English, French, or German — handle all five.
 
 If the message contains a financial transaction, return ONLY valid JSON (no other text):
 {"is_expense": true, "type": "expense"|"income", "amount": <float>, "currency": "EUR"|"USD"|"GBP", "merchant": "<store/person or null>", "category": "<category>", "description": "<short description>", "days_ago": <int, 0=today, 1=yesterday>}
