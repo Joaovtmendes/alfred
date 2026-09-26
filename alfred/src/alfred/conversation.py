@@ -9,6 +9,8 @@ State machine:
   accepted         → commands or LLM reply with conversation history
 """
 from __future__ import annotations
+
+import re
 import unicodedata
 
 import uuid
@@ -327,6 +329,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": "Revenu enregistré — {amount} de *{name}*",
         "de": "Einnahme erfasst — {amount} von *{name}*",
     },
+    "lembrete_set": {
+        "pt": "⏰ Lembrete configurado: *{text}* às {time} UTC. Vou lembrar-te todos os dias.",
+        "nl": "⏰ Herinnering ingesteld: *{text}* om {time} UTC. Ik herinner je elke dag.",
+        "en": "⏰ Reminder set: *{text}* at {time} UTC. I'll remind you every day.",
+        "fr": "⏰ Rappel configuré : *{text}* à {time} UTC. Je te rappellerai chaque jour.",
+        "de": "⏰ Erinnerung eingestellt: *{text}* um {time} Uhr UTC. Ich erinnere dich täglich.",
+    },
+    "lembrete_invalid": {
+        "pt": "Formato inválido. Tenta: *configura lembrete: toma medicamento às 08:00*",
+        "nl": "Ongeldig formaat. Probeer: *herinnering: medicatie innemen om 08:00*",
+        "en": "Invalid format. Try: *reminder: take medication at 08:00*",
+        "fr": "Format invalide. Essaie : *rappel : prendre médicament à 08:00*",
+        "de": "Ungültiges Format. Versuche: *Erinnerung: Medikament nehmen um 08:00*",
+    },
     "days_ago_suffix": {
         "pt": " _(referente a {n}d atrás)_",
         "nl": " _({n}d geleden)_",
@@ -405,6 +421,53 @@ _CONSENT_YES = {
 _CONSENT_NO = {
     "não", "nao", "no", "n", "stop", "nee", "non", "nein",
 }
+
+
+
+_LEMBRETE_WORDS = {
+    "configura lembrete", "configura lembrete:",
+    "herinnering:", "herinnering",
+    "reminder:", "set reminder",
+    "rappel:", "configurer rappel",
+    "erinnerung:", "erinnerung setzen",
+}
+
+# Matches "lembrete: <text> às/at/om/à/um HH:MM"
+_LEMBRETE_RE = re.compile(
+    r"(?:configura\s+lembrete|lembrete|set\s+reminder|reminder|herinnering|"
+    r"rappel|configurer\s+rappel|erinnerung(?:\s+setzen)?)"
+    r"[:\s]+(.+?)\s+(?:às|at|om|à|um|a)\s+(\d{1,2}:\d{2})\b",
+    re.IGNORECASE,
+)
+
+_JOB_TYPE_MAP: dict[str, str] = {
+    "medicamento": "medication_reminder",
+    "medicine": "medication_reminder",
+    "medication": "medication_reminder",
+    "medicatie": "medication_reminder",
+    "médicament": "medication_reminder",
+    "medikament": "medication_reminder",
+    "pil": "medication_reminder",
+    "treino": "workout_reminder",
+    "treinar": "workout_reminder",
+    "workout": "workout_reminder",
+    "training": "workout_reminder",
+    "sport": "workout_reminder",
+    "objetivo": "goal_checkin",
+    "goal": "goal_checkin",
+    "doel": "goal_checkin",
+    "objectif": "goal_checkin",
+    "ziel": "goal_checkin",
+}
+
+
+def _detect_job_type(text: str) -> str:
+    """Detect reminder job_type from text keywords; default medication_reminder."""
+    lower = text.lower()
+    for kw, jtype in _JOB_TYPE_MAP.items():
+        if kw in lower:
+            return jtype
+    return "medication_reminder"
 
 
 def _is_command(body: str, keywords: set[str]) -> bool:
@@ -715,6 +778,50 @@ async def handle_inbound(
             summary = await _build_summary(member, session)
             await send_text(to, summary)
             await _save_outbound(member, summary, session)
+            return
+
+        # 4e-0. "configura lembrete" — proactive reminder setup (M5)
+        m_lembrete = _LEMBRETE_RE.search(body)
+        if m_lembrete or _is_command(body, _LEMBRETE_WORDS):
+            if m_lembrete:
+                reminder_text = m_lembrete.group(1).strip()
+                time_str = m_lembrete.group(2).zfill(5)  # "8:00" → "08:00"
+                # Validate HH:MM
+                try:
+                    hh, mm = time_str.split(":")
+                    assert 0 <= int(hh) <= 23 and 0 <= int(mm) <= 59
+                except Exception:
+                    reply = _t("lembrete_invalid", lang)
+                    await send_text(to, reply)
+                    await _save_outbound(member, reply, session)
+                    return
+
+                job_type = _detect_job_type(reminder_text)
+                from alfred.models import ScheduledJob
+                import uuid as _uuid
+                job = ScheduledJob(
+                    id=_uuid.uuid4(),
+                    member_id=member.id,
+                    job_type=job_type,
+                    time_of_day=time_str,
+                    days_mask=127,  # every day
+                    payload={"text": reminder_text},
+                    active=True,
+                )
+                session.add(job)
+                reply = _t("lembrete_set", lang, text=reminder_text, time=time_str)
+                logger.info(
+                    "conversation.lembrete_created",
+                    wa_phone=to,
+                    job_type=job_type,
+                    time=time_str,
+                )
+            else:
+                # Bare "lembrete" without full syntax → show format hint
+                reply = _t("lembrete_invalid", lang)
+
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
             return
 
         # 4e. Try to extract an expense or income from the message

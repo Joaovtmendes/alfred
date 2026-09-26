@@ -155,3 +155,46 @@ class Expense(Base):
 
     member: Mapped[Member] = relationship(back_populates="expenses")
     household: Mapped[Household] = relationship(back_populates="expenses")
+
+
+class ScheduledJob(Base):
+    """Proactive notification schedule for a member.
+
+    M5 — each row represents one recurring reminder or weekly summary.
+    The daily cron script queries this table for due jobs and enqueues them.
+
+    job_type:
+        weekly_summary        — sent every Monday morning
+        medication_reminder   — sent daily at time_of_day
+        goal_checkin          — sent daily at time_of_day
+        workout_reminder      — sent daily at time_of_day
+
+    days_mask: bitmask Mon=1 Tue=2 Wed=4 Thu=8 Fri=16 Sat=32 Sun=64
+               127 = every day, 1 = Monday only
+    """
+
+    __tablename__ = "scheduled_job"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
+    )
+    job_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # weekly_summary | medication_reminder | goal_checkin | workout_reminder
+    time_of_day: Mapped[str] = mapped_column(
+        String(5), nullable=False, default="08:00"
+    )  # "HH:MM" UTC
+    days_mask: Mapped[int] = mapped_column(
+        nullable=False, default=127
+    )  # bitmask; 127 = every day
+    payload: Mapped[dict | None] = mapped_column(JSONB)  # extra params e.g. {"text": "toma medicamento"}
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    member: Mapped["Member"] = relationship()

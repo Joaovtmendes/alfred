@@ -1,3 +1,4 @@
+# ── Web service (main) ──────────────────────────────────────────────────────
 [build]
 dockerfilePath = "Dockerfile"
 
@@ -6,3 +7,16 @@ startCommand = "bash /app/start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 60
 restartPolicyType = "on_failure"
+
+# ── Additional Railway services (create manually in Railway dashboard) ───────
+#
+# 1. Cron service — "alfred-cron"
+#    Image:         same Docker image as web service
+#    Start command: python /app/scripts/daily_cron.py
+#    Cron schedule: 0 8 * * *   (08:00 UTC daily)
+#    Env vars:      same as web service (share reference variables)
+#
+# 2. Worker service — "alfred-worker"  (optional, for Procrastinate async jobs)
+#    Image:         same Docker image as web service
+#    Start command: python /app/scripts/worker.py
+#    Env vars:      same as web service

@@ -1,0 +1,67 @@
+{
+  "_comment": "Daily workout reminder. Body {{1}} = custom workout text from ScheduledJob.payload.text.",
+  "name": "alfred_workout_reminder",
+  "category": "UTILITY",
+  "translations": {
+    "en": {
+      "language": "en",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Workout time!" },
+        {
+          "type": "BODY",
+          "text": "💪 Time for: {{1}}\n\nYou've got this! Reply to Alfred when you're done.",
+          "example": { "body_text": [["30-minute run"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — your AI assistant" }
+      ]
+    },
+    "pt_BR": {
+      "language": "pt_BR",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Hora do treino!" },
+        {
+          "type": "BODY",
+          "text": "💪 Hora de: {{1}}\n\nVai a isso! Responde ao Alfred quando terminares.",
+          "example": { "body_text": [["corrida de 30 minutos"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — o teu assistente pessoal" }
+      ]
+    },
+    "nl": {
+      "language": "nl",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Tijd om te sporten!" },
+        {
+          "type": "BODY",
+          "text": "💪 Tijd voor: {{1}}\n\nJij kunt het! Antwoord Alfred als je klaar bent.",
+          "example": { "body_text": [["30 minuten hardlopen"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — jouw persoonlijke assistent" }
+      ]
+    },
+    "fr": {
+      "language": "fr",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "C'est l'heure du sport !" },
+        {
+          "type": "BODY",
+          "text": "💪 C'est l'heure de : {{1}}\n\nTu peux le faire ! Réponds à Alfred quand tu as terminé.",
+          "example": { "body_text": [["course de 30 minutes"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — ton assistant personnel" }
+      ]
+    },
+    "de": {
+      "language": "de",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Zeit zu trainieren!" },
+        {
+          "type": "BODY",
+          "text": "💪 Zeit für: {{1}}\n\nDu schaffst das! Antworte Alfred, wenn du fertig bist.",
+          "example": { "body_text": [["30 Minuten laufen"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — dein persönlicher Assistent" }
+      ]
+    }
+  }
+}

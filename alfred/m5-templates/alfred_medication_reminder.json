@@ -1,0 +1,70 @@
+{
+  "_comment": "Daily medication reminder — body {{1}} is the custom reminder text set by the user.",
+  "_note": "Submit once per language. Body parameter {{1}} = payload.text from ScheduledJob.",
+
+  "name": "alfred_medication_reminder",
+  "category": "UTILITY",
+
+  "translations": {
+    "en": {
+      "language": "en",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Alfred reminder" },
+        {
+          "type": "BODY",
+          "text": "⏰ Reminder: {{1}}\n\nTap to open Alfred and reply if you've done it.",
+          "example": { "body_text": [["take your medication"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — your AI assistant" }
+      ]
+    },
+    "pt_BR": {
+      "language": "pt_BR",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Lembrete Alfred" },
+        {
+          "type": "BODY",
+          "text": "⏰ Lembrete: {{1}}\n\nAbre o Alfred e responde quando estiver feito.",
+          "example": { "body_text": [["toma o teu medicamento"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — o teu assistente pessoal" }
+      ]
+    },
+    "nl": {
+      "language": "nl",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Alfred herinnering" },
+        {
+          "type": "BODY",
+          "text": "⏰ Herinnering: {{1}}\n\nOpen Alfred en antwoord als je klaar bent.",
+          "example": { "body_text": [["neem je medicatie"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — jouw persoonlijke assistent" }
+      ]
+    },
+    "fr": {
+      "language": "fr",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Rappel Alfred" },
+        {
+          "type": "BODY",
+          "text": "⏰ Rappel : {{1}}\n\nOuvre Alfred et réponds quand c'est fait.",
+          "example": { "body_text": [["prends tes médicaments"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — ton assistant personnel" }
+      ]
+    },
+    "de": {
+      "language": "de",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Alfred Erinnerung" },
+        {
+          "type": "BODY",
+          "text": "⏰ Erinnerung: {{1}}\n\nÖffne Alfred und antworte, wenn du fertig bist.",
+          "example": { "body_text": [["nimm deine Medikamente"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — dein persönlicher Assistent" }
+      ]
+    }
+  }
+}

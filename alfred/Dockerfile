@@ -22,7 +22,9 @@ RUN pip install --upgrade pip && \
 COPY --chown=alfred:alfred src/ ./src/
 COPY --chown=alfred:alfred alembic/ ./alembic/
 COPY --chown=alfred:alfred alembic.ini ./
-COPY --chown=alfred:alfred start.sh ./
+COPY --chown=alfred:alfred start.sh .
+COPY --chown=alfred:alfred scripts/ ./scripts/
+RUN chmod +x /app/scripts/*.py
 RUN chmod +x /app/start.sh
 
 USER alfred

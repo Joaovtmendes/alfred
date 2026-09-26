@@ -1,0 +1,67 @@
+{
+  "_comment": "Daily goal check-in reminder. Body {{1}} = custom goal text from ScheduledJob.payload.text.",
+  "name": "alfred_goal_checkin",
+  "category": "UTILITY",
+  "translations": {
+    "en": {
+      "language": "en",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Goal check-in" },
+        {
+          "type": "BODY",
+          "text": "🎯 Daily check-in: {{1}}\n\nHow's it going? Reply to Alfred to log your progress.",
+          "example": { "body_text": [["save €10 today"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — your AI assistant" }
+      ]
+    },
+    "pt_BR": {
+      "language": "pt_BR",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Check-in de objetivo" },
+        {
+          "type": "BODY",
+          "text": "🎯 Check-in diário: {{1}}\n\nComo está a correr? Responde ao Alfred para registar o teu progresso.",
+          "example": { "body_text": [["poupar €10 hoje"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — o teu assistente pessoal" }
+      ]
+    },
+    "nl": {
+      "language": "nl",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Doel check-in" },
+        {
+          "type": "BODY",
+          "text": "🎯 Dagelijkse check-in: {{1}}\n\nHoe gaat het? Antwoord Alfred om je voortgang bij te houden.",
+          "example": { "body_text": [["€10 sparen vandaag"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — jouw persoonlijke assistent" }
+      ]
+    },
+    "fr": {
+      "language": "fr",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Suivi d'objectif" },
+        {
+          "type": "BODY",
+          "text": "🎯 Check-in quotidien : {{1}}\n\nComment ça se passe ? Réponds à Alfred pour noter tes progrès.",
+          "example": { "body_text": [["économiser 10 € aujourd'hui"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — ton assistant personnel" }
+      ]
+    },
+    "de": {
+      "language": "de",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Ziel-Check-in" },
+        {
+          "type": "BODY",
+          "text": "🎯 Täglicher Check-in: {{1}}\n\nWie läuft es? Antworte Alfred, um deinen Fortschritt zu erfassen.",
+          "example": { "body_text": [["heute 10 € sparen"]] }
+        },
+        { "type": "FOOTER", "text": "Alfred — dein persönlicher Assistent" }
+      ]
+    }
+  }
+}

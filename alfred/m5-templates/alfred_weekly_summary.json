@@ -1,0 +1,66 @@
+{
+  "_comment": "Weekly expense summary — sent every Monday at 08:00 UTC to all active members.",
+  "_note": "Submit once per language; replace LANGUAGE_CODE with: en / pt_BR / nl / fr / de",
+  "_submit_for": ["en", "pt_BR", "nl", "fr", "de"],
+
+  "name": "alfred_weekly_summary",
+  "category": "UTILITY",
+
+  "translations": {
+    "en": {
+      "language": "en",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Your weekly summary" },
+        {
+          "type": "BODY",
+          "text": "Hi! Here's your Alfred expense summary for last week. Reply *summary* to see the details, or just keep chatting to track new expenses."
+        },
+        { "type": "FOOTER", "text": "Alfred — your AI assistant" }
+      ]
+    },
+    "pt_BR": {
+      "language": "pt_BR",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "O teu resumo semanal" },
+        {
+          "type": "BODY",
+          "text": "Olá! Aqui está o teu resumo de despesas da semana passada. Responde *resumo* para ver os detalhes, ou continua a conversar para registar novas despesas."
+        },
+        { "type": "FOOTER", "text": "Alfred — o teu assistente pessoal" }
+      ]
+    },
+    "nl": {
+      "language": "nl",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Jouw weekoverzicht" },
+        {
+          "type": "BODY",
+          "text": "Hoi! Hier is jouw Alfred-overzicht van vorige week. Antwoord *overzicht* voor de details, of chat gewoon door om nieuwe uitgaven bij te houden."
+        },
+        { "type": "FOOTER", "text": "Alfred — jouw persoonlijke assistent" }
+      ]
+    },
+    "fr": {
+      "language": "fr",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Ton bilan hebdomadaire" },
+        {
+          "type": "BODY",
+          "text": "Salut ! Voici ton résumé de dépenses Alfred de la semaine passée. Réponds *résumé* pour voir les détails, ou continue à discuter pour enregistrer de nouvelles dépenses."
+        },
+        { "type": "FOOTER", "text": "Alfred — ton assistant personnel" }
+      ]
+    },
+    "de": {
+      "language": "de",
+      "components": [
+        { "type": "HEADER", "format": "TEXT", "text": "Deine Wochenzusammenfassung" },
+        {
+          "type": "BODY",
+          "text": "Hallo! Hier ist deine Alfred-Ausgabenübersicht für letzte Woche. Antworte *Übersicht* für Details oder chatte einfach weiter, um neue Ausgaben zu erfassen."
+        },
+        { "type": "FOOTER", "text": "Alfred — dein persönlicher Assistent" }
+      ]
+    }
+  }
+}
