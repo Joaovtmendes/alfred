@@ -2205,7 +2205,8 @@ async def handle_inbound(
             if member.dashboard_token is None:
                 member.dashboard_token = _uuid.uuid4()
                 await session.flush()
-            base_url = getattr(_settings, "base_url", "").rstrip("/")
+            import os as _os
+            base_url = (getattr(_settings, "base_url", "") or _os.environ.get("BASE_URL", "")).rstrip("/")
             if not base_url:
                 reply = _t("dashboard_no_base_url", lang)
             else:
