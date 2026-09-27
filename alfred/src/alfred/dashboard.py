@@ -258,7 +258,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Alfred Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -270,67 +270,113 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
   --radius:12px;--gap:16px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;
-     font-size:15px;line-height:1.5;min-height:100vh}
-header{background:var(--surface);border-bottom:1px solid var(--border);
-       padding:14px 24px;display:flex;align-items:center;gap:12px;
-       position:sticky;top:0;z-index:10}
-header h1{font-size:1.2rem;font-weight:700;color:var(--accent)}
-header h1 span{color:var(--text);font-weight:400;font-size:.95rem;margin-left:4px}
-.month-nav{margin-left:auto;display:flex;align-items:center;gap:8px}
-.month-nav button{background:var(--surface2);border:1px solid var(--border);
-  color:var(--text);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:.85rem}
-.month-nav button:hover{background:var(--accent);border-color:var(--accent)}
-#month-label{font-weight:600;min-width:90px;text-align:center}
-main{max-width:1100px;margin:0 auto;padding:24px var(--gap)}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  font-size:15px;line-height:1.5;min-height:100vh;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  position:sticky;top:env(safe-area-inset-top,0);z-index:10;
+}
+header h1{font-size:1.1rem;font-weight:700;color:var(--accent)}
+header h1 span{color:var(--text);font-weight:400;font-size:.9rem;margin-left:4px}
+.month-nav{margin-left:auto;display:flex;align-items:center;gap:6px}
+.month-nav button{
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:8px 16px;cursor:pointer;
+  font-size:.9rem;min-height:40px;min-width:40px;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.month-nav button:hover,.month-nav button:active{
+  background:var(--accent);border-color:var(--accent);
+}
+#month-label{font-weight:600;min-width:80px;text-align:center;font-size:.9rem}
+main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
 .grid{display:grid;gap:var(--gap)}
 .row-3{grid-template-columns:repeat(3,1fr)}
 .row-2{grid-template-columns:1fr 1fr}
 .row-1{grid-template-columns:1fr}
 @media(max-width:700px){.row-3,.row-2{grid-template-columns:1fr}}
-.card{background:var(--surface);border-radius:var(--radius);
-      border:1px solid var(--border);padding:20px}
-.card-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;
-            color:var(--muted);margin-bottom:8px}
-.stat-val{font-size:2rem;font-weight:700}
+.card{
+  background:var(--surface);border-radius:var(--radius);
+  border:1px solid var(--border);padding:16px;
+}
+.card-title{
+  font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--muted);margin-bottom:8px;
+}
+.stat-val{font-size:1.85rem;font-weight:700;word-break:break-all}
+@media(max-width:400px){.stat-val{font-size:1.5rem}}
 .stat-val.red{color:var(--red)}
 .stat-val.green{color:var(--green)}
 .stat-val.neutral{color:var(--accent)}
-.stat-sub{font-size:.82rem;color:var(--muted);margin-top:2px}
-canvas{width:100%!important}
-.tx-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;
-         max-height:340px;overflow-y:auto}
-.tx-row{display:grid;grid-template-columns:40px 1fr auto;
-        align-items:center;gap:8px;padding:8px;
-        background:var(--surface2);border-radius:8px}
-.tx-date{font-size:.78rem;color:var(--muted);text-align:center}
-.tx-info{overflow:hidden}
-.tx-merchant{font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tx-cat{font-size:.78rem;color:var(--muted)}
-.tx-amt{font-weight:700;font-size:.95rem;white-space:nowrap}
+.stat-sub{font-size:.8rem;color:var(--muted);margin-top:2px}
+
+/* Chart containers — height via CSS so Chart.js fills them */
+.chart-wrap{position:relative;height:240px}
+@media(max-width:700px){.chart-wrap{height:200px}}
+@media(max-width:400px){.chart-wrap{height:175px}}
+
+.tx-list{
+  display:flex;flex-direction:column;gap:7px;margin-top:8px;
+  max-height:340px;overflow-y:auto;
+}
+.tx-row{
+  display:grid;grid-template-columns:36px 1fr auto;
+  align-items:center;gap:8px;padding:9px 10px;
+  background:var(--surface2);border-radius:8px;
+}
+@media(max-width:400px){
+  .tx-row{grid-template-columns:30px 1fr auto;gap:6px;padding:7px 8px}
+}
+.tx-date{font-size:.72rem;color:var(--muted);text-align:center;line-height:1.3}
+.tx-info{overflow:hidden;min-width:0}
+.tx-merchant{
+  font-weight:600;font-size:.88rem;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tx-cat{font-size:.72rem;color:var(--muted)}
+.tx-amt{font-weight:700;font-size:.9rem;white-space:nowrap}
 .tx-amt.expense{color:var(--red)}
 .tx-amt.income{color:var(--green)}
-.goal-item,.task-item,.note-item{padding:10px 12px;
-  background:var(--surface2);border-radius:8px;margin-top:8px}
-.goal-title,.task-body{font-weight:600;font-size:.9rem}
-.goal-meta,.task-due,.note-date{font-size:.78rem;color:var(--muted);margin-top:2px}
-.habit-row{display:flex;align-items:center;gap:10px;padding:8px 0;
-           border-bottom:1px solid var(--border)}
+.goal-item,.task-item,.note-item{
+  padding:10px 12px;background:var(--surface2);
+  border-radius:8px;margin-top:8px;
+}
+.goal-title,.task-body{font-weight:600;font-size:.88rem}
+.goal-meta,.task-due,.note-date{font-size:.75rem;color:var(--muted);margin-top:2px}
+.habit-row{
+  display:flex;align-items:center;gap:8px;padding:9px 0;
+  border-bottom:1px solid var(--border);flex-wrap:wrap;
+}
 .habit-row:last-child{border-bottom:none}
-.habit-name{flex:1;font-size:.9rem;font-weight:600}
-.habit-streak{font-size:.78rem;color:var(--accent2);font-weight:700;min-width:56px}
-.habit-dots{display:flex;gap:4px}
-.dot{width:14px;height:14px;border-radius:50%;background:var(--surface2);
-     border:1px solid var(--border)}
+.habit-name{flex:1;min-width:80px;font-size:.88rem;font-weight:600}
+.habit-streak{font-size:.78rem;color:var(--accent2);font-weight:700;white-space:nowrap}
+.habit-dots{display:flex;gap:4px;margin-left:auto}
+@media(max-width:400px){
+  .habit-name{width:100%}
+  .habit-dots{margin-left:0}
+}
+.dot{
+  width:13px;height:13px;border-radius:50%;
+  background:var(--surface2);border:1px solid var(--border);
+}
 .dot.on{background:var(--accent2);border-color:var(--accent2)}
 .health-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.chip{padding:5px 12px;border-radius:20px;background:var(--surface2);
-      border:1px solid var(--border);font-size:.82rem}
+.chip{
+  padding:5px 12px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);font-size:.82rem;
+}
 .chip span{font-weight:700;color:var(--accent2)}
-.empty{color:var(--muted);font-size:.88rem;padding:12px 0}
-#loading{position:fixed;inset:0;background:var(--bg);display:flex;
-         align-items:center;justify-content:center;font-size:1.1rem;
-         color:var(--muted);z-index:100}
+.empty{color:var(--muted);font-size:.85rem;padding:12px 0}
+#loading{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;color:var(--muted);z-index:100;
+}
 </style>
 </head>
 <body>
@@ -338,9 +384,9 @@ canvas{width:100%!important}
 <header>
   <h1>Alfred <span id="header-name"></span></h1>
   <div class="month-nav">
-    <button id="prev-btn">&#8592;</button>
+    <button id="prev-btn" aria-label="Mês anterior">&#8592;</button>
     <span id="month-label">—</span>
-    <button id="next-btn">&#8594;</button>
+    <button id="next-btn" aria-label="Próximo mês">&#8594;</button>
   </div>
 </header>
 <main>
@@ -363,11 +409,11 @@ canvas{width:100%!important}
   <div class="grid row-2" style="margin-bottom:var(--gap)">
     <div class="card">
       <div class="card-title">Gastos por categoria</div>
-      <canvas id="chart-donut" height="220"></canvas>
+      <div class="chart-wrap"><canvas id="chart-donut"></canvas></div>
     </div>
     <div class="card">
       <div class="card-title">Histórico mensal</div>
-      <canvas id="chart-bar" height="220"></canvas>
+      <div class="chart-wrap"><canvas id="chart-bar"></canvas></div>
     </div>
   </div>
 
@@ -412,23 +458,22 @@ const TOKEN = "__TOKEN__";
 let currentMonth = "";
 let donutChart = null;
 let barChart = null;
+let lastData = null;
 
 const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
                      "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-
 const CAT_COLORS = [
   "#6c63ff","#48e5c2","#f4647a","#f9c74f","#4cc9f0",
   "#7b2d8b","#ff9f43","#00b4d8","#06d6a0","#ef476f",
 ];
 
 function fmtEur(v){
-  return "€ " + v.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+  return "€ " + v.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
 }
 function fmtMonth(ym){
   const [y,m] = ym.split("-");
   return MONTH_NAMES[parseInt(m)-1] + " " + y;
 }
-
 function addSubtractMonth(ym, delta){
   let [y,m] = ym.split("-").map(Number);
   m += delta;
@@ -436,36 +481,35 @@ function addSubtractMonth(ym, delta){
   if(m < 1){m=12; y--;}
   return `${y}-${String(m).padStart(2,"0")}`;
 }
+function isMobile(){ return window.innerWidth < 600; }
 
 async function load(month){
   const url = `/api/d/${TOKEN}${month ? "?month="+month : ""}`;
   const res = await fetch(url);
-  if(!res.ok){ document.getElementById("loading").textContent="Dashboard não encontrado."; return; }
+  if(!res.ok){
+    document.getElementById("loading").textContent = "Dashboard não encontrado.";
+    return;
+  }
   const d = await res.json();
   currentMonth = d.month;
+  lastData = d;
   render(d);
-  document.getElementById("loading").style.display="none";
+  document.getElementById("loading").style.display = "none";
 }
 
 function render(d){
   document.getElementById("header-name").textContent = "· " + d.member_name;
   document.getElementById("month-label").textContent = fmtMonth(d.month);
 
-  // Cards
   document.getElementById("v-expense").textContent = fmtEur(d.total_expense);
   document.getElementById("v-expense-sub").textContent =
-    d.expenses_by_category.length > 0
-      ? `${d.expenses_by_category.length} categorias`
-      : "";
+    d.expenses_by_category.length > 0 ? `${d.expenses_by_category.length} categorias` : "";
   document.getElementById("v-income").textContent = fmtEur(d.total_income);
   const balEl = document.getElementById("v-balance");
   balEl.textContent = fmtEur(d.balance);
   balEl.className = "stat-val " + (d.balance >= 0 ? "green" : "red");
 
-  // Donut
   renderDonut(d.expenses_by_category);
-
-  // Bar
   renderBar(d.monthly_history);
 
   // Transactions
@@ -547,25 +591,36 @@ function render(d){
 function renderDonut(cats){
   const ctx = document.getElementById("chart-donut").getContext("2d");
   if(donutChart) donutChart.destroy();
-  if(cats.length === 0){
-    ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-    return;
-  }
+  if(cats.length === 0){ ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height); return; }
+  const mob = isMobile();
   donutChart = new Chart(ctx, {
-    type:"doughnut",
-    data:{
-      labels: cats.map(c=>c.category),
-      datasets:[{
-        data: cats.map(c=>c.total),
-        backgroundColor: cats.map((_,i)=>CAT_COLORS[i%CAT_COLORS.length]),
-        borderWidth:2,borderColor:"#1a1d27"
+    type: "doughnut",
+    data: {
+      labels: cats.map(c => c.category),
+      datasets: [{
+        data: cats.map(c => c.total),
+        backgroundColor: cats.map((_,i) => CAT_COLORS[i % CAT_COLORS.length]),
+        borderWidth: 2,
+        borderColor: "#1a1d27",
       }]
     },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{position:"right",labels:{color:"#e8eaf0",font:{size:11},boxWidth:12}},
-        tooltip:{callbacks:{label:ctx=>" " + ctx.label + ": " + fmtEur(ctx.parsed)}}
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: mob ? 4 : 0 },
+      plugins: {
+        legend: {
+          position: mob ? "bottom" : "right",
+          labels: {
+            color: "#e8eaf0",
+            font: { size: mob ? 10 : 11 },
+            boxWidth: 10,
+            padding: mob ? 8 : 12,
+          }
+        },
+        tooltip: {
+          callbacks: { label: ctx => " " + ctx.label + ": " + fmtEur(ctx.parsed) }
+        }
       }
     }
   });
@@ -574,25 +629,60 @@ function renderDonut(cats){
 function renderBar(history){
   const ctx = document.getElementById("chart-bar").getContext("2d");
   if(barChart) barChart.destroy();
+  const mob = isMobile();
+  // On mobile show last 6 months to avoid label cramping
+  const data = mob ? history.slice(-6) : history;
   barChart = new Chart(ctx, {
-    type:"bar",
-    data:{
-      labels: history.map(h=>h.label),
-      datasets:[
-        {label:"Gastos",data:history.map(h=>h.total_expense),
-         backgroundColor:"rgba(244,100,122,0.7)",borderRadius:4},
-        {label:"Receita",data:history.map(h=>h.total_income),
-         backgroundColor:"rgba(72,229,194,0.7)",borderRadius:4}
+    type: "bar",
+    data: {
+      labels: data.map(h => h.label),
+      datasets: [
+        {
+          label: "Gastos",
+          data: data.map(h => h.total_expense),
+          backgroundColor: "rgba(244,100,122,0.7)",
+          borderRadius: 4,
+        },
+        {
+          label: "Receita",
+          data: data.map(h => h.total_income),
+          backgroundColor: "rgba(72,229,194,0.7)",
+          borderRadius: 4,
+        }
       ]
     },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      scales:{
-        x:{ticks:{color:"#8b90a0",font:{size:10}},grid:{color:"#2c3050"}},
-        y:{ticks:{color:"#8b90a0",font:{size:10},callback:v=>"€"+v},grid:{color:"#2c3050"}}
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          ticks: {
+            color: "#8b90a0",
+            font: { size: mob ? 10 : 10 },
+            maxRotation: mob ? 45 : 0,
+            minRotation: mob ? 45 : 0,
+          },
+          grid: { color: "#2c3050" }
+        },
+        y: {
+          ticks: {
+            color: "#8b90a0",
+            font: { size: mob ? 9 : 10 },
+            callback: v => "€" + v,
+          },
+          grid: { color: "#2c3050" }
+        }
       },
-      plugins:{legend:{labels:{color:"#e8eaf0",font:{size:11}}},
-               tooltip:{callbacks:{label:ctx=>" " + ctx.dataset.label + ": " + fmtEur(ctx.parsed.y)}}}
+      plugins: {
+        legend: {
+          labels: { color: "#e8eaf0", font: { size: mob ? 10 : 11 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => " " + ctx.dataset.label + ": " + fmtEur(ctx.parsed.y)
+          }
+        }
+      }
     }
   });
 }
@@ -602,11 +692,23 @@ function esc(s){
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
-document.getElementById("prev-btn").addEventListener("click",()=>{
-  load(addSubtractMonth(currentMonth,-1));
+// Re-render charts on resize / orientation change
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if(lastData){
+      renderDonut(lastData.expenses_by_category);
+      renderBar(lastData.monthly_history);
+    }
+  }, 250);
 });
-document.getElementById("next-btn").addEventListener("click",()=>{
-  const next = addSubtractMonth(currentMonth,1);
+
+document.getElementById("prev-btn").addEventListener("click", () => {
+  load(addSubtractMonth(currentMonth, -1));
+});
+document.getElementById("next-btn").addEventListener("click", () => {
+  const next = addSubtractMonth(currentMonth, 1);
   const today = new Date();
   const todayYM = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`;
   if(next <= todayYM) load(next);
