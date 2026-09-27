@@ -5,6 +5,7 @@ POST /webhook/whatsapp  → incoming messages (HMAC-validated, idempotent)
 """
 from __future__ import annotations
 
+import asyncio
 import structlog
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy import select
@@ -19,6 +20,15 @@ from alfred.settings import settings
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/webhook", tags=["webhook"])
+
+# Per-member serialisation lock — prevents double-response when Meta sends
+# concurrent/duplicate webhook calls for the same user.
+_MEMBER_LOCKS: dict = {}
+
+def _get_member_lock(member_id: object) -> asyncio.Lock:
+    if member_id not in _MEMBER_LOCKS:
+        _MEMBER_LOCKS[member_id] = asyncio.Lock()
+    return _MEMBER_LOCKS[member_id]
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +91,8 @@ async def _process_value(
         # Only process text messages for now (M18/M19 will add image/audio).
         # Reactions, system notifications, delivery receipts in messages[] all
         # have body=None and must NOT reach handle_inbound.
-        if msg_type != "text":
+        # Allow 'text' and 'interactive' (Flow nfm_reply); drop everything else.
+        if msg_type not in ("text", "interactive"):
             log.info(
                 "webhook.non_text_ignored",
                 wa_message_id=wa_message_id,
@@ -90,17 +101,21 @@ async def _process_value(
             )
             continue
 
-        body: str | None = msg.get("text", {}).get("body")
-
-        # Skip if body is empty/None even for text type (safety net)
-        if not body:
-            log.warning(
-                "webhook.empty_body_ignored",
-                wa_message_id=wa_message_id,
-                from_phone=from_phone,
-                msg_type=msg_type,
-            )
-            continue
+        # For text messages, ensure body is non-empty.
+        if msg_type == "text":
+            body: str | None = msg.get("text", {}).get("body")
+            if not body:
+                log.warning(
+                    "webhook.empty_body_ignored",
+                    wa_message_id=wa_message_id,
+                    from_phone=from_phone,
+                    msg_type=msg_type,
+                )
+                continue
+        else:
+            # Interactive (nfm_reply from WhatsApp Flow) — body is None;
+            # handle_inbound inspects message.raw directly.
+            body = None
 
         # Timestamp (Unix epoch → datetime)
         import datetime
@@ -151,7 +166,8 @@ async def _process_value(
             )
             stored_msg = msg_result.scalar_one()
             try:
-                await handle_inbound(member, stored_msg, session)
+                async with _get_member_lock(member.id):
+                    await handle_inbound(member, stored_msg, session)
             except Exception as exc:
                 log.error(
                     "webhook.handle_inbound_failed",

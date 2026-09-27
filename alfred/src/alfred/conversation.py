@@ -376,6 +376,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": " _(il y a {n}j)_",
         "de": " _(vor {n}T)_",
     },
+    "period_today": {
+        "pt": "hoje",
+        "nl": "vandaag",
+        "en": "today",
+        "fr": "aujourd'hui",
+        "de": "heute",
+    },
     "period_current_week": {
         "pt": "esta semana",
         "nl": "deze week",
@@ -765,13 +772,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "\U0001f4ca Dein pers\u00f6nliches Dashboard:\n{url}",
     },
     "dashboard_no_base_url": {
-        "pt": "O dashboard ainda nao esta configurado. Fala com o administrador.",
+        "pt": "O dashboard ainda não está configurado. Fala com o administrador.",
         "nl": "Het dashboard is nog niet geconfigureerd. Neem contact op met de beheerder.",
         "en": "The dashboard is not configured yet. Contact the administrator.",
         "fr": "Le tableau de bord n'est pas encore configure. Contacte l'administrateur.",
         "de": "Das Dashboard ist noch nicht konfiguriert. Kontaktiere den Administrator.",
     },
-    # M14 — Viagem
+    "not_understood": {
+        "pt": "Não percebi. Podes reformular?",
+        "nl": "Ik begreep je niet. Kun je het anders formuleren?",
+        "en": "I didn't understand that. Could you rephrase?",
+        "fr": "Je n'ai pas compris. Peux-tu reformuler ?",
+        "de": "Das habe ich nicht verstanden. Kannst du es anders formulieren?",
+    },
+        # M14 — Viagem
     "trip_started": {
         "pt": "Viagem para {dest} iniciada! As despesas serao associadas automaticamente.",
         "nl": "Reis naar {dest} gestart! Uitgaven worden automatisch gekoppeld.",
@@ -814,7 +828,21 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": "Tu n'as pas encore de voyages enregistres.",
         "de": "Du hast noch keine Reisen erfasst.",
     },
-    "trip_active_tag": {
+    "trip_expense_total": {
+        "pt": " [viagem {dest}: {total} no total]",
+        "nl": " [reis {dest}: {total} totaal]",
+        "en": " [trip {dest}: {total} total]",
+        "fr": " [voyage {dest}: {total} au total]",
+        "de": " [Reise {dest}: {total} gesamt]",
+    },
+        "category_hint_overig": {
+        "pt": "\nSem certeza da categoria de {merchant}. Podes corrigir com '{merchant} é [categoria]'.",
+        "nl": "\nIk weet de categorie voor {merchant} niet. Verbeter met '{merchant} is [categorie]'.",
+        "en": "\nNot sure about {merchant}'s category. You can fix it: '{merchant} is [category]'.",
+        "fr": "\nJe ne suis pas sûr de la catégorie de {merchant}. Corrige avec '{merchant} est [catégorie]'.",
+        "de": "\nUnsicher bei der Kategorie für {merchant}. Korrigiere mit '{merchant} ist [Kategorie]'.",
+    },
+        "trip_active_tag": {
         "pt": " [viagem: {dest}]",
         "nl": " [reis: {dest}]",
         "en": " [trip: {dest}]",
@@ -937,6 +965,14 @@ _CAT_ALIAS: dict[str, str] = {
     "other": "overig", "outros": "overig", "anderen": "overig", "autre": "overig",
 }
 
+
+
+_AMOUNT_CORRECTION_RE = re.compile(
+    r"(?:errei|foi\s+na\s+verdade|na\s+verdade\s+foi|corrijo|na\s+verdade|"
+    r"actually|was\s+actually|c\'?etait|war\s+eigentlich|was\s+eigenlijk)"
+    r"[^0-9€$£]*([€$£]?\s*[0-9]+[.,]?[0-9]*\s*[€$£]?)",
+    re.IGNORECASE,
+)
 
 def _canonical_category(raw: str) -> str | None:
     """Return canonical category for a raw user string, or None if not recognised."""
@@ -1464,9 +1500,29 @@ def _fmt_eur(amount: float) -> str:
     return f"€{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _looks_like_gibberish(text: str) -> bool:
+    """Return True if text looks like random key-mashing (no meaningful content)."""
+    t = text.strip()
+    if len(t) < 7:
+        return False
+    if " " in t:  # multi-word is probably real content
+        return False
+    if any(c in t for c in "0123456789€$£.,@#%+"):
+        return False
+    if not t.replace("-", "").replace("'", "").isalpha():
+        return False
+    # Real words in any supported language have >15% vowels
+    vowels = sum(1 for c in t.lower() if c in "aeiouáâãàéêèíïóôõòúùûüäöü")
+    return (vowels / len(t)) < 0.15
+
+
 def _period_range(period: str, lang: str = "en") -> tuple[datetime, datetime | None, str]:
     """Return (start, end_exclusive, label).  end_exclusive=None means open (up to now)."""
     now = datetime.now(timezone.utc)
+    if period == "today":
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow = start + timedelta(days=1)
+        return start, tomorrow, _t("period_today", lang)
     if period == "last_month":
         first_this = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         prev_last = first_this - timedelta(seconds=1)
@@ -2336,7 +2392,7 @@ async def handle_inbound(
         _not_workout = not _is_command(body, _WORKOUT_WORDS)
         _not_health = not _is_command(body, _HEALTH_WORDS)
         if len(body) < 80 and _not_expense and _not_workout and _not_health:
-            habit_data = await extract_habit(body)
+            habit_data = await extract_habit(body, lang=member.language or "en")
             if habit_data:
                 h_activity = habit_data["activity"]
                 h_days_ago = habit_data.get("days_ago", 0)
@@ -2376,7 +2432,7 @@ async def handle_inbound(
         if _is_command(body, _HEALTH_WORDS):
             from datetime import date as _date
             today = datetime.now(timezone.utc).date()
-            health_data = await extract_health_log(body)
+            health_data = await extract_health_log(body, lang=member.language or "en")
             if health_data:
                 log_date = today
                 if health_data.get("days_ago", 0) > 0:
@@ -2504,7 +2560,7 @@ async def handle_inbound(
         if _is_command(body, _WORKOUT_WORDS):
             from datetime import date as _date
             today = datetime.now(timezone.utc).date()
-            workout_data = await extract_workout(body)
+            workout_data = await extract_workout(body, lang=member.language or "en")
             if workout_data:
                 from datetime import timedelta as _td
                 wo_date = today
@@ -2672,8 +2728,39 @@ async def handle_inbound(
             await _save_outbound(member, trip_reply, session)
             return
 
-        # 4e. Try to extract an expense or income from the message
-        expense_data = await extract_expense(message.body or "", merchant_overrides=member_overrides)
+        # 4e-0d. Amount correction: "errei foram 42€" / "na verdade foram 32"
+        m_amt = _AMOUNT_CORRECTION_RE.search(body)
+        if m_amt:
+            raw_amt = m_amt.group(1).replace("€", "").replace("$", "").replace("£", "").replace(",", ".").strip()
+            try:
+                new_amount = float(raw_amt)
+            except ValueError:
+                new_amount = None
+            if new_amount and new_amount > 0:
+                cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+                res = await session.execute(
+                    select(Expense)
+                    .where(
+                        Expense.member_id == member.id,
+                        Expense.created_at >= cutoff,
+                        Expense.transaction_type == "expense",
+                    )
+                    .order_by(Expense.created_at.desc())
+                    .limit(1)
+                )
+                last_exp = res.scalar_one_or_none()
+                if last_exp:
+                    last_exp.amount = new_amount
+                    session.add(last_exp)
+                    name = last_exp.merchant or last_exp.category or ""
+                    reply = _t("expense_recorded", lang, amount=_fmt_eur(new_amount), name=name)
+                    await send_text(to, reply)
+                    await _save_outbound(member, reply, session)
+                    logger.info("conversation.expense_amount_corrected", wa_phone=to, new_amount=new_amount)
+                    return
+
+                # 4e. Try to extract an expense or income from the message
+        expense_data = await extract_expense(message.body or "", merchant_overrides=member_overrides, lang=member.language or "en")
         if expense_data:
             txn_type = expense_data.get("type", "expense")
             days_ago = expense_data.get("days_ago", 0)
@@ -2706,6 +2793,26 @@ async def handle_inbound(
             reply = _t(key, lang, amount=amt_fmt, name=name)
             if days_ago > 0:
                 reply += _t("days_ago_suffix", lang, n=days_ago)
+            # BUG-07 fix: show cumulative trip total when expense tagged to trip
+            if active_trip and txn_type == "expense":
+                from sqlalchemy import func as sa_func
+                trip_total_res = await session.execute(
+                    select(sa_func.coalesce(sa_func.sum(Expense.amount), 0))
+                    .where(
+                        Expense.trip_id == active_trip.id,
+                        Expense.transaction_type == "expense",
+                    )
+                )
+                trip_total = float(trip_total_res.scalar() or 0) + expense_data["amount"]
+                reply += _t("trip_expense_total", lang, dest=active_trip.destination, total=_fmt_eur(trip_total))
+            # BUG-09: prompt for category when merchant unknown and category is overig
+            if (
+                txn_type == "expense"
+                and expense_data.get("category") == "overig"
+                and expense_data.get("merchant")
+                and expense_data["merchant"].lower() not in (member_overrides or {})
+            ):
+                reply += _t("category_hint_overig", lang, merchant=expense_data["merchant"])
 
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
@@ -2742,7 +2849,14 @@ async def handle_inbound(
                 logger.info("conversation.query_replied", wa_phone=to, query_type=qtype)
                 return
 
-        # 4g. General LLM reply with conversation history
+        # Gibberish / unrecognised input check
+        if _looks_like_gibberish(body):
+            reply = _t("not_understood", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+                # 4g. General LLM reply with conversation history
         history = await _load_history(member, session)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
         await send_text(to, reply)

@@ -233,6 +233,7 @@ query_type:
 Categories: supermarkt, restaurant, transport, gezondheid, entertainment, wonen, kleding, abonnement, inkomen, overig
 
 period values:
+- "today"         — hoje, vandaag, today, aujourd'hui, heute
 - "current_month" — este mês (default for vague queries)
 - "last_month"    — mês passado, vorige maand
 - "current_week"  — esta semana, deze week
@@ -244,6 +245,8 @@ EXAMPLES:
 "quanto gastei em supermercado?" → {"is_query": true, "query_type": "category", "category": "supermarkt", "period": "current_month"}
 "o que gastei em transporte?" → {"is_query": true, "query_type": "category", "category": "transport", "period": "current_month"}
 "gastos em restaurante na semana passada" → {"is_query": true, "query_type": "category", "category": "restaurant", "period": "last_week"}
+"quanto gastei hoje?" → {"is_query": true, "query_type": "period", "category": null, "period": "today"}
+"o que gastei hoje?" → {"is_query": true, "query_type": "period", "category": null, "period": "today"}
 "quanto gastei esta semana?" → {"is_query": true, "query_type": "period", "category": null, "period": "current_week"}
 "gastos da semana passada" → {"is_query": true, "query_type": "period", "category": null, "period": "last_week"}
 "gastos do mês passado" → {"is_query": true, "query_type": "period", "category": null, "period": "last_month"}
@@ -291,6 +294,7 @@ EXAMPLES:
 async def extract_expense(
     text: str,
     merchant_overrides: dict[str, str] | None = None,
+    lang: str = "en",
 ) -> dict | None:
     """Try to extract expense data from a message using Claude.
 
@@ -306,7 +310,7 @@ async def extract_expense(
     """
     provider = settings.llm_provider.lower()
     if provider in ("anthropic", "bedrock"):
-        result = await _extract_expense_anthropic(text)
+        result = await _extract_expense_anthropic(text, lang)
     else:
         result = None
 
@@ -326,7 +330,7 @@ async def extract_expense(
     return result
 
 
-async def _extract_expense_anthropic(text: str) -> dict | None:
+async def _extract_expense_anthropic(text: str, lang: str = "en") -> dict | None:
     try:
         import anthropic  # type: ignore[import]
 
@@ -384,6 +388,13 @@ User: "qual é o tempo hoje?"
 User: "resumo"
 {"is_expense": false}"""
 
+        lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
+        system = (
+            system
+            + f"\n\n{lang_instr}"
+            + "\nIMPORTANT: The 'category' field MUST always use the Dutch canonical values listed above."
+            + " The 'description' field MUST be in the user's language."
+        )
         response = client.messages.create(
             model=model,
             max_tokens=256,
@@ -430,18 +441,22 @@ Return JSON only, no markdown fences. Fields:
 If not a workout entry, return {"is_workout": false}.
 """
 
-async def extract_workout(text: str) -> dict | None:
+async def extract_workout(text: str, lang: str = "en") -> dict | None:
     """Extract workout session data from natural language text."""
     try:
-        from alfred.settings import get_settings
-        settings = get_settings()
-        client = anthropic.AsyncAnthropic(api_key=settings.llm_api_key)
-        model = settings.llm_model
+        import anthropic  # type: ignore[import]
+        api_key = settings.llm_api_key.get_secret_value()
+        if not api_key:
+            return None
+        model = _anthropic_model_id(settings.llm_model)
+        client = anthropic.Anthropic(api_key=api_key)
+        lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
+        workout_system = _WORKOUT_SYSTEM + f"\n\n{lang_instr}"
 
-        response = await client.messages.create(
+        response = client.messages.create(
             model=model,
             max_tokens=256,
-            system=_WORKOUT_SYSTEM,
+            system=workout_system,
             messages=[{"role": "user", "content": text}],
         )
         raw = response.content[0].text.strip()
@@ -484,18 +499,22 @@ Examples:
 - "bebi 2L de água" → {is_health:true, log_type:"water", value:"2", unit:"L"}
 """
 
-async def extract_health_log(text: str) -> dict | None:
+async def extract_health_log(text: str, lang: str = "en") -> dict | None:
     """Extract health log entry from natural language text."""
     try:
-        from alfred.settings import get_settings
-        settings = get_settings()
-        client = anthropic.AsyncAnthropic(api_key=settings.llm_api_key)
-        model = settings.llm_model
+        import anthropic  # type: ignore[import]
+        api_key = settings.llm_api_key.get_secret_value()
+        if not api_key:
+            return None
+        model = _anthropic_model_id(settings.llm_model)
+        client = anthropic.Anthropic(api_key=api_key)
+        lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
+        health_system = _HEALTH_SYSTEM + f"\n\n{lang_instr}"
 
-        response = await client.messages.create(
+        response = client.messages.create(
             model=model,
             max_tokens=256,
-            system=_HEALTH_SYSTEM,
+            system=health_system,
             messages=[{"role": "user", "content": text}],
         )
         raw = response.content[0].text.strip()
@@ -537,18 +556,22 @@ Examples:
 - "corri 5km" → {"is_habit":false}
 """
 
-async def extract_habit(text: str) -> dict | None:
+async def extract_habit(text: str, lang: str = "en") -> dict | None:
     """Extract habit log entry from natural language text."""
     try:
-        from alfred.settings import get_settings
-        settings = get_settings()
-        client = anthropic.AsyncAnthropic(api_key=settings.llm_api_key)
-        model = settings.llm_model
+        import anthropic  # type: ignore[import]
+        api_key = settings.llm_api_key.get_secret_value()
+        if not api_key:
+            return None
+        model = _anthropic_model_id(settings.llm_model)
+        client = anthropic.Anthropic(api_key=api_key)
+        lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
+        habit_system = _HABIT_SYSTEM + f"\n\n{lang_instr}"
 
-        response = await client.messages.create(
+        response = client.messages.create(
             model=model,
             max_tokens=256,
-            system=_HABIT_SYSTEM,
+            system=habit_system,
             messages=[{"role": "user", "content": text}],
         )
         raw = response.content[0].text.strip()
