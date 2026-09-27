@@ -355,6 +355,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": "Je n'ai pas trouvé de dépense récente de ce marchand à corriger. Peux-tu la re-saisir ?",
         "de": "Ich fand keine aktuelle Ausgabe von diesem Händler zum Korrigieren. Kannst du sie erneut eingeben?",
     },
+    "correction_no_expense": {
+        "pt": "Não encontrei nenhuma despesa recente para corrigir. Tenta registar de novo.",
+        "nl": "Ik vond geen recente uitgave om te corrigeren. Probeer het opnieuw in te voeren.",
+        "en": "I couldn't find a recent expense to correct. Please re-enter it.",
+        "fr": "Je n'ai pas trouvé de dépense récente à corriger. Peux-tu la re-saisir ?",
+        "de": "Ich fand keine aktuelle Ausgabe zum Korrigieren. Bitte gib sie erneut ein.",
+    },
     "lembrete_set": {
         "pt": "⏰ Lembrete configurado: *{text}* às {time} UTC. Vou lembrar-te todos os dias.",
         "nl": "⏰ Herinnering ingesteld: *{text}* om {time} UTC. Ik herinner je elke dag.",
@@ -887,6 +894,21 @@ _SUMMARY_WORDS = {
     "résumé", "resume", "bilan", "dépenses", "depenses",
     "übersicht", "ubersicht", "zusammenfassung", "ausgaben",
 }
+_SUMMARY_TIME_QUALIFIERS = (
+    # today
+    "hoje", "today", "vandaag", "heute", "aujourd\'hui",
+    # yesterday
+    "ontem", "yesterday", "gisteren", "gestern", "hier",
+    # this week
+    "esta semana", "this week", "deze week", "diese woche", "cette semaine",
+    # last week
+    "semana passada", "last week", "vorige week", "letzte woche",
+    # this month
+    "este mês", "este mes", "this month", "deze maand", "diesen monat", "ce mois",
+    # last month
+    "mês passado", "mes passado", "last month", "vorige maand", "letzten monat", "mois dernier",
+)
+
 _SALDO_WORDS = {
     "saldo", "balance", "balanço", "balancete", "balanso",
     "solde", "bilanz", "kontostand",
@@ -1899,8 +1921,8 @@ async def handle_inbound(
             await _save_outbound(member, help_text, session)
             return
 
-        # 4d. Summary command
-        if _is_command(body, _SUMMARY_WORDS):
+        # 4d. Summary command — skip if message has a time qualifier (let classify_query handle it)
+        if not any(q in body.lower() for q in _SUMMARY_TIME_QUALIFIERS) and _is_command(body, _SUMMARY_WORDS):
             summary = await _build_summary(member, session)
             await send_text(to, summary)
             await _save_outbound(member, summary, session)
@@ -2759,8 +2781,13 @@ async def handle_inbound(
                     await _save_outbound(member, reply, session)
                     logger.info("conversation.expense_amount_corrected", wa_phone=to, new_amount=new_amount)
                     return
+                else:
+                    # m_amt matched but no recent expense found — don't create a new one
+                    reply = _t("correction_no_expense", lang)
+                    await send_text(to, reply)
+                    await _save_outbound(member, reply, session)
+                    return
 
-                # 4e. Try to extract an expense or income from the message
         expense_data = await extract_expense(message.body or "", merchant_overrides=member_overrides, lang=member.language or "en")
         if expense_data:
             txn_type = expense_data.get("type", "expense")
@@ -2788,7 +2815,7 @@ async def handle_inbound(
             if active_trip:
                 expense.trip_id = active_trip.id
 
-            name = expense_data["merchant"] or expense_data["category"] or expense_data["description"]
+            name = expense_data["merchant"] or expense_data["description"] or expense_data["category"]
             amt_fmt = _fmt_eur(expense_data["amount"])
             key = "income_recorded" if txn_type == "income" else "expense_recorded"
             reply = _t(key, lang, amount=amt_fmt, name=name)
@@ -2826,6 +2853,13 @@ async def handle_inbound(
             )
             return
 
+        # Gibberish / unrecognised input check — before LLM calls to save tokens
+        if _looks_like_gibberish(body):
+            reply = _t("not_understood", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
         # 4f. Try to classify as a financial query
         query = await classify_query(message.body or "")
         if query:
@@ -2849,13 +2883,6 @@ async def handle_inbound(
                 await _save_outbound(member, reply, session)
                 logger.info("conversation.query_replied", wa_phone=to, query_type=qtype)
                 return
-
-        # Gibberish / unrecognised input check
-        if _looks_like_gibberish(body):
-            reply = _t("not_understood", lang)
-            await send_text(to, reply)
-            await _save_outbound(member, reply, session)
-            return
 
                 # 4g. General LLM reply with conversation history
         history = await _load_history(member, session)
