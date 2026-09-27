@@ -1,0 +1,618 @@
+"""M11 — Personal dashboard (token-based, no login required).
+
+Routes:
+  GET  /d/{token}           → full HTML single-page app
+  GET  /api/d/{token}       → JSON data, ?month=YYYY-MM
+"""
+from __future__ import annotations
+
+import uuid
+from calendar import monthrange
+from collections import defaultdict
+from datetime import date, timedelta
+
+import structlog
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from alfred.db import get_session
+from alfred.models import Expense, Goal, HabitLog, HealthLog, Member, Note, Task
+
+logger = structlog.get_logger(__name__)
+router = APIRouter(tags=["dashboard"])
+
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+
+async def _get_member(token_str: str, session: AsyncSession) -> Member:
+    try:
+        token = uuid.UUID(token_str)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+    result = await session.execute(
+        select(Member).where(Member.dashboard_token == token)
+    )
+    member = result.scalar_one_or_none()
+    if member is None:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+    return member
+
+
+# ── JSON API ──────────────────────────────────────────────────────────────────
+
+
+@router.get("/api/d/{token}", include_in_schema=False)
+async def dashboard_api(
+    token: str,
+    month: str | None = Query(None, description="YYYY-MM"),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    member = await _get_member(token, session)
+
+    today = date.today()
+    if month:
+        try:
+            sel_year, sel_month = (int(x) for x in month.split("-"))
+        except (ValueError, AttributeError):
+            sel_year, sel_month = today.year, today.month
+    else:
+        sel_year, sel_month = today.year, today.month
+
+    month_start = date(sel_year, sel_month, 1)
+    _, last_day = monthrange(sel_year, sel_month)
+    month_end = date(sel_year, sel_month, last_day)
+
+    # ── Financial ─────────────────────────────────────────────────────────────
+    exp_q = await session.execute(
+        select(Expense)
+        .where(
+            and_(
+                Expense.member_id == member.id,
+                func.date(Expense.expense_date) >= month_start,
+                func.date(Expense.expense_date) <= month_end,
+            )
+        )
+        .order_by(Expense.expense_date.desc())
+    )
+    month_txs = exp_q.scalars().all()
+
+    total_expense = sum(e.amount for e in month_txs if e.transaction_type == "expense")
+    total_income = sum(e.amount for e in month_txs if e.transaction_type == "income")
+    balance = total_income - total_expense
+
+    cat_totals: dict[str, float] = defaultdict(float)
+    for e in month_txs:
+        if e.transaction_type == "expense":
+            cat_totals[e.category or "Outros"] += e.amount
+
+    # Monthly history — last 12 months
+    history: list[dict] = []
+    for i in range(11, -1, -1):
+        m = sel_month - i
+        y = sel_year
+        while m <= 0:
+            m += 12
+            y -= 1
+        ms = date(y, m, 1)
+        _, ld = monthrange(y, m)
+        me = date(y, m, ld)
+        hq = await session.execute(
+            select(Expense).where(
+                and_(
+                    Expense.member_id == member.id,
+                    func.date(Expense.expense_date) >= ms,
+                    func.date(Expense.expense_date) <= me,
+                )
+            )
+        )
+        h = hq.scalars().all()
+        history.append(
+            {
+                "month": f"{y:04d}-{m:02d}",
+                "label": ms.strftime("%b %y"),
+                "total_expense": round(
+                    sum(e.amount for e in h if e.transaction_type == "expense"), 2
+                ),
+                "total_income": round(
+                    sum(e.amount for e in h if e.transaction_type == "income"), 2
+                ),
+            }
+        )
+
+    recent_transactions = [
+        {
+            "date": e.expense_date.strftime("%d/%m") if e.expense_date else "",
+            "merchant": e.merchant or "-",
+            "category": e.category or "Outros",
+            "amount": round(e.amount, 2),
+            "type": e.transaction_type,
+        }
+        for e in month_txs[:20]
+    ]
+
+    # ── Goals ──────────────────────────────────────────────────────────────────
+    gq = await session.execute(
+        select(Goal)
+        .where(Goal.member_id == member.id, Goal.active.is_(True))
+        .order_by(Goal.deadline.asc().nullslast(), Goal.created_at.asc())
+    )
+    goals = [
+        {
+            "title": g.title,
+            "target": (
+                f"{g.target_value} {g.target_unit or ''}".strip()
+                if g.target_value
+                else None
+            ),
+            "deadline": g.deadline.isoformat() if g.deadline else None,
+        }
+        for g in gq.scalars().all()
+    ]
+
+    # ── Habits / streaks ───────────────────────────────────────────────────────
+    thirty_ago = today - timedelta(days=30)
+    hbq = await session.execute(
+        select(HabitLog)
+        .where(
+            and_(
+                HabitLog.member_id == member.id,
+                HabitLog.log_date >= thirty_ago,
+            )
+        )
+        .order_by(HabitLog.log_date.desc())
+    )
+    activity_dates: dict[str, set[date]] = defaultdict(set)
+    for h in hbq.scalars().all():
+        activity_dates[h.activity].add(h.log_date)
+
+    habits: list[dict] = []
+    for activity, dates_set in activity_dates.items():
+        last7 = [(today - timedelta(days=i)) in dates_set for i in range(6, -1, -1)]
+        streak = 0
+        d = today
+        while d in dates_set:
+            streak += 1
+            d -= timedelta(days=1)
+        habits.append({"activity": activity, "streak": streak, "last7": last7})
+    habits.sort(key=lambda x: -x["streak"])
+
+    # ── Tasks ──────────────────────────────────────────────────────────────────
+    tq = await session.execute(
+        select(Task)
+        .where(Task.member_id == member.id, Task.done_at.is_(None))
+        .order_by(Task.due_date.asc().nullslast(), Task.created_at.asc())
+        .limit(20)
+    )
+    tasks = [
+        {
+            "body": t.body,
+            "due_date": t.due_date.isoformat() if t.due_date else None,
+        }
+        for t in tq.scalars().all()
+    ]
+
+    # ── Notes ──────────────────────────────────────────────────────────────────
+    nq = await session.execute(
+        select(Note)
+        .where(Note.member_id == member.id)
+        .order_by(Note.created_at.desc())
+        .limit(6)
+    )
+    notes = [
+        {"body": n.body, "date": n.created_at.strftime("%d/%m/%Y")}
+        for n in nq.scalars().all()
+    ]
+
+    # ── Health ─────────────────────────────────────────────────────────────────
+    hlq = await session.execute(
+        select(HealthLog.log_type, func.count().label("cnt"))
+        .where(
+            and_(
+                HealthLog.member_id == member.id,
+                HealthLog.log_date >= month_start,
+                HealthLog.log_date <= month_end,
+            )
+        )
+        .group_by(HealthLog.log_type)
+    )
+    health = [{"type": row.log_type, "count": row.cnt} for row in hlq.all()]
+
+    return JSONResponse(
+        {
+            "member_name": member.preferred_name or member.display_name or "Utilizador",
+            "month": f"{sel_year:04d}-{sel_month:02d}",
+            "total_expense": round(total_expense, 2),
+            "total_income": round(total_income, 2),
+            "balance": round(balance, 2),
+            "expenses_by_category": [
+                {"category": k, "total": round(v, 2)}
+                for k, v in sorted(cat_totals.items(), key=lambda x: -x[1])
+            ],
+            "monthly_history": history,
+            "recent_transactions": recent_transactions,
+            "goals": goals,
+            "habits": habits,
+            "tasks": tasks,
+            "notes": notes,
+            "health": health,
+        }
+    )
+
+
+# ── HTML page ─────────────────────────────────────────────────────────────────
+
+
+@router.get("/d/{token}", include_in_schema=False)
+async def dashboard_page(
+    token: str,
+    session: AsyncSession = Depends(get_session),
+) -> HTMLResponse:
+    await _get_member(token, session)
+    return HTMLResponse(_HTML_TEMPLATE.replace("__TOKEN__", token))
+
+
+_HTML_TEMPLATE = r"""<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Alfred Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#232635;
+  --accent:#6c63ff;--accent2:#48e5c2;
+  --red:#f4647a;--green:#48e5c2;--yellow:#f9c74f;
+  --text:#e8eaf0;--muted:#8b90a0;--border:#2c3050;
+  --radius:12px;--gap:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;
+     font-size:15px;line-height:1.5;min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);
+       padding:14px 24px;display:flex;align-items:center;gap:12px;
+       position:sticky;top:0;z-index:10}
+header h1{font-size:1.2rem;font-weight:700;color:var(--accent)}
+header h1 span{color:var(--text);font-weight:400;font-size:.95rem;margin-left:4px}
+.month-nav{margin-left:auto;display:flex;align-items:center;gap:8px}
+.month-nav button{background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:.85rem}
+.month-nav button:hover{background:var(--accent);border-color:var(--accent)}
+#month-label{font-weight:600;min-width:90px;text-align:center}
+main{max-width:1100px;margin:0 auto;padding:24px var(--gap)}
+.grid{display:grid;gap:var(--gap)}
+.row-3{grid-template-columns:repeat(3,1fr)}
+.row-2{grid-template-columns:1fr 1fr}
+.row-1{grid-template-columns:1fr}
+@media(max-width:700px){.row-3,.row-2{grid-template-columns:1fr}}
+.card{background:var(--surface);border-radius:var(--radius);
+      border:1px solid var(--border);padding:20px}
+.card-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;
+            color:var(--muted);margin-bottom:8px}
+.stat-val{font-size:2rem;font-weight:700}
+.stat-val.red{color:var(--red)}
+.stat-val.green{color:var(--green)}
+.stat-val.neutral{color:var(--accent)}
+.stat-sub{font-size:.82rem;color:var(--muted);margin-top:2px}
+canvas{width:100%!important}
+.tx-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;
+         max-height:340px;overflow-y:auto}
+.tx-row{display:grid;grid-template-columns:40px 1fr auto;
+        align-items:center;gap:8px;padding:8px;
+        background:var(--surface2);border-radius:8px}
+.tx-date{font-size:.78rem;color:var(--muted);text-align:center}
+.tx-info{overflow:hidden}
+.tx-merchant{font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-cat{font-size:.78rem;color:var(--muted)}
+.tx-amt{font-weight:700;font-size:.95rem;white-space:nowrap}
+.tx-amt.expense{color:var(--red)}
+.tx-amt.income{color:var(--green)}
+.goal-item,.task-item,.note-item{padding:10px 12px;
+  background:var(--surface2);border-radius:8px;margin-top:8px}
+.goal-title,.task-body{font-weight:600;font-size:.9rem}
+.goal-meta,.task-due,.note-date{font-size:.78rem;color:var(--muted);margin-top:2px}
+.habit-row{display:flex;align-items:center;gap:10px;padding:8px 0;
+           border-bottom:1px solid var(--border)}
+.habit-row:last-child{border-bottom:none}
+.habit-name{flex:1;font-size:.9rem;font-weight:600}
+.habit-streak{font-size:.78rem;color:var(--accent2);font-weight:700;min-width:56px}
+.habit-dots{display:flex;gap:4px}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--surface2);
+     border:1px solid var(--border)}
+.dot.on{background:var(--accent2);border-color:var(--accent2)}
+.health-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{padding:5px 12px;border-radius:20px;background:var(--surface2);
+      border:1px solid var(--border);font-size:.82rem}
+.chip span{font-weight:700;color:var(--accent2)}
+.empty{color:var(--muted);font-size:.88rem;padding:12px 0}
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;
+         align-items:center;justify-content:center;font-size:1.1rem;
+         color:var(--muted);z-index:100}
+</style>
+</head>
+<body>
+<div id="loading">A carregar…</div>
+<header>
+  <h1>Alfred <span id="header-name"></span></h1>
+  <div class="month-nav">
+    <button id="prev-btn">&#8592;</button>
+    <span id="month-label">—</span>
+    <button id="next-btn">&#8594;</button>
+  </div>
+</header>
+<main>
+  <div class="grid row-3" style="margin-bottom:var(--gap)">
+    <div class="card">
+      <div class="card-title">Gastos</div>
+      <div class="stat-val red" id="v-expense">—</div>
+      <div class="stat-sub" id="v-expense-sub"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Receita</div>
+      <div class="stat-val green" id="v-income">—</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Saldo</div>
+      <div class="stat-val neutral" id="v-balance">—</div>
+    </div>
+  </div>
+
+  <div class="grid row-2" style="margin-bottom:var(--gap)">
+    <div class="card">
+      <div class="card-title">Gastos por categoria</div>
+      <canvas id="chart-donut" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Histórico mensal</div>
+      <canvas id="chart-bar" height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="grid row-2" style="margin-bottom:var(--gap)">
+    <div class="card">
+      <div class="card-title">Transações recentes</div>
+      <div class="tx-list" id="tx-list"></div>
+    </div>
+    <div class="grid row-1" style="gap:var(--gap)">
+      <div class="card">
+        <div class="card-title">Metas</div>
+        <div id="goals-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Saúde este mês</div>
+        <div class="health-chips" id="health-chips"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid row-2" style="margin-bottom:var(--gap)">
+    <div class="card">
+      <div class="card-title">Hábitos</div>
+      <div id="habits-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tarefas pendentes</div>
+      <div id="tasks-list"></div>
+    </div>
+  </div>
+
+  <div class="grid row-1">
+    <div class="card">
+      <div class="card-title">Notas recentes</div>
+      <div id="notes-list"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const TOKEN = "__TOKEN__";
+let currentMonth = "";
+let donutChart = null;
+let barChart = null;
+
+const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+                     "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+const CAT_COLORS = [
+  "#6c63ff","#48e5c2","#f4647a","#f9c74f","#4cc9f0",
+  "#7b2d8b","#ff9f43","#00b4d8","#06d6a0","#ef476f",
+];
+
+function fmtEur(v){
+  return "€ " + v.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+}
+function fmtMonth(ym){
+  const [y,m] = ym.split("-");
+  return MONTH_NAMES[parseInt(m)-1] + " " + y;
+}
+
+function addSubtractMonth(ym, delta){
+  let [y,m] = ym.split("-").map(Number);
+  m += delta;
+  if(m > 12){m=1; y++;}
+  if(m < 1){m=12; y--;}
+  return `${y}-${String(m).padStart(2,"0")}`;
+}
+
+async function load(month){
+  const url = `/api/d/${TOKEN}${month ? "?month="+month : ""}`;
+  const res = await fetch(url);
+  if(!res.ok){ document.getElementById("loading").textContent="Dashboard não encontrado."; return; }
+  const d = await res.json();
+  currentMonth = d.month;
+  render(d);
+  document.getElementById("loading").style.display="none";
+}
+
+function render(d){
+  document.getElementById("header-name").textContent = "· " + d.member_name;
+  document.getElementById("month-label").textContent = fmtMonth(d.month);
+
+  // Cards
+  document.getElementById("v-expense").textContent = fmtEur(d.total_expense);
+  document.getElementById("v-expense-sub").textContent =
+    d.expenses_by_category.length > 0
+      ? `${d.expenses_by_category.length} categorias`
+      : "";
+  document.getElementById("v-income").textContent = fmtEur(d.total_income);
+  const balEl = document.getElementById("v-balance");
+  balEl.textContent = fmtEur(d.balance);
+  balEl.className = "stat-val " + (d.balance >= 0 ? "green" : "red");
+
+  // Donut
+  renderDonut(d.expenses_by_category);
+
+  // Bar
+  renderBar(d.monthly_history);
+
+  // Transactions
+  const txList = document.getElementById("tx-list");
+  if(d.recent_transactions.length === 0){
+    txList.innerHTML = '<div class="empty">Sem transações este mês.</div>';
+  } else {
+    txList.innerHTML = d.recent_transactions.map(t => `
+      <div class="tx-row">
+        <div class="tx-date">${t.date}</div>
+        <div class="tx-info">
+          <div class="tx-merchant">${esc(t.merchant)}</div>
+          <div class="tx-cat">${esc(t.category)}</div>
+        </div>
+        <div class="tx-amt ${t.type}">${t.type==="income"?"+":"−"}${fmtEur(t.amount)}</div>
+      </div>`).join("");
+  }
+
+  // Goals
+  const goalsList = document.getElementById("goals-list");
+  if(d.goals.length === 0){
+    goalsList.innerHTML = '<div class="empty">Sem metas activas.</div>';
+  } else {
+    goalsList.innerHTML = d.goals.map(g => `
+      <div class="goal-item">
+        <div class="goal-title">${esc(g.title)}</div>
+        <div class="goal-meta">${g.target ? esc(g.target) : ""}${g.deadline ? " · " + g.deadline : ""}</div>
+      </div>`).join("");
+  }
+
+  // Habits
+  const habitsList = document.getElementById("habits-list");
+  if(d.habits.length === 0){
+    habitsList.innerHTML = '<div class="empty">Sem hábitos registados nos últimos 30 dias.</div>';
+  } else {
+    habitsList.innerHTML = d.habits.map(h => `
+      <div class="habit-row">
+        <div class="habit-name">${esc(h.activity)}</div>
+        <div class="habit-streak">${h.streak}d 🔥</div>
+        <div class="habit-dots">${h.last7.map(on=>`<div class="dot${on?" on":""}"></div>`).join("")}</div>
+      </div>`).join("");
+  }
+
+  // Tasks
+  const tasksList = document.getElementById("tasks-list");
+  if(d.tasks.length === 0){
+    tasksList.innerHTML = '<div class="empty">Nenhuma tarefa pendente.</div>';
+  } else {
+    tasksList.innerHTML = d.tasks.map(t => `
+      <div class="task-item">
+        <div class="task-body">${esc(t.body)}</div>
+        ${t.due_date ? `<div class="task-due">📅 ${t.due_date}</div>` : ""}
+      </div>`).join("");
+  }
+
+  // Notes
+  const notesList = document.getElementById("notes-list");
+  if(d.notes.length === 0){
+    notesList.innerHTML = '<div class="empty">Sem notas.</div>';
+  } else {
+    notesList.innerHTML = d.notes.map(n => `
+      <div class="note-item">
+        <div class="tx-merchant">${esc(n.body)}</div>
+        <div class="note-date">${n.date}</div>
+      </div>`).join("");
+  }
+
+  // Health
+  const chips = document.getElementById("health-chips");
+  if(d.health.length === 0){
+    chips.innerHTML = '<div class="empty">Sem registos de saúde este mês.</div>';
+  } else {
+    const labels = {medication:"💊 Medicação",mood:"😊 Humor",sleep:"😴 Sono",water:"💧 Água"};
+    chips.innerHTML = d.health.map(h => `
+      <div class="chip">${labels[h.type]||h.type}: <span>${h.count}x</span></div>`).join("");
+  }
+}
+
+function renderDonut(cats){
+  const ctx = document.getElementById("chart-donut").getContext("2d");
+  if(donutChart) donutChart.destroy();
+  if(cats.length === 0){
+    ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+    return;
+  }
+  donutChart = new Chart(ctx, {
+    type:"doughnut",
+    data:{
+      labels: cats.map(c=>c.category),
+      datasets:[{
+        data: cats.map(c=>c.total),
+        backgroundColor: cats.map((_,i)=>CAT_COLORS[i%CAT_COLORS.length]),
+        borderWidth:2,borderColor:"#1a1d27"
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:"right",labels:{color:"#e8eaf0",font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:ctx=>" " + ctx.label + ": " + fmtEur(ctx.parsed)}}
+      }
+    }
+  });
+}
+
+function renderBar(history){
+  const ctx = document.getElementById("chart-bar").getContext("2d");
+  if(barChart) barChart.destroy();
+  barChart = new Chart(ctx, {
+    type:"bar",
+    data:{
+      labels: history.map(h=>h.label),
+      datasets:[
+        {label:"Gastos",data:history.map(h=>h.total_expense),
+         backgroundColor:"rgba(244,100,122,0.7)",borderRadius:4},
+        {label:"Receita",data:history.map(h=>h.total_income),
+         backgroundColor:"rgba(72,229,194,0.7)",borderRadius:4}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{
+        x:{ticks:{color:"#8b90a0",font:{size:10}},grid:{color:"#2c3050"}},
+        y:{ticks:{color:"#8b90a0",font:{size:10},callback:v=>"€"+v},grid:{color:"#2c3050"}}
+      },
+      plugins:{legend:{labels:{color:"#e8eaf0",font:{size:11}}},
+               tooltip:{callbacks:{label:ctx=>" " + ctx.dataset.label + ": " + fmtEur(ctx.parsed.y)}}}
+    }
+  });
+}
+
+function esc(s){
+  if(!s) return "";
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+document.getElementById("prev-btn").addEventListener("click",()=>{
+  load(addSubtractMonth(currentMonth,-1));
+});
+document.getElementById("next-btn").addEventListener("click",()=>{
+  const next = addSubtractMonth(currentMonth,1);
+  const today = new Date();
+  const todayYM = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`;
+  if(next <= todayYM) load(next);
+});
+
+load();
+</script>
+</body>
+</html>"""
