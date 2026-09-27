@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     llm_model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
     aws_region: str = "eu-central-1"        # Frankfurt — data residency
 
+    # Dashboard
+    base_url: str = ""  # e.g. https://alfred.up.railway.app
+
     # Security
     secret_key: SecretStr = SecretStr("change-me-in-production")
 
