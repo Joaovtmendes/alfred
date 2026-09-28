@@ -24,6 +24,8 @@ from pydantic import SecretStr
 from alfred.main import app
 from alfred.settings import settings
 
+pytest_plugins = ["tests.labkit"]  # provides the ``lab`` fixture (DB-backed router tests)
+
 TEST_APP_SECRET = "test-app-secret"
 
 

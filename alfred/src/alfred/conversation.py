@@ -55,8 +55,10 @@ from alfred.parsing import (
     TRIP_END_RE,
     TRIP_LIST_RE,
     TRIP_QUERY_RE,
+    like_escape,
     match_trip_start,
     parse_category_correction,
+    strip_accents,
 )
 from alfred.whatsapp import send_text
 
@@ -1332,7 +1334,8 @@ _GOALS_QUERY_WORDS = {
     "meine ziele",
     "mes objectifs",
     "como vão as metas",
-    "como vai",
+    "como vão as minhas metas",
+    "como vai a minha meta",
 }
 _HABIT_WORDS = {
     "meditei",
@@ -1563,7 +1566,7 @@ _GOAL_COMPLETE_RE = re.compile(
 _HABIT_FREQ_RE = re.compile(
     r"(?:quantas\s+vezes|how\s+many\s+times|hoe\s+vaak|combien\s+de\s+fois|wie\s+oft)\s+"
     r"(?:(?:eu\s+)?fiz|did\s+i\s+do|deed\s+ik|ai-je\s+fait|habe\s+ich\s+gemacht|"
-    r"meditei|meditated|li|leste|estudei|corri|ran|nadei)\s*(.+)?",
+    r"meditei|meditated|li|leste|estudei)\b\s*(.+)?",
     re.IGNORECASE,
 )
 _HABIT_STREAK_RE = re.compile(
@@ -1645,16 +1648,30 @@ def _detect_job_type(text: str) -> str:
 
 
 def _is_command(body: str, keywords: set[str]) -> bool:
-    """True when body *starts with* a command keyword (ignores trailing punctuation/words)."""
+    """True when body *starts with* a command keyword (accent- and case-insensitive)."""
+    plain = strip_accents(body)
     for kw in keywords:
-        if (
-            body == kw
-            or body.startswith(kw + " ")
-            or body.startswith(kw + "?")
-            or body.startswith(kw + "!")
-        ):
+        k = strip_accents(kw)
+        if plain == k or plain.startswith((k + " ", k + "?", k + "!")):
             return True
     return False
+
+
+def _is_bare_command(body: str, keywords: set[str]) -> bool:
+    """True when body is *only* a command keyword (plus punctuation / a polite word).
+
+    Used where trailing words change the meaning: "gastos em restaurante" is a
+    category query, not the plain "gastos" summary.
+    """
+    plain = strip_accents(body).strip(" .!?")
+    for polite in (" por favor", " please", " alsjeblieft", " s'il vous plait", " bitte"):
+        plain = plain.removesuffix(polite)
+    return plain in {strip_accents(k) for k in keywords}
+
+
+def _grp(body: str, m: re.Match[str], n: int = 1) -> str:
+    """Group ``n`` of a match made on ``body_plain``, sliced from the accented ``body``."""
+    return body[m.start(n) : m.end(n)] if m.group(n) is not None else ""
 
 
 # ── M14 — Viagem handler ─────────────────────────────────────────────────────
@@ -2139,7 +2156,10 @@ async def _handle_category_correction(
     if not known:
         seen = await session.scalar(
             select(Expense.id)
-            .where(Expense.member_id == member.id, Expense.merchant.ilike(raw_merchant))
+            .where(
+                Expense.member_id == member.id,
+                Expense.merchant.ilike(like_escape(raw_merchant), escape="\\"),
+            )
             .limit(1)
         )
         if seen is None:
@@ -2153,7 +2173,7 @@ async def _handle_category_correction(
             select(Expense)
             .where(
                 Expense.member_id == member.id,
-                Expense.merchant.ilike(raw_merchant),
+                Expense.merchant.ilike(like_escape(raw_merchant), escape="\\"),
                 Expense.created_at >= cutoff,
             )
             .order_by(Expense.created_at.desc())
@@ -2271,6 +2291,9 @@ async def handle_inbound(
 
     to = member.wa_phone
     body = unicodedata.normalize("NFC", (message.body or "").strip()).lower()
+    # Accent-free twin (same length as ``body``): command regexes are written without
+    # accents so "está"/"água"/"medicação" match; slice captured text from ``body``.
+    body_plain = strip_accents(body)
 
     # ── 1. First contact: detect language, send disclosure ───────────────────
     if member.consent_state == "pending":
@@ -2346,9 +2369,7 @@ async def handle_inbound(
             return
 
         # 4d. Summary command — skip if message has a time qualifier (let classify_query handle it)
-        if not any(q in body.lower() for q in _SUMMARY_TIME_QUALIFIERS) and _is_command(
-            body, _SUMMARY_WORDS
-        ):
+        if _is_bare_command(body, _SUMMARY_WORDS):
             summary = await _build_summary(member, session)
             await send_text(to, summary)
             await _save_outbound(member, summary, session)
@@ -2435,9 +2456,9 @@ async def handle_inbound(
             return
 
         # 4e-0c. M5 — cancel reminder
-        m_cancel = _CANCEL_LEMBRETE_RE.search(body)
+        m_cancel = _CANCEL_LEMBRETE_RE.search(body_plain)
         if m_cancel:
-            cancel_kw = m_cancel.group(1).strip().lower()
+            cancel_kw = _grp(body, m_cancel).strip().lower()
             from sqlalchemy import select as _sel
 
             from alfred.models import ScheduledJob as _SJ
@@ -2490,19 +2511,19 @@ async def handle_inbound(
 
             raw_task = m_task.group(1).strip()
             # try to extract due_date ("até <date>" / "by <date>" / "voor <date>")
-            due_m = _re.search(r"(?:até|by|voor|bis|avant)\s+(.+)$", raw_task, _re.IGNORECASE)
+            due_m = _re.search(r"\s(?:até|by|voor|bis|avant)\s+(.+)$", raw_task, _re.IGNORECASE)
             task_body = raw_task
             due_date_val = None
             if due_m:
-                task_body = raw_task[: due_m.start()].strip()
                 try:
                     from dateutil import parser as _dp
 
                     due_date_val = _dp.parse(
                         due_m.group(1), default=datetime.combine(today_local(), datetime.min.time())
                     ).date()
+                    task_body = raw_task[: due_m.start()].strip() or raw_task
                 except Exception:
-                    pass
+                    due_date_val = None  # not a date ("até logo"): keep the full text
             task = Task(
                 id=uuid.uuid4(),
                 member_id=member.id,
@@ -2540,12 +2561,12 @@ async def handle_inbound(
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
                 return
-            done_text_lower = done_text.lower()
+            done_text_lower = like_escape(done_text.lower())
             result = await session.execute(
                 _sel(Task)
                 .where(Task.member_id == member.id)
                 .where(Task.done_at.is_(None))
-                .where(Task.body.ilike(f"%{done_text_lower}%"))
+                .where(Task.body.ilike(f"%{done_text_lower}%", escape="\\"))
                 .order_by(Task.created_at.desc())
                 .limit(1)
             )
@@ -2587,16 +2608,16 @@ async def handle_inbound(
             return
 
         # 4e-5b. M10 — delete task: "apaga tarefa X"
-        m_tdel = _TASK_DELETE_RE.match(body)
+        m_tdel = _TASK_DELETE_RE.match(body_plain)
         if m_tdel:
-            del_kw = m_tdel.group(1).strip().lower()
+            del_kw = like_escape(_grp(body, m_tdel).strip().lower())
             from sqlalchemy import select as _sel
 
             res_del = await session.execute(
                 _sel(Task)
                 .where(Task.member_id == member.id)
-                .where(Task.body.ilike(f"%{del_kw}%"))
-                .order_by(Task.created_at.desc())
+                .where(Task.body.ilike(f"%{del_kw}%", escape="\\"))
+                .order_by(Task.done_at.is_(None).desc(), Task.created_at.desc())
                 .limit(1)
             )
             del_task = res_del.scalar_one_or_none()
@@ -2690,16 +2711,16 @@ async def handle_inbound(
             return
 
         # 4e-7b. M9 — complete goal: "meta de correr concluida"
-        m_gcomplete = _GOAL_COMPLETE_RE.search(body)
+        m_gcomplete = _GOAL_COMPLETE_RE.search(body_plain)
         if m_gcomplete:
-            kw = m_gcomplete.group(1).strip().lower()
+            kw = like_escape(_grp(body, m_gcomplete).strip().lower())
             from sqlalchemy import select as _sel
 
             res_gc = await session.execute(
                 _sel(Goal)
                 .where(Goal.member_id == member.id)
                 .where(Goal.active.is_(True))
-                .where(Goal.title.ilike(f"%{kw}%"))
+                .where(Goal.title.ilike(f"%{kw}%", escape="\\"))
                 .order_by(Goal.created_at.desc())
                 .limit(1)
             )
@@ -2715,9 +2736,9 @@ async def handle_inbound(
             return
 
         # 4e-7c. M9 — habit frequency: "quantas vezes meditei esta semana"
-        m_hfreq = _HABIT_FREQ_RE.search(body)
+        m_hfreq = _HABIT_FREQ_RE.search(body_plain)
         if m_hfreq:
-            freq_raw = (m_hfreq.group(1) or body).strip()
+            freq_raw = (_grp(body, m_hfreq) or body).strip()
             # extract the activity from the whole body
             from datetime import timedelta as _td
 
@@ -2750,9 +2771,9 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
         # 4e-7d. V1.1 — habit streak: "quantos dias seguidos meditei"
-        m_hstreak = _HABIT_STREAK_RE.search(body)
+        m_hstreak = _HABIT_STREAK_RE.search(body_plain)
         if m_hstreak:
-            streak_raw = (m_hstreak.group(1) or "").strip()
+            streak_raw = _grp(body, m_hstreak).strip()
             streak_kw = streak_raw.lower() if streak_raw else ""
             from datetime import timedelta as _td
 
@@ -2925,7 +2946,7 @@ async def handle_inbound(
                 return
 
         # 4e-9b. M8 — mood history query
-        if _HEALTH_MOOD_QUERY_RE.search(body):
+        if _HEALTH_MOOD_QUERY_RE.search(body_plain):
             from datetime import timedelta as _td
 
             from sqlalchemy import select as _sel
@@ -2951,7 +2972,7 @@ async def handle_inbound(
             return
 
         # 4e-9c. M8 — sleep average query
-        if _HEALTH_SLEEP_QUERY_RE.search(body):
+        if _HEALTH_SLEEP_QUERY_RE.search(body_plain):
             from datetime import timedelta as _td
 
             from sqlalchemy import select as _sel
@@ -2978,7 +2999,7 @@ async def handle_inbound(
             return
 
         # 4e-9d. M8 — medication adherence query
-        if _HEALTH_MED_QUERY_RE.search(body):
+        if _HEALTH_MED_QUERY_RE.search(body_plain):
             from datetime import timedelta as _td
 
             from sqlalchemy import select as _sel
@@ -3009,7 +3030,7 @@ async def handle_inbound(
             return
 
         # 4e-9e. M8 — water intake query
-        if _HEALTH_WATER_QUERY_RE.search(body):
+        if _HEALTH_WATER_QUERY_RE.search(body_plain):
             from sqlalchemy import select as _sel
 
             today_wq = today_local()
@@ -3124,14 +3145,17 @@ async def handle_inbound(
             return
 
         # 4e-11b. M7 — delete workout: "apaga o treino de hoje"
-        if _WORKOUT_DELETE_RE.search(body):
+        if _WORKOUT_DELETE_RE.search(body_plain):
             from sqlalchemy import select as _sel
 
+            wd_query = _sel(WorkoutSession).where(WorkoutSession.member_id == member.id)
+            if re.search(r"\b(?:hoje|today|vandaag|heute|aujourd)", body_plain):
+                # "apaga o treino de hoje" must never remove a workout from another day
+                wd_query = wd_query.where(WorkoutSession.workout_date == today_local())
             res_wd = await session.execute(
-                _sel(WorkoutSession)
-                .where(WorkoutSession.member_id == member.id)
-                .order_by(WorkoutSession.workout_date.desc(), WorkoutSession.created_at.desc())
-                .limit(1)
+                wd_query.order_by(
+                    WorkoutSession.workout_date.desc(), WorkoutSession.created_at.desc()
+                ).limit(1)
             )
             wo_del = res_wd.scalar_one_or_none()
             if wo_del:
@@ -3144,7 +3168,7 @@ async def handle_inbound(
             return
 
         # 4e-11c. M7 — workout monthly summary: "treinos deste mês"
-        if _WORKOUT_MONTH_RE.search(body):
+        if _WORKOUT_MONTH_RE.search(body_plain):
             from datetime import timedelta as _td
 
             from sqlalchemy import select as _sel
@@ -3207,7 +3231,7 @@ async def handle_inbound(
             return
 
         # 4e-11d. M7 — workout activity count: "quantas vezes corri esta semana"
-        if _WORKOUT_ACTIVITY_RE.search(body):
+        if _WORKOUT_ACTIVITY_RE.search(body_plain):
             from datetime import timedelta as _td
 
             from sqlalchemy import select as _sel

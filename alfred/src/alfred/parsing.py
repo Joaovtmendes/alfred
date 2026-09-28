@@ -9,6 +9,22 @@ belong to a later handler (an expense, a task, a note).
 from __future__ import annotations
 
 import re
+import unicodedata
+
+# ── Text normalisation ────────────────────────────────────────────────────────
+
+
+def strip_accents(text: str) -> str:
+    """'está água ç' → 'esta agua c'. Length-preserving for NFC input, so match
+    positions found on the plain text can be sliced out of the original."""
+    nfd = unicodedata.normalize("NFD", text)
+    return "".join(c for c in nfd if unicodedata.category(c) != "Mn")
+
+
+def like_escape(text: str) -> str:
+    """Escape %, _ and \\ so user text is matched literally by ILIKE (escape='\\')."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
 
 # ── Money ─────────────────────────────────────────────────────────────────────
 

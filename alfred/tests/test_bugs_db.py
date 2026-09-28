@@ -8,22 +8,17 @@ from __future__ import annotations
 
 import os
 import uuid
-from unittest.mock import AsyncMock, patch
 
 import pytest
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 
-from alfred.conversation import handle_inbound
-from alfred.db import AsyncSessionLocal, engine
+from alfred.db import engine
 from alfred.models import (
     Expense,
-    Household,
-    Member,
     MerchantCategoryOverride,
-    Message,
     Trip,
 )
-from tests.conftest import make_message
+from tests.labkit import Lab
 
 pytestmark = pytest.mark.skipif(os.environ.get("ALFRED_TEST_DB") != "1", reason="needs test DB")
 
@@ -42,75 +37,6 @@ EXPENSE = {
 async def _fresh_engine():
     yield
     await engine.dispose()
-
-
-class Lab:
-    """A member in a real DB plus a ``say()`` that runs one inbound message."""
-
-    def __init__(self, member_id: uuid.UUID, household_id: uuid.UUID, phone: str) -> None:
-        self.member_id, self.household_id, self.phone = member_id, household_id, phone
-        self.sent: list[str] = []
-        self.expense = AsyncMock(return_value=None)
-        self.llm_reply = AsyncMock(return_value="[llm]")
-
-    async def say(self, body: str) -> str:
-        """Send one message; returns the reply text."""
-        before = len(self.sent)
-
-        async def fake_send(to: str, text: str) -> dict:
-            self.sent.append(text)
-            return {}
-
-        with (
-            patch("alfred.conversation.send_text", fake_send),
-            patch("alfred.conversation.extract_expense", self.expense),
-            patch("alfred.conversation.extract_habit", AsyncMock(return_value=None)),
-            patch("alfred.conversation.extract_health_log", AsyncMock(return_value=None)),
-            patch("alfred.conversation.extract_workout", AsyncMock(return_value=None)),
-            patch("alfred.conversation.classify_query", AsyncMock(return_value=None)),
-            patch("alfred.conversation.generate_reply", self.llm_reply),
-        ):
-            async with AsyncSessionLocal() as s:
-                member = await s.get(Member, self.member_id)
-                await handle_inbound(member, make_message(body), s)
-                await s.commit()
-        assert len(self.sent) == before + 1, f"expected exactly one reply, got {self.sent[before:]}"
-        return self.sent[-1]
-
-    async def scalar(self, stmt):
-        async with AsyncSessionLocal() as s:
-            return (await s.execute(stmt)).scalar()
-
-    async def add(self, *rows) -> None:
-        async with AsyncSessionLocal() as s:
-            s.add_all(rows)
-            await s.commit()
-
-
-@pytest.fixture
-async def lab():
-    phone = "3160" + uuid.uuid4().hex[:7]
-    async with AsyncSessionLocal() as s:
-        hh = Household(name="bugs")
-        s.add(hh)
-        await s.flush()
-        m = Member(household_id=hh.id, wa_phone=phone, consent_state="accepted", language="pt")
-        s.add(m)
-        await s.commit()
-        lab = Lab(m.id, hh.id, phone)
-    yield lab
-    async with AsyncSessionLocal() as s:
-        await s.execute(delete(Expense).where(Expense.member_id == lab.member_id))
-        await s.execute(delete(Trip).where(Trip.member_id == lab.member_id))
-        await s.execute(
-            delete(MerchantCategoryOverride).where(
-                MerchantCategoryOverride.member_id == lab.member_id
-            )
-        )
-        await s.execute(delete(Message).where(Message.household_id == lab.household_id))
-        await s.execute(delete(Member).where(Member.id == lab.member_id))
-        await s.execute(delete(Household).where(Household.id == lab.household_id))
-        await s.commit()
 
 
 async def _active_trip(lab: Lab, destination: str = "Lisboa") -> None:
