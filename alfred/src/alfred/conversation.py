@@ -20,6 +20,15 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred.clock import (
+    day_start,
+    month_start,
+    now_local,
+    prev_month_start,
+    to_local,
+    today_local,
+    week_start,
+)
 from alfred.llm import (
     classify_query,
     extract_expense,
@@ -1676,7 +1685,7 @@ async def _handle_trip(
             id=uuid.uuid4(),
             member_id=member.id,
             destination=dest,
-            started_at=datetime.now(UTC).date(),
+            started_at=today_local(),
             active=True,
         )
         session.add(trip)
@@ -1690,7 +1699,7 @@ async def _handle_trip(
         if not active:
             return _t("trip_none_active", lang)
 
-        active.ended_at = datetime.now(UTC).date()
+        active.ended_at = today_local()
         active.active = False
 
         row = (
@@ -1749,7 +1758,7 @@ async def _handle_trip(
         ]
         for r in rows:
             lines.append(
-                f"  {r.expense_date.strftime('%d/%m')}  {r.merchant or r.category}"
+                f"  {to_local(r.expense_date).strftime('%d/%m')}  {r.merchant or r.category}"
                 f" ({r.category})  {_fmt_eur(r.amount)}"
             )
         lines.append(f"Total: {_fmt_eur(total)}  ({len(rows)} despesas)")
@@ -1871,31 +1880,31 @@ def _looks_like_gibberish(text: str) -> bool:
 
 
 def _period_range(period: str, lang: str = "en") -> tuple[datetime, datetime | None, str]:
-    """Return (start, end_exclusive, label).  end_exclusive=None means open (up to now)."""
-    now = datetime.now(UTC)
+    """Return (start, end_exclusive, label) — day boundaries in the user's timezone.
+
+    end_exclusive=None means open (up to now).
+    """
+    today = today_local()
     if period == "today":
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        tomorrow = start + timedelta(days=1)
-        return start, tomorrow, _t("period_today", lang)
+        return day_start(today), day_start(today + timedelta(days=1)), _t("period_today", lang)
     if period == "last_month":
-        first_this = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        prev_last = first_this - timedelta(seconds=1)
-        start = prev_last.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        return start, first_this, prev_last.strftime("%B %Y").capitalize()
+        first_prev = prev_month_start(today)
+        return (
+            day_start(first_prev),
+            day_start(month_start(today)),
+            first_prev.strftime("%B %Y").capitalize(),
+        )
     if period == "current_week":
-        start = (now - timedelta(days=now.weekday())).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        return start, None, _t("period_current_week", lang)
+        return day_start(week_start(today)), None, _t("period_current_week", lang)
     if period == "last_week":
-        start_this = (now - timedelta(days=now.weekday())).replace(
-            hour=0, minute=0, second=0, microsecond=0
+        this_week = week_start(today)
+        return (
+            day_start(this_week - timedelta(days=7)),
+            day_start(this_week),
+            _t("period_last_week", lang),
         )
-        start = start_this - timedelta(days=7)
-        return start, start_this, _t("period_last_week", lang)
     # default: current_month
-    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    return start, None, now.strftime("%B %Y").capitalize()
+    return day_start(month_start(today)), None, today.strftime("%B %Y").capitalize()
 
 
 async def _build_summary(
@@ -1942,7 +1951,7 @@ async def _build_summary(
         )
         lines = [f"{title}\n"]
         for e in outflows[:10]:
-            date_str = e.expense_date.strftime("%d/%m")
+            date_str = to_local(e.expense_date).strftime("%d/%m")
             name = e.merchant or e.description or category
             lines.append(f"• {date_str} {name}: {_fmt_eur(e.amount)}")
         lines.append(f"\n{_t('category_total', lang, amount=_fmt_eur(total_out))}")
@@ -1974,8 +1983,8 @@ async def _build_summary(
 async def _build_saldo(member: Member, session: AsyncSession) -> str:
     """Show income/expense balance for the current month."""
     lang = member.language or "en"
-    now = datetime.now(UTC)
-    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    now = now_local()
+    start = day_start(month_start(now.date()))
 
     result = await session.execute(
         select(Expense).where(
@@ -2006,11 +2015,10 @@ async def _build_saldo(member: Member, session: AsyncSession) -> str:
 async def _build_comparison(member: Member, session: AsyncSession) -> str:
     """Compare current month vs previous month (expenses only)."""
     lang = member.language or "en"
-    now = datetime.now(UTC)
-    cur_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    now = now_local()
+    cur_start = day_start(month_start(now.date()))
     prev_end = cur_start
-    prev_last = cur_start - timedelta(seconds=1)
-    prev_start = prev_last.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    prev_start = day_start(prev_month_start(now.date()))
 
     async def _total_out(start: datetime, end: datetime) -> tuple[float, int]:
         r = await session.execute(
@@ -2028,7 +2036,7 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
     prev_total, prev_n = await _total_out(prev_start, prev_end)
 
     cur_label = now.strftime("%B").capitalize()
-    prev_label = prev_last.strftime("%B").capitalize()
+    prev_label = prev_start.strftime("%B").capitalize()
 
     diff = cur_total - prev_total
     if prev_total == 0:
@@ -2490,7 +2498,9 @@ async def handle_inbound(
                 try:
                     from dateutil import parser as _dp
 
-                    due_date_val = _dp.parse(due_m.group(1), default=datetime.now()).date()
+                    due_date_val = _dp.parse(
+                        due_m.group(1), default=datetime.combine(today_local(), datetime.min.time())
+                    ).date()
                 except Exception:
                     pass
             task = Task(
@@ -2565,7 +2575,7 @@ async def handle_inbound(
                 reply = _t("tasks_list_empty", lang)
             else:
                 lines = [_t("tasks_list_header", lang, n=len(open_tasks))]
-                today_date = datetime.now(UTC).date()
+                today_date = today_local()
                 for i, t in enumerate(open_tasks, 1):
                     due_str = _t("tasks_list_due", lang, date=str(t.due_date)) if t.due_date else ""
                     is_overdue = bool(t.due_date and t.due_date < today_date)
@@ -2713,7 +2723,7 @@ async def handle_inbound(
 
             from sqlalchemy import select as _sel
 
-            week_ago = datetime.now(UTC).date() - _td(days=7)
+            week_ago = today_local() - _td(days=6)  # 7-day window incl. today
             res_hf = await session.execute(
                 _sel(HabitLog)
                 .where(HabitLog.member_id == member.id)
@@ -2817,7 +2827,7 @@ async def handle_inbound(
                 member_id=member.id,
                 goal_id=linked_goal.id if linked_goal else None,
                 activity=habit_activity,
-                log_date=datetime.now(UTC).date(),
+                log_date=today_local(),
             )
             session.add(habit_log)
             if linked_goal:
@@ -2848,7 +2858,7 @@ async def handle_inbound(
 
                 from sqlalchemy import select as _sel
 
-                h_date = (datetime.now(UTC) - _td(days=h_days_ago)).date()
+                h_date = today_local() - _td(days=h_days_ago)
                 # Try to link to goal
                 res_hg2 = await session.execute(
                     _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
@@ -2882,14 +2892,14 @@ async def handle_inbound(
 
         # 4e-9. M8 — health log: medicação, humor, sono, água
         if _is_command(body, _HEALTH_WORDS):
-            today = datetime.now(UTC).date()
+            today = today_local()
             health_data = await extract_health_log(body, lang=member.language or "en")
             if health_data:
                 log_date = today
                 if health_data.get("days_ago", 0) > 0:
                     from datetime import timedelta as _td
 
-                    log_date = (datetime.now(UTC) - _td(days=health_data["days_ago"])).date()
+                    log_date = today_local() - _td(days=health_data["days_ago"])
                 hlog = HealthLog(
                     id=uuid.uuid4(),
                     member_id=member.id,
@@ -2920,7 +2930,7 @@ async def handle_inbound(
 
             from sqlalchemy import select as _sel
 
-            week_ago = datetime.now(UTC).date() - _td(days=7)
+            week_ago = today_local() - _td(days=6)  # 7-day window incl. today
             res_mq = await session.execute(
                 _sel(HealthLog)
                 .where(HealthLog.member_id == member.id)
@@ -2946,7 +2956,7 @@ async def handle_inbound(
 
             from sqlalchemy import select as _sel
 
-            week_ago = datetime.now(UTC).date() - _td(days=7)
+            week_ago = today_local() - _td(days=6)  # 7-day window incl. today
             res_sq = await session.execute(
                 _sel(HealthLog)
                 .where(HealthLog.member_id == member.id)
@@ -2973,7 +2983,7 @@ async def handle_inbound(
 
             from sqlalchemy import select as _sel
 
-            week_ago = datetime.now(UTC).date() - _td(days=7)
+            week_ago = today_local() - _td(days=6)  # 7-day window incl. today
             res_medq = await session.execute(
                 _sel(HealthLog)
                 .where(HealthLog.member_id == member.id)
@@ -2985,7 +2995,7 @@ async def handle_inbound(
                 reply = _t("health_medication_empty", lang)
             else:
                 unique_days = len({r.log_date for r in med_rows})
-                total_days = min(7, (datetime.now(UTC).date() - week_ago).days + 1)
+                total_days = min(7, (today_local() - week_ago).days + 1)
                 day_labels = ", ".join(sorted({r.log_date.strftime("%a") for r in med_rows}))
                 reply = _t(
                     "health_medication_adherence",
@@ -3002,7 +3012,7 @@ async def handle_inbound(
         if _HEALTH_WATER_QUERY_RE.search(body):
             from sqlalchemy import select as _sel
 
-            today_wq = datetime.now(UTC).date()
+            today_wq = today_local()
             res_wq = await session.execute(
                 _sel(HealthLog)
                 .where(HealthLog.member_id == member.id)
@@ -3024,14 +3034,14 @@ async def handle_inbound(
 
         # 4e-10. M7 — treino: "corri 30 min"
         if _is_command(body, _WORKOUT_WORDS):
-            today = datetime.now(UTC).date()
+            today = today_local()
             workout_data = await extract_workout(body, lang=member.language or "en")
             if workout_data:
                 from datetime import timedelta as _td
 
                 wo_date = today
                 if workout_data.get("days_ago", 0) > 0:
-                    wo_date = (datetime.now(UTC) - _td(days=workout_data["days_ago"])).date()
+                    wo_date = today_local() - _td(days=workout_data["days_ago"])
                 ws = WorkoutSession(
                     id=uuid.uuid4(),
                     member_id=member.id,
@@ -3081,7 +3091,7 @@ async def handle_inbound(
 
             from sqlalchemy import select as _sel
 
-            week_ago = datetime.now(UTC).date() - _td(days=7)
+            week_ago = today_local() - _td(days=6)  # 7-day window incl. today
             result = await session.execute(
                 _sel(WorkoutSession)
                 .where(WorkoutSession.member_id == member.id)
@@ -3139,7 +3149,7 @@ async def handle_inbound(
 
             from sqlalchemy import select as _sel
 
-            now_wm = datetime.now(UTC)
+            now_wm = now_local()
             # Check if "mes passado" / "last month"
             _bl = body.lower()
             if any(
@@ -3152,18 +3162,17 @@ async def handle_inbound(
                     "letzten monat",
                 )
             ):
-                first_this = now_wm.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-                prev_last = first_this - _td(seconds=1)
-                start_wm = prev_last.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-                end_wm = first_this.date()
-                month_label = prev_last.strftime("%B %Y")
+                first_prev_wm = prev_month_start(now_wm.date())
+                start_wm = first_prev_wm
+                end_wm = month_start(now_wm.date())
+                month_label = first_prev_wm.strftime("%B %Y")
             else:
-                start_wm = now_wm.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                start_wm = month_start(now_wm.date())
                 end_wm = None
                 month_label = now_wm.strftime("%B %Y")
             q = _sel(WorkoutSession).where(
                 WorkoutSession.member_id == member.id,
-                WorkoutSession.workout_date >= start_wm.date(),
+                WorkoutSession.workout_date >= start_wm,
             )
             if end_wm:
                 q = q.where(WorkoutSession.workout_date < end_wm)
@@ -3203,7 +3212,7 @@ async def handle_inbound(
 
             from sqlalchemy import select as _sel
 
-            week_ago_wa = datetime.now(UTC).date() - _td(days=7)
+            week_ago_wa = today_local() - _td(days=6)  # 7-day window incl. today
             res_wa = await session.execute(
                 _sel(WorkoutSession)
                 .where(WorkoutSession.member_id == member.id)
@@ -3301,7 +3310,7 @@ async def handle_inbound(
         if expense_data:
             txn_type = expense_data.get("type", "expense")
             days_ago = expense_data.get("days_ago", 0)
-            expense_date = datetime.now(UTC) - timedelta(days=days_ago)
+            expense_date = now_local() - timedelta(days=days_ago)
 
             # M14 — auto-tag with the active trip. Looked up BEFORE the expense is
             # created so it is inserted once, already tagged.
