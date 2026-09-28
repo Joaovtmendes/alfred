@@ -1,0 +1,74 @@
+{
+  "version": "6.0",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "WELCOME": []
+  },
+  "screens": [
+    {
+      "id": "WELCOME",
+      "title": "Alfred",
+      "terminal": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Welcome to Alfred"
+          },
+          {
+            "type": "TextBody",
+            "text": "Your personal WhatsApp assistant for expenses, reminders and more.\n\nTake 30 seconds to set up your account."
+          },
+          {
+            "type": "TextInput",
+            "label": "Your name",
+            "name": "preferred_name",
+            "required": true,
+            "input-type": "text",
+            "helper-text": "How should Alfred address you?"
+          },
+          {
+            "type": "Dropdown",
+            "label": "Language / Idioma / Taal",
+            "name": "language",
+            "required": true,
+            "data-source": [
+              { "id": "en", "title": "English" },
+              { "id": "nl", "title": "Nederlands" },
+              { "id": "pt", "title": "Português" },
+              { "id": "fr", "title": "Français" },
+              { "id": "de", "title": "Deutsch" }
+            ]
+          },
+          {
+            "type": "CheckboxGroup",
+            "label": "Privacy",
+            "name": "gdpr_consent",
+            "required": true,
+            "min-selected-items": 1,
+            "max-selected-items": 1,
+            "data-source": [
+              {
+                "id": "accepted",
+                "title": "I understand that Alfred is an AI, not a person, and that my messages are processed to provide the service."
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Activate Alfred",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "preferred_name": "${form.preferred_name}",
+                "language": "${form.language}",
+                "gdpr_consent": "${form.gdpr_consent}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -61,6 +61,7 @@ ignore = ["B008"]  # FastAPI Depends()/Header() defaults are idiomatic
 "src/alfred/llm.py" = ["E501"]
 "src/alfred/dashboard.py" = ["E501"]  # embedded HTML/JS
 "alembic/versions/*.py" = ["E501"]
+"scripts/hard_test.py" = ["E501"]  # test-case tables
 
 [tool.mypy]
 python_version = "3.11"

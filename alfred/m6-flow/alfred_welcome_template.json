@@ -1,0 +1,33 @@
+{
+  "_note": "Substituir FLOW_ID pelo ID do Flow após submissão e aprovação na Meta",
+  "name": "alfred_welcome",
+  "language": "en",
+  "category": "UTILITY",
+  "components": [
+    {
+      "type": "HEADER",
+      "format": "TEXT",
+      "text": "Welcome to Alfred"
+    },
+    {
+      "type": "BODY",
+      "text": "Hi! I'm Alfred, your personal WhatsApp assistant.\n\nI help you track expenses, set reminders and manage goals — all in a simple chat.\n\nTap below to activate your account in 30 seconds."
+    },
+    {
+      "type": "FOOTER",
+      "text": "Alfred — your AI assistant"
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [
+        {
+          "type": "FLOW",
+          "text": "Activate account",
+          "flow_id": "FLOW_ID_HERE",
+          "flow_action": "navigate",
+          "navigate_screen": "WELCOME"
+        }
+      ]
+    }
+  ]
+}

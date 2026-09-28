@@ -69,7 +69,7 @@ async def send_template(
     Args:
         to: Recipient phone in E.164 without '+' (e.g. '31612345678').
         template_name: Approved template name (e.g. 'alfred_weekly_summary').
-        lang_code: BCP-47 language code matching the approved template ('en', 'pt', 'nl', 'fr', 'de').
+        lang_code: Language code of the approved template ('en', 'pt_BR', 'nl', 'fr', 'de').
         components: Optional list of template component objects (header/body/button params).
 
     Returns:
