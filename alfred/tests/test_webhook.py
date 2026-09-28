@@ -92,3 +92,28 @@ async def test_webhook_post_valid_signature_empty_payload(
     # 200 even with no messages — Meta expects always-200
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
+
+
+# --- fail-closed when the app secret is missing ---
+
+async def test_webhook_rejects_everything_without_app_secret(
+    client: AsyncClient, monkeypatch
+) -> None:
+    """An empty secret must not turn into 'any HMAC with an empty key is valid'."""
+    from pydantic import SecretStr
+
+    monkeypatch.setattr(settings, "whatsapp_app_secret", SecretStr(""))
+    body = json.dumps({"entry": []}).encode()
+    resp = await client.post(
+        "/webhook/whatsapp",
+        content=body,
+        headers={"Content-Type": "application/json", "X-Hub-Signature-256": _sign(body, "")},
+    )
+    assert resp.status_code == 401
+
+
+def test_phone_is_masked_in_logs() -> None:
+    from alfred.webhook import _mask_phone
+
+    assert _mask_phone("31631152144") == "***2144"
+    assert _mask_phone("") == ""

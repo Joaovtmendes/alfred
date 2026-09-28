@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import time
 from contextlib import asynccontextmanager
-from typing import Any
 
 import structlog
 from fastapi import FastAPI

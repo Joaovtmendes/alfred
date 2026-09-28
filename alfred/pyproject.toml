@@ -19,20 +19,17 @@ dependencies = [
     # Validation
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
-    # Task queue (postgres-backed, no Redis needed)
-    "procrastinate[sqlalchemy]>=2.5",
-    # Templating
-    "jinja2>=3.1",
-    # Utilities
-    "python-multipart>=0.0.9",
-    "python-dotenv>=1.0",
-    "structlog>=24.2",
-    "boto3>=1.34",
+    # LLM
     "anthropic>=0.40",
+    # Utilities
+    "structlog>=24.2",
+    "python-dateutil>=2.9",  # task due dates (conversation.py)
+    "tzdata>=2024.1",        # Europe/Amsterdam on slim images
 ]
 
 [project.optional-dependencies]
 prod = []
+bedrock = ["boto3>=1.34"]  # only when LLM_PROVIDER=bedrock
 dev = [
     "pytest>=8.2",
     "pytest-asyncio>=0.23",

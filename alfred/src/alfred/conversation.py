@@ -113,11 +113,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         ),
     },
     "consent_rejected": {
-        "pt": "Entendido. Se quiseres retomar, é só enviar uma mensagem.",
-        "nl": "Begrepen. Als je wilt hervatten, stuur gewoon een bericht.",
-        "en": "Understood. If you'd like to resume, just send a message.",
-        "fr": "Compris. Si tu veux reprendre, envoie simplement un message.",
-        "de": "Verstanden. Wenn du fortfahren möchtest, sende einfach eine Nachricht.",
+        "pt": "Entendido. Não vou processar mais mensagens. Para retomar, envia *START*.",
+        "nl": "Begrepen. Ik verwerk geen berichten meer. Stuur *START* om te hervatten.",
+        "en": "Understood. I won't process any more messages. Send *START* to resume.",
+        "fr": "Compris. Je ne traiterai plus de messages. Envoie *START* pour reprendre.",
+        "de": "Verstanden. Ich verarbeite keine Nachrichten mehr. Sende *START*, um fortzufahren.",
     },
     "consent_unknown": {
         "pt": "Responde *sim* para continuar ou *não* para cancelar.",
@@ -363,11 +363,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Ich fand keine aktuelle Ausgabe zum Korrigieren. Bitte gib sie erneut ein.",
     },
     "lembrete_set": {
-        "pt": "⏰ Lembrete configurado: *{text}* às {time} UTC. Vou lembrar-te todos os dias.",
-        "nl": "⏰ Herinnering ingesteld: *{text}* om {time} UTC. Ik herinner je elke dag.",
-        "en": "⏰ Reminder set: *{text}* at {time} UTC. I'll remind you every day.",
-        "fr": "⏰ Rappel configuré : *{text}* à {time} UTC. Je te rappellerai chaque jour.",
-        "de": "⏰ Erinnerung eingestellt: *{text}* um {time} Uhr UTC. Ich erinnere dich täglich.",
+        "pt": "⏰ Lembrete configurado: *{text}* às {time}. Vou lembrar-te todos os dias.",
+        "nl": "⏰ Herinnering ingesteld: *{text}* om {time}. Ik herinner je elke dag.",
+        "en": "⏰ Reminder set: *{text}* at {time}. I'll remind you every day.",
+        "fr": "⏰ Rappel configuré : *{text}* à {time}. Je te rappellerai chaque jour.",
+        "de": "⏰ Erinnerung eingestellt: *{text}* um {time} Uhr. Ich erinnere dich täglich.",
     },
     "lembrete_invalid": {
         "pt": "Formato inválido. Tenta: *configura lembrete: toma medicamento às 08:00*",
@@ -917,6 +917,12 @@ _HELP_WORDS = {
     "ajuda", "help", "hulp", "comandos", "commands",
     "aide", "commandes", "hilfe", "befehle",
 }
+# Words that re-open the consent flow after "stop" (the user must accept again).
+_RESUME_WORDS = {
+    "start", "iniciar", "começar", "comecar", "retomar", "voltar",
+    "hervat", "hervatten", "resume", "restart", "reprendre", "fortsetzen",
+}
+
 _STOP_WORDS = {
     "stop", "pare", "parar", "stoppen", "ophouden",
     "arrêter", "arreter", "aufhören", "aufhoren",
@@ -961,15 +967,14 @@ _VALID_CATEGORIES = frozenset({
     "supermarkt", "restaurant", "transport", "gezondheid", "entertainment",
     "wonen", "kleding", "abonnement", "inkomen", "overig",
     # common aliases
-    "supermercado", "supermercaat", "supermarché", "supermarkt",
-    "alimentação", "food", "eten", "nourriture",
+    "supermercado", "supermercaat", "supermarché", "alimentação", "food", "eten", "nourriture",
     "reizen", "viagem", "voyage", "reise",
     "gezondheidszorg", "saúde", "santé", "gesundheit",
     "divertissement", "unterhaltung",
     "wohnen", "loyer", "habitation", "moradia",
     "kleren", "roupas", "vêtements", "kleidung",
-    "subscription", "abonnement", "assinatura", "abo",
-    "income", "inkomen", "renda", "revenu", "einkommen",
+    "subscription", "assinatura", "abo",
+    "income", "renda", "revenu", "einkommen",
     "other", "outros", "anderen", "autre",
 })
 
@@ -1058,7 +1063,7 @@ _HABIT_WORDS = {
     "bebi água", "drank water", "leste", "li", "estudei", "estudied",
 }
 _HABIT_LOG_RE = re.compile(
-    r"(?P<activity>meditei|meditated|mediteerde|meditiert|li|leste|estudei|fiz yoga|"
+    r"(?P<activity>meditei|meditated|mediteerde|meditiert|li\b|leste|estudei|fiz yoga|"
     r"bebi água|drank water|fiz pilates|fiz alongamento)\s*(?:hoje|today|vandaag|heute|aujourd'hui)?",
     re.IGNORECASE,
 )
@@ -1479,11 +1484,21 @@ async def _handle_trip(
 _HISTORY_LIMIT = 10  # messages (pairs) to include in LLM context
 
 
-async def _load_history(member: Member, session: AsyncSession) -> list[dict]:
-    """Return the last N messages for this member as Claude-format dicts."""
+async def _load_history(
+    member: Member,
+    session: AsyncSession,
+    exclude_id: object | None = None,
+) -> list[dict]:
+    """Return the last N messages for this member as Claude-format dicts.
+
+    ``exclude_id`` is the inbound message being answered: it is already stored
+    in this transaction, and ``generate_reply`` appends it itself.
+    """
+    query = select(Message).where(Message.author_id == member.id)
+    if exclude_id is not None:
+        query = query.where(Message.id != exclude_id)
     result = await session.execute(
-        select(Message)
-        .where(Message.author_id == member.id)
+        query
         .order_by(Message.created_at.desc())
         .limit(_HISTORY_LIMIT * 2)
     )
@@ -1777,7 +1792,7 @@ async def handle_flow_onboarding(
     try:
         payload = _json.loads(nfm.get("response_json", "{}"))
     except (_json.JSONDecodeError, TypeError):
-        logger.warning("conversation.flow_invalid_json", wa_phone=member.wa_phone)
+        logger.warning("conversation.flow_invalid_json", member_id=str(member.id))
         return True  # consumed but invalid — ignore
 
     preferred_name = (payload.get("preferred_name") or "").strip()
@@ -1795,7 +1810,7 @@ async def handle_flow_onboarding(
 
     logger.info(
         "conversation.flow_onboarding_received",
-        wa_phone=member.wa_phone,
+        member_id=str(member.id),
         preferred_name=preferred_name,
         language=language,
         consent_given=consent_given,
@@ -1861,7 +1876,7 @@ async def handle_inbound(
         disclosure = _t("disclosure", lang)
         await send_text(to, disclosure)
         member.consent_state = "pending_response"
-        logger.info("conversation.disclosure_sent", wa_phone=to, lang=lang)
+        logger.info("conversation.disclosure_sent", member_id=str(member.id), lang=lang)
         return
 
     lang = member.language or "en"
@@ -1876,20 +1891,26 @@ async def handle_inbound(
             reply = _t("consent_accepted", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
-            logger.info("conversation.consent_accepted", wa_phone=to)
+            logger.info("conversation.consent_accepted", member_id=str(member.id))
         elif body in _CONSENT_NO:
             member.consent_state = "rejected"
             session.add(member)
             reply = _t("consent_rejected", lang)
             await send_text(to, reply)
-            logger.info("conversation.consent_rejected", wa_phone=to)
+            logger.info("conversation.consent_rejected", member_id=str(member.id))
         else:
             await send_text(to, _t("consent_unknown", lang))
         return
 
     # ── 3. Rejected — honour their choice ────────────────────────────────────
     if member.consent_state == "rejected":
-        logger.info("conversation.rejected_member_ignored", wa_phone=to)
+        if body in _RESUME_WORDS:
+            member.consent_state = "pending_response"
+            session.add(member)
+            await send_text(to, _t("disclosure", lang))
+            logger.info("conversation.resume_requested", member_id=str(member.id))
+            return
+        logger.info("conversation.rejected_member_ignored", member_id=str(member.id))
         return
 
     # ── 4. Accepted — handle commands and LLM ────────────────────────────────
@@ -1904,7 +1925,7 @@ async def handle_inbound(
             session.add(member)
             reply = _t("consent_rejected", lang)
             await send_text(to, reply)
-            logger.info("conversation.stop_requested", wa_phone=to)
+            logger.info("conversation.stop_requested", member_id=str(member.id))
             return
 
         # 4b. Saldo command
@@ -1960,7 +1981,7 @@ async def handle_inbound(
                 reply = _t("lembrete_set", lang, text=reminder_text, time=time_str)
                 logger.info(
                     "conversation.lembrete_created",
-                    wa_phone=to,
+                    member_id=str(member.id),
                     job_type=job_type,
                     time=time_str,
                 )
@@ -2055,7 +2076,7 @@ async def handle_inbound(
                 reply = _t("category_corrected", lang, merchant=raw_merchant.title(), category=canonical)
                 logger.info(
                     "conversation.category_override_saved",
-                    wa_phone=to, merchant=raw_merchant, category=canonical,
+                    member_id=str(member.id), merchant=raw_merchant, category=canonical,
                 )
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
@@ -2300,7 +2321,7 @@ async def handle_inbound(
         if m_hfreq:
             freq_raw = (m_hfreq.group(1) or body).strip()
             # extract the activity from the whole body
-            from sqlalchemy import select as _sel, func as _func
+            from sqlalchemy import select as _sel
             from datetime import timedelta as _td
             week_ago = datetime.now(timezone.utc).date() - _td(days=7)
             res_hf = await session.execute(
@@ -2330,7 +2351,7 @@ async def handle_inbound(
             streak_raw = (m_hstreak.group(1) or "").strip()
             streak_kw = streak_raw.lower() if streak_raw else ""
             from sqlalchemy import select as _sel
-            from datetime import date as _date, timedelta as _td
+            from datetime import timedelta as _td
             res_hs = await session.execute(
                 _sel(HabitLog.log_date, HabitLog.activity)
                 .where(HabitLog.member_id == member.id)
@@ -2448,12 +2469,11 @@ async def handle_inbound(
                     reply = _t("habit_logged", lang, activity=h_activity)
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
-                logger.info("conversation.habit_recorded_llm", wa_phone=to, activity=h_activity)
+                logger.info("conversation.habit_recorded_llm", member_id=str(member.id), activity=h_activity)
                 return
 
         # 4e-9. M8 — health log: medicação, humor, sono, água
         if _is_command(body, _HEALTH_WORDS):
-            from datetime import date as _date
             today = datetime.now(timezone.utc).date()
             health_data = await extract_health_log(body, lang=member.language or "en")
             if health_data:
@@ -2581,7 +2601,6 @@ async def handle_inbound(
 
         # 4e-10. M7 — treino: "corri 30 min"
         if _is_command(body, _WORKOUT_WORDS):
-            from datetime import date as _date
             today = datetime.now(timezone.utc).date()
             workout_data = await extract_workout(body, lang=member.language or "en")
             if workout_data:
@@ -2615,7 +2634,7 @@ async def handle_inbound(
                 await _save_outbound(member, reply, session)
                 logger.info(
                     "conversation.workout_recorded",
-                    wa_phone=to,
+                    member_id=str(member.id),
                     activity=workout_data["activity_type"],
                 )
                 return
@@ -2779,7 +2798,7 @@ async def handle_inbound(
                     reply = _t("expense_recorded", lang, amount=_fmt_eur(new_amount), name=name)
                     await send_text(to, reply)
                     await _save_outbound(member, reply, session)
-                    logger.info("conversation.expense_amount_corrected", wa_phone=to, new_amount=new_amount)
+                    logger.info("conversation.expense_amount_corrected", member_id=str(member.id), new_amount=new_amount)
                     return
                 else:
                     # m_amt matched but no recent expense found — don't create a new one
@@ -2846,7 +2865,7 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             logger.info(
                 "conversation.expense_recorded",
-                wa_phone=to,
+                member_id=str(member.id),
                 type=txn_type,
                 amount=expense_data["amount"],
                 category=expense_data["category"],
@@ -2881,13 +2900,13 @@ async def handle_inbound(
             if reply:
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
-                logger.info("conversation.query_replied", wa_phone=to, query_type=qtype)
+                logger.info("conversation.query_replied", member_id=str(member.id), query_type=qtype)
                 return
 
                 # 4g. General LLM reply with conversation history
-        history = await _load_history(member, session)
+        history = await _load_history(member, session, exclude_id=message.id)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
         await send_text(to, reply)
         await _save_outbound(member, reply, session)
-        logger.info("conversation.reply_sent", wa_phone=to)
+        logger.info("conversation.reply_sent", member_id=str(member.id))
         return

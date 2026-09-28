@@ -171,7 +171,7 @@ class ScheduledJob(Base):
     """Proactive notification schedule for a member.
 
     M5 — each row represents one recurring reminder or weekly summary.
-    The daily cron script queries this table for due jobs and enqueues them.
+    scripts/daily_cron.py (every 15 min) reads this table and sends due templates.
 
     job_type:
         weekly_summary        — sent every Monday morning

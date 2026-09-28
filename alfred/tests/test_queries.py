@@ -36,6 +36,8 @@ def _make_member(consent_state: str = "accepted") -> SimpleNamespace:
         wa_phone="31600000001",
         consent_state=consent_state,
         display_name="Test",
+        preferred_name=None,
+        language="pt",
         disclosure_accepted_at=None,
         disclosure_version=None,
     )
@@ -48,6 +50,7 @@ def _make_message(body: str) -> SimpleNamespace:
         direction="inbound",
         wa_message_id="wamid.test",
         wa_timestamp=datetime.now(timezone.utc),
+        raw={"type": "text"},
     )
 
 
@@ -98,14 +101,14 @@ def test_period_range_last_month():
 
 
 def test_period_range_current_week():
-    start, end, label = _period_range("current_week")
+    start, end, label = _period_range("current_week", "pt")
     assert start.weekday() == 0  # Monday
     assert end is None
     assert label == "esta semana"
 
 
 def test_period_range_last_week():
-    start, end, label = _period_range("last_week")
+    start, end, label = _period_range("last_week", "pt")
     assert end is not None
     assert end.weekday() == 0  # Monday (start of current week)
     assert start.weekday() == 0  # Monday (start of previous week)

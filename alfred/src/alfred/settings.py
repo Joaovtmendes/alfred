@@ -27,10 +27,14 @@ class Settings(BaseSettings):
     whatsapp_phone_number_id: str = ""
 
     # LLM
-    llm_provider: str = "bedrock"          # bedrock | azure_openai
+    llm_provider: str = "anthropic"  # anthropic | bedrock
     llm_api_key: SecretStr = SecretStr("")
-    llm_model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
-    aws_region: str = "eu-central-1"        # Frankfurt — data residency
+    llm_model: str = "claude-haiku-4-5-20251001"
+    llm_timeout_seconds: float = 20.0  # per request; the SDK default is 600 s
+    aws_region: str = "eu-central-1"  # Bedrock only — Frankfurt, data residency
+
+    # Time — every "today"/"this week" and reminder time is in this zone
+    timezone: str = "Europe/Amsterdam"
 
     # Dashboard
     base_url: str = ""  # e.g. https://alfred.up.railway.app
