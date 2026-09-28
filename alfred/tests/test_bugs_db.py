@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import uuid
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
