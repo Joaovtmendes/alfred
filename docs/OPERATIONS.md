@@ -37,6 +37,17 @@ A lista completa, com explicação, está em `alfred/.env.example`. As críticas
 | `BASE_URL` | o link do dashboard não é enviado |
 | `TIMEZONE` | default `Europe/Amsterdam` |
 
+## Processamento de mensagens
+
+- O webhook grava a mensagem e responde 200 em ~0,1 s; o handler corre depois, em
+  background. Se o processo morrer a meio, a mensagem fica com `processed = false` e o
+  serviço web re-tenta-a (a cada minuto, mensagens com 2–20 min).
+- Alerta recomendado: log `webhook.stale_unprocessed_message` (mensagem que ficou mais de
+  20 min sem resposta) e `webhook.handle_inbound_failed`.
+- Deploy: a migração `a1d5c7e9b3f2` marca as mensagens antigas como processadas e converte
+  valores inválidos (NaN/inf/≥1e10) em 0,00 em vez de falhar. Numa segunda instância em
+  paralelo (deploy rolling), a linha da mensagem é reservada com `SKIP LOCKED`.
+
 ## Lembretes (cron)
 
 - Horas dos lembretes = hora local de Amsterdão, como o utilizador escreveu.
