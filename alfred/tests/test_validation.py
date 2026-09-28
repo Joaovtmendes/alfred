@@ -99,3 +99,9 @@ def test_query_is_normalised() -> None:
         ]
         == "wonen"
     )
+
+
+def test_string_amounts_and_tiny_amounts() -> None:
+    assert sanitize_expense(_exp(amount="12,50"))["amount"] == 12.5
+    assert sanitize_expense(_exp(amount="€ 12"))["amount"] == 12.0
+    assert sanitize_expense(_exp(amount=0.004)) is None  # would be stored as 0.00

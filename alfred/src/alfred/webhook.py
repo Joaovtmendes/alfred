@@ -11,8 +11,10 @@ The POST is two-phase so Meta gets its 200 in milliseconds, not after the LLM:
    ``handle_inbound`` → mark the message ``processed``.
 
 If the process dies between the two phases the message is stored with
-``processed = false``; ``recover_unprocessed`` (called by the cron every 15 min)
-re-drives it.
+``processed = false``; the web process re-drives it (``recover_unprocessed``, run every
+minute by a task started in ``main.lifespan`` — the web service has the LLM key, the cron
+service does not). ``dispatch_inbound`` claims the message row with
+``FOR UPDATE SKIP LOCKED``, so two processes (a rolling deploy) never handle it twice.
 """
 
 from __future__ import annotations
@@ -45,8 +47,21 @@ _MEMBER_LOCKS: weakref.WeakValueDictionary = weakref.WeakValueDictionary()
 
 # A stored-but-unprocessed message is only re-driven inside this window: old enough that
 # the original background task is certainly dead, young enough that a late answer is useful.
+MAX_CONCURRENT_DISPATCH = 8  # < DB pool (5 + 10 overflow): each task holds one connection
+_SLOTS: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()  # event loop → semaphore
+_WARNED_STALE: set[uuid.UUID] = set()  # log each abandoned message once, not every minute
+
 RECOVER_MIN_AGE = datetime.timedelta(minutes=2)
 RECOVER_MAX_AGE = datetime.timedelta(minutes=20)
+
+
+def _dispatch_slot() -> asyncio.Semaphore:
+    """Bounds concurrent background handlers (one semaphore per event loop)."""
+    loop = asyncio.get_running_loop()
+    sem = _SLOTS.get(loop)
+    if sem is None:
+        sem = _SLOTS[loop] = asyncio.Semaphore(MAX_CONCURRENT_DISPATCH)
+    return sem
 
 
 @dataclass(frozen=True)
@@ -221,14 +236,27 @@ async def dispatch_inbound(item: Inbound) -> bool:
 
     log = logger.bind(wa_message_id=item.wa_message_id, member_id=str(item.member_id))
     try:
-        async with _get_member_lock(item.member_id), AsyncSessionLocal() as session:
+        # member lock first (waiters must not hold a slot), then the concurrency slot
+        async with (
+            _get_member_lock(item.member_id),
+            _dispatch_slot(),
+            AsyncSessionLocal() as session,
+        ):
             member = await session.get(Member, item.member_id)
-            stored = await session.get(Message, item.message_id)
+            # Claim the row: held until commit, so another process (rolling deploy, the
+            # recovery sweep) skips it instead of answering the same message twice.
+            stored = (
+                await session.execute(
+                    select(Message)
+                    .where(Message.id == item.message_id)
+                    .with_for_update(skip_locked=True)
+                )
+            ).scalar_one_or_none()
             if member is None or stored is None:
-                log.warning("webhook.dispatch_missing_rows")
+                log.info("webhook.dispatch_skipped", reason="missing_or_claimed")
                 return False
             if stored.processed:
-                return True  # another worker (or the recovery sweep) got there first
+                return True  # another worker got there first
             try:
                 # SAVEPOINT: if the handler fails half-way, its partial writes are
                 # rolled back but the inbound message stays stored.
@@ -271,7 +299,38 @@ async def recover_unprocessed(now: datetime.datetime | None = None, limit: int =
     for row in rows:
         logger.warning("webhook.recovering_message", wa_message_id=row.wa_message_id)
         await dispatch_inbound(Inbound(row.author_id, row.id, row.wa_message_id))
+
+    # Messages that fell out of the window unanswered are lost to the user: say so loudly
+    # (once each) so an alert can be attached to this log line.
+    async with AsyncSessionLocal() as session:
+        stale = (
+            await session.execute(
+                select(Message.id, Message.wa_message_id).where(
+                    Message.direction == "inbound",
+                    Message.processed.is_(False),
+                    Message.created_at < now - RECOVER_MAX_AGE,
+                    Message.created_at >= now - datetime.timedelta(hours=24),
+                )
+            )
+        ).all()
+    for row in stale:
+        if row.id not in _WARNED_STALE:
+            _WARNED_STALE.add(row.id)
+            logger.error("webhook.stale_unprocessed_message", wa_message_id=row.wa_message_id)
     return len(rows)
+
+
+RECOVER_INTERVAL_SECONDS = 60
+
+
+async def recovery_loop() -> None:
+    """Run ``recover_unprocessed`` forever (started by ``main.lifespan``)."""
+    while True:
+        await asyncio.sleep(RECOVER_INTERVAL_SECONDS)
+        try:
+            await recover_unprocessed()
+        except Exception as exc:
+            logger.error("webhook.recovery_failed", error=str(exc))
 
 
 async def _get_or_create_member(

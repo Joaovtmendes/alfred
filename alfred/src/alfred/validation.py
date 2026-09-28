@@ -39,9 +39,15 @@ MAX_NOTES = 500
 
 
 def _num(value: Any) -> float | None:
-    """Finite float, or None (rejects NaN/inf/bools/garbage)."""
+    """Finite float, or None (rejects NaN/inf/bools/garbage). "12,50" is understood."""
     if isinstance(value, bool):
         return None
+    if isinstance(value, str):
+        from alfred.parsing import to_amount
+
+        cleaned = value.strip().lstrip("-").strip("€$£ ").removesuffix("EUR").strip()
+        parsed = to_amount(cleaned)
+        return parsed if parsed is not None else None
     try:
         f = float(value)
     except (TypeError, ValueError):
@@ -69,8 +75,8 @@ def sanitize_expense(data: dict) -> dict | None:
     amount = _num(data.get("amount"))
     if amount is None:
         return None
-    amount = abs(amount)  # the sign lives in ``type``, never in the amount
-    if amount <= 0 or amount > MAX_AMOUNT:
+    amount = round(abs(amount), 2)  # the sign lives in ``type``, never in the amount
+    if amount <= 0 or amount > MAX_AMOUNT:  # also rejects 0.004 (would be stored as 0.00)
         return None
     txn_type = str(data.get("type") or "expense").lower()
     if txn_type not in TXN_TYPES:
@@ -86,7 +92,7 @@ def sanitize_expense(data: dict) -> dict | None:
     elif category == "inkomen":
         category = "overig"  # an expense cannot be "income"
     return {
-        "amount": round(amount, 2),
+        "amount": amount,
         "currency": currency,
         "merchant": _text(data.get("merchant")),
         "category": category,

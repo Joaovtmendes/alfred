@@ -1,6 +1,7 @@
 """Sprint 1 — exact money, missing indexes, trip budget
 
-* expense.amount FLOAT -> NUMERIC(12,2)   (exact cents; existing values rounded to 2 dp)
+* expense.amount FLOAT -> NUMERIC(12,2)   (exact cents; existing values rounded to 2 dp;
+  NaN/inf/>=1e10 — impossible from real users — become 0.00 instead of aborting the deploy)
 * indexes: expense(member_id, expense_date), message(author_id, created_at), member(household_id)
 * trip.budget NUMERIC(12,2) NULL          (hard test BUG-07: "saldo restante")
 * message.processed: all existing inbound rows were handled inline by the old webhook,
@@ -30,7 +31,12 @@ def upgrade() -> None:
         existing_type=sa.Float(),
         type_=sa.Numeric(12, 2),
         existing_nullable=False,
-        postgresql_using="round(amount::numeric, 2)",
+        # The old code stored unvalidated LLM floats: a NaN/inf/>=1e10 value would abort the
+        # cast (and crash-loop the deploy). Such rows are garbage → 0.00.
+        postgresql_using=(
+            "CASE WHEN amount = 'NaN'::float8 OR abs(amount) >= 1e10 THEN 0 "
+            "ELSE round(amount::numeric, 2) END"
+        ),
     )
     op.execute("UPDATE message SET processed = true WHERE direction = 'inbound'")
     op.add_column("trip", sa.Column("budget", sa.Numeric(12, 2), nullable=True))

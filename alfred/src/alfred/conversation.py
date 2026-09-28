@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 import unicodedata
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import structlog
 from sqlalchemy import select
@@ -54,6 +54,7 @@ from alfred.models import (
 )
 from alfred.parsing import (
     CORRECTION_PRONOUNS,
+    MONTH_WORDS,
     TRIP_END_RE,
     TRIP_LIST_RE,
     TRIP_QUERY_RE,
@@ -63,6 +64,7 @@ from alfred.parsing import (
     parse_category_correction,
     strip_accents,
 )
+from alfred.validation import MAX_AMOUNT
 from alfred.whatsapp import send_text
 
 logger = structlog.get_logger()
@@ -1274,9 +1276,11 @@ _CAT_ALIAS: dict[str, str] = {
 
 
 _AMOUNT_CORRECTION_RE = re.compile(
-    r"(?:errei|foi\s+na\s+verdade|na\s+verdade\s+foi|corrijo|na\s+verdade|"
+    # The whole message must be the correction: "errei, foram 42€", "na verdade foram 32".
+    # "actually I spent 20 at Lidl" is a new expense and must NOT rewrite the last one.
+    r"^(?:errei|foi\s+na\s+verdade|na\s+verdade\s+foi|corrijo|na\s+verdade|"
     r"actually|was\s+actually|c\'?etait|war\s+eigentlich|was\s+eigenlijk)"
-    r"[^0-9€$£]*([€$£]?\s*[0-9]+[.,]?[0-9]*\s*[€$£]?)",
+    r"\b[^0-9€$£]{0,25}?([€$£]?\s*[0-9]+(?:[.,][0-9]{1,2})?)\s*(?:[€$£]|eur(?:os?)?)?\s*[.!]*$",
     re.IGNORECASE,
 )
 
@@ -1571,9 +1575,14 @@ _CANCEL_LEMBRETE_RE = re.compile(
 
 # ── M7 — extra workout patterns ──────────────────────────────────────────────
 _WORKOUT_DELETE_RE = re.compile(
-    r"(?:apaga|delete|verwijder|supprimer|losch|apagar)\s+"
-    r"(?:o\s+)?(?:treino|workout|training|entrainement)\s*"
-    r"(?:de\s+hoje|today|vandaag|heute|aujourd.hui|ultimo|last|laatste)?",
+    # Whole message: "apaga o treino", "apaga o treino de hoje/ontem". Anything else
+    # ("apaga o treino de segunda") must NOT delete the latest workout by accident.
+    r"^(?:apaga|apagar|delete|verwijder|supprimer|losch)\s+"
+    r"(?:o\s+(?:meu\s+)?|the\s+|het\s+|le\s+|mein\s+)?"
+    r"(?:(?:ultimo|last|laatste|dernier|letzte[nrs]?)\s+)?"
+    r"(?:treino|workout|training|entrainement)\s*"
+    r"(?:de\s+)?(?:hoje|ontem|today|yesterday|vandaag|gisteren|heute|gestern|"
+    r"aujourd.hui|hier|ultimo|last|laatste|dernier|letzte[nrs]?)?\s*[.!?]*$",
     re.IGNORECASE,
 )
 _WORKOUT_ACTIVITY_RE = re.compile(
@@ -1584,7 +1593,8 @@ _WORKOUT_ACTIVITY_RE = re.compile(
 )
 _WORKOUT_MONTH_RE = re.compile(
     r"(?:treinos|workouts|trainingen|trainings)\s+"
-    r"(?:de\s+)?(?:este\s+mes|this\s+month|deze\s+maand|ce\s+mois|diesen\s+monat|"
+    r"(?:de\s+|do\s+|em\s+|no\s+|in\s+|im\s+|en\s+)?"
+    r"(?:(?:este|deste|neste)\s+mes|this\s+month|deze\s+maand|ce\s+mois|diesen\s+monat|"
     r"mes\s+passado|last\s+month|vorige\s+maand|mois\s+dernier|letzten\s+monat|"
     r"janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|"
     r"january|february|march|april|may|june|july|august|september|october|november|december)",
@@ -1736,9 +1746,14 @@ def _grp(body: str, m: re.Match[str], n: int = 1) -> str:
 # ── M14 — Viagem handler ─────────────────────────────────────────────────────
 
 
+def _cents(value: float) -> float:
+    """Round a Python-side float sum to whole cents (0.1 + 0.2 must not become -0.00)."""
+    return round(float(value), 2)
+
+
 def _budget_remaining(budget: float, spent: float, lang: str) -> str:
     """' · restante €380,00' or ' · €20,00 acima do orçamento'."""
-    left = float(budget) - float(spent)
+    left = _cents(float(budget) - float(spent))
     if left >= 0:
         return _t("trip_budget_left", lang, left=_fmt_eur(left))
     return _t("trip_budget_over", lang, over=_fmt_eur(-left))
@@ -1839,7 +1854,7 @@ async def _handle_trip(
         if not rows:
             return _t("trip_no_expenses", lang)
 
-        total = sum(r.amount for r in rows)
+        total = _cents(sum(r.amount for r in rows))
         end_str = trip.ended_at.strftime("%d/%m") if trip.ended_at else _t("trip_today", lang)
         lines = [
             _t(
@@ -2006,6 +2021,36 @@ def _period_range(period: str, lang: str = "en") -> tuple[datetime, datetime | N
     return day_start(month_start(today)), None, month_name(today, lang, year=True)
 
 
+_LAST_MONTH_WORDS = (
+    "mes passado",
+    "last month",
+    "vorige maand",
+    "mois dernier",
+    "letzten monat",
+    "letzter monat",
+)
+
+
+def _month_window(text_plain: str, today: date) -> tuple[date, date | None]:
+    """[start, end) dates for "este mês" / "mês passado" / a named month ("de agosto").
+
+    ``text_plain`` is accent-free and lower-case. A named month resolves to its most
+    recent occurrence (so "agosto" in January means last year's August).
+    """
+    if any(w in text_plain for w in _LAST_MONTH_WORDS):
+        return prev_month_start(today), month_start(today)
+    for word in re.findall(r"[a-z]+", text_plain):
+        month = MONTH_WORDS.get(word)
+        if (
+            month and len(word) > 3
+        ):  # skip 3-letter abbreviations that are also words ("mar", "set")
+            year = today.year if month <= today.month else today.year - 1
+            start = date(year, month, 1)
+            nxt = date(year + (month == 12), month % 12 + 1, 1)
+            return start, (None if start == month_start(today) else nxt)
+    return month_start(today), None
+
+
 async def _build_summary(
     member: Member,
     session: AsyncSession,
@@ -2040,8 +2085,8 @@ async def _build_summary(
 
     outflows = [e for e in records if e.transaction_type != "income"]
     inflows = [e for e in records if e.transaction_type == "income"]
-    total_out = sum(e.amount for e in outflows)
-    total_in = sum(e.amount for e in inflows)
+    total_out = _cents(sum(e.amount for e in outflows))
+    total_in = _cents(sum(e.amount for e in inflows))
 
     if category:
         # Category view: list individual transactions
@@ -2069,7 +2114,7 @@ async def _build_summary(
         lines.append(f"\n{_t('total_expenses', lang, amount=_fmt_eur(total_out))}")
 
         if inflows:
-            balance = total_in - total_out
+            balance = _cents(total_in - total_out)
             sign = "+" if balance >= 0 else "-"
             lines.append(_t("income_line", lang, amount=_fmt_eur(total_in)))
             lines.append(_t("balance_line", lang, sign=sign, amount=_fmt_eur(abs(balance))))
@@ -2096,9 +2141,9 @@ async def _build_saldo(member: Member, session: AsyncSession) -> str:
     if not records:
         return _t("no_records_month", lang)
 
-    total_in = sum(e.amount for e in records if e.transaction_type == "income")
-    total_out = sum(e.amount for e in records if e.transaction_type != "income")
-    balance = total_in - total_out
+    total_in = _cents(sum(e.amount for e in records if e.transaction_type == "income"))
+    total_out = _cents(sum(e.amount for e in records if e.transaction_type != "income"))
+    balance = _cents(total_in - total_out)
     sign = "+" if balance >= 0 else "-"
 
     month_label = month_name(now.date(), lang, year=True)
@@ -2129,7 +2174,7 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
             )
         )
         rows = r.scalars().all()
-        return sum(e.amount for e in rows), len(rows)
+        return _cents(sum(e.amount for e in rows)), len(rows)
 
     cur_total, cur_n = await _total_out(cur_start, now + timedelta(seconds=1))
     prev_total, prev_n = await _total_out(prev_start, prev_end)
@@ -2137,7 +2182,7 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
     cur_label = month_name(now.date(), lang)
     prev_label = month_name(prev_start, lang)
 
-    diff = cur_total - prev_total
+    diff = _cents(cur_total - prev_total)
     if prev_total == 0:
         diff_str = _t("comparison_no_prev", lang)
     elif diff == 0:
@@ -3179,7 +3224,7 @@ async def handle_inbound(
                 return
 
         # 4e-11. M7 — query de treinos: "treinos desta semana"
-        if _is_command(
+        if _is_bare_command(
             body,
             {
                 "treinos",
@@ -3233,9 +3278,13 @@ async def handle_inbound(
             from sqlalchemy import select as _sel
 
             wd_query = _sel(WorkoutSession).where(WorkoutSession.member_id == member.id)
+            # A day word scopes the delete: "de hoje" must never remove another day's workout.
             if re.search(r"\b(?:hoje|today|vandaag|heute|aujourd)", body_plain):
-                # "apaga o treino de hoje" must never remove a workout from another day
                 wd_query = wd_query.where(WorkoutSession.workout_date == today_local())
+            elif re.search(r"\b(?:ontem|yesterday|gisteren|gestern|hier)\b", body_plain):
+                wd_query = wd_query.where(
+                    WorkoutSession.workout_date == today_local() - timedelta(days=1)
+                )
             res_wd = await session.execute(
                 wd_query.order_by(
                     WorkoutSession.workout_date.desc(), WorkoutSession.created_at.desc()
@@ -3258,26 +3307,8 @@ async def handle_inbound(
             from sqlalchemy import select as _sel
 
             now_wm = now_local()
-            # Check if "mes passado" / "last month"
-            _bl = body.lower()
-            if any(
-                w in _bl
-                for w in (
-                    "mes passado",
-                    "last month",
-                    "vorige maand",
-                    "mois dernier",
-                    "letzten monat",
-                )
-            ):
-                first_prev_wm = prev_month_start(now_wm.date())
-                start_wm = first_prev_wm
-                end_wm = month_start(now_wm.date())
-                month_label = month_name(first_prev_wm, lang, year=True)
-            else:
-                start_wm = month_start(now_wm.date())
-                end_wm = None
-                month_label = month_name(now_wm.date(), lang, year=True)
+            start_wm, end_wm = _month_window(body_plain, now_wm.date())
+            month_label = month_name(start_wm, lang, year=True)
             q = _sel(WorkoutSession).where(
                 WorkoutSession.member_id == member.id,
                 WorkoutSession.workout_date >= start_wm,
@@ -3327,7 +3358,7 @@ async def handle_inbound(
                 .where(WorkoutSession.workout_date >= week_ago_wa)
             )
             wa_sessions = res_wa.scalars().all()
-            _bl2 = body.lower()
+            _bl2 = body_plain
             # Detect activity keyword
             _act_map = {
                 "corri": "running",
@@ -3379,7 +3410,8 @@ async def handle_inbound(
                 new_amount = float(raw_amt)
             except ValueError:
                 new_amount = None
-            if new_amount and new_amount > 0:
+            # bounded: NUMERIC(12,2) would overflow (and the reply was already sent)
+            if new_amount and 0 < round(new_amount, 2) <= MAX_AMOUNT:
                 cutoff = datetime.now(UTC) - timedelta(hours=24)
                 res = await session.execute(
                     select(Expense)

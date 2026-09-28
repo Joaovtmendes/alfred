@@ -235,3 +235,44 @@ def test_strip_accents_is_length_preserving() -> None:
     assert len(strip_accents(text)) == len(text)
     assert strip_accents("está água") == "esta agua"
     assert like_escape("100%_x\\") == "100\\%\\_x\\\\"
+
+
+# ── review findings ───────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["viagem a lisboa 30€ gasolina", "viagem em uber 15,00", "trip to the store 5,00"],
+)
+def test_trip_start_does_not_swallow_expenses_with_a_tail(text: str) -> None:
+    assert match_trip_start(text) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "dest"),
+    [
+        ("viagem a lisboa com a maria", "Lisboa"),
+        ("trip to rome 1.500 euro 3 to 9 march", "Rome"),
+        ("viagem a paris 10/10 a 15/10", "Paris"),
+        ("trip to berlin from 3 oct", "Berlin"),
+    ],
+)
+def test_trip_start_still_accepts_budget_dates_and_companions(text: str, dest: str) -> None:
+    assert match_trip_start(text) == dest
+
+
+@pytest.mark.parametrize(
+    "text", ["❤️ cancela lembrete de água", "✔️ meta correr", "한국어 é", "ç ñ ü ß"]
+)
+def test_strip_accents_is_length_preserving_for_any_input(text: str) -> None:
+    """U+FE0F (❤️, ✔️, ☀️) is a combining mark: dropping it shifted every later slice."""
+    from alfred.parsing import strip_accents
+
+    assert len(strip_accents(text)) == len(text)
+
+
+def test_to_amount_leading_zero_is_a_decimal() -> None:
+    from alfred.parsing import to_amount
+
+    assert to_amount("0.500") == 0.5
+    assert to_amount("1.500") == 1500

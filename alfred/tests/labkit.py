@@ -55,6 +55,10 @@ class Lab:
         async with AsyncSessionLocal() as s:
             return (await s.execute(stmt)).scalar()
 
+    async def rows(self, stmt) -> list:
+        async with AsyncSessionLocal() as s:
+            return list((await s.execute(stmt)).all())
+
     async def add(self, *rows) -> None:
         async with AsyncSessionLocal() as s:
             s.add_all(rows)

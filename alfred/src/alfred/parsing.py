@@ -14,11 +14,23 @@ import unicodedata
 # ── Text normalisation ────────────────────────────────────────────────────────
 
 
+def _strip_char(c: str) -> str:
+    """One char → one char: drop the accent only when exactly one base char remains.
+
+    Lone combining marks (U+FE0F emoji variation selector!), Hangul and other
+    characters whose NFD form is not "base + marks" are kept as they are, so the
+    output has the same length as the input.
+    """
+    stripped = "".join(
+        x for x in unicodedata.normalize("NFD", c) if unicodedata.category(x) != "Mn"
+    )
+    return stripped if len(stripped) == 1 else c
+
+
 def strip_accents(text: str) -> str:
-    """'está água ç' → 'esta agua c'. Length-preserving for NFC input, so match
-    positions found on the plain text can be sliced out of the original."""
-    nfd = unicodedata.normalize("NFD", text)
-    return "".join(c for c in nfd if unicodedata.category(c) != "Mn")
+    """'está água' → 'esta agua'. Always ``len(out) == len(text)``, so match positions
+    found on the plain text can be sliced out of the original."""
+    return "".join(map(_strip_char, text))
 
 
 def like_escape(text: str) -> str:
@@ -121,13 +133,74 @@ def clean_destination(raw: str) -> str | None:
     return dest.title()
 
 
+# Month names (accent-free, all five languages) → 1..12. Used for "treinos de agosto"
+# and to recognise the date part of "criar viagem Portugal €500 de 1 a 7 de outubro".
+MONTH_WORDS: dict[str, int] = {}
+for _num, _names in enumerate(
+    (
+        ("janeiro", "januari", "january", "janvier", "januar", "jan"),
+        ("fevereiro", "februari", "february", "fevrier", "februar", "fev", "feb"),
+        ("marco", "maart", "march", "mars", "marz", "mar", "mrt"),
+        ("abril", "april", "avril", "abr", "apr", "avr"),
+        ("maio", "mei", "may", "mai"),
+        ("junho", "juni", "june", "juin", "jun"),
+        ("julho", "juli", "july", "juillet", "jul"),
+        ("agosto", "augustus", "august", "aout", "aug", "ago"),
+        ("setembro", "september", "septembre", "set", "sep"),
+        ("outubro", "oktober", "october", "octobre", "out", "oct", "okt"),
+        ("novembro", "november", "novembre", "nov"),
+        ("dezembro", "december", "decembre", "dez", "dec"),
+    ),
+    start=1,
+):
+    for _n in _names:
+        MONTH_WORDS[_n] = _num
+
+_MONTH_ALT = "|".join(sorted(MONTH_WORDS, key=len, reverse=True))
+_TRIP_MONEY_RE = re.compile(
+    r"(?:[€$£]\s*\d[\d.,]*|\d[\d.,]*\s*(?:[€$£]|eur\b|euros?\b|dollars?\b))", re.IGNORECASE
+)
+_TRIP_DATE_RE = re.compile(
+    r"\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?"
+    rf"|\d{{1,2}}\s*(?:(?:a|ate|to|tot|au|bis|-)\s*\d{{1,2}}\s*)?(?:de\s+|of\s+)?(?:{_MONTH_ALT})\b"
+    r"(?:\s*(?:de\s+|of\s+)?\d{4})?",
+    re.IGNORECASE,
+)
+_TRIP_FILLER = frozenset(
+    "de do da a ate para com with met avec mit budget orcamento from to tot van vom bis du au "
+    "dia dias days dagen jours tage noites nights e and en et und of".split()
+)
+
+
+def _only_trip_details(rest: str) -> bool:
+    """True if what follows the destination is just a budget / dates / filler words.
+
+    "viagem a lisboa 30€ gasolina" leaves "gasolina" → it is an expense, not a trip.
+    """
+    r = strip_accents(rest.lower())
+    r = _TRIP_MONEY_RE.sub(" ", r)
+    r = _TRIP_DATE_RE.sub(" ", r)
+    words = re.sub(r"[\s,;:()\-–/.]+", " ", r).split()
+    return all(w in _TRIP_FILLER for w in words)
+
+
 def match_trip_start(text: str) -> str | None:
     """Destination if ``text`` is a start-trip command, else None."""
     m = TRIP_START_RE.match(text.strip())
     if not m:
         return None
     raw = next((g for g in m.groups() if g), "")
-    return clean_destination(raw)
+    dest = clean_destination(raw)
+    if dest is None:
+        return None
+    cut = _DEST_CUT_RE.search(raw)
+    rest = raw[cut.start() :] if cut else ""
+    # Digits after the destination must be a budget or dates. "viagem em uber 15,00" or
+    # "viagem a lisboa 30€ gasolina" are expenses, not trips. Digit-free tails
+    # ("… com a Maria") are harmless.
+    if HAS_DIGIT_RE.search(rest) and not _only_trip_details(rest):
+        return None
+    return dest
 
 
 # ── Category corrections (M12) ────────────────────────────────────────────────
@@ -197,7 +270,7 @@ _BUDGET_RE = re.compile(
 )
 
 
-def _to_amount(raw: str) -> float | None:
+def to_amount(raw: str) -> float | None:
     """'1.500' → 1500 · '1.500,50' → 1500.5 · '12,5' → 12.5 · '500' → 500."""
     raw = raw.rstrip(".,")
     if not raw:
@@ -208,7 +281,8 @@ def _to_amount(raw: str) -> float | None:
     else:
         tail = raw[last + 1 :]
         other_sep = "," if raw[last] == "." else "."
-        if len(tail) == 3 and other_sep not in raw and raw.count(raw[last]) >= 1:
+        head = raw[:last]
+        if len(tail) == 3 and other_sep not in raw and head not in ("0", "") and head != "00":
             digits = raw.replace(".", "").replace(",", "")  # thousands separator
         else:
             digits = raw[:last].replace(".", "").replace(",", "") + "." + tail
@@ -224,4 +298,4 @@ def parse_budget(text: str) -> float | None:
     m = _BUDGET_RE.search(text)
     if not m:
         return None
-    return _to_amount(m.group("a") or m.group("b"))
+    return to_amount(m.group("a") or m.group("b"))

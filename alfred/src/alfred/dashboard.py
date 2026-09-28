@@ -88,9 +88,9 @@ async def dashboard_api(
     )
     month_txs = exp_q.scalars().all()
 
-    total_expense = sum(e.amount for e in month_txs if e.transaction_type == "expense")
-    total_income = sum(e.amount for e in month_txs if e.transaction_type == "income")
-    balance = total_income - total_expense
+    total_expense = round(sum(e.amount for e in month_txs if e.transaction_type == "expense"), 2)
+    total_income = round(sum(e.amount for e in month_txs if e.transaction_type == "income"), 2)
+    balance = round(total_income - total_expense, 2)
 
     cat_totals: dict[str, float] = defaultdict(float)
     for e in month_txs:

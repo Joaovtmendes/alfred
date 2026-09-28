@@ -148,3 +148,153 @@ async def test_habit_logged_just_after_local_midnight_lands_on_the_local_day(lab
         await lab.say("meditei hoje")
     d = await lab.scalar(select(HabitLog.log_date).where(HabitLog.member_id == lab.member_id))
     assert d == local_day
+
+
+# ── second-round review findings ──────────────────────────────────────────────
+
+
+async def test_treinos_deste_mes_reaches_the_monthly_handler(lab: Lab) -> None:
+    from alfred.clock import month_name
+
+    await _workouts(lab, 0)
+    reply = await lab.say("treinos deste mês")  # was: always answered by the weekly list
+    header = _t(
+        "workout_month_header",
+        "pt",
+        month=month_name(today_local(), "pt", year=True),
+        n=1,
+        km=0,
+        min=0,
+    )
+    assert reply.splitlines()[0] == header
+
+
+async def test_treinos_de_mes_passado_uses_the_previous_month(lab: Lab) -> None:
+    from alfred.clock import month_name, prev_month_start
+
+    await _workouts(lab, 0)  # today only, so last month is empty
+    reply = await lab.say("treinos mês passado")
+    header = _t(
+        "workout_month_header",
+        "pt",
+        month=month_name(prev_month_start(today_local()), "pt", year=True),
+        n=0,
+        km=0,
+        min=0,
+    )
+    assert reply.splitlines()[0] == header
+
+
+async def test_treinos_de_um_mes_por_nome(lab: Lab) -> None:
+    await _workouts(lab, 0)
+    reply = await lab.say("treinos de agosto")
+    assert "Agosto" in reply.splitlines()[0]
+
+
+async def test_delete_yesterdays_workout_only_removes_yesterdays(lab: Lab) -> None:
+    await _workouts(lab, 0, 1, 3)
+    await lab.say("apaga o treino de ontem")
+    days = sorted(
+        d
+        for (d,) in (
+            await lab.rows(
+                select(WorkoutSession.workout_date).where(WorkoutSession.member_id == lab.member_id)
+            )
+        )
+    )
+    assert days == [today_local() - timedelta(days=3), today_local()]
+
+
+async def test_delete_workout_of_an_unsupported_day_deletes_nothing(lab: Lab) -> None:
+    await _workouts(lab, 0)
+    await lab.say("apaga o treino de segunda")  # not a command we understand
+    n = await lab.scalar(select(func.count()).where(WorkoutSession.member_id == lab.member_id))
+    assert n == 1
+
+
+async def test_actually_i_spent_is_a_new_expense_not_an_amount_correction(lab: Lab) -> None:
+    from alfred.models import Expense
+
+    lab.expense.return_value = {
+        "amount": 10.0,
+        "currency": "EUR",
+        "merchant": "Jumbo",
+        "category": "supermarkt",
+        "description": "x",
+        "type": "expense",
+        "days_ago": 0,
+    }
+    await lab.say("gastei 10 no jumbo")
+    lab.expense.return_value = {
+        "amount": 20.0,
+        "currency": "EUR",
+        "merchant": "Lidl",
+        "category": "supermarkt",
+        "description": "x",
+        "type": "expense",
+        "days_ago": 0,
+    }
+    await lab.say("actually I spent 20 at Lidl")
+    amounts = sorted(
+        a
+        for (a,) in await lab.rows(select(Expense.amount).where(Expense.member_id == lab.member_id))
+    )
+    assert amounts == [10.0, 20.0]  # was: the Jumbo expense was rewritten to 20
+
+
+async def test_amount_correction_out_of_range_does_not_crash_or_reply_twice(lab: Lab) -> None:
+    from alfred.models import Expense
+
+    lab.expense.return_value = {
+        "amount": 10.0,
+        "currency": "EUR",
+        "merchant": "Jumbo",
+        "category": "supermarkt",
+        "description": "x",
+        "type": "expense",
+        "days_ago": 0,
+    }
+    await lab.say("gastei 10 no jumbo")
+    lab.expense.return_value = None
+    await lab.say("errei foram 99999999999")  # exactly one reply, no NumericValueOutOfRange
+    amount = await lab.scalar(select(Expense.amount).where(Expense.member_id == lab.member_id))
+    assert amount == 10.0
+
+
+async def test_emoji_before_a_command_does_not_truncate_the_captured_text(lab: Lab) -> None:
+    await lab.add(Task(member_id=lab.member_id, body="ligar ao pai"))
+    reply = await lab.say("❤️ apaga tarefa ligar ao pai")
+    # regex is anchored at the start, so an emoji prefix means "not a command" — but it must
+    # never delete a *different* task via a truncated key
+    assert await lab.scalar(select(func.count()).where(Task.member_id == lab.member_id)) == 1
+    assert reply
+
+
+async def test_cents_do_not_show_float_noise(lab: Lab) -> None:
+    from alfred.models import Expense
+
+    await lab.add(
+        Expense(
+            member_id=lab.member_id,
+            household_id=lab.household_id,
+            amount=0.30,
+            transaction_type="income",
+            category="inkomen",
+        ),
+        Expense(
+            member_id=lab.member_id,
+            household_id=lab.household_id,
+            amount=0.10,
+            transaction_type="expense",
+            category="overig",
+        ),
+        Expense(
+            member_id=lab.member_id,
+            household_id=lab.household_id,
+            amount=0.20,
+            transaction_type="expense",
+            category="overig",
+        ),
+    )
+    reply = await lab.say("saldo")
+    assert "-€0,00" not in reply and "€0,00" in reply

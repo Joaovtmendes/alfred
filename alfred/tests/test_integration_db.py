@@ -258,3 +258,37 @@ async def test_failed_handler_leaves_message_unprocessed_for_recovery(client) ->
         assert await recover_unprocessed(now=datetime.now(UTC) + timedelta(hours=2)) == 0
         send.assert_not_awaited()
     await _cleanup(phone)
+
+
+async def test_two_workers_never_handle_the_same_message(client) -> None:
+    """Rolling deploy / recovery sweep: the row lock (SKIP LOCKED) makes the second a no-op,
+    even though it does not share the first worker's in-process lock."""
+    import asyncio
+
+    from alfred import webhook
+    from alfred.webhook import Inbound, dispatch_inbound
+
+    phone = "3160" + uuid.uuid4().hex[:7]
+    with patch("alfred.webhook.dispatch_inbound", new_callable=AsyncMock):
+        await _post(client, _payload(phone, "olá"))  # stored, not processed
+    async with AsyncSessionLocal() as s:
+        member = (await s.execute(select(Member).where(Member.wa_phone == phone))).scalar_one()
+        msg = (await s.execute(select(Message).where(Message.author_id == member.id))).scalar_one()
+        item = Inbound(member.id, msg.id, msg.wa_message_id)
+
+    calls: list[str] = []
+
+    async def slow_handler(member, message, session):
+        calls.append("run")
+        await asyncio.sleep(0.5)
+
+    # simulate a second *process*: it has its own (empty) lock registry
+    other = webhook.weakref.WeakValueDictionary()
+    with patch("alfred.conversation.handle_inbound", slow_handler):
+        first = asyncio.create_task(dispatch_inbound(item))
+        await asyncio.sleep(0.1)
+        with patch.object(webhook, "_MEMBER_LOCKS", other):
+            second = await dispatch_inbound(item)
+        first_ok = await first
+    assert calls == ["run"] and first_ok is True and second is False
+    await _cleanup(phone)
