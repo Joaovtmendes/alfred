@@ -39,7 +39,8 @@ class Settings(BaseSettings):
     # Time — every "today"/"this week" and reminder time is in this zone
     timezone: str = "Europe/Amsterdam"
 
-    # Dashboard
+    # Dashboard / public pages
+    privacy_contact_email: str = ""  # shown on /privacy
     base_url: str = ""  # e.g. https://alfred.up.railway.app
 
     # Security

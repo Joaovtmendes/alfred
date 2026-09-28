@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from alfred.dashboard import router as dashboard_router
+from alfred.legal import router as legal_router
 from alfred.settings import settings
 from alfred.webhook import router as webhook_router
 
@@ -38,6 +39,7 @@ app = FastAPI(
 
 app.include_router(webhook_router)
 app.include_router(dashboard_router)
+app.include_router(legal_router)
 
 
 @app.get("/health", tags=["ops"])
