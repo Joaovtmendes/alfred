@@ -51,11 +51,12 @@ def weekday_bit(dt: datetime) -> int:
     return 1 << dt.weekday()
 
 
-def due_at(time_of_day: str, now_local: datetime) -> datetime | None:
-    """Today's due datetime (local, tz-aware) for an "HH:MM" string, or None if invalid."""
+def due_at(time_of_day: str, day: datetime) -> datetime | None:
+    """Due datetime (local, tz-aware) on ``day``'s date for "HH:MM", or None if invalid."""
     try:
         hh, mm = (int(x) for x in time_of_day.strip().split(":"))
-        return now_local.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        # fold=0: on the autumn day the ambiguous hour means its first occurrence
+        return day.replace(hour=hh, minute=mm, second=0, microsecond=0, fold=0)
     except (ValueError, AttributeError):
         return None
 
@@ -67,13 +68,23 @@ def is_job_due(
     now_local: datetime,
     window: timedelta = WINDOW,
 ) -> bool:
-    """Pure decision function — unit-tested in tests/test_cron.py."""
-    if not days_mask & weekday_bit(now_local):
-        return False
-    due = due_at(time_of_day, now_local)
-    if due is None or not (due <= now_local < due + window):
-        return False
-    return last_sent_at is None or last_sent_at < due
+    """Pure decision function — unit-tested in tests/test_cron.py.
+
+    Checks today's and yesterday's occurrence, so a 23:50 reminder still fires on
+    the 00:00 run. Comparisons are done in UTC so DST changes never shrink or
+    stretch the window (wall-clock arithmetic breaks on the spring-forward day).
+    """
+    now_utc = now_local.astimezone(UTC)
+    for day in (now_local, now_local - timedelta(days=1)):
+        if not days_mask & weekday_bit(day):
+            continue
+        due = due_at(time_of_day, day)
+        if due is None:
+            return False
+        due_utc = due.astimezone(UTC)
+        if due_utc <= now_utc < due_utc + window:
+            return last_sent_at is None or last_sent_at.astimezone(UTC) < due_utc
+    return False
 
 
 def is_weekly_summary_due(now_local: datetime, interval_minutes: int = INTERVAL_MINUTES) -> bool:
@@ -101,72 +112,82 @@ async def run_cron() -> int:
 
     sent = errors = 0
 
+    # Read everything first into plain values, then send. Each last_sent_at update
+    # gets its own short session, so one failed send never breaks the rest of the run.
     async with AsyncSessionLocal() as session:
         rows = (
             await session.execute(
-                select(ScheduledJob, Member)
+                select(
+                    ScheduledJob.id,
+                    ScheduledJob.member_id,
+                    ScheduledJob.job_type,
+                    ScheduledJob.time_of_day,
+                    ScheduledJob.days_mask,
+                    ScheduledJob.payload,
+                    ScheduledJob.last_sent_at,
+                    Member.wa_phone,
+                    Member.language,
+                )
                 .join(Member, ScheduledJob.member_id == Member.id)
                 .where(ScheduledJob.active.is_(True), Member.consent_state == "accepted")
             )
         ).all()
-
-        own_weekly = {job.member_id for job, _ in rows if job.job_type == "weekly_summary"}
-
-        for job, member in rows:
-            last = job.last_sent_at.astimezone(tz) if job.last_sent_at else None
-            if not is_job_due(job.time_of_day, job.days_mask, last, now_local):
-                continue
-            template_name = TEMPLATE_MAP.get(job.job_type)
-            if not template_name:
-                logger.warning("cron.unknown_job_type", job_id=str(job.id), job_type=job.job_type)
-                continue
-
-            payload = job.payload or {}
-            components = None
-            if payload.get("text"):
-                components = [
-                    {"type": "body", "parameters": [{"type": "text", "text": payload["text"]}]}
-                ]
-            try:
-                await send_template(
-                    to=member.wa_phone,
-                    template_name=template_name,
-                    lang_code=LANG_CODE_MAP.get(member.language or "en", "en"),
-                    components=components,
-                )
-                await session.execute(
-                    update(ScheduledJob)
-                    .where(ScheduledJob.id == job.id)
-                    .values(last_sent_at=datetime.now(UTC))
-                )
-                await session.commit()
-                sent += 1
-            except Exception as exc:
-                await session.rollback()
-                logger.error("cron.send_failed", job_id=str(job.id), error=str(exc))
-                errors += 1
-
+        weekly_targets = []
         if is_weekly_summary_due(now_local):
-            members = (
-                (await session.execute(select(Member).where(Member.consent_state == "accepted")))
-                .scalars()
-                .all()
+            weekly_targets = (
+                await session.execute(
+                    select(Member.id, Member.wa_phone, Member.language).where(
+                        Member.consent_state == "accepted"
+                    )
+                )
+            ).all()
+
+    own_weekly = {r.member_id for r in rows if r.job_type == "weekly_summary"}
+
+    for r in rows:
+        if not is_job_due(r.time_of_day, r.days_mask, r.last_sent_at, now_local):
+            continue
+        template_name = TEMPLATE_MAP.get(r.job_type)
+        if not template_name:
+            logger.warning("cron.unknown_job_type", job_id=str(r.id), job_type=r.job_type)
+            continue
+        text = (r.payload or {}).get("text")
+        components = (
+            [{"type": "body", "parameters": [{"type": "text", "text": text}]}] if text else None
+        )
+        try:
+            await send_template(
+                to=r.wa_phone,
+                template_name=template_name,
+                lang_code=LANG_CODE_MAP.get(r.language or "en", "en"),
+                components=components,
             )
-            for member in members:
-                if member.id in own_weekly:
-                    continue  # they get it through their own job — avoid a double send
-                try:
-                    await send_template(
-                        to=member.wa_phone,
-                        template_name="alfred_weekly_summary",
-                        lang_code=LANG_CODE_MAP.get(member.language or "en", "en"),
-                    )
-                    sent += 1
-                except Exception as exc:
-                    logger.error(
-                        "cron.weekly_summary_failed", member_id=str(member.id), error=str(exc)
-                    )
-                    errors += 1
+        except Exception as exc:
+            logger.error("cron.send_failed", job_id=str(r.id), error=str(exc))
+            errors += 1
+            continue
+        sent += 1
+        async with AsyncSessionLocal() as session:
+            await session.execute(
+                update(ScheduledJob)
+                .where(ScheduledJob.id == r.id)
+                .values(last_sent_at=datetime.now(UTC))
+            )
+            await session.commit()
+
+    for m in weekly_targets:
+        if m.id in own_weekly:
+            continue  # they get it through their own job — avoid a double send
+        try:
+            await send_template(
+                to=m.wa_phone,
+                template_name="alfred_weekly_summary",
+                lang_code=LANG_CODE_MAP.get(m.language or "en", "en"),
+            )
+            sent += 1
+        except Exception as exc:
+            logger.error("cron.weekly_summary_failed", member_id=str(m.id), error=str(exc))
+            errors += 1
 
     logger.info("cron.done", sent=sent, errors=errors)
     return errors
@@ -174,9 +195,10 @@ async def run_cron() -> int:
 
 if __name__ == "__main__":
     try:
-        asyncio.run(run_cron())
+        failed = asyncio.run(run_cron())
     except Exception:
         import traceback
 
         traceback.print_exc()
         sys.exit(1)
+    sys.exit(1 if failed else 0)  # non-zero → Railway marks the run as failed

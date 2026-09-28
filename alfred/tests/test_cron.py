@@ -63,3 +63,29 @@ def test_weekly_summary_exactly_one_run_on_monday() -> None:
     assert cron.is_weekly_summary_due(at(9, 14), 15)
     assert not cron.is_weekly_summary_due(at(9, 15), 15)
     assert not cron.is_weekly_summary_due(at(9, 5, day=29), 15)  # Tuesday
+
+
+def test_late_evening_reminder_fires_after_midnight_run() -> None:
+    """23:50 reminder: the 23:45 run is too early, the 00:00 run must send it."""
+    assert not cron.is_job_due("23:50", EVERY_DAY, None, at(23, 45))
+    assert cron.is_job_due("23:50", EVERY_DAY, None, at(0, 0, day=29))
+
+
+def test_late_evening_uses_yesterdays_weekday() -> None:
+    """Monday-only 23:50 reminder still fires on Tuesday 00:00, not on Monday 00:00."""
+    assert cron.is_job_due("23:50", MONDAY_ONLY, None, at(0, 0, day=29))  # Tue 00:00
+    assert not cron.is_job_due("23:50", MONDAY_ONLY, None, at(0, 0, day=28))  # Mon 00:00
+
+
+def test_spring_forward_day_still_fires() -> None:
+    """2027-03-28: clocks jump 02:00 → 03:00 in Amsterdam."""
+    now = datetime(2027, 3, 28, 3, 0, tzinfo=AMS)  # first run after the jump
+    assert cron.is_job_due("01:50", EVERY_DAY, None, now)
+
+
+def test_fall_back_day_no_double_send() -> None:
+    """2026-10-25: 02:00–03:00 happens twice; a job sent once must not resend."""
+    first = datetime(2026, 10, 25, 2, 5, tzinfo=AMS, fold=0)
+    second = datetime(2026, 10, 25, 2, 5, tzinfo=AMS, fold=1)
+    assert cron.is_job_due("02:00", EVERY_DAY, None, first)
+    assert not cron.is_job_due("02:00", EVERY_DAY, first, second)

@@ -177,7 +177,7 @@ class ScheduledJob(Base):
     )  # weekly_summary | medication_reminder | goal_checkin | workout_reminder
     time_of_day: Mapped[str] = mapped_column(
         String(5), nullable=False, default="08:00"
-    )  # "HH:MM" UTC
+    )  # "HH:MM" local time in settings.timezone (Europe/Amsterdam)
     days_mask: Mapped[int] = mapped_column(nullable=False, default=127)  # bitmask; 127 = every day
     payload: Mapped[dict | None] = mapped_column(
         JSONB

@@ -123,3 +123,58 @@ async def test_llm_history_does_not_repeat_current_message(client) -> None:
     assert history, "history should contain the earlier turns"
     assert all("capital da frança" not in h["content"] for h in history)
     await _cleanup(phone)
+
+
+async def test_cron_keeps_going_after_a_failed_send(monkeypatch) -> None:
+    """Regression: a failed send used to expire ORM rows and crash the whole run."""
+    import importlib.util
+    from datetime import UTC, datetime
+    from pathlib import Path
+
+    from alfred.models import ScheduledJob
+
+    spec = importlib.util.spec_from_file_location(
+        "daily_cron", Path(__file__).parent.parent / "scripts" / "daily_cron.py"
+    )
+    cron = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cron)
+
+    phone = "3160" + uuid.uuid4().hex[:7]
+    now_local = datetime.now(UTC).astimezone(cron.ZoneInfo("Europe/Amsterdam"))
+    hhmm = now_local.strftime("%H:%M")
+    async with AsyncSessionLocal() as s:
+        hh = Household(name="cron")
+        s.add(hh)
+        await s.flush()
+        m = Member(household_id=hh.id, wa_phone=phone, consent_state="accepted", language="pt")
+        s.add(m)
+        await s.flush()
+        for jt in ("medication_reminder", "workout_reminder"):
+            s.add(ScheduledJob(member_id=m.id, job_type=jt, time_of_day=hhmm, days_mask=127))
+        await s.commit()
+        member_id = m.id
+
+    calls = []
+
+    async def flaky_send(**kw):
+        calls.append(kw["template_name"])
+        if len(calls) == 1:
+            raise RuntimeError("template not approved")
+        return {}
+
+    with patch("alfred.whatsapp.send_template", flaky_send):
+        errors = await cron.run_cron()
+
+    mine = [c for c in calls if c in ("alfred_medication_reminder", "alfred_workout_reminder")]
+    assert len(mine) == 2 and errors >= 1
+    async with AsyncSessionLocal() as s:
+        jobs = (
+            (await s.execute(select(ScheduledJob).where(ScheduledJob.member_id == member_id)))
+            .scalars()
+            .all()
+        )
+        assert sum(j.last_sent_at is not None for j in jobs) == 1  # only the successful one
+        for j in jobs:
+            await s.delete(j)
+        await s.commit()
+    await _cleanup(phone)
