@@ -1,0 +1,10 @@
+# Config-as-code for the "alfred-cron" Railway service.
+# In that service: Settings → Config-as-code → file path = alfred/railway.cron.toml
+# (otherwise it reads railway.toml and would start the web server instead).
+[build]
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "python /app/scripts/daily_cron.py"
+cronSchedule = "*/15 * * * *"   # must match CRON_INTERVAL_MINUTES
+restartPolicyType = "never"

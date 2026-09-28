@@ -10,10 +10,13 @@
 
 ## Serviços Railway
 
-| Serviço | Start command | Schedule |
-|---|---|---|
-| `alfred-web` | `bash /app/start.sh` | — (healthcheck `/health`) |
-| `alfred-cron` | `python /app/scripts/daily_cron.py` | `*/15 * * * *` |
+| Serviço | Config-as-code | Start command | Schedule |
+|---|---|---|---|
+| `alfred-web` | `alfred/railway.toml` | `bash /app/start.sh` | — (healthcheck `/health`) |
+| `alfred-cron` | `alfred/railway.cron.toml` | `python /app/scripts/daily_cron.py` | `*/15 * * * *` |
+
+Atenção: se o `alfred-cron` ler o `railway.toml`, o `startCommand` de lá sobrepõe o
+do painel e o cron passa a arrancar o servidor web. Aponta-o para `railway.cron.toml`.
 
 Se ainda existir um serviço `alfred-worker`, pode ser apagado: o código procrastinate
 foi removido.
