@@ -112,6 +112,18 @@ async def run_cron() -> int:
 
     sent = errors = 0
 
+    # Safety net for the webhook's background processing: re-drive messages that were
+    # stored but never handled (crash/deploy right after Meta got its 200).
+    try:
+        from alfred.webhook import recover_unprocessed
+
+        recovered = await recover_unprocessed()
+        if recovered:
+            logger.warning("cron.recovered_messages", count=recovered)
+    except Exception as exc:
+        logger.error("cron.recover_failed", error=str(exc))
+        errors += 1
+
     # Read everything first into plain values, then send. Each last_sent_at update
     # gets its own short session, so one failed send never breaks the rest of the run.
     async with AsyncSessionLocal() as session:

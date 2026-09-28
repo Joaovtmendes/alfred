@@ -2,19 +2,34 @@
 
 GET  /webhook/whatsapp  → Meta hub challenge (verification)
 POST /webhook/whatsapp  → incoming messages (HMAC-validated, idempotent)
+
+The POST is two-phase so Meta gets its 200 in milliseconds, not after the LLM:
+
+1. **Ingest (in the request)** — verify HMAC, find/create the member, store the inbound
+   message (``ON CONFLICT DO NOTHING`` → retries are ignored) and COMMIT.
+2. **Process (background task, own DB session)** — per-member lock → SAVEPOINT →
+   ``handle_inbound`` → mark the message ``processed``.
+
+If the process dies between the two phases the message is stored with
+``processed = false``; ``recover_unprocessed`` (called by the cron every 15 min)
+re-drives it.
 """
 
 from __future__ import annotations
 
 import asyncio
+import datetime
+import uuid
+import weakref
+from dataclasses import dataclass
 
 import structlog
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from alfred.db import get_session
+from alfred.db import AsyncSessionLocal, get_session
 from alfred.models import Household, Member, Message
 from alfred.security import verify_whatsapp_signature
 from alfred.settings import settings
@@ -25,7 +40,22 @@ router = APIRouter(prefix="/webhook", tags=["webhook"])
 
 # Per-member serialisation lock — prevents double-response when Meta sends
 # concurrent/duplicate webhook calls for the same user.
-_MEMBER_LOCKS: dict = {}
+# Weak values: a lock disappears once nobody holds or awaits it (no unbounded growth).
+_MEMBER_LOCKS: weakref.WeakValueDictionary = weakref.WeakValueDictionary()
+
+# A stored-but-unprocessed message is only re-driven inside this window: old enough that
+# the original background task is certainly dead, young enough that a late answer is useful.
+RECOVER_MIN_AGE = datetime.timedelta(minutes=2)
+RECOVER_MAX_AGE = datetime.timedelta(minutes=20)
+
+
+@dataclass(frozen=True)
+class Inbound:
+    """A stored inbound message waiting to be handled."""
+
+    member_id: uuid.UUID
+    message_id: uuid.UUID
+    wa_message_id: str
 
 
 def _mask_phone(phone: str) -> str:
@@ -34,9 +64,11 @@ def _mask_phone(phone: str) -> str:
 
 
 def _get_member_lock(member_id: object) -> asyncio.Lock:
-    if member_id not in _MEMBER_LOCKS:
-        _MEMBER_LOCKS[member_id] = asyncio.Lock()
-    return _MEMBER_LOCKS[member_id]
+    lock = _MEMBER_LOCKS.get(member_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _MEMBER_LOCKS[member_id] = lock
+    return lock
 
 
 # ---------------------------------------------------------------------------
@@ -69,27 +101,38 @@ async def verify_webhook(
 )
 async def receive_message(
     request: Request,
+    background: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     payload: dict = await request.json()
     log = logger.bind(payload_keys=list(payload.keys()))
 
-    # Meta wraps messages inside entry[].changes[].value
+    # Phase 1 — store. Meta wraps messages inside entry[].changes[].value
+    pending: list[Inbound] = []
     for entry in payload.get("entry", []):
         for change in entry.get("changes", []):
             value = change.get("value", {})
-            await _process_value(value, session, log)
+            pending.extend(await _ingest_value(value, session, log))
 
-    # Always return 200 — Meta retries on any non-2xx
+    # Commit BEFORE answering: once Meta sees the 200 it never resends, so the
+    # message must already be durable.
+    await session.commit()
+
+    # Phase 2 — process after the response has been sent, in arrival order.
+    for item in pending:
+        background.add_task(dispatch_inbound, item)
+
+    # Always 200 — Meta retries on any non-2xx
     return {"status": "ok"}
 
 
-async def _process_value(
+async def _ingest_value(
     value: dict,
     session: AsyncSession,
     log: structlog.BoundLogger,
-) -> None:
-    """Process one changes.value block — may contain multiple messages."""
+) -> list[Inbound]:
+    """Store the new messages of one changes.value block; return those to process."""
+    pending: list[Inbound] = []
     messages = value.get("messages", [])
     contacts = {c["wa_id"]: c for c in value.get("contacts", [])}
 
@@ -128,8 +171,6 @@ async def _process_value(
             body = None
 
         # Timestamp (Unix epoch → datetime)
-        import datetime
-
         ts_raw = msg.get("timestamp")
         wa_ts = datetime.datetime.fromtimestamp(int(ts_raw), tz=datetime.UTC) if ts_raw else None
 
@@ -165,26 +206,72 @@ async def _process_value(
             log.info("webhook.duplicate_ignored", wa_message_id=wa_message_id)
         else:
             log.info("webhook.message_stored", message_id=str(inserted))
-            # Fetch stored message and dispatch to conversation handler
-            from sqlalchemy import select as sa_select
+            pending.append(Inbound(member.id, inserted, wa_message_id))
+    return pending
 
-            from alfred.conversation import handle_inbound
 
-            msg_result = await session.execute(sa_select(Message).where(Message.id == inserted))
-            stored_msg = msg_result.scalar_one()
+async def dispatch_inbound(item: Inbound) -> bool:
+    """Run ``handle_inbound`` for one stored message, in its own session.
+
+    Returns True when the handler finished. Never raises (it runs in a background task
+    where an exception would just be lost); failures are logged and leave the message
+    ``processed = false`` so ``recover_unprocessed`` can retry.
+    """
+    from alfred.conversation import handle_inbound
+
+    log = logger.bind(wa_message_id=item.wa_message_id, member_id=str(item.member_id))
+    try:
+        async with _get_member_lock(item.member_id), AsyncSessionLocal() as session:
+            member = await session.get(Member, item.member_id)
+            stored = await session.get(Message, item.message_id)
+            if member is None or stored is None:
+                log.warning("webhook.dispatch_missing_rows")
+                return False
+            if stored.processed:
+                return True  # another worker (or the recovery sweep) got there first
             try:
-                async with _get_member_lock(member.id):
-                    # SAVEPOINT: if the handler fails half-way, its partial
-                    # writes are rolled back but the inbound message stays stored.
-                    async with session.begin_nested():
-                        await handle_inbound(member, stored_msg, session)
+                # SAVEPOINT: if the handler fails half-way, its partial writes are
+                # rolled back but the inbound message stays stored.
+                async with session.begin_nested():
+                    await handle_inbound(member, stored, session)
             except Exception as exc:
-                log.error(
-                    "webhook.handle_inbound_failed",
-                    error=str(exc),
-                    wa_message_id=wa_message_id,
-                    exc_info=True,
+                log.error("webhook.handle_inbound_failed", error=str(exc), exc_info=True)
+                await session.commit()  # keep whatever the savepoint left (the message)
+                return False
+            stored.processed = True
+            await session.commit()
+            return True
+    except Exception as exc:  # DB down etc. — the message is stored; recovery retries
+        log.error("webhook.dispatch_failed", error=str(exc), exc_info=True)
+        return False
+
+
+async def recover_unprocessed(now: datetime.datetime | None = None, limit: int = 20) -> int:
+    """Re-drive inbound messages that were stored but never processed.
+
+    Covers a crash/deploy between the 200 and the end of the background task.
+    Returns how many were re-driven.
+    """
+    now = now or datetime.datetime.now(datetime.UTC)
+    async with AsyncSessionLocal() as session:
+        rows = (
+            await session.execute(
+                select(Message.id, Message.author_id, Message.wa_message_id)
+                .where(
+                    Message.direction == "inbound",
+                    Message.processed.is_(False),
+                    Message.author_id.is_not(None),
+                    Message.created_at <= now - RECOVER_MIN_AGE,
+                    Message.created_at >= now - RECOVER_MAX_AGE,
                 )
+                .order_by(Message.created_at.asc())
+                .limit(limit)
+            )
+        ).all()
+    for row in rows:
+        logger.warning("webhook.recovering_message", wa_message_id=row.wa_message_id)
+        await dispatch_inbound(Inbound(row.author_id, row.id, row.wa_message_id))
+    return len(rows)
 
 
 async def _get_or_create_member(

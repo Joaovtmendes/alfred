@@ -3,6 +3,8 @@
 * expense.amount FLOAT -> NUMERIC(12,2)   (exact cents; existing values rounded to 2 dp)
 * indexes: expense(member_id, expense_date), message(author_id, created_at), member(household_id)
 * trip.budget NUMERIC(12,2) NULL          (hard test BUG-07: "saldo restante")
+* message.processed: all existing inbound rows were handled inline by the old webhook,
+  so mark them processed (the new recovery sweep must not re-drive them)
 
 Revision ID: a1d5c7e9b3f2
 Revises: e5f3a2d7c8b1
@@ -30,6 +32,7 @@ def upgrade() -> None:
         existing_nullable=False,
         postgresql_using="round(amount::numeric, 2)",
     )
+    op.execute("UPDATE message SET processed = true WHERE direction = 'inbound'")
     op.add_column("trip", sa.Column("budget", sa.Numeric(12, 2), nullable=True))
     op.create_index("ix_expense_member_date", "expense", ["member_id", "expense_date"])
     op.create_index("ix_message_author_created", "message", ["author_id", "created_at"])

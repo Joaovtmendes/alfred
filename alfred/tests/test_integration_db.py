@@ -178,3 +178,83 @@ async def test_cron_keeps_going_after_a_failed_send(monkeypatch) -> None:
             await s.delete(j)
         await s.commit()
     await _cleanup(phone)
+
+
+# ── two-phase webhook (1.7) ───────────────────────────────────────────────────
+
+
+async def test_webhook_stores_then_acknowledges_then_processes(client) -> None:
+    """The 200 must not depend on the handler; the message is durable before processing."""
+    from alfred.webhook import Inbound
+
+    phone = "3160" + uuid.uuid4().hex[:7]
+    seen: list[Inbound] = []
+
+    async def fake_dispatch(item: Inbound) -> bool:
+        async with AsyncSessionLocal() as s:  # committed before the background task runs
+            msg = await s.get(Message, item.message_id)
+            assert msg is not None and msg.processed is False
+        seen.append(item)
+        return True
+
+    with patch("alfred.webhook.dispatch_inbound", fake_dispatch):
+        resp = await _post(client, _payload(phone, "olá"))
+    assert resp.status_code == 200 and len(seen) == 1
+    await _cleanup(phone)
+
+
+async def test_processed_flag_is_set_after_handling(client) -> None:
+    phone = "3160" + uuid.uuid4().hex[:7]
+    with patch("alfred.conversation.send_text", new_callable=AsyncMock):
+        await _post(client, _payload(phone, "olá"))
+    async with AsyncSessionLocal() as s:
+        member = (await s.execute(select(Member).where(Member.wa_phone == phone))).scalar_one()
+        inbound = (
+            await s.execute(
+                select(Message.processed).where(
+                    Message.author_id == member.id, Message.direction == "inbound"
+                )
+            )
+        ).scalar_one()
+        assert inbound is True
+    await _cleanup(phone)
+
+
+async def test_failed_handler_leaves_message_unprocessed_for_recovery(client) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from alfred.webhook import recover_unprocessed
+
+    phone = "3160" + uuid.uuid4().hex[:7]
+    with patch("alfred.conversation.send_text", AsyncMock(side_effect=RuntimeError("down"))):
+        resp = await _post(client, _payload(phone, "olá"))
+    assert resp.status_code == 200
+    async with AsyncSessionLocal() as s:
+        member = (await s.execute(select(Member).where(Member.wa_phone == phone))).scalar_one()
+        msg = (await s.execute(select(Message).where(Message.author_id == member.id))).scalar_one()
+        assert msg.processed is False
+        msg_id = msg.id
+
+    # too fresh → left alone (the original task may still be running)
+    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as send:
+        assert await recover_unprocessed() == 0
+        send.assert_not_awaited()
+
+    # five minutes later WhatsApp is back: the sweep answers it exactly once
+    later = datetime.now(UTC) + timedelta(minutes=5)
+    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as send:
+        assert await recover_unprocessed(now=later) == 1
+        assert await recover_unprocessed(now=later) == 0  # processed now
+        send.assert_awaited_once()
+    async with AsyncSessionLocal() as s:
+        assert (await s.get(Message, msg_id)).processed is True
+
+    # far too old → never re-driven
+    async with AsyncSessionLocal() as s:
+        row = await s.get(Message, msg_id)
+        row.processed = False
+        await s.commit()
+    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as send:
+        assert await recover_unprocessed(now=datetime.now(UTC) + timedelta(hours=2)) == 0
+        send.assert_not_awaited()
+    await _cleanup(phone)
