@@ -9,7 +9,9 @@ from alfred.settings import settings
 
 logger = structlog.get_logger()
 
-_GRAPH_URL = "https://graph.facebook.com/v19.0"
+# v19.0 expired on 2026-05-21 (Meta silently upgraded calls). Pin a supported version;
+# check https://developers.facebook.com/docs/graph-api/changelog/versions/ yearly.
+_GRAPH_URL = f"https://graph.facebook.com/{settings.graph_api_version}"
 
 
 async def send_text(to: str, body: str) -> dict:

@@ -64,5 +64,5 @@ tool use é o próximo ganho de custo e latência (roadmap S0).
 
 | Processo | O quê | Onde |
 |---|---|---|
-| web | FastAPI (webhook, dashboard, health) | Railway `alfred-web`, `start.sh` corre migrações |
+| web | FastAPI (webhook, dashboard, health) | Railway `alfred`, `start.sh` corre migrações |
 | cron | `scripts/daily_cron.py` a cada 15 min | Railway `alfred-cron` |

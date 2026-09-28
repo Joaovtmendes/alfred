@@ -8,8 +8,15 @@ healthcheckPath = "/health"
 healthcheckTimeout = 60
 restartPolicyType = "on_failure"
 
-# ── Cron service "alfred-cron" ───────────────────────────────────────────────
-# Uses its own config file: alfred/railway.cron.toml (set it in that service's
-# Settings → Config-as-code). Variables: reference the web service, e.g.
-# DATABASE_URL=${{alfred-web.DATABASE_URL}}, WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
-# TIMEZONE, CRON_INTERVAL_MINUTES.
+# ── Cron service "alfred-cron" — configured in the Railway DASHBOARD ────────
+# (Railway deprecated config-as-code; services can no longer opt in.)
+#   Settings → Deploy → Start command:  python /app/scripts/daily_cron.py
+#   Settings → Deploy → Cron schedule:  Every 15 minutes (*/15 * * * *)
+#   Variables (references to the web service, which is named "alfred"):
+#     DATABASE_URL=${{alfred.DATABASE_URL}}
+#     WHATSAPP_TOKEN=${{alfred.WHATSAPP_TOKEN}}
+#     WHATSAPP_PHONE_NUMBER_ID=${{alfred.WHATSAPP_PHONE_NUMBER_ID}}
+#
+# Note: this file only works until 2026-12-01 (Railway sunset); the web service
+# runs fine without it (Dockerfile CMD = start.sh). Move healthcheck path to the
+# dashboard before then.

@@ -10,16 +10,20 @@
 
 ## Serviços Railway
 
-| Serviço | Config-as-code | Start command | Schedule |
+Projecto `alert-empathy`, ambiente `production`. Configuração feita **no painel**
+(o Railway descontinuou o config-as-code; `alfred/railway.toml` só vale até 01/12/2026).
+
+| Serviço | Start command | Schedule | Variáveis |
 |---|---|---|---|
-| `alfred-web` | `alfred/railway.toml` | `bash /app/start.sh` | — (healthcheck `/health`) |
-| `alfred-cron` | `alfred/railway.cron.toml` | `python /app/scripts/daily_cron.py` | `*/15 * * * *` |
+| `alfred` (web) | CMD do Dockerfile (`start.sh`) | — | todas as do `.env.example` |
+| `alfred-cron` | `python /app/scripts/daily_cron.py` | Every 15 minutes | `DATABASE_URL=${{alfred.DATABASE_URL}}`, `WHATSAPP_TOKEN=${{alfred.WHATSAPP_TOKEN}}`, `WHATSAPP_PHONE_NUMBER_ID=${{alfred.WHATSAPP_PHONE_NUMBER_ID}}` |
+| `Postgres` | gerido | — | — |
 
-Atenção: se o `alfred-cron` ler o `railway.toml`, o `startCommand` de lá sobrepõe o
-do painel e o cron passa a arrancar o servidor web. Aponta-o para `railway.cron.toml`.
+Ambos os serviços têm Root Directory `alfred` e activar **Wait for CI** (deploy só
+depois do CI verde).
 
-Se ainda existir um serviço `alfred-worker`, pode ser apagado: o código procrastinate
-foi removido.
+Pendentes de infra: região actual é **US West** (dados de utilizadores UE → mover
+para EU West/Amsterdã); plano actual é trial (upgrade para Hobby antes de acabar).
 
 ## Variáveis de ambiente
 
@@ -48,7 +52,10 @@ A lista completa, com explicação, está em `alfred/.env.example`. As críticas
 - `alfred/m5-templates/`: 4 templates UTILITY (lembretes, resumo semanal).
 - `alfred/m6-flow/`: Flow de onboarding + template de boas-vindas. O handler já
   está integrado em `conversation.handle_flow_onboarding`.
-- Submissão: WhatsApp Manager → Message Templates (depois da verificação do negócio).
+- Submissão: `python scripts/submit_templates.py` (dry run) e depois `--apply`, no teu
+  Mac (usa `WHATSAPP_TOKEN` e `WHATSAPP_WABA_ID` do `.env`). Re-executar mostra o estado.
+- Enviar templates exige **forma de pagamento** na WABA (Business Settings → WhatsApp
+  → Configurações de pagamento).
 
 ## Testes
 
