@@ -1,4 +1,5 @@
 """M5 — reminder scheduling decisions (scripts/daily_cron.py, pure functions)."""
+
 from __future__ import annotations
 
 import importlib.util

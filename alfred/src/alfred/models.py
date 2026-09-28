@@ -10,6 +10,7 @@ Design decisions:
 - message.direction: inbound | outbound
 - All timestamps in UTC (timestamptz)
 """
+
 from __future__ import annotations
 
 import uuid
@@ -35,9 +36,7 @@ from alfred.db import Base
 class Household(Base):
     __tablename__ = "household"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -52,9 +51,7 @@ class Member(Base):
     __tablename__ = "member"
     __table_args__ = (UniqueConstraint("wa_phone", name="uq_member_wa_phone"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     household_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("household.id"), nullable=False
     )
@@ -69,9 +66,7 @@ class Member(Base):
     consent_state: Mapped[str] = mapped_column(
         String(20), nullable=False, default="pending"
     )  # pending | pending_response | accepted | rejected
-    disclosure_accepted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    disclosure_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     disclosure_version: Mapped[str | None] = mapped_column(String(20))
 
     # M11 — Dashboard
@@ -96,23 +91,15 @@ class Message(Base):
     """
 
     __tablename__ = "message"
-    __table_args__ = (
-        UniqueConstraint("wa_message_id", name="uq_message_wa_message_id"),
-    )
+    __table_args__ = (UniqueConstraint("wa_message_id", name="uq_message_wa_message_id"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     wa_message_id: Mapped[str] = mapped_column(String(128), nullable=False)
     household_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("household.id"), nullable=False
     )
-    author_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("member.id")
-    )
-    direction: Mapped[str] = mapped_column(
-        String(10), nullable=False
-    )  # inbound | outbound
+    author_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("member.id"))
+    direction: Mapped[str] = mapped_column(String(10), nullable=False)  # inbound | outbound
     body: Mapped[str | None] = mapped_column(Text)
     wa_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -130,9 +117,7 @@ class Expense(Base):
 
     __tablename__ = "expense"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False
     )
@@ -141,9 +126,7 @@ class Expense(Base):
     )
 
     # expense | income
-    transaction_type: Mapped[str] = mapped_column(
-        String(10), nullable=False, default="expense"
-    )
+    transaction_type: Mapped[str] = mapped_column(String(10), nullable=False, default="expense")
 
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="EUR")
@@ -185,9 +168,7 @@ class ScheduledJob(Base):
 
     __tablename__ = "scheduled_job"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
     )
@@ -197,17 +178,17 @@ class ScheduledJob(Base):
     time_of_day: Mapped[str] = mapped_column(
         String(5), nullable=False, default="08:00"
     )  # "HH:MM" UTC
-    days_mask: Mapped[int] = mapped_column(
-        nullable=False, default=127
-    )  # bitmask; 127 = every day
-    payload: Mapped[dict | None] = mapped_column(JSONB)  # extra params e.g. {"text": "toma medicamento"}
+    days_mask: Mapped[int] = mapped_column(nullable=False, default=127)  # bitmask; 127 = every day
+    payload: Mapped[dict | None] = mapped_column(
+        JSONB
+    )  # extra params e.g. {"text": "toma medicamento"}
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    member: Mapped["Member"] = relationship()
+    member: Mapped[Member] = relationship()
 
 
 class MerchantCategoryOverride(Base):
@@ -222,21 +203,13 @@ class MerchantCategoryOverride(Base):
     """
 
     __tablename__ = "merchant_category_overrides"
-    __table_args__ = (
-        UniqueConstraint(
-            "member_id", "merchant", name="uq_mco_member_merchant"
-        ),
-    )
+    __table_args__ = (UniqueConstraint("member_id", "merchant", name="uq_mco_member_merchant"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
     )
-    merchant: Mapped[str] = mapped_column(
-        String(255), nullable=False
-    )  # normalised lowercase
+    merchant: Mapped[str] = mapped_column(String(255), nullable=False)  # normalised lowercase
     category: Mapped[str] = mapped_column(String(50), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -248,19 +221,18 @@ class MerchantCategoryOverride(Base):
         nullable=False,
     )
 
-    member: Mapped["Member"] = relationship()
+    member: Mapped[Member] = relationship()
 
 
 # ── M7 — Treino ─────────────────────────────────────────────────────────────
+
 
 class WorkoutSession(Base):
     """Registo de uma sessão de treino/exercício."""
 
     __tablename__ = "workout_session"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
     )
@@ -275,57 +247,49 @@ class WorkoutSession(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    member: Mapped["Member"] = relationship()
+    member: Mapped[Member] = relationship()
 
 
 # ── M8 — Saúde ──────────────────────────────────────────────────────────────
+
 
 class HealthLog(Base):
     """Registo de saúde: medicação, humor, sono, água."""
 
     __tablename__ = "health_log"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
     )
     log_type: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # medication | mood | sleep | water
-    value: Mapped[str] = mapped_column(
-        String(255), nullable=False
-    )  # "omeprazol", "7", "6.5"
-    unit: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )  # "/10", "hours", "mg", "L"
+    value: Mapped[str] = mapped_column(String(255), nullable=False)  # "omeprazol", "7", "6.5"
+    unit: Mapped[str | None] = mapped_column(String(50), nullable=True)  # "/10", "hours", "mg", "L"
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     log_date: Mapped[date] = mapped_column(Date, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    member: Mapped["Member"] = relationship()
+    member: Mapped[Member] = relationship()
 
 
 # ── M9 — Metas & Hábitos ────────────────────────────────────────────────────
+
 
 class Goal(Base):
     """Meta pessoal do utilizador."""
 
     __tablename__ = "goal"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    target_value: Mapped[str | None] = mapped_column(
-        String(100), nullable=True
-    )  # "500", "3x"
+    target_value: Mapped[str | None] = mapped_column(String(100), nullable=True)  # "500", "3x"
     target_unit: Mapped[str | None] = mapped_column(
         String(50), nullable=True
     )  # "EUR/month", "per week"
@@ -335,8 +299,8 @@ class Goal(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    member: Mapped["Member"] = relationship()
-    habit_logs: Mapped[list["HabitLog"]] = relationship(back_populates="goal")
+    member: Mapped[Member] = relationship()
+    habit_logs: Mapped[list[HabitLog]] = relationship(back_populates="goal")
 
 
 class HabitLog(Base):
@@ -344,9 +308,7 @@ class HabitLog(Base):
 
     __tablename__ = "habit_log"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
     )
@@ -360,20 +322,19 @@ class HabitLog(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    member: Mapped["Member"] = relationship()
-    goal: Mapped["Goal | None"] = relationship(back_populates="habit_logs")
+    member: Mapped[Member] = relationship()
+    goal: Mapped[Goal | None] = relationship(back_populates="habit_logs")
 
 
 # ── M10 — Produtividade ──────────────────────────────────────────────────────
+
 
 class Note(Base):
     """Nota rápida do utilizador."""
 
     __tablename__ = "note"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
     )
@@ -382,7 +343,7 @@ class Note(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    member: Mapped["Member"] = relationship()
+    member: Mapped[Member] = relationship()
 
 
 class Task(Base):
@@ -390,22 +351,18 @@ class Task(Base):
 
     __tablename__ = "task"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
     )
     body: Mapped[str] = mapped_column(String(500), nullable=False)
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    done_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    member: Mapped["Member"] = relationship()
+    member: Mapped[Member] = relationship()
 
 
 # ── M14 — Viagem ─────────────────────────────────────────────────────────────
@@ -416,9 +373,7 @@ class Trip(Base):
 
     __tablename__ = "trip"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
     )
@@ -430,4 +385,4 @@ class Trip(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    member: Mapped["Member"] = relationship()
+    member: Mapped[Member] = relationship()

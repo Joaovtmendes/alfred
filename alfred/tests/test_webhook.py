@@ -1,4 +1,5 @@
 """Tests for webhook verification and signature validation."""
+
 from __future__ import annotations
 
 import hashlib
@@ -14,9 +15,7 @@ from alfred.settings import settings
 
 @pytest.fixture
 async def client():
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 
@@ -26,6 +25,7 @@ def _sign(payload: bytes, secret: str) -> str:
 
 
 # --- GET verification ---
+
 
 async def test_webhook_verify_valid(client: AsyncClient) -> None:
     resp = await client.get(
@@ -53,6 +53,7 @@ async def test_webhook_verify_wrong_token(client: AsyncClient) -> None:
 
 
 # --- POST signature validation ---
+
 
 async def test_webhook_post_missing_signature(client: AsyncClient) -> None:
     resp = await client.post(
@@ -95,6 +96,7 @@ async def test_webhook_post_valid_signature_empty_payload(
 
 
 # --- fail-closed when the app secret is missing ---
+
 
 async def test_webhook_rejects_everything_without_app_secret(
     client: AsyncClient, monkeypatch

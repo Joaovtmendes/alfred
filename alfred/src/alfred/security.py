@@ -3,6 +3,7 @@
 Meta signs every POST with X-Hub-Signature-256: sha256=<hex>
 Reference: https://developers.facebook.com/docs/messenger-platform/webhooks#validate-payloads
 """
+
 from __future__ import annotations
 
 import hashlib

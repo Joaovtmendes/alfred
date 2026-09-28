@@ -1,4 +1,5 @@
 """LLM layer — shared async client and prompt safety."""
+
 from __future__ import annotations
 
 from unittest.mock import patch

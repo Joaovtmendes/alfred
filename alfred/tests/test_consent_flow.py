@@ -8,6 +8,7 @@ accepted           + stop → rejected, no LLM call
 rejected           + text → ignored
 rejected           + START→ disclosure again → pending_response (must re-consent)
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch

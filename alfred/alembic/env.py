@@ -1,16 +1,18 @@
 """Alembic environment — async SQLAlchemy 2.0 pattern."""
+
 from __future__ import annotations
 
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
-from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import async_engine_from_config
+
+from alembic import context
+from alfred.db import Base as DbBase  # noqa: F401
 
 # Import all models so autogenerate detects them
 from alfred.models import Base  # noqa: F401  # registers all tables
-from alfred.db import Base as DbBase  # noqa: F401
 
 config = context.config
 
@@ -20,6 +22,7 @@ if config.config_file_name is not None:
 # Override URL from environment / settings at runtime
 try:
     from alfred.settings import settings
+
     db_url = settings.database_url
     if db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)

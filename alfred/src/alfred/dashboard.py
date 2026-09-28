@@ -4,6 +4,7 @@ Routes:
   GET  /d/{token}           → full HTML single-page app
   GET  /api/d/{token}       → JSON data, ?month=YYYY-MM
 """
+
 from __future__ import annotations
 
 import uuid
@@ -31,13 +32,11 @@ async def _get_member(token_str: str, session: AsyncSession) -> Member:
     try:
         token = uuid.UUID(token_str)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Dashboard not found")
-    result = await session.execute(
-        select(Member).where(Member.dashboard_token == token)
-    )
+        raise HTTPException(status_code=404, detail="Dashboard not found") from None
+    result = await session.execute(select(Member).where(Member.dashboard_token == token))
     member = result.scalar_one_or_none()
     if member is None:
-        raise HTTPException(status_code=404, detail="Dashboard not found")
+        raise HTTPException(status_code=404, detail="Dashboard not found") from None
     return member
 
 
@@ -143,9 +142,7 @@ async def dashboard_api(
         {
             "title": g.title,
             "target": (
-                f"{g.target_value} {g.target_unit or ''}".strip()
-                if g.target_value
-                else None
+                f"{g.target_value} {g.target_unit or ''}".strip() if g.target_value else None
             ),
             "deadline": g.deadline.isoformat() if g.deadline else None,
         }
@@ -196,14 +193,10 @@ async def dashboard_api(
 
     # ── Notes ──────────────────────────────────────────────────────────────────
     nq = await session.execute(
-        select(Note)
-        .where(Note.member_id == member.id)
-        .order_by(Note.created_at.desc())
-        .limit(6)
+        select(Note).where(Note.member_id == member.id).order_by(Note.created_at.desc()).limit(6)
     )
     notes = [
-        {"body": n.body, "date": n.created_at.strftime("%d/%m/%Y")}
-        for n in nq.scalars().all()
+        {"body": n.body, "date": n.created_at.strftime("%d/%m/%Y")} for n in nq.scalars().all()
     ]
 
     # ── Health ─────────────────────────────────────────────────────────────────

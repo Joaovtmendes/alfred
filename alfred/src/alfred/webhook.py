@@ -3,9 +3,11 @@
 GET  /webhook/whatsapp  → Meta hub challenge (verification)
 POST /webhook/whatsapp  → incoming messages (HMAC-validated, idempotent)
 """
+
 from __future__ import annotations
 
 import asyncio
+
 import structlog
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy import select
@@ -25,6 +27,7 @@ router = APIRouter(prefix="/webhook", tags=["webhook"])
 # concurrent/duplicate webhook calls for the same user.
 _MEMBER_LOCKS: dict = {}
 
+
 def _mask_phone(phone: str) -> str:
     """Log-safe phone: keep only the last 4 digits (GDPR data minimisation)."""
     return f"***{phone[-4:]}" if phone else ""
@@ -39,6 +42,7 @@ def _get_member_lock(member_id: object) -> asyncio.Lock:
 # ---------------------------------------------------------------------------
 # GET — Meta verification challenge
 # ---------------------------------------------------------------------------
+
 
 @router.get("/whatsapp")
 async def verify_webhook(
@@ -56,6 +60,7 @@ async def verify_webhook(
 # ---------------------------------------------------------------------------
 # POST — incoming messages
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/whatsapp",
@@ -124,12 +129,9 @@ async def _process_value(
 
         # Timestamp (Unix epoch → datetime)
         import datetime
+
         ts_raw = msg.get("timestamp")
-        wa_ts = (
-            datetime.datetime.fromtimestamp(int(ts_raw), tz=datetime.timezone.utc)
-            if ts_raw
-            else None
-        )
+        wa_ts = datetime.datetime.fromtimestamp(int(ts_raw), tz=datetime.UTC) if ts_raw else None
 
         log.info(
             "webhook.message_received",
@@ -165,10 +167,10 @@ async def _process_value(
             log.info("webhook.message_stored", message_id=str(inserted))
             # Fetch stored message and dispatch to conversation handler
             from sqlalchemy import select as sa_select
+
             from alfred.conversation import handle_inbound
-            msg_result = await session.execute(
-                sa_select(Message).where(Message.id == inserted)
-            )
+
+            msg_result = await session.execute(sa_select(Message).where(Message.id == inserted))
             stored_msg = msg_result.scalar_one()
             try:
                 async with _get_member_lock(member.id):
@@ -191,9 +193,7 @@ async def _get_or_create_member(
     contacts: dict,
 ) -> Member:
     """Return existing member or create household + member on first contact."""
-    result = await session.execute(
-        select(Member).where(Member.wa_phone == wa_phone)
-    )
+    result = await session.execute(select(Member).where(Member.wa_phone == wa_phone))
     member = result.scalar_one_or_none()
     if member:
         return member

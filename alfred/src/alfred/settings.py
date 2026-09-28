@@ -1,4 +1,5 @@
 """Application settings — all config from environment variables via pydantic-settings."""
+
 from __future__ import annotations
 
 from pydantic import SecretStr

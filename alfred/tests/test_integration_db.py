@@ -5,6 +5,7 @@ Skipped unless ALFRED_TEST_DB=1 and DATABASE_URL points at a migrated test DB:
     DATABASE_URL=postgresql+asyncpg://... alembic upgrade head
     ALFRED_TEST_DB=1 DATABASE_URL=postgresql+asyncpg://... pytest tests/test_integration_db.py
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -97,9 +98,7 @@ async def test_handler_failure_rolls_back_partial_writes_but_keeps_message(clien
         member = (await s.execute(select(Member).where(Member.wa_phone == phone))).scalar_one()
         # consent change was rolled back with the savepoint → retried next message
         assert member.consent_state == "pending"
-        n = (
-            await s.execute(select(func.count()).where(Message.author_id == member.id))
-        ).scalar()
+        n = (await s.execute(select(func.count()).where(Message.author_id == member.id))).scalar()
         assert n == 1
     await _cleanup(phone)
 

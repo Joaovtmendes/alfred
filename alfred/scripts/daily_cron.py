@@ -15,12 +15,13 @@ Rules
 * The platform weekly summary goes out on Mondays at 09:00 local time, except
   to members who already have their own ``weekly_summary`` job.
 """
+
 from __future__ import annotations
 
 import asyncio
 import os
 import sys
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 # Ensure src/ is on the path when run from the repo root
@@ -95,7 +96,7 @@ async def run_cron() -> int:
     from alfred.whatsapp import send_template
 
     tz = ZoneInfo(settings.timezone)
-    now_local = datetime.now(timezone.utc).astimezone(tz)
+    now_local = datetime.now(UTC).astimezone(tz)
     logger.info("cron.start", local=now_local.isoformat(), interval_min=INTERVAL_MINUTES)
 
     sent = errors = 0
@@ -136,7 +137,7 @@ async def run_cron() -> int:
                 await session.execute(
                     update(ScheduledJob)
                     .where(ScheduledJob.id == job.id)
-                    .values(last_sent_at=datetime.now(timezone.utc))
+                    .values(last_sent_at=datetime.now(UTC))
                 )
                 await session.commit()
                 sent += 1
@@ -147,8 +148,10 @@ async def run_cron() -> int:
 
         if is_weekly_summary_due(now_local):
             members = (
-                await session.execute(select(Member).where(Member.consent_state == "accepted"))
-            ).scalars().all()
+                (await session.execute(select(Member).where(Member.consent_state == "accepted")))
+                .scalars()
+                .all()
+            )
             for member in members:
                 if member.id in own_weekly:
                     continue  # they get it through their own job — avoid a double send

@@ -7,11 +7,12 @@ Conventions
 * Never call real external services: patch ``alfred.conversation.send_text``
   and the ``alfred.llm`` functions used by the code under test.
 """
+
 from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -40,7 +41,9 @@ async def client() -> AsyncIterator[AsyncClient]:
         yield ac
 
 
-def make_member(consent_state: str = "accepted", language: str = "pt", **kw: Any) -> SimpleNamespace:
+def make_member(
+    consent_state: str = "accepted", language: str = "pt", **kw: Any
+) -> SimpleNamespace:
     """A Member-like object with every attribute handle_inbound reads."""
     fields: dict[str, Any] = {
         "id": uuid.uuid4(),
@@ -65,7 +68,7 @@ def make_message(body: str = "olá", **kw: Any) -> SimpleNamespace:
         "body": body,
         "direction": "inbound",
         "wa_message_id": "wamid.test",
-        "wa_timestamp": datetime.now(timezone.utc),
+        "wa_timestamp": datetime.now(UTC),
         "raw": {"type": "text"},
     }
     fields.update(kw)

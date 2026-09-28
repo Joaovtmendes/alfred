@@ -1,4 +1,5 @@
 """LLM integration — supports Anthropic direct API and AWS Bedrock."""
+
 from __future__ import annotations
 
 import asyncio
@@ -32,6 +33,7 @@ def _get_client(api_key: str) -> Any:
         _client_key = api_key
     return _client
 
+
 _SYSTEM_PROMPT = """Je bent Alfred, een persoonlijke assistent via WhatsApp.
 Je helpt met uitgaven bijhouden, afspraken en herinneringen.
 Je bent een AI — geen mens.
@@ -51,7 +53,6 @@ BELANGRIJK — je registreert zelf NIETS en je hebt geen toegang tot gegevens:
 - Als de gebruiker om een overzicht vraagt: verzin geen cijfers. Verwijs naar het commando "resumo" / "overzicht" / "summary" of "saldo"."""
 
 
-
 _LLM_ERROR: dict[str, str] = {
     "pt": "Não foi possível processar a tua mensagem. Tenta de novo.",
     "nl": "Sorry, ik kan je bericht nu niet verwerken. Probeer het later opnieuw.",
@@ -67,6 +68,7 @@ _LANG_INSTRUCTION: dict[str, str] = {
     "fr": "Réponds TOUJOURS en français. Ne mélange jamais avec l'anglais ou le néerlandais, même si l'historique contient d'autres langues.",
     "de": "Antworte IMMER auf Deutsch. Vermische niemals mit Englisch oder Niederländisch, auch wenn der Gesprächsverlauf andere Sprachen enthält.",
 }
+
 
 def _bedrock_model_id(model: str) -> str:
     """Normalise model name for Bedrock (adds prefix if needed)."""
@@ -118,7 +120,6 @@ async def _reply_anthropic(
 ) -> str:
     """Call Anthropic API directly."""
     try:
-
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             logger.warning("llm.anthropic_key_missing")
@@ -180,12 +181,14 @@ async def _reply_bedrock(
         lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
         system_prompt = f"{_SYSTEM_PROMPT}\n\n{lang_instr}"
 
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 512,
-            "system": system_prompt,
-            "messages": messages,
-        })
+        body = json.dumps(
+            {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 512,
+                "system": system_prompt,
+                "messages": messages,
+            }
+        )
 
         response = await asyncio.to_thread(
             client.invoke_model,
@@ -232,7 +235,6 @@ async def classify_query(text: str) -> dict | None:
 
 async def _classify_query_anthropic(text: str) -> dict | None:
     try:
-
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             return None
@@ -356,7 +358,6 @@ async def extract_expense(
 
 async def _extract_expense_anthropic(text: str, lang: str = "en") -> dict | None:
     try:
-
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             return None
@@ -464,6 +465,7 @@ Return JSON only, no markdown fences. Fields:
 If not a workout entry, return {"is_workout": false}.
 """
 
+
 async def extract_workout(text: str, lang: str = "en") -> dict | None:
     """Extract workout session data from natural language text."""
     try:
@@ -521,6 +523,7 @@ Examples:
 - "bebi 2L de água" → {is_health:true, log_type:"water", value:"2", unit:"L"}
 """
 
+
 async def extract_health_log(text: str, lang: str = "en") -> dict | None:
     """Extract health log entry from natural language text."""
     try:
@@ -577,6 +580,7 @@ Examples:
 - "corri 5km" → {"is_habit":false}
 """
 
+
 async def extract_habit(text: str, lang: str = "en") -> dict | None:
     """Extract habit log entry from natural language text."""
     try:
@@ -616,4 +620,3 @@ async def extract_habit(text: str, lang: str = "en") -> dict | None:
     except Exception as exc:
         logger.warning("llm.extract_habit_failed", error=str(exc))
         return None
-
