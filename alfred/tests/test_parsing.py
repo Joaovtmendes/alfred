@@ -198,3 +198,40 @@ def test_category_correction_lookalikes_parse_but_the_handler_rejects_them(
     """Short 'X e Y' sentences parse. The handler then requires a KNOWN merchant
     (see test_conversation_regressions), which is what keeps them out."""
     assert parse_category_correction(text) == parsed
+
+
+# ── trip budget ───────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("text", "amount"),
+    [
+        ("criar viagem portugal €500 de 1 a 7 de outubro", 500.0),
+        ("trip to rome 1.500 euro", 1500.0),
+        ("viagem a paris 1.500,50€", 1500.5),
+        ("berlin € 12,5", 12.5),
+        ("op reis naar berlijn 300 eur", 300.0),
+    ],
+)
+def test_parse_budget(text: str, amount: float) -> None:
+    from alfred.parsing import parse_budget
+
+    assert parse_budget(text) == amount
+
+
+@pytest.mark.parametrize(
+    "text", ["trip to oslo", "nova viagem 3 dias", "€0", "viagem 7 de outubro"]
+)
+def test_parse_budget_needs_a_currency_marker(text: str) -> None:
+    from alfred.parsing import parse_budget
+
+    assert parse_budget(text) is None
+
+
+def test_strip_accents_is_length_preserving() -> None:
+    from alfred.parsing import like_escape, strip_accents
+
+    text = "como está o meu humor? bebi água, medicação — coração ñ"
+    assert len(strip_accents(text)) == len(text)
+    assert strip_accents("está água") == "esta agua"
+    assert like_escape("100%_x\\") == "100\\%\\_x\\\\"

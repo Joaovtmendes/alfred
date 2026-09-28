@@ -22,6 +22,8 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -49,7 +51,10 @@ class Household(Base):
 
 class Member(Base):
     __tablename__ = "member"
-    __table_args__ = (UniqueConstraint("wa_phone", name="uq_member_wa_phone"),)
+    __table_args__ = (
+        UniqueConstraint("wa_phone", name="uq_member_wa_phone"),
+        Index("ix_member_household_id", "household_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     household_id: Mapped[uuid.UUID] = mapped_column(
@@ -91,7 +96,11 @@ class Message(Base):
     """
 
     __tablename__ = "message"
-    __table_args__ = (UniqueConstraint("wa_message_id", name="uq_message_wa_message_id"),)
+    __table_args__ = (
+        UniqueConstraint("wa_message_id", name="uq_message_wa_message_id"),
+        # conversation history: latest messages of one author
+        Index("ix_message_author_created", "author_id", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     wa_message_id: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -116,6 +125,10 @@ class Expense(Base):
     """A financial transaction recorded by a member via natural language."""
 
     __tablename__ = "expense"
+    __table_args__ = (
+        # every summary/dashboard/saldo query filters by member and a date range
+        Index("ix_expense_member_date", "member_id", "expense_date"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     member_id: Mapped[uuid.UUID] = mapped_column(
@@ -128,7 +141,9 @@ class Expense(Base):
     # expense | income
     transaction_type: Mapped[str] = mapped_column(String(10), nullable=False, default="expense")
 
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    # NUMERIC(12,2) in the database (exact cents, exact SUM); asdecimal=False keeps
+    # the Python side a float so display/JSON code is unchanged.
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="EUR")
     merchant: Mapped[str | None] = mapped_column(String(255))
     category: Mapped[str | None] = mapped_column(String(50))
@@ -143,7 +158,7 @@ class Expense(Base):
     )
     # M14 — Viagem
     trip_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("trip.id"), nullable=True, default=None
+        UUID(as_uuid=True), ForeignKey("trip.id"), nullable=True, default=None, index=True
     )
 
     member: Mapped[Member] = relationship(back_populates="expenses")
@@ -381,6 +396,8 @@ class Trip(Base):
     started_at: Mapped[date] = mapped_column(Date, nullable=False)
     ended_at: Mapped[date | None] = mapped_column(Date, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Optional budget stated when the trip starts ("criar viagem Portugal €500")
+    budget: Mapped[float | None] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

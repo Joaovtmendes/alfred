@@ -187,3 +187,41 @@ def parse_category_correction(text: str) -> tuple[str, str] | None:
     if not merchant or len(merchant.split()) > 4:
         return None
     return merchant, m.group("cat").strip()
+
+
+# ── Trip budget ("criar viagem Portugal €500") ────────────────────────────────
+
+_BUDGET_RE = re.compile(
+    r"(?:[€$£]\s*(?P<a>\d[\d.,]*)|(?P<b>\d[\d.,]*)\s*(?:[€$£]|eur\b|euros?\b|dollars?\b))",
+    re.IGNORECASE,
+)
+
+
+def _to_amount(raw: str) -> float | None:
+    """'1.500' → 1500 · '1.500,50' → 1500.5 · '12,5' → 12.5 · '500' → 500."""
+    raw = raw.rstrip(".,")
+    if not raw:
+        return None
+    last = max(raw.rfind("."), raw.rfind(","))
+    if last == -1:
+        digits = raw
+    else:
+        tail = raw[last + 1 :]
+        other_sep = "," if raw[last] == "." else "."
+        if len(tail) == 3 and other_sep not in raw and raw.count(raw[last]) >= 1:
+            digits = raw.replace(".", "").replace(",", "")  # thousands separator
+        else:
+            digits = raw[:last].replace(".", "").replace(",", "") + "." + tail
+    try:
+        value = float(digits)
+    except ValueError:
+        return None
+    return value if 0 < value < 1_000_000 else None
+
+
+def parse_budget(text: str) -> float | None:
+    """First money amount in ``text`` (needs a currency marker), else None."""
+    m = _BUDGET_RE.search(text)
+    if not m:
+        return None
+    return _to_amount(m.group("a") or m.group("b"))

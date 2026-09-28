@@ -22,12 +22,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.clock import (
     day_start,
+    month_name,
     month_start,
     now_local,
     prev_month_start,
     to_local,
     today_local,
     week_start,
+    weekday_abbr,
 )
 from alfred.llm import (
     classify_query,
@@ -57,6 +59,7 @@ from alfred.parsing import (
     TRIP_QUERY_RE,
     like_escape,
     match_trip_start,
+    parse_budget,
     parse_category_correction,
     strip_accents,
 )
@@ -860,6 +863,62 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "You have no trips recorded yet.",
         "fr": "Tu n'as pas encore de voyages enregistres.",
         "de": "Du hast noch keine Reisen erfasst.",
+    },
+    "trip_started_budget": {
+        "pt": "Viagem para {dest} iniciada! Orçamento: {budget}. As despesas serão associadas automaticamente.",
+        "nl": "Reis naar {dest} gestart! Budget: {budget}. Uitgaven worden automatisch gekoppeld.",
+        "en": "Trip to {dest} started! Budget: {budget}. Expenses will be tagged automatically.",
+        "fr": "Voyage à {dest} commencé ! Budget : {budget}. Les dépenses seront associées automatiquement.",
+        "de": "Reise nach {dest} gestartet! Budget: {budget}. Ausgaben werden automatisch zugeordnet.",
+    },
+    "trip_budget_left": {
+        "pt": " · restante {left}",
+        "nl": " · nog over {left}",
+        "en": " · {left} left",
+        "fr": " · reste {left}",
+        "de": " · noch {left}",
+    },
+    "trip_budget_over": {
+        "pt": " · {over} acima do orçamento",
+        "nl": " · {over} boven budget",
+        "en": " · {over} over budget",
+        "fr": " · {over} au-dessus du budget",
+        "de": " · {over} über dem Budget",
+    },
+    "trip_summary_header": {
+        "pt": "Viagem: {dest} ({start} → {end})",
+        "nl": "Reis: {dest} ({start} → {end})",
+        "en": "Trip: {dest} ({start} → {end})",
+        "fr": "Voyage : {dest} ({start} → {end})",
+        "de": "Reise: {dest} ({start} → {end})",
+    },
+    "trip_summary_total": {
+        "pt": "Total: {total}  ({n} despesas)",
+        "nl": "Totaal: {total}  ({n} uitgaven)",
+        "en": "Total: {total}  ({n} expenses)",
+        "fr": "Total : {total}  ({n} dépenses)",
+        "de": "Gesamt: {total}  ({n} Ausgaben)",
+    },
+    "trip_summary_budget": {
+        "pt": "Orçamento: {budget}",
+        "nl": "Budget: {budget}",
+        "en": "Budget: {budget}",
+        "fr": "Budget : {budget}",
+        "de": "Budget: {budget}",
+    },
+    "trip_ongoing": {
+        "pt": "em curso",
+        "nl": "lopend",
+        "en": "ongoing",
+        "fr": "en cours",
+        "de": "laufend",
+    },
+    "trip_today": {
+        "pt": "hoje",
+        "nl": "vandaag",
+        "en": "today",
+        "fr": "aujourd'hui",
+        "de": "heute",
     },
     "trip_expense_total": {
         "pt": " [viagem {dest}: {total} no total]",
@@ -1677,6 +1736,14 @@ def _grp(body: str, m: re.Match[str], n: int = 1) -> str:
 # ── M14 — Viagem handler ─────────────────────────────────────────────────────
 
 
+def _budget_remaining(budget: float, spent: float, lang: str) -> str:
+    """' · restante €380,00' or ' · €20,00 acima do orçamento'."""
+    left = float(budget) - float(spent)
+    if left >= 0:
+        return _t("trip_budget_left", lang, left=_fmt_eur(left))
+    return _t("trip_budget_over", lang, over=_fmt_eur(-left))
+
+
 async def _handle_trip(
     body: str,
     member: Member,
@@ -1698,14 +1765,18 @@ async def _handle_trip(
         if active:
             return _t("trip_already_active", lang, dest=active.destination)
 
+        budget = parse_budget(body)
         trip = Trip(
             id=uuid.uuid4(),
             member_id=member.id,
             destination=dest,
             started_at=today_local(),
             active=True,
+            budget=budget,
         )
         session.add(trip)
+        if budget:
+            return _t("trip_started_budget", lang, dest=dest, budget=_fmt_eur(budget))
         return _t("trip_started", lang, dest=dest)
 
     # ── end trip ──────────────────────────────────────────────────────────
@@ -1769,16 +1840,27 @@ async def _handle_trip(
             return _t("trip_no_expenses", lang)
 
         total = sum(r.amount for r in rows)
-        end_str = trip.ended_at.strftime("%d/%m") if trip.ended_at else "hoje"
+        end_str = trip.ended_at.strftime("%d/%m") if trip.ended_at else _t("trip_today", lang)
         lines = [
-            f"Viagem: {trip.destination} ({trip.started_at.strftime('%d/%m')} \u2192 {end_str})"
+            _t(
+                "trip_summary_header",
+                lang,
+                dest=trip.destination,
+                start=trip.started_at.strftime("%d/%m"),
+                end=end_str,
+            )
         ]
         for r in rows:
             lines.append(
                 f"  {to_local(r.expense_date).strftime('%d/%m')}  {r.merchant or r.category}"
                 f" ({r.category})  {_fmt_eur(r.amount)}"
             )
-        lines.append(f"Total: {_fmt_eur(total)}  ({len(rows)} despesas)")
+        lines.append(_t("trip_summary_total", lang, total=_fmt_eur(total), n=len(rows)))
+        if trip.budget:
+            lines.append(
+                _t("trip_summary_budget", lang, budget=_fmt_eur(trip.budget))
+                + _budget_remaining(trip.budget, total, lang)
+            )
         return "\n".join(lines)
 
     # ── trip list ─────────────────────────────────────────────────────────
@@ -1813,7 +1895,7 @@ async def _handle_trip(
             ).scalar()
             total = row or _D("0")
             status = "\u25b6" if t.active else "\u2713"
-            end_str = t.ended_at.strftime("%d/%m/%y") if t.ended_at else "em curso"
+            end_str = t.ended_at.strftime("%d/%m/%y") if t.ended_at else _t("trip_ongoing", lang)
             lines_out.append(
                 f"{status} {t.destination}  "
                 f"{t.started_at.strftime('%d/%m/%y')} \u2192 {end_str}  "
@@ -1909,7 +1991,7 @@ def _period_range(period: str, lang: str = "en") -> tuple[datetime, datetime | N
         return (
             day_start(first_prev),
             day_start(month_start(today)),
-            first_prev.strftime("%B %Y").capitalize(),
+            month_name(first_prev, lang, year=True),
         )
     if period == "current_week":
         return day_start(week_start(today)), None, _t("period_current_week", lang)
@@ -1921,7 +2003,7 @@ def _period_range(period: str, lang: str = "en") -> tuple[datetime, datetime | N
             _t("period_last_week", lang),
         )
     # default: current_month
-    return day_start(month_start(today)), None, today.strftime("%B %Y").capitalize()
+    return day_start(month_start(today)), None, month_name(today, lang, year=True)
 
 
 async def _build_summary(
@@ -2019,7 +2101,7 @@ async def _build_saldo(member: Member, session: AsyncSession) -> str:
     balance = total_in - total_out
     sign = "+" if balance >= 0 else "-"
 
-    month_label = now.strftime("%B %Y").capitalize()
+    month_label = month_name(now.date(), lang, year=True)
     lines = [
         f"{_t('saldo_title', lang, month=month_label)}\n",
         _t("saldo_income", lang, amount=_fmt_eur(total_in)),
@@ -2052,8 +2134,8 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
     cur_total, cur_n = await _total_out(cur_start, now + timedelta(seconds=1))
     prev_total, prev_n = await _total_out(prev_start, prev_end)
 
-    cur_label = now.strftime("%B").capitalize()
-    prev_label = prev_start.strftime("%B").capitalize()
+    cur_label = month_name(now.date(), lang)
+    prev_label = month_name(prev_start, lang)
 
     diff = cur_total - prev_total
     if prev_total == 0:
@@ -2964,7 +3046,7 @@ async def handle_inbound(
                 reply = _t("health_mood_empty", lang)
             else:
                 entries = ", ".join(
-                    f"{r.value}/10 ({r.log_date.strftime('%a')})" for r in mood_rows[:7]
+                    f"{r.value}/10 ({weekday_abbr(r.log_date, lang)})" for r in mood_rows[:7]
                 )
                 reply = _t("health_mood_history", lang, entries=entries)
             await send_text(to, reply)
@@ -3017,7 +3099,9 @@ async def handle_inbound(
             else:
                 unique_days = len({r.log_date for r in med_rows})
                 total_days = min(7, (today_local() - week_ago).days + 1)
-                day_labels = ", ".join(sorted({r.log_date.strftime("%a") for r in med_rows}))
+                day_labels = ", ".join(
+                    weekday_abbr(d, lang) for d in sorted({r.log_date for r in med_rows})
+                )
                 reply = _t(
                     "health_medication_adherence",
                     lang,
@@ -3189,11 +3273,11 @@ async def handle_inbound(
                 first_prev_wm = prev_month_start(now_wm.date())
                 start_wm = first_prev_wm
                 end_wm = month_start(now_wm.date())
-                month_label = first_prev_wm.strftime("%B %Y")
+                month_label = month_name(first_prev_wm, lang, year=True)
             else:
                 start_wm = month_start(now_wm.date())
                 end_wm = None
-                month_label = now_wm.strftime("%B %Y")
+                month_label = month_name(now_wm.date(), lang, year=True)
             q = _sel(WorkoutSession).where(
                 WorkoutSession.member_id == member.id,
                 WorkoutSession.workout_date >= start_wm,
@@ -3383,6 +3467,10 @@ async def handle_inbound(
                     dest=active_trip.destination,
                     total=_fmt_eur(trip_total),
                 )
+                if active_trip.budget:
+                    reply = reply.rstrip("]") + (
+                        _budget_remaining(active_trip.budget, trip_total, lang) + "]"
+                    )
             # BUG-09: prompt for category when merchant unknown and category is overig
             if (
                 txn_type == "expense"

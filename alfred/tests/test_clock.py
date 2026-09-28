@@ -62,3 +62,17 @@ def test_week_and_prev_month_helpers() -> None:
 
 def test_to_local_handles_naive_as_utc() -> None:
     assert to_local(datetime(2026, 9, 28, 22, 30)).date() == date(2026, 9, 29)
+
+
+def test_month_and_weekday_names_follow_the_language() -> None:
+    from alfred.clock import month_name, weekday_abbr
+
+    d = date(2026, 9, 28)  # a Monday
+    assert month_name(d, "pt", year=True) == "Setembro 2026"
+    assert month_name(d, "nl") == "September"
+    assert month_name(date(2026, 3, 1), "de") == "März"
+    assert month_name(date(2026, 8, 1), "fr") == "Août"
+    assert month_name(d, "xx") == "September"  # unknown language → English
+    assert weekday_abbr(d, "pt") == "Seg"
+    assert weekday_abbr(date(2026, 9, 26), "pt") == "Sáb"
+    assert weekday_abbr(d, "nl") == "Ma"

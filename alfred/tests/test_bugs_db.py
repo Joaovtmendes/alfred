@@ -151,3 +151,54 @@ async def test_pronoun_correction_applies_to_the_last_expense(lab: Lab) -> None:
     assert await lab.scalar(select(Expense.category).where(Expense.member_id == lab.member_id)) == (
         "transport"
     )
+
+
+# ── trip budget (hard test BUG-07) and single replies (BUG-05/06) ─────────────
+
+
+async def test_trip_budget_is_parsed_and_remaining_is_shown(lab: Lab) -> None:
+    reply = await lab.say("criar viagem Portugal €500 de 1 a 7 de outubro")
+    assert "€500,00" in reply
+    budget = await lab.scalar(select(Trip.budget).where(Trip.member_id == lab.member_id))
+    assert budget == 500
+
+    lab.expense.return_value = {**EXPENSE, "amount": 120.0, "merchant": "Hotel Lisboa"}
+    reply = await lab.say("hotel Lisboa 120€ viagem Portugal")  # BUG-05: exactly one reply
+    assert "€120,00" in reply and "restante €380,00" in reply  # BUG-07
+
+
+async def test_trip_over_budget_is_flagged(lab: Lab) -> None:
+    await lab.say("criar viagem Roma €100")
+    lab.expense.return_value = {**EXPENSE, "amount": 130.0}
+    reply = await lab.say("gastei 130 no jumbo")
+    assert "€30,00 acima do orçamento" in reply
+
+
+async def test_trip_without_budget_has_no_remaining_text(lab: Lab) -> None:
+    await lab.say("viagem a Lisboa")
+    lab.expense.return_value = dict(EXPENSE)
+    reply = await lab.say("gastei 10 no jumbo")
+    assert "restante" not in reply and "acima do orçamento" not in reply
+
+
+@pytest.mark.parametrize(
+    ("lang", "ongoing", "header"),
+    [("nl", "lopend", "Reis:"), ("en", "ongoing", "Trip:"), ("de", "laufend", "Reise:")],
+)
+async def test_trip_summary_and_list_follow_the_member_language(lab, lang, ongoing, header):
+    from alfred.db import AsyncSessionLocal
+    from alfred.models import Member
+
+    async with AsyncSessionLocal() as s:
+        m = await s.get(Member, lab.member_id)
+        m.language = lang
+        await s.commit()
+    await lab.say(
+        {"nl": "nieuwe reis naar Berlijn", "en": "trip to Berlin", "de": "reise nach Wien"}[lang]
+    )
+    lab.expense.return_value = dict(EXPENSE)
+    await lab.say({"nl": "Jumbo 10 euro", "en": "spent 10 at jumbo", "de": "Jumbo 10 euro"}[lang])
+    summary = await lab.say({"nl": "reiskosten", "en": "trip summary", "de": "reisekosten"}[lang])
+    assert summary.startswith(header)
+    listing = await lab.say({"nl": "mijn reizen", "en": "my trips", "de": "meine reisen"}[lang])
+    assert ongoing in listing

@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from alfred.clock import day_start, to_local, today_local
+from alfred.clock import day_start, month_name, to_local, today_local
 from alfred.db import get_session
 from alfred.models import Expense, Goal, HabitLog, HealthLog, Member, Note, Task
 
@@ -121,7 +121,7 @@ async def dashboard_api(
         history.append(
             {
                 "month": f"{y:04d}-{m:02d}",
-                "label": ms.strftime("%b %y"),
+                "label": f"{month_name(ms, member.language or 'pt')[:3]} {ms.year % 100:02d}",
                 "total_expense": round(
                     sum(e.amount for e in h if e.transaction_type == "expense"), 2
                 ),
