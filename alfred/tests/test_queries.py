@@ -7,10 +7,11 @@ Covers:
   - _build_summary with period/category params
   - _build_saldo / _build_comparison
 """
+
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -24,10 +25,10 @@ from alfred.conversation import (
     handle_inbound,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_member(consent_state: str = "accepted") -> SimpleNamespace:
     return SimpleNamespace(
@@ -36,6 +37,8 @@ def _make_member(consent_state: str = "accepted") -> SimpleNamespace:
         wa_phone="31600000001",
         consent_state=consent_state,
         display_name="Test",
+        preferred_name=None,
+        language="pt",
         disclosure_accepted_at=None,
         disclosure_version=None,
     )
@@ -47,7 +50,8 @@ def _make_message(body: str) -> SimpleNamespace:
         body=body,
         direction="inbound",
         wa_message_id="wamid.test",
-        wa_timestamp=datetime.now(timezone.utc),
+        wa_timestamp=datetime.now(UTC),
+        raw={"type": "text"},
     )
 
 
@@ -74,13 +78,14 @@ def _make_expense(
         category=category,
         merchant=merchant,
         description=description,
-        expense_date=datetime.now(timezone.utc),
+        expense_date=datetime.now(UTC),
     )
 
 
 # ---------------------------------------------------------------------------
 # _period_range unit tests
 # ---------------------------------------------------------------------------
+
 
 def test_period_range_current_month():
     start, end, label = _period_range("current_month")
@@ -98,14 +103,14 @@ def test_period_range_last_month():
 
 
 def test_period_range_current_week():
-    start, end, label = _period_range("current_week")
+    start, end, label = _period_range("current_week", "pt")
     assert start.weekday() == 0  # Monday
     assert end is None
     assert label == "esta semana"
 
 
 def test_period_range_last_week():
-    start, end, label = _period_range("last_week")
+    start, end, label = _period_range("last_week", "pt")
     assert end is not None
     assert end.weekday() == 0  # Monday (start of current week)
     assert start.weekday() == 0  # Monday (start of previous week)
@@ -116,6 +121,7 @@ def test_period_range_last_week():
 # ---------------------------------------------------------------------------
 # _build_summary with category / period
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_build_summary_empty_returns_message():
@@ -160,6 +166,7 @@ async def test_build_summary_with_income_shows_saldo():
 # _build_saldo
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_build_saldo_empty():
     member = _make_member()
@@ -196,6 +203,7 @@ async def test_build_saldo_negative_balance():
 # _build_comparison
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_build_comparison_no_data():
     member = _make_member()
@@ -207,6 +215,7 @@ async def test_build_comparison_no_data():
 # ---------------------------------------------------------------------------
 # handle_inbound — saldo command routing
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("word", ["saldo", "Saldo", "SALDO", "balanço"])
 @pytest.mark.asyncio
@@ -232,6 +241,7 @@ async def test_saldo_command_routing(word: str) -> None:
 # handle_inbound — classify_query dispatch
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_query_category_routing() -> None:
     """classify_query returns category query → _build_summary called, no LLM."""
@@ -245,7 +255,9 @@ async def test_query_category_routing() -> None:
         patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send,
         patch("alfred.conversation.generate_reply", new_callable=AsyncMock) as mock_llm,
         patch("alfred.conversation.extract_expense", new_callable=AsyncMock, return_value=None),
-        patch("alfred.conversation.classify_query", new_callable=AsyncMock, return_value=query_result),
+        patch(
+            "alfred.conversation.classify_query", new_callable=AsyncMock, return_value=query_result
+        ),
     ):
         await handle_inbound(member, message, session)
 
@@ -266,7 +278,9 @@ async def test_query_period_routing() -> None:
         patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send,
         patch("alfred.conversation.generate_reply", new_callable=AsyncMock) as mock_llm,
         patch("alfred.conversation.extract_expense", new_callable=AsyncMock, return_value=None),
-        patch("alfred.conversation.classify_query", new_callable=AsyncMock, return_value=query_result),
+        patch(
+            "alfred.conversation.classify_query", new_callable=AsyncMock, return_value=query_result
+        ),
     ):
         await handle_inbound(member, message, session)
 
@@ -287,7 +301,9 @@ async def test_query_comparison_routing() -> None:
         patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send,
         patch("alfred.conversation.generate_reply", new_callable=AsyncMock) as mock_llm,
         patch("alfred.conversation.extract_expense", new_callable=AsyncMock, return_value=None),
-        patch("alfred.conversation.classify_query", new_callable=AsyncMock, return_value=query_result),
+        patch(
+            "alfred.conversation.classify_query", new_callable=AsyncMock, return_value=query_result
+        ),
     ):
         await handle_inbound(member, message, session)
 
@@ -308,7 +324,9 @@ async def test_query_balance_routing() -> None:
         patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send,
         patch("alfred.conversation.generate_reply", new_callable=AsyncMock) as mock_llm,
         patch("alfred.conversation.extract_expense", new_callable=AsyncMock, return_value=None),
-        patch("alfred.conversation.classify_query", new_callable=AsyncMock, return_value=query_result),
+        patch(
+            "alfred.conversation.classify_query", new_callable=AsyncMock, return_value=query_result
+        ),
     ):
         await handle_inbound(member, message, session)
 
@@ -325,7 +343,9 @@ async def test_non_query_falls_through_to_llm() -> None:
 
     with (
         patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send,
-        patch("alfred.conversation.generate_reply", new_callable=AsyncMock, return_value="Está sol!"),
+        patch(
+            "alfred.conversation.generate_reply", new_callable=AsyncMock, return_value="Está sol!"
+        ),
         patch("alfred.conversation.extract_expense", new_callable=AsyncMock, return_value=None),
         patch("alfred.conversation.classify_query", new_callable=AsyncMock, return_value=None),
     ):

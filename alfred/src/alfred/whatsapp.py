@@ -1,4 +1,5 @@
 """WhatsApp Business Cloud API client — send messages via Meta Graph API."""
+
 from __future__ import annotations
 
 import httpx
@@ -8,7 +9,9 @@ from alfred.settings import settings
 
 logger = structlog.get_logger()
 
-_GRAPH_URL = "https://graph.facebook.com/v19.0"
+# v19.0 expired on 2026-05-21 (Meta silently upgraded calls). Pin a supported version;
+# check https://developers.facebook.com/docs/graph-api/changelog/versions/ yearly.
+_GRAPH_URL = f"https://graph.facebook.com/{settings.graph_api_version}"
 
 
 async def send_text(to: str, body: str) -> dict:
@@ -68,7 +71,7 @@ async def send_template(
     Args:
         to: Recipient phone in E.164 without '+' (e.g. '31612345678').
         template_name: Approved template name (e.g. 'alfred_weekly_summary').
-        lang_code: BCP-47 language code matching the approved template ('en', 'pt', 'nl', 'fr', 'de').
+        lang_code: Language code of the approved template ('en', 'pt_BR', 'nl', 'fr', 'de').
         components: Optional list of template component objects (header/body/button params).
 
     Returns:

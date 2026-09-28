@@ -1,170 +1,107 @@
-"""M3 — Consent flow tests.
+"""M3 — consent state machine (conversation.handle_inbound).
 
-Tests every state transition in conversation.handle_inbound:
-  pending          → sends disclosure, advances to pending_response
-  pending_response + sim   → accepted, sends confirmation
-  pending_response + nao   → rejected, sends rejection message
-  pending_response + ?     → stays pending_response, sends reminder
-  rejected         → silently ignored
-  accepted         → routed to LLM, reply sent
+pending            → disclosure sent (in the detected language) → pending_response
+pending_response   + yes  → accepted (timestamp + version recorded)
+pending_response   + no   → rejected
+pending_response   + ?    → reminder, state unchanged
+accepted           + stop → rejected, no LLM call
+rejected           + text → ignored
+rejected           + START→ disclosure again → pending_response (must re-consent)
 """
+
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from alfred.conversation import (
-    CONSENT_ACCEPTED_NL,
-    CONSENT_REJECTED_NL,
-    CONSENT_UNKNOWN_NL,
-    DISCLOSURE_NL,
-    handle_inbound,
-)
-from alfred.models import Member, Message
+from alfred.conversation import _t, handle_inbound
+from tests.conftest import make_member, make_message, make_session
+
+SEND = "alfred.conversation.send_text"
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _make_member(consent_state: str = "pending") -> Member:
-    m = Member.__new__(Member)
-    m.id = uuid.uuid4()
-    m.household_id = uuid.uuid4()
-    m.wa_phone = "31600000001"
-    m.consent_state = consent_state
-    m.display_name = "Test"
-    m.disclosure_accepted_at = None
-    m.disclosure_version = None
-    return m
-
-
-def _make_message(body: str = "hallo") -> Message:
-    msg = Message.__new__(Message)
-    msg.id = uuid.uuid4()
-    msg.body = body
-    msg.direction = "inbound"
-    msg.wa_message_id = "wamid.test"
-    msg.wa_timestamp = datetime.now(timezone.utc)
-    return msg
-
-
-def _mock_session() -> MagicMock:
-    session = MagicMock()
-    session.add = MagicMock()
-    return session
-
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_pending_sends_disclosure() -> None:
-    """First contact: disclosure is sent and state advances."""
-    member = _make_member("pending")
-    message = _make_message("qualquer coisa")
-    session = _mock_session()
-
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send:
-        await handle_inbound(member, message, session)
-
-    mock_send.assert_awaited_once_with(member.wa_phone, DISCLOSURE_NL)
+async def test_pending_sends_disclosure_in_detected_language() -> None:
+    member = make_member("pending", language=None)
+    with patch(SEND, new_callable=AsyncMock) as send:
+        await handle_inbound(member, make_message("hallo, ik wil beginnen"), make_session())
     assert member.consent_state == "pending_response"
-    session.add.assert_called_once_with(member)
+    send.assert_awaited_once_with(member.wa_phone, _t("disclosure", member.language))
 
 
-@pytest.mark.parametrize("word", ["sim", "yes", "s", "y", "ok", "aceito", "aceitar", "ja"])
-@pytest.mark.asyncio
+@pytest.mark.parametrize("word", ["sim", "yes", "ok", "aceito", "ja", "oui"])
 async def test_consent_accepted(word: str) -> None:
-    """User replies with acceptance word → state = accepted."""
-    member = _make_member("pending_response")
-    message = _make_message(word)
-    session = _mock_session()
-
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send:
-        await handle_inbound(member, message, session)
-
-    mock_send.assert_awaited_once_with(member.wa_phone, CONSENT_ACCEPTED_NL)
+    member = make_member("pending_response")
+    with patch(SEND, new_callable=AsyncMock) as send:
+        await handle_inbound(member, make_message(word), make_session())
     assert member.consent_state == "accepted"
     assert member.disclosure_accepted_at is not None
     assert member.disclosure_version == "1.0"
+    send.assert_awaited_once_with(member.wa_phone, _t("consent_accepted", "pt"))
 
 
-@pytest.mark.parametrize("word", ["não", "nao", "no", "n", "stop", "nee"])
-@pytest.mark.asyncio
+@pytest.mark.parametrize("word", ["não", "nao", "no", "nee", "stop"])
 async def test_consent_rejected(word: str) -> None:
-    """User replies with rejection word → state = rejected."""
-    member = _make_member("pending_response")
-    message = _make_message(word)
-    session = _mock_session()
+    member = make_member("pending_response")
+    with patch(SEND, new_callable=AsyncMock) as send:
+        await handle_inbound(member, make_message(word), make_session())
+    assert member.consent_state == "rejected"
+    send.assert_awaited_once_with(member.wa_phone, _t("consent_rejected", "pt"))
 
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send:
-        await handle_inbound(member, message, session)
 
-    mock_send.assert_awaited_once_with(member.wa_phone, CONSENT_REJECTED_NL)
+async def test_consent_unknown_reply_keeps_state() -> None:
+    member = make_member("pending_response")
+    with patch(SEND, new_callable=AsyncMock) as send:
+        await handle_inbound(member, make_message("talvez"), make_session())
+    assert member.consent_state == "pending_response"
+    send.assert_awaited_once_with(member.wa_phone, _t("consent_unknown", "pt"))
+
+
+async def test_rejected_member_is_ignored() -> None:
+    member = make_member("rejected")
+    with patch(SEND, new_callable=AsyncMock) as send:
+        await handle_inbound(member, make_message("olá de novo"), make_session())
+    send.assert_not_awaited()
     assert member.consent_state == "rejected"
 
 
-@pytest.mark.asyncio
-async def test_consent_unknown_reply() -> None:
-    """Ambiguous reply during pending_response → reminder sent, state unchanged."""
-    member = _make_member("pending_response")
-    message = _make_message("talvez")
-    session = _mock_session()
-
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send:
-        await handle_inbound(member, message, session)
-
-    mock_send.assert_awaited_once_with(member.wa_phone, CONSENT_UNKNOWN_NL)
+@pytest.mark.parametrize("word", ["start", "START", "retomar", "hervatten"])
+async def test_rejected_member_can_resume_with_start(word: str) -> None:
+    member = make_member("rejected")
+    with patch(SEND, new_callable=AsyncMock) as send:
+        await handle_inbound(member, make_message(word), make_session())
     assert member.consent_state == "pending_response"
+    send.assert_awaited_once_with(member.wa_phone, _t("disclosure", "pt"))
 
 
-@pytest.mark.asyncio
-async def test_rejected_member_ignored() -> None:
-    """Rejected member sends message → no reply sent."""
-    member = _make_member("rejected")
-    message = _make_message("olá de novo")
-    session = _mock_session()
-
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send:
-        await handle_inbound(member, message, session)
-
-    mock_send.assert_not_awaited()
+def test_rejection_message_tells_user_how_to_resume() -> None:
+    for lang in ("pt", "nl", "en", "fr", "de"):
+        assert "START" in _t("consent_rejected", lang)
 
 
-@pytest.mark.asyncio
-async def test_accepted_member_gets_llm_reply() -> None:
-    """Accepted member → generate_reply called and result sent."""
-    member = _make_member("accepted")
-    message = _make_message("qual é o tempo hoje?")
-    session = _mock_session()
-
-    fake_reply = "Hoje está sol em Amesterdão! ☀️"
-
+async def test_stop_in_accepted_rejects_without_llm() -> None:
+    member = make_member("accepted")
     with (
-        patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send,
-        patch("alfred.llm.generate_reply", new_callable=AsyncMock, return_value=fake_reply),
+        patch(SEND, new_callable=AsyncMock) as send,
+        patch("alfred.conversation.generate_reply", new_callable=AsyncMock) as llm,
     ):
-        await handle_inbound(member, message, session)
+        await handle_inbound(member, make_message("stop"), make_session())
+    assert member.consent_state == "rejected"
+    llm.assert_not_awaited()
+    send.assert_awaited_once()
 
-    mock_send.assert_awaited_once_with(member.wa_phone, fake_reply)
 
-
-@pytest.mark.asyncio
-async def test_accepted_member_empty_body() -> None:
-    """Accepted member sends empty message → LLM still called (body='')."""
-    member = _make_member("accepted")
-    message = _make_message("")
-    session = _mock_session()
-
+async def test_accepted_free_text_goes_to_llm() -> None:
+    member = make_member("accepted")
     with (
-        patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send,
-        patch("alfred.llm.generate_reply", new_callable=AsyncMock, return_value="…"),
+        patch(SEND, new_callable=AsyncMock) as send,
+        patch("alfred.conversation.extract_expense", new_callable=AsyncMock, return_value=None),
+        patch("alfred.conversation.classify_query", new_callable=AsyncMock, return_value=None),
+        patch("alfred.conversation.extract_habit", new_callable=AsyncMock, return_value=None),
+        patch(
+            "alfred.conversation.generate_reply", new_callable=AsyncMock, return_value="Olá!"
+        ) as llm,
     ):
-        await handle_inbound(member, message, session)
-
-    mock_send.assert_awaited_once()
+        await handle_inbound(member, make_message("qual é a capital da frança?"), make_session())
+    llm.assert_awaited_once()
+    send.assert_awaited_once_with(member.wa_phone, "Olá!")

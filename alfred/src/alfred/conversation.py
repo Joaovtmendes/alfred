@@ -8,19 +8,26 @@ State machine:
   rejected         → silently ignored
   accepted         → commands or LLM reply with conversation history
 """
+
 from __future__ import annotations
 
 import re
 import unicodedata
-
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from alfred.llm import classify_query, extract_expense, extract_habit, extract_health_log, extract_workout, generate_reply
+from alfred.llm import (
+    classify_query,
+    extract_expense,
+    extract_habit,
+    extract_health_log,
+    extract_workout,
+    generate_reply,
+)
 from alfred.models import (
     Expense,
     Goal,
@@ -78,46 +85,46 @@ _STRINGS: dict[str, dict[str, str]] = {
     "consent_accepted": {
         "pt": (
             "Tudo pronto. Podes começar agora.\n\n"
-            "• \"gastei €45 no Jumbo\" — registar despesa\n"
-            "• \"recebi €2.800 de salário\" — registar receita\n"
-            "• \"resumo\" — ver os gastos do mês\n"
-            "• \"ajuda\" — ver todos os comandos"
+            '• "gastei €45 no Jumbo" — registar despesa\n'
+            '• "recebi €2.800 de salário" — registar receita\n'
+            '• "resumo" — ver os gastos do mês\n'
+            '• "ajuda" — ver todos os comandos'
         ),
         "nl": (
             "Alles klaar. Je kunt nu beginnen.\n\n"
-            "• \"€45 uitgegeven bij Jumbo\" — uitgave registreren\n"
-            "• \"€2.800 salaris ontvangen\" — inkomsten registreren\n"
-            "• \"overzicht\" — uitgaven van de maand bekijken\n"
-            "• \"hulp\" — alle commando's bekijken"
+            '• "€45 uitgegeven bij Jumbo" — uitgave registreren\n'
+            '• "€2.800 salaris ontvangen" — inkomsten registreren\n'
+            '• "overzicht" — uitgaven van de maand bekijken\n'
+            '• "hulp" — alle commando\'s bekijken'
         ),
         "en": (
             "All set. You can start now.\n\n"
-            "• \"spent €45 at Jumbo\" — record expense\n"
-            "• \"received €2,800 salary\" — record income\n"
-            "• \"summary\" — view monthly expenses\n"
-            "• \"help\" — see all commands"
+            '• "spent €45 at Jumbo" — record expense\n'
+            '• "received €2,800 salary" — record income\n'
+            '• "summary" — view monthly expenses\n'
+            '• "help" — see all commands'
         ),
         "fr": (
             "Tout est prêt. Tu peux commencer maintenant.\n\n"
-            "• \"dépensé €45 au Jumbo\" — enregistrer une dépense\n"
-            "• \"reçu €2 800 de salaire\" — enregistrer un revenu\n"
-            "• \"résumé\" — voir les dépenses du mois\n"
-            "• \"aide\" — voir toutes les commandes"
+            '• "dépensé €45 au Jumbo" — enregistrer une dépense\n'
+            '• "reçu €2 800 de salaire" — enregistrer un revenu\n'
+            '• "résumé" — voir les dépenses du mois\n'
+            '• "aide" — voir toutes les commandes'
         ),
         "de": (
             "Alles bereit. Du kannst jetzt beginnen.\n\n"
-            "• \"€45 bei Jumbo ausgegeben\" — Ausgabe erfassen\n"
-            "• \"€2.800 Gehalt erhalten\" — Einnahme erfassen\n"
-            "• \"übersicht\" — Monatsausgaben anzeigen\n"
-            "• \"hilfe\" — alle Befehle anzeigen"
+            '• "€45 bei Jumbo ausgegeben" — Ausgabe erfassen\n'
+            '• "€2.800 Gehalt erhalten" — Einnahme erfassen\n'
+            '• "übersicht" — Monatsausgaben anzeigen\n'
+            '• "hilfe" — alle Befehle anzeigen'
         ),
     },
     "consent_rejected": {
-        "pt": "Entendido. Se quiseres retomar, é só enviar uma mensagem.",
-        "nl": "Begrepen. Als je wilt hervatten, stuur gewoon een bericht.",
-        "en": "Understood. If you'd like to resume, just send a message.",
-        "fr": "Compris. Si tu veux reprendre, envoie simplement un message.",
-        "de": "Verstanden. Wenn du fortfahren möchtest, sende einfach eine Nachricht.",
+        "pt": "Entendido. Não vou processar mais mensagens. Para retomar, envia *START*.",
+        "nl": "Begrepen. Ik verwerk geen berichten meer. Stuur *START* om te hervatten.",
+        "en": "Understood. I won't process any more messages. Send *START* to resume.",
+        "fr": "Compris. Je ne traiterai plus de messages. Envoie *START* pour reprendre.",
+        "de": "Verstanden. Ich verarbeite keine Nachrichten mehr. Sende *START*, um fortzufahren.",
     },
     "consent_unknown": {
         "pt": "Responde *sim* para continuar ou *não* para cancelar.",
@@ -130,82 +137,82 @@ _STRINGS: dict[str, dict[str, str]] = {
         "pt": (
             "*Alfred* — o que posso fazer por ti:\n\n"
             "*Registar despesas*\n"
-            "• \"gastei €45 no Jumbo\"\n"
-            "• \"Uber 12,50\"\n"
-            "• \"paguei €180 de renda\"\n\n"
+            '• "gastei €45 no Jumbo"\n'
+            '• "Uber 12,50"\n'
+            '• "paguei €180 de renda"\n\n'
             "*Registar receitas*\n"
-            "• \"recebi €2.800 de salário\"\n\n"
+            '• "recebi €2.800 de salário"\n\n'
             "*Consultas*\n"
-            "• \"resumo\" — gastos do mês\n"
-            "• \"saldo\" — balanço receitas/despesas\n"
-            "• \"gastos desta semana\" — por período\n"
-            "• \"compara este mês com o mês passado\"\n"
-            "• \"ajuda\" — esta mensagem\n\n"
-            "_Para sair: \"stop\"_"
+            '• "resumo" — gastos do mês\n'
+            '• "saldo" — balanço receitas/despesas\n'
+            '• "gastos desta semana" — por período\n'
+            '• "compara este mês com o mês passado"\n'
+            '• "ajuda" — esta mensagem\n\n'
+            '_Para sair: "stop"_'
         ),
         "nl": (
             "*Alfred* — wat ik voor je kan doen:\n\n"
             "*Uitgaven registreren*\n"
-            "• \"€45 uitgegeven bij Jumbo\"\n"
-            "• \"Uber 12,50\"\n"
-            "• \"€180 huur betaald\"\n\n"
+            '• "€45 uitgegeven bij Jumbo"\n'
+            '• "Uber 12,50"\n'
+            '• "€180 huur betaald"\n\n'
             "*Inkomsten registreren*\n"
-            "• \"€2.800 salaris ontvangen\"\n\n"
+            '• "€2.800 salaris ontvangen"\n\n'
             "*Opvragen*\n"
-            "• \"overzicht\" — uitgaven van de maand\n"
-            "• \"saldo\" — inkomsten/uitgaven balans\n"
-            "• \"uitgaven deze week\" — per periode\n"
-            "• \"vergelijk deze maand met vorige maand\"\n"
-            "• \"hulp\" — dit bericht\n\n"
-            "_Om te stoppen: \"stoppen\"_"
+            '• "overzicht" — uitgaven van de maand\n'
+            '• "saldo" — inkomsten/uitgaven balans\n'
+            '• "uitgaven deze week" — per periode\n'
+            '• "vergelijk deze maand met vorige maand"\n'
+            '• "hulp" — dit bericht\n\n'
+            '_Om te stoppen: "stoppen"_'
         ),
         "en": (
             "*Alfred* — what I can do for you:\n\n"
             "*Record expenses*\n"
-            "• \"spent €45 at Jumbo\"\n"
-            "• \"Uber 12.50\"\n"
-            "• \"paid €180 rent\"\n\n"
+            '• "spent €45 at Jumbo"\n'
+            '• "Uber 12.50"\n'
+            '• "paid €180 rent"\n\n'
             "*Record income*\n"
-            "• \"received €2,800 salary\"\n\n"
+            '• "received €2,800 salary"\n\n'
             "*Queries*\n"
-            "• \"summary\" — monthly expenses\n"
-            "• \"balance\" — income/expense balance\n"
-            "• \"expenses this week\" — by period\n"
-            "• \"compare this month with last month\"\n"
-            "• \"help\" — this message\n\n"
-            "_To stop: \"stop\"_"
+            '• "summary" — monthly expenses\n'
+            '• "balance" — income/expense balance\n'
+            '• "expenses this week" — by period\n'
+            '• "compare this month with last month"\n'
+            '• "help" — this message\n\n'
+            '_To stop: "stop"_'
         ),
         "fr": (
             "*Alfred* — ce que je peux faire pour toi:\n\n"
             "*Enregistrer des dépenses*\n"
-            "• \"dépensé €45 au Jumbo\"\n"
-            "• \"Uber 12,50\"\n"
-            "• \"payé €180 de loyer\"\n\n"
+            '• "dépensé €45 au Jumbo"\n'
+            '• "Uber 12,50"\n'
+            '• "payé €180 de loyer"\n\n'
             "*Enregistrer des revenus*\n"
-            "• \"reçu €2 800 de salaire\"\n\n"
+            '• "reçu €2 800 de salaire"\n\n'
             "*Consultes*\n"
-            "• \"résumé\" — dépenses du mois\n"
-            "• \"solde\" — balance revenus/dépenses\n"
-            "• \"dépenses cette semaine\" — par période\n"
-            "• \"compare ce mois avec le mois dernier\"\n"
-            "• \"aide\" — ce message\n\n"
-            "_Pour arrêter: \"stop\"_"
+            '• "résumé" — dépenses du mois\n'
+            '• "solde" — balance revenus/dépenses\n'
+            '• "dépenses cette semaine" — par période\n'
+            '• "compare ce mois avec le mois dernier"\n'
+            '• "aide" — ce message\n\n'
+            '_Pour arrêter: "stop"_'
         ),
         "de": (
             "*Alfred* — was ich für dich tun kann:\n\n"
             "*Ausgaben erfassen*\n"
-            "• \"€45 bei Jumbo ausgegeben\"\n"
-            "• \"Uber 12,50\"\n"
-            "• \"€180 Miete bezahlt\"\n\n"
+            '• "€45 bei Jumbo ausgegeben"\n'
+            '• "Uber 12,50"\n'
+            '• "€180 Miete bezahlt"\n\n'
             "*Einnahmen erfassen*\n"
-            "• \"€2.800 Gehalt erhalten\"\n\n"
+            '• "€2.800 Gehalt erhalten"\n\n'
             "*Abfragen*\n"
-            "• \"übersicht\" — Monatsausgaben\n"
-            "• \"bilanz\" — Einnahmen/Ausgaben-Balance\n"
-            "• \"ausgaben diese woche\" — nach Zeitraum\n"
-            "• \"vergleiche diesen monat mit letztem monat\"\n"
-            "• \"hilfe\" — diese Nachricht\n\n"
-            "_Zum Beenden: \"stop\"_"
+            '• "übersicht" — Monatsausgaben\n'
+            '• "bilanz" — Einnahmen/Ausgaben-Balance\n'
+            '• "ausgaben diese woche" — nach Zeitraum\n'
+            '• "vergleiche diesen monat mit letztem monat"\n'
+            '• "hilfe" — diese Nachricht\n\n'
+            '_Zum Beenden: "stop"_'
         ),
     },
     "no_records_scope": {
@@ -363,11 +370,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Ich fand keine aktuelle Ausgabe zum Korrigieren. Bitte gib sie erneut ein.",
     },
     "lembrete_set": {
-        "pt": "⏰ Lembrete configurado: *{text}* às {time} UTC. Vou lembrar-te todos os dias.",
-        "nl": "⏰ Herinnering ingesteld: *{text}* om {time} UTC. Ik herinner je elke dag.",
-        "en": "⏰ Reminder set: *{text}* at {time} UTC. I'll remind you every day.",
-        "fr": "⏰ Rappel configuré : *{text}* à {time} UTC. Je te rappellerai chaque jour.",
-        "de": "⏰ Erinnerung eingestellt: *{text}* um {time} Uhr UTC. Ich erinnere dich täglich.",
+        "pt": "⏰ Lembrete configurado: *{text}* às {time}. Vou lembrar-te todos os dias.",
+        "nl": "⏰ Herinnering ingesteld: *{text}* om {time}. Ik herinner je elke dag.",
+        "en": "⏰ Reminder set: *{text}* at {time}. I'll remind you every day.",
+        "fr": "⏰ Rappel configuré : *{text}* à {time}. Je te rappellerai chaque jour.",
+        "de": "⏰ Erinnerung eingestellt: *{text}* um {time} Uhr. Ich erinnere dich täglich.",
     },
     "lembrete_invalid": {
         "pt": "Formato inválido. Tenta: *configura lembrete: toma medicamento às 08:00*",
@@ -792,7 +799,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": "Je n'ai pas compris. Peux-tu reformuler ?",
         "de": "Das habe ich nicht verstanden. Kannst du es anders formulieren?",
     },
-        # M14 — Viagem
+    # M14 — Viagem
     "trip_started": {
         "pt": "Viagem para {dest} iniciada! As despesas serao associadas automaticamente.",
         "nl": "Reis naar {dest} gestart! Uitgaven worden automatisch gekoppeld.",
@@ -842,14 +849,14 @@ _STRINGS: dict[str, dict[str, str]] = {
         "fr": " [voyage {dest}: {total} au total]",
         "de": " [Reise {dest}: {total} gesamt]",
     },
-        "category_hint_overig": {
+    "category_hint_overig": {
         "pt": "\nSem certeza da categoria de {merchant}. Podes corrigir com '{merchant} é [categoria]'.",
         "nl": "\nIk weet de categorie voor {merchant} niet. Verbeter met '{merchant} is [categorie]'.",
         "en": "\nNot sure about {merchant}'s category. You can fix it: '{merchant} is [category]'.",
         "fr": "\nJe ne suis pas sûr de la catégorie de {merchant}. Corrige avec '{merchant} est [catégorie]'.",
         "de": "\nUnsicher bei der Kategorie für {merchant}. Korrigiere mit '{merchant} ist [Kategorie]'.",
     },
-        "trip_active_tag": {
+    "trip_active_tag": {
         "pt": " [viagem: {dest}]",
         "nl": " [reis: {dest}]",
         "en": " [trip: {dest}]",
@@ -869,20 +876,77 @@ def _t(key: str, lang: str, **kwargs: object) -> str:
 def _detect_language(text: str) -> str:
     """Heuristic: detect language from first-message keywords."""
     t = unicodedata.normalize("NFC", text).lower()
-    if any(w in t for w in ["bonjour", "salut", "allô", "allo", "merci",
-                              "bilan", "solde", "aide", " oui", "oui ",
-                              "dépense", "depense", "résumé"]):
+    if any(
+        w in t
+        for w in [
+            "bonjour",
+            "salut",
+            "allô",
+            "allo",
+            "merci",
+            "bilan",
+            "solde",
+            "aide",
+            " oui",
+            "oui ",
+            "dépense",
+            "depense",
+            "résumé",
+        ]
+    ):
         return "fr"
-    if any(w in t for w in ["guten", "danke", "bitte", "übersicht", "ubersicht",
-                              "ausgaben", "hilfe", "nein", "bezahlt", "erhalten"]):
+    if any(
+        w in t
+        for w in [
+            "guten",
+            "danke",
+            "bitte",
+            "übersicht",
+            "ubersicht",
+            "ausgaben",
+            "hilfe",
+            "nein",
+            "bezahlt",
+            "erhalten",
+        ]
+    ):
         return "de"
-    if any(w in t for w in ["oi ", " oi", "olá", "ola", "obrigad", "ajuda",
-                              "gastei", "paguei", "recebi", " sim", "sim ",
-                              "não", "nao", "resumo"]):
+    if any(
+        w in t
+        for w in [
+            "oi ",
+            " oi",
+            "olá",
+            "ola",
+            "obrigad",
+            "ajuda",
+            "gastei",
+            "paguei",
+            "recebi",
+            " sim",
+            "sim ",
+            "não",
+            "nao",
+            "resumo",
+        ]
+    ):
         return "pt"
-    if any(w in t for w in [" dag", "dag ", "hallo", "bedankt", "overzicht",
-                              "hulp", "samenvatting", "uitgegeven", "ontvangen",
-                              "betaald", "hoi "]):
+    if any(
+        w in t
+        for w in [
+            " dag",
+            "dag ",
+            "hallo",
+            "bedankt",
+            "overzicht",
+            "hulp",
+            "samenvatting",
+            "uitgegeven",
+            "ontvangen",
+            "betaald",
+            "hoi ",
+        ]
+    ):
         return "nl"
     return "en"
 
@@ -890,53 +954,143 @@ def _detect_language(text: str) -> str:
 # ── Command keywords ──────────────────────────────────────────────────────────
 
 _SUMMARY_WORDS = {
-    "resumo", "overzicht", "summary", "samenvatting", "gastos",
-    "résumé", "resume", "bilan", "dépenses", "depenses",
-    "übersicht", "ubersicht", "zusammenfassung", "ausgaben",
+    "resumo",
+    "overzicht",
+    "summary",
+    "samenvatting",
+    "gastos",
+    "résumé",
+    "resume",
+    "bilan",
+    "dépenses",
+    "depenses",
+    "übersicht",
+    "ubersicht",
+    "zusammenfassung",
+    "ausgaben",
 }
 _SUMMARY_TIME_QUALIFIERS = (
     # today
-    "hoje", "today", "vandaag", "heute", "aujourd\'hui",
+    "hoje",
+    "today",
+    "vandaag",
+    "heute",
+    "aujourd'hui",
     # yesterday
-    "ontem", "yesterday", "gisteren", "gestern", "hier",
+    "ontem",
+    "yesterday",
+    "gisteren",
+    "gestern",
+    "hier",
     # this week
-    "esta semana", "this week", "deze week", "diese woche", "cette semaine",
+    "esta semana",
+    "this week",
+    "deze week",
+    "diese woche",
+    "cette semaine",
     # last week
-    "semana passada", "last week", "vorige week", "letzte woche",
+    "semana passada",
+    "last week",
+    "vorige week",
+    "letzte woche",
     # this month
-    "este mês", "este mes", "this month", "deze maand", "diesen monat", "ce mois",
+    "este mês",
+    "este mes",
+    "this month",
+    "deze maand",
+    "diesen monat",
+    "ce mois",
     # last month
-    "mês passado", "mes passado", "last month", "vorige maand", "letzten monat", "mois dernier",
+    "mês passado",
+    "mes passado",
+    "last month",
+    "vorige maand",
+    "letzten monat",
+    "mois dernier",
 )
 
 _SALDO_WORDS = {
-    "saldo", "balance", "balanço", "balancete", "balanso",
-    "solde", "bilanz", "kontostand",
+    "saldo",
+    "balance",
+    "balanço",
+    "balancete",
+    "balanso",
+    "solde",
+    "bilanz",
+    "kontostand",
 }
 _HELP_WORDS = {
-    "ajuda", "help", "hulp", "comandos", "commands",
-    "aide", "commandes", "hilfe", "befehle",
+    "ajuda",
+    "help",
+    "hulp",
+    "comandos",
+    "commands",
+    "aide",
+    "commandes",
+    "hilfe",
+    "befehle",
 }
-_STOP_WORDS = {
-    "stop", "pare", "parar", "stoppen", "ophouden",
-    "arrêter", "arreter", "aufhören", "aufhoren",
-}
-_CONSENT_YES = {
-    "sim", "yes", "s", "y", "ok", "aceito", "aceitar",
-    "ja", "oui",
-}
-_CONSENT_NO = {
-    "não", "nao", "no", "n", "stop", "nee", "non", "nein",
+# Words that re-open the consent flow after "stop" (the user must accept again).
+_RESUME_WORDS = {
+    "start",
+    "iniciar",
+    "começar",
+    "comecar",
+    "retomar",
+    "voltar",
+    "hervat",
+    "hervatten",
+    "resume",
+    "restart",
+    "reprendre",
+    "fortsetzen",
 }
 
+_STOP_WORDS = {
+    "stop",
+    "pare",
+    "parar",
+    "stoppen",
+    "ophouden",
+    "arrêter",
+    "arreter",
+    "aufhören",
+    "aufhoren",
+}
+_CONSENT_YES = {
+    "sim",
+    "yes",
+    "s",
+    "y",
+    "ok",
+    "aceito",
+    "aceitar",
+    "ja",
+    "oui",
+}
+_CONSENT_NO = {
+    "não",
+    "nao",
+    "no",
+    "n",
+    "stop",
+    "nee",
+    "non",
+    "nein",
+}
 
 
 _LEMBRETE_WORDS = {
-    "configura lembrete", "configura lembrete:",
-    "herinnering:", "herinnering",
-    "reminder:", "set reminder",
-    "rappel:", "configurer rappel",
-    "erinnerung:", "erinnerung setzen",
+    "configura lembrete",
+    "configura lembrete:",
+    "herinnering:",
+    "herinnering",
+    "reminder:",
+    "set reminder",
+    "rappel:",
+    "configurer rappel",
+    "erinnerung:",
+    "erinnerung setzen",
 }
 
 # Matches "lembrete: <text> às/at/om/à/um HH:MM"
@@ -957,36 +1111,97 @@ _CORRECTION_RE = re.compile(
     re.IGNORECASE,
 )
 
-_VALID_CATEGORIES = frozenset({
-    "supermarkt", "restaurant", "transport", "gezondheid", "entertainment",
-    "wonen", "kleding", "abonnement", "inkomen", "overig",
-    # common aliases
-    "supermercado", "supermercaat", "supermarché", "supermarkt",
-    "alimentação", "food", "eten", "nourriture",
-    "reizen", "viagem", "voyage", "reise",
-    "gezondheidszorg", "saúde", "santé", "gesundheit",
-    "divertissement", "unterhaltung",
-    "wohnen", "loyer", "habitation", "moradia",
-    "kleren", "roupas", "vêtements", "kleidung",
-    "subscription", "abonnement", "assinatura", "abo",
-    "income", "inkomen", "renda", "revenu", "einkommen",
-    "other", "outros", "anderen", "autre",
-})
+_VALID_CATEGORIES = frozenset(
+    {
+        "supermarkt",
+        "restaurant",
+        "transport",
+        "gezondheid",
+        "entertainment",
+        "wonen",
+        "kleding",
+        "abonnement",
+        "inkomen",
+        "overig",
+        # common aliases
+        "supermercado",
+        "supermercaat",
+        "supermarché",
+        "alimentação",
+        "food",
+        "eten",
+        "nourriture",
+        "reizen",
+        "viagem",
+        "voyage",
+        "reise",
+        "gezondheidszorg",
+        "saúde",
+        "santé",
+        "gesundheit",
+        "divertissement",
+        "unterhaltung",
+        "wohnen",
+        "loyer",
+        "habitation",
+        "moradia",
+        "kleren",
+        "roupas",
+        "vêtements",
+        "kleidung",
+        "subscription",
+        "assinatura",
+        "abo",
+        "income",
+        "renda",
+        "revenu",
+        "einkommen",
+        "other",
+        "outros",
+        "anderen",
+        "autre",
+    }
+)
 
 # Canonical mapping for alias→canonical category
 _CAT_ALIAS: dict[str, str] = {
-    "supermercado": "supermarkt", "supermercaat": "supermarkt", "supermarché": "supermarkt",
-    "alimentação": "restaurant", "food": "restaurant", "eten": "restaurant", "nourriture": "restaurant",
-    "reizen": "transport", "viagem": "transport", "voyage": "transport", "reise": "transport",
-    "gezondheidszorg": "gezondheid", "saúde": "gezondheid", "santé": "gezondheid", "gesundheit": "gezondheid",
-    "divertissement": "entertainment", "unterhaltung": "entertainment",
-    "wohnen": "wonen", "loyer": "wonen", "habitation": "wonen", "moradia": "wonen",
-    "kleren": "kleding", "roupas": "kleding", "vêtements": "kleding", "kleidung": "kleding",
-    "subscription": "abonnement", "assinatura": "abonnement", "abo": "abonnement",
-    "income": "inkomen", "renda": "inkomen", "revenu": "inkomen", "einkommen": "inkomen",
-    "other": "overig", "outros": "overig", "anderen": "overig", "autre": "overig",
+    "supermercado": "supermarkt",
+    "supermercaat": "supermarkt",
+    "supermarché": "supermarkt",
+    "alimentação": "restaurant",
+    "food": "restaurant",
+    "eten": "restaurant",
+    "nourriture": "restaurant",
+    "reizen": "transport",
+    "viagem": "transport",
+    "voyage": "transport",
+    "reise": "transport",
+    "gezondheidszorg": "gezondheid",
+    "saúde": "gezondheid",
+    "santé": "gezondheid",
+    "gesundheit": "gezondheid",
+    "divertissement": "entertainment",
+    "unterhaltung": "entertainment",
+    "wohnen": "wonen",
+    "loyer": "wonen",
+    "habitation": "wonen",
+    "moradia": "wonen",
+    "kleren": "kleding",
+    "roupas": "kleding",
+    "vêtements": "kleding",
+    "kleidung": "kleding",
+    "subscription": "abonnement",
+    "assinatura": "abonnement",
+    "abo": "abonnement",
+    "income": "inkomen",
+    "renda": "inkomen",
+    "revenu": "inkomen",
+    "einkommen": "inkomen",
+    "other": "overig",
+    "outros": "overig",
+    "anderen": "overig",
+    "autre": "overig",
 }
-
 
 
 _AMOUNT_CORRECTION_RE = re.compile(
@@ -995,6 +1210,7 @@ _AMOUNT_CORRECTION_RE = re.compile(
     r"[^0-9€$£]*([€$£]?\s*[0-9]+[.,]?[0-9]*\s*[€$£]?)",
     re.IGNORECASE,
 )
+
 
 def _canonical_category(raw: str) -> str | None:
     """Return canonical category for a raw user string, or None if not recognised."""
@@ -1005,24 +1221,75 @@ def _canonical_category(raw: str) -> str | None:
         return lower
     return None
 
+
 # ── M7 — Treino keywords ────────────────────────────────────────────────────
 _WORKOUT_WORDS = {
-    "corri", "correr", "treino", "treinar", "ginásio", "ginasio", "gym",
-    "exercício", "exercicio", "yoga", "pilates", "caminhei", "caminhada",
-    "natação", "natacao", "ciclismo", "hiit", "alongamento", "musculação",
+    "corri",
+    "correr",
+    "treino",
+    "treinar",
+    "ginásio",
+    "ginasio",
+    "gym",
+    "exercício",
+    "exercicio",
+    "yoga",
+    "pilates",
+    "caminhei",
+    "caminhada",
+    "natação",
+    "natacao",
+    "ciclismo",
+    "hiit",
+    "alongamento",
+    "musculação",
     "musculacao",
-    "ran", "run", "walked", "walk", "trained", "workout", "exercise",
-    "swam", "swim", "cycling", "jogged",
-    "joggen", "fietste", "zwom", "trainde", "liep", "sportde",
-    "couru", "marché", "nagé", "cyclisme", "gelaufen", "geschwommen",
+    "ran",
+    "run",
+    "walked",
+    "walk",
+    "trained",
+    "workout",
+    "exercise",
+    "swam",
+    "swim",
+    "cycling",
+    "jogged",
+    "joggen",
+    "fietste",
+    "zwom",
+    "trainde",
+    "liep",
+    "sportde",
+    "couru",
+    "marché",
+    "nagé",
+    "cyclisme",
+    "gelaufen",
+    "geschwommen",
 }
 
 # ── M8 — Saúde keywords ──────────────────────────────────────────────────────
 _HEALTH_WORDS = {
-    "tomei", "tomi", "took", "nam", "pris", "eingenommen",   # medication
-    "humor", "mood", "humeur", "stimmung",                    # mood
-    "dormi", "slept", "sliep", "geschlafen", "dormido",       # sleep
-    "bebi", "drank", "dronk", "bu",                           # water
+    "tomei",
+    "tomi",
+    "took",
+    "nam",
+    "pris",
+    "eingenommen",  # medication
+    "humor",
+    "mood",
+    "humeur",
+    "stimmung",  # mood
+    "dormi",
+    "slept",
+    "sliep",
+    "geschlafen",
+    "dormido",  # sleep
+    "bebi",
+    "drank",
+    "dronk",
+    "bu",  # water
 }
 
 _SLEEP_RE = re.compile(
@@ -1049,16 +1316,30 @@ _GOAL_CREATE_RE = re.compile(
     re.IGNORECASE,
 )
 _GOALS_QUERY_WORDS = {
-    "minhas metas", "as minhas metas", "meus objetivos",
-    "my goals", "mijn doelen", "meine ziele", "mes objectifs",
-    "como vão as metas", "como vai",
+    "minhas metas",
+    "as minhas metas",
+    "meus objetivos",
+    "my goals",
+    "mijn doelen",
+    "meine ziele",
+    "mes objectifs",
+    "como vão as metas",
+    "como vai",
 }
 _HABIT_WORDS = {
-    "meditei", "meditated", "mediteerde", "meditiert",
-    "bebi água", "drank water", "leste", "li", "estudei", "estudied",
+    "meditei",
+    "meditated",
+    "mediteerde",
+    "meditiert",
+    "bebi água",
+    "drank water",
+    "leste",
+    "li",
+    "estudei",
+    "estudied",
 }
 _HABIT_LOG_RE = re.compile(
-    r"(?P<activity>meditei|meditated|mediteerde|meditiert|li|leste|estudei|fiz yoga|"
+    r"(?P<activity>meditei|meditated|mediteerde|meditiert|li\b|leste|estudei|fiz yoga|"
     r"bebi água|drank water|fiz pilates|fiz alongamento)\s*(?:hoje|today|vandaag|heute|aujourd'hui)?",
     re.IGNORECASE,
 )
@@ -1077,32 +1358,77 @@ _DONE_RE = re.compile(
     re.IGNORECASE,
 )
 _TASKS_QUERY_WORDS = {
-    "minhas tarefas", "as minhas tarefas", "o que tenho para fazer",
-    "my tasks", "mijn taken", "meine aufgaben", "mes tâches",
-    "lista de tarefas", "task list",
+    "minhas tarefas",
+    "as minhas tarefas",
+    "o que tenho para fazer",
+    "my tasks",
+    "mijn taken",
+    "meine aufgaben",
+    "mes tâches",
+    "lista de tarefas",
+    "task list",
 }
 
 
 # ── M5 — days_mask NL parsing + list/cancel ──────────────────────────────────
 _DAY_BITS: dict[str, int] = {
     # Monday = 1
-    "segunda": 1, "segunda-feira": 1, "monday": 1, "maandag": 1, "lundi": 1, "montag": 1,
+    "segunda": 1,
+    "segunda-feira": 1,
+    "monday": 1,
+    "maandag": 1,
+    "lundi": 1,
+    "montag": 1,
     # Tuesday = 2
-    "terca": 2, "terca-feira": 2, "tuesday": 2, "dinsdag": 2, "mardi": 2, "dienstag": 2,
+    "terca": 2,
+    "terca-feira": 2,
+    "tuesday": 2,
+    "dinsdag": 2,
+    "mardi": 2,
+    "dienstag": 2,
     # Wednesday = 4
-    "quarta": 4, "quarta-feira": 4, "wednesday": 4, "woensdag": 4, "mercredi": 4, "mittwoch": 4,
+    "quarta": 4,
+    "quarta-feira": 4,
+    "wednesday": 4,
+    "woensdag": 4,
+    "mercredi": 4,
+    "mittwoch": 4,
     # Thursday = 8
-    "quinta": 8, "quinta-feira": 8, "thursday": 8, "donderdag": 8, "jeudi": 8, "donnerstag": 8,
+    "quinta": 8,
+    "quinta-feira": 8,
+    "thursday": 8,
+    "donderdag": 8,
+    "jeudi": 8,
+    "donnerstag": 8,
     # Friday = 16
-    "sexta": 16, "sexta-feira": 16, "friday": 16, "vrijdag": 16, "vendredi": 16, "freitag": 16,
+    "sexta": 16,
+    "sexta-feira": 16,
+    "friday": 16,
+    "vrijdag": 16,
+    "vendredi": 16,
+    "freitag": 16,
     # Saturday = 32
-    "sabado": 32, "saturday": 32, "zaterdag": 32, "samedi": 32, "samstag": 32,
+    "sabado": 32,
+    "saturday": 32,
+    "zaterdag": 32,
+    "samedi": 32,
+    "samstag": 32,
     # Sunday = 64
-    "domingo": 64, "sunday": 64, "zondag": 64, "dimanche": 64, "sonntag": 64,
+    "domingo": 64,
+    "sunday": 64,
+    "zondag": 64,
+    "dimanche": 64,
+    "sonntag": 64,
 }
 
 _DAYS_LABEL: dict[int, str] = {
-    1: "Mon", 2: "Tue", 4: "Wed", 8: "Thu", 16: "Fri", 32: "Sat", 64: "Sun",
+    1: "Mon",
+    2: "Tue",
+    4: "Wed",
+    8: "Thu",
+    16: "Fri",
+    32: "Sat",
+    64: "Sun",
 }
 
 
@@ -1110,9 +1436,30 @@ def _parse_days_mask(text: str) -> int:
     """Parse days bitmask from free-text. Returns 127 (all days) if no days specified."""
     lower = unicodedata.normalize("NFD", text.lower())
     lower = "".join(c for c in lower if unicodedata.category(c) != "Mn")
-    if any(w in lower for w in ("todos os dias", "every day", "elke dag", "tous les jours", "jeden tag", "diariamente", "daily")):
+    if any(
+        w in lower
+        for w in (
+            "todos os dias",
+            "every day",
+            "elke dag",
+            "tous les jours",
+            "jeden tag",
+            "diariamente",
+            "daily",
+        )
+    ):
         return 127
-    if any(w in lower for w in ("dias uteis", "dias de semana", "weekdays", "werkdagen", "jours ouvrables", "werktage")):
+    if any(
+        w in lower
+        for w in (
+            "dias uteis",
+            "dias de semana",
+            "weekdays",
+            "werkdagen",
+            "jours ouvrables",
+            "werktage",
+        )
+    ):
         return 31  # Mon–Fri
     if any(w in lower for w in ("fim de semana", "weekend", "wochenende")):
         return 96  # Sat+Sun
@@ -1137,9 +1484,15 @@ def _mask_to_label(mask: int) -> str:
 
 
 _LIST_LEMBRETES_WORDS = {
-    "os meus lembretes", "meus lembretes", "lembretes activos",
-    "my reminders", "mijn herinneringen", "mes rappels", "meine erinnerungen",
-    "ver lembretes", "lista de lembretes",
+    "os meus lembretes",
+    "meus lembretes",
+    "lembretes activos",
+    "my reminders",
+    "mijn herinneringen",
+    "mes rappels",
+    "meine erinnerungen",
+    "ver lembretes",
+    "lista de lembretes",
 }
 _CANCEL_LEMBRETE_RE = re.compile(
     r"(?:cancela|cancel|annuler|abbrechen|annuleer)\s+(?:lembrete|reminder|herinnering|rappel|erinnerung)\s+(?:de|of|van|du|von|sobre)?\s*(.+)",
@@ -1223,16 +1576,29 @@ _HABIT_STREAK_RE = re.compile(
 
 # ── M10 — notes list + task delete ────────────────────────────────────────────
 _NOTES_QUERY_WORDS = {
-    "as minhas notas", "minhas notas", "as notas", "ver notas",
-    "my notes", "mijn notities", "mes notes", "meine notizen",
-    "lista de notas", "notes list",
+    "as minhas notas",
+    "minhas notas",
+    "as notas",
+    "ver notas",
+    "my notes",
+    "mijn notities",
+    "mes notes",
+    "meine notizen",
+    "lista de notas",
+    "notes list",
 }
 
 # \u2500\u2500 M11 \u2014 Dashboard keywords \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 _DASHBOARD_WORDS: set[str] = {
-    "meu dashboard", "o meu dashboard", "dashboard",
-    "my dashboard", "mijn dashboard", "mon tableau de bord", "mein dashboard",
-    "link dashboard", "dashboard link",
+    "meu dashboard",
+    "o meu dashboard",
+    "dashboard",
+    "my dashboard",
+    "mijn dashboard",
+    "mon tableau de bord",
+    "mein dashboard",
+    "link dashboard",
+    "dashboard link",
 }
 _TASK_DELETE_RE = re.compile(
     r"(?:apaga|apagar|delete|verwijder|supprimer|losch)\s+"
@@ -1320,7 +1686,12 @@ def _detect_job_type(text: str) -> str:
 def _is_command(body: str, keywords: set[str]) -> bool:
     """True when body *starts with* a command keyword (ignores trailing punctuation/words)."""
     for kw in keywords:
-        if body == kw or body.startswith(kw + " ") or body.startswith(kw + "?") or body.startswith(kw + "!"):
+        if (
+            body == kw
+            or body.startswith(kw + " ")
+            or body.startswith(kw + "?")
+            or body.startswith(kw + "!")
+        ):
             return True
     return False
 
@@ -1330,13 +1701,15 @@ def _is_command(body: str, keywords: set[str]) -> bool:
 
 async def _handle_trip(
     body: str,
-    member: "Member",
+    member: Member,
     lang: str,
-    session: "AsyncSession",
+    session: AsyncSession,
 ) -> str | None:
     """Return a reply if the message is trip-related, else None."""
     from decimal import Decimal
-    from sqlalchemy import select, func as sqlfunc
+
+    from sqlalchemy import func as sqlfunc
+    from sqlalchemy import select
 
     # ── start trip ────────────────────────────────────────────────────────
     m = _TRIP_START_RE.search(body)
@@ -1355,7 +1728,7 @@ async def _handle_trip(
             id=uuid.uuid4(),
             member_id=member.id,
             destination=dest,
-            started_at=datetime.now(timezone.utc).date(),
+            started_at=datetime.now(UTC).date(),
             active=True,
         )
         session.add(trip)
@@ -1369,7 +1742,7 @@ async def _handle_trip(
         if not active:
             return _t("trip_none_active", lang)
 
-        active.ended_at = datetime.now(timezone.utc).date()
+        active.ended_at = datetime.now(UTC).date()
         active.active = False
 
         row = (
@@ -1385,8 +1758,7 @@ async def _handle_trip(
         ).one()
         total = row.total or Decimal("0")
         count = row.cnt or 0
-        return _t("trip_ended", lang, dest=active.destination,
-                  total=_fmt_eur(total), count=count)
+        return _t("trip_ended", lang, dest=active.destination, total=_fmt_eur(total), count=count)
 
     # ── trip summary ──────────────────────────────────────────────────────
     if _TRIP_QUERY_RE.search(body):
@@ -1425,8 +1797,7 @@ async def _handle_trip(
         total = sum(r.amount for r in rows)
         end_str = trip.ended_at.strftime("%d/%m") if trip.ended_at else "hoje"
         lines = [
-            f"Viagem: {trip.destination} "
-            f"({trip.started_at.strftime('%d/%m')} \u2192 {end_str})"
+            f"Viagem: {trip.destination} ({trip.started_at.strftime('%d/%m')} \u2192 {end_str})"
         ]
         for r in rows:
             lines.append(
@@ -1439,18 +1810,23 @@ async def _handle_trip(
     # ── trip list ─────────────────────────────────────────────────────────
     if _TRIP_LIST_RE.search(body):
         trips = (
-            await session.execute(
-                select(Trip)
-                .where(Trip.member_id == member.id)
-                .order_by(Trip.started_at.desc())
-                .limit(10)
+            (
+                await session.execute(
+                    select(Trip)
+                    .where(Trip.member_id == member.id)
+                    .order_by(Trip.started_at.desc())
+                    .limit(10)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         if not trips:
             return _t("trip_list_empty", lang)
 
         from decimal import Decimal as _D
+
         lines_out: list[str] = []
         for t in trips:
             row = (
@@ -1479,13 +1855,21 @@ async def _handle_trip(
 _HISTORY_LIMIT = 10  # messages (pairs) to include in LLM context
 
 
-async def _load_history(member: Member, session: AsyncSession) -> list[dict]:
-    """Return the last N messages for this member as Claude-format dicts."""
+async def _load_history(
+    member: Member,
+    session: AsyncSession,
+    exclude_id: object | None = None,
+) -> list[dict]:
+    """Return the last N messages for this member as Claude-format dicts.
+
+    ``exclude_id`` is the inbound message being answered: it is already stored
+    in this transaction, and ``generate_reply`` appends it itself.
+    """
+    query = select(Message).where(Message.author_id == member.id)
+    if exclude_id is not None:
+        query = query.where(Message.id != exclude_id)
     result = await session.execute(
-        select(Message)
-        .where(Message.author_id == member.id)
-        .order_by(Message.created_at.desc())
-        .limit(_HISTORY_LIMIT * 2)
+        query.order_by(Message.created_at.desc()).limit(_HISTORY_LIMIT * 2)
     )
     rows = result.scalars().all()
     rows = list(reversed(rows))  # chronological order
@@ -1511,7 +1895,7 @@ async def _save_outbound(
         author_id=member.id,
         direction="outbound",
         body=body,
-        wa_timestamp=datetime.now(timezone.utc),
+        wa_timestamp=datetime.now(UTC),
         processed=True,
     )
     session.add(outbound)
@@ -1540,7 +1924,7 @@ def _looks_like_gibberish(text: str) -> bool:
 
 def _period_range(period: str, lang: str = "en") -> tuple[datetime, datetime | None, str]:
     """Return (start, end_exclusive, label).  end_exclusive=None means open (up to now)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if period == "today":
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         tomorrow = start + timedelta(days=1)
@@ -1593,7 +1977,9 @@ async def _build_summary(
 
     if not records:
         if category:
-            return _t("no_records_scope", lang, category=category.capitalize(), period_label=period_label)
+            return _t(
+                "no_records_scope", lang, category=category.capitalize(), period_label=period_label
+            )
         return _t("no_records_period", lang, period_label=period_label)
 
     outflows = [e for e in records if e.transaction_type != "income"]
@@ -1603,7 +1989,9 @@ async def _build_summary(
 
     if category:
         # Category view: list individual transactions
-        title = _t("category_title", lang, category=category.capitalize(), period_label=period_label)
+        title = _t(
+            "category_title", lang, category=category.capitalize(), period_label=period_label
+        )
         lines = [f"{title}\n"]
         for e in outflows[:10]:
             date_str = e.expense_date.strftime("%d/%m")
@@ -1638,7 +2026,7 @@ async def _build_summary(
 async def _build_saldo(member: Member, session: AsyncSession) -> str:
     """Show income/expense balance for the current month."""
     lang = member.language or "en"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     result = await session.execute(
@@ -1670,7 +2058,7 @@ async def _build_saldo(member: Member, session: AsyncSession) -> str:
 async def _build_comparison(member: Member, session: AsyncSession) -> str:
     """Compare current month vs previous month (expenses only)."""
     lang = member.language or "en"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cur_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     prev_end = cur_start
     prev_last = cur_start - timedelta(seconds=1)
@@ -1716,8 +2104,8 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
 
 
 async def _load_merchant_overrides(
-    member: "Member",
-    session: "AsyncSession",
+    member: Member,
+    session: AsyncSession,
 ) -> dict[str, str]:
     """Return {lowercase_merchant: category} for this member (M12)."""
     result = await session.execute(
@@ -1729,13 +2117,14 @@ async def _load_merchant_overrides(
 
 
 async def _upsert_merchant_override(
-    member: "Member",
+    member: Member,
     merchant: str,
     category: str,
-    session: "AsyncSession",
+    session: AsyncSession,
 ) -> None:
     """Insert or update a merchant→category override for this member (M12)."""
     from sqlalchemy.dialects.postgresql import insert as _pg_insert
+
     key = merchant.lower().strip()
     stmt = (
         _pg_insert(MerchantCategoryOverride)
@@ -1747,19 +2136,16 @@ async def _upsert_merchant_override(
         )
         .on_conflict_do_update(
             constraint="uq_mco_member_merchant",
-            set_={"category": category, "updated_at": datetime.now(timezone.utc)},
+            set_={"category": category, "updated_at": datetime.now(UTC)},
         )
     )
     await session.execute(stmt)
 
 
-
-
-
 async def handle_flow_onboarding(
-    member: "Member",
-    message: "Message",
-    session: "AsyncSession",
+    member: Member,
+    message: Message,
+    session: AsyncSession,
 ) -> bool:
     """Process a completed WhatsApp Flow onboarding nfm_reply.
 
@@ -1777,7 +2163,7 @@ async def handle_flow_onboarding(
     try:
         payload = _json.loads(nfm.get("response_json", "{}"))
     except (_json.JSONDecodeError, TypeError):
-        logger.warning("conversation.flow_invalid_json", wa_phone=member.wa_phone)
+        logger.warning("conversation.flow_invalid_json", member_id=str(member.id))
         return True  # consumed but invalid — ignore
 
     preferred_name = (payload.get("preferred_name") or "").strip()
@@ -1795,7 +2181,7 @@ async def handle_flow_onboarding(
 
     logger.info(
         "conversation.flow_onboarding_received",
-        wa_phone=member.wa_phone,
+        member_id=str(member.id),
         preferred_name=preferred_name,
         language=language,
         consent_given=consent_given,
@@ -1811,7 +2197,7 @@ async def handle_flow_onboarding(
     member.preferred_name = preferred_name or None
     member.language = language
     member.consent_state = "accepted"
-    member.disclosure_accepted_at = datetime.now(timezone.utc)
+    member.disclosure_accepted_at = datetime.now(UTC)
     member.disclosure_version = "flow-1.0"
     session.add(member)
 
@@ -1824,21 +2210,26 @@ async def handle_flow_onboarding(
         "fr": f"Bonjour{name_part} ! Compte activé.",
         "de": f"Hallo{name_part}! Konto aktiviert.",
     }
-    reply = f"{greeting_map.get(language, greeting_map['en'])}\n\n{_t('consent_accepted', language)}"
+    reply = (
+        f"{greeting_map.get(language, greeting_map['en'])}\n\n{_t('consent_accepted', language)}"
+    )
     await send_text(member.wa_phone, reply)
 
     # Persist outbound message
-    session.add(Message(
-        id=uuid.uuid4(),
-        wa_message_id=f"out-{uuid.uuid4()}",
-        household_id=member.household_id,
-        author_id=member.id,
-        direction="outbound",
-        body=reply,
-        wa_timestamp=datetime.now(timezone.utc),
-        processed=True,
-    ))
+    session.add(
+        Message(
+            id=uuid.uuid4(),
+            wa_message_id=f"out-{uuid.uuid4()}",
+            household_id=member.household_id,
+            author_id=member.id,
+            direction="outbound",
+            body=reply,
+            wa_timestamp=datetime.now(UTC),
+            processed=True,
+        )
+    )
     return True
+
 
 async def handle_inbound(
     member: Member,
@@ -1861,7 +2252,7 @@ async def handle_inbound(
         disclosure = _t("disclosure", lang)
         await send_text(to, disclosure)
         member.consent_state = "pending_response"
-        logger.info("conversation.disclosure_sent", wa_phone=to, lang=lang)
+        logger.info("conversation.disclosure_sent", member_id=str(member.id), lang=lang)
         return
 
     lang = member.language or "en"
@@ -1870,31 +2261,36 @@ async def handle_inbound(
     if member.consent_state == "pending_response":
         if body in _CONSENT_YES:
             member.consent_state = "accepted"
-            member.disclosure_accepted_at = datetime.now(timezone.utc)
+            member.disclosure_accepted_at = datetime.now(UTC)
             member.disclosure_version = "1.0"
             session.add(member)
             reply = _t("consent_accepted", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
-            logger.info("conversation.consent_accepted", wa_phone=to)
+            logger.info("conversation.consent_accepted", member_id=str(member.id))
         elif body in _CONSENT_NO:
             member.consent_state = "rejected"
             session.add(member)
             reply = _t("consent_rejected", lang)
             await send_text(to, reply)
-            logger.info("conversation.consent_rejected", wa_phone=to)
+            logger.info("conversation.consent_rejected", member_id=str(member.id))
         else:
             await send_text(to, _t("consent_unknown", lang))
         return
 
     # ── 3. Rejected — honour their choice ────────────────────────────────────
     if member.consent_state == "rejected":
-        logger.info("conversation.rejected_member_ignored", wa_phone=to)
+        if body in _RESUME_WORDS:
+            member.consent_state = "pending_response"
+            session.add(member)
+            await send_text(to, _t("disclosure", lang))
+            logger.info("conversation.resume_requested", member_id=str(member.id))
+            return
+        logger.info("conversation.rejected_member_ignored", member_id=str(member.id))
         return
 
     # ── 4. Accepted — handle commands and LLM ────────────────────────────────
     if member.consent_state == "accepted":
-
         # M12 — load member's merchant→category overrides once per message
         member_overrides = await _load_merchant_overrides(member, session)
 
@@ -1904,7 +2300,7 @@ async def handle_inbound(
             session.add(member)
             reply = _t("consent_rejected", lang)
             await send_text(to, reply)
-            logger.info("conversation.stop_requested", wa_phone=to)
+            logger.info("conversation.stop_requested", member_id=str(member.id))
             return
 
         # 4b. Saldo command
@@ -1922,7 +2318,9 @@ async def handle_inbound(
             return
 
         # 4d. Summary command — skip if message has a time qualifier (let classify_query handle it)
-        if not any(q in body.lower() for q in _SUMMARY_TIME_QUALIFIERS) and _is_command(body, _SUMMARY_WORDS):
+        if not any(q in body.lower() for q in _SUMMARY_TIME_QUALIFIERS) and _is_command(
+            body, _SUMMARY_WORDS
+        ):
             summary = await _build_summary(member, session)
             await send_text(to, summary)
             await _save_outbound(member, summary, session)
@@ -1945,8 +2343,10 @@ async def handle_inbound(
                     return
 
                 job_type = _detect_job_type(reminder_text)
-                from alfred.models import ScheduledJob
                 import uuid as _uuid
+
+                from alfred.models import ScheduledJob
+
                 job = ScheduledJob(
                     id=_uuid.uuid4(),
                     member_id=member.id,
@@ -1960,7 +2360,7 @@ async def handle_inbound(
                 reply = _t("lembrete_set", lang, text=reminder_text, time=time_str)
                 logger.info(
                     "conversation.lembrete_created",
-                    wa_phone=to,
+                    member_id=str(member.id),
                     job_type=job_type,
                     time=time_str,
                 )
@@ -1972,11 +2372,12 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-
         # 4e-0b. M5 — list active reminders
         if _is_command(body, _LIST_LEMBRETES_WORDS):
-            from alfred.models import ScheduledJob as _SJ
             from sqlalchemy import select as _sel
+
+            from alfred.models import ScheduledJob as _SJ
+
             res = await session.execute(
                 _sel(_SJ)
                 .where(_SJ.member_id == member.id)
@@ -1991,7 +2392,15 @@ async def handle_inbound(
                 for j in jobs:
                     days_label = _mask_to_label(j.days_mask)
                     text_label = (j.payload or {}).get("text", j.job_type)
-                    lines.append(_t("lembretes_list_row", lang, time=j.time_of_day, text=text_label, days=days_label))
+                    lines.append(
+                        _t(
+                            "lembretes_list_row",
+                            lang,
+                            time=j.time_of_day,
+                            text=text_label,
+                            days=days_label,
+                        )
+                    )
                 reply = "\n".join(lines)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
@@ -2001,12 +2410,12 @@ async def handle_inbound(
         m_cancel = _CANCEL_LEMBRETE_RE.search(body)
         if m_cancel:
             cancel_kw = m_cancel.group(1).strip().lower()
-            from alfred.models import ScheduledJob as _SJ
             from sqlalchemy import select as _sel
+
+            from alfred.models import ScheduledJob as _SJ
+
             res = await session.execute(
-                _sel(_SJ)
-                .where(_SJ.member_id == member.id)
-                .where(_SJ.active.is_(True))
+                _sel(_SJ).where(_SJ.member_id == member.id).where(_SJ.active.is_(True))
             )
             jobs = res.scalars().all()
             matched = None
@@ -2036,7 +2445,7 @@ async def handle_inbound(
             if raw_merchant and canonical:
                 await _upsert_merchant_override(member, raw_merchant, canonical, session)
                 # Patch the most recent expense with this merchant (last 7 days)
-                cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+                cutoff = datetime.now(UTC) - timedelta(days=7)
                 res = await session.execute(
                     select(Expense)
                     .where(
@@ -2052,10 +2461,14 @@ async def handle_inbound(
                     last_expense.category = canonical
                     session.add(last_expense)
 
-                reply = _t("category_corrected", lang, merchant=raw_merchant.title(), category=canonical)
+                reply = _t(
+                    "category_corrected", lang, merchant=raw_merchant.title(), category=canonical
+                )
                 logger.info(
                     "conversation.category_override_saved",
-                    wa_phone=to, merchant=raw_merchant, category=canonical,
+                    member_id=str(member.id),
+                    merchant=raw_merchant,
+                    category=canonical,
                 )
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
@@ -2076,17 +2489,17 @@ async def handle_inbound(
         m_task = _TASK_RE.match(body)
         if m_task:
             import re as _re
+
             raw_task = m_task.group(1).strip()
             # try to extract due_date ("até <date>" / "by <date>" / "voor <date>")
-            due_m = _re.search(
-                r"(?:até|by|voor|bis|avant)\s+(.+)$", raw_task, _re.IGNORECASE
-            )
+            due_m = _re.search(r"(?:até|by|voor|bis|avant)\s+(.+)$", raw_task, _re.IGNORECASE)
             task_body = raw_task
             due_date_val = None
             if due_m:
                 task_body = raw_task[: due_m.start()].strip()
                 try:
                     from dateutil import parser as _dp
+
                     due_date_val = _dp.parse(due_m.group(1), default=datetime.now()).date()
                 except Exception:
                     pass
@@ -2107,6 +2520,7 @@ async def handle_inbound(
         if m_done:
             done_text = m_done.group(1).strip()
             from sqlalchemy import select as _sel
+
             if done_text.isdigit():
                 idx = int(done_text)
                 res_all = await session.execute(
@@ -2118,7 +2532,7 @@ async def handle_inbound(
                 open_list = res_all.scalars().all()
                 task_row = open_list[idx - 1] if 0 < idx <= len(open_list) else None
                 if task_row:
-                    task_row.done_at = datetime.now(timezone.utc)
+                    task_row.done_at = datetime.now(UTC)
                     session.add(task_row)
                     reply = _t("task_done", lang)
                 else:
@@ -2137,7 +2551,7 @@ async def handle_inbound(
             )
             task_row = result.scalar_one_or_none()
             if task_row:
-                task_row.done_at = datetime.now(timezone.utc)
+                task_row.done_at = datetime.now(UTC)
                 session.add(task_row)
                 reply = _t("task_done", lang)
             else:
@@ -2149,6 +2563,7 @@ async def handle_inbound(
         # 4e-5. M10 — lista de tarefas: "minhas tarefas"
         if _is_command(body, _TASKS_QUERY_WORDS):
             from sqlalchemy import select as _sel
+
             result = await session.execute(
                 _sel(Task)
                 .where(Task.member_id == member.id)
@@ -2160,12 +2575,9 @@ async def handle_inbound(
                 reply = _t("tasks_list_empty", lang)
             else:
                 lines = [_t("tasks_list_header", lang, n=len(open_tasks))]
-                today_date = datetime.now(timezone.utc).date()
+                today_date = datetime.now(UTC).date()
                 for i, t in enumerate(open_tasks, 1):
-                    due_str = (
-                        _t("tasks_list_due", lang, date=str(t.due_date))
-                        if t.due_date else ""
-                    )
+                    due_str = _t("tasks_list_due", lang, date=str(t.due_date)) if t.due_date else ""
                     is_overdue = bool(t.due_date and t.due_date < today_date)
                     tpl_key = "tasks_list_overdue" if is_overdue else "tasks_list_row"
                     lines.append(_t(tpl_key, lang, n=i, body=t.body, due=due_str))
@@ -2174,12 +2586,12 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-
         # 4e-5b. M10 — delete task: "apaga tarefa X"
         m_tdel = _TASK_DELETE_RE.match(body)
         if m_tdel:
             del_kw = m_tdel.group(1).strip().lower()
             from sqlalchemy import select as _sel
+
             res_del = await session.execute(
                 _sel(Task)
                 .where(Task.member_id == member.id)
@@ -2201,6 +2613,7 @@ async def handle_inbound(
         # 4e-5c. M10 — list notes: "as minhas notas"
         if _is_command(body, _NOTES_QUERY_WORDS):
             from sqlalchemy import select as _sel
+
             res_notes = await session.execute(
                 _sel(Note)
                 .where(Note.member_id == member.id)
@@ -2222,13 +2635,18 @@ async def handle_inbound(
         # 4e-5d. M11 — dashboard link: "meu dashboard"
         if _is_command(body, _DASHBOARD_WORDS):
             import uuid as _uuid
+
             from alfred.settings import settings as _settings
+
             # Generate token if member doesn't have one
             if member.dashboard_token is None:
                 member.dashboard_token = _uuid.uuid4()
                 await session.flush()
             import os as _os
-            base_url = (getattr(_settings, "base_url", "") or _os.environ.get("BASE_URL", "")).rstrip("/")
+
+            base_url = (
+                getattr(_settings, "base_url", "") or _os.environ.get("BASE_URL", "")
+            ).rstrip("/")
             if not base_url:
                 reply = _t("dashboard_no_base_url", lang)
             else:
@@ -2252,6 +2670,7 @@ async def handle_inbound(
         # 4e-7. M9 — query de metas: "minhas metas"
         if _is_command(body, _GOALS_QUERY_WORDS):
             from sqlalchemy import select as _sel
+
             result = await session.execute(
                 _sel(Goal)
                 .where(Goal.member_id == member.id)
@@ -2270,12 +2689,12 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-
         # 4e-7b. M9 — complete goal: "meta de correr concluida"
         m_gcomplete = _GOAL_COMPLETE_RE.search(body)
         if m_gcomplete:
             kw = m_gcomplete.group(1).strip().lower()
             from sqlalchemy import select as _sel
+
             res_gc = await session.execute(
                 _sel(Goal)
                 .where(Goal.member_id == member.id)
@@ -2300,9 +2719,11 @@ async def handle_inbound(
         if m_hfreq:
             freq_raw = (m_hfreq.group(1) or body).strip()
             # extract the activity from the whole body
-            from sqlalchemy import select as _sel, func as _func
             from datetime import timedelta as _td
-            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+
+            from sqlalchemy import select as _sel
+
+            week_ago = datetime.now(UTC).date() - _td(days=7)
             res_hf = await session.execute(
                 _sel(HabitLog)
                 .where(HabitLog.member_id == member.id)
@@ -2311,7 +2732,11 @@ async def handle_inbound(
             all_habits = res_hf.scalars().all()
             # Find best matching activity
             freq_kw = freq_raw.lower() if freq_raw else body.lower()
-            matched = [h for h in all_habits if freq_kw in h.activity.lower() or h.activity.lower() in freq_kw]
+            matched = [
+                h
+                for h in all_habits
+                if freq_kw in h.activity.lower() or h.activity.lower() in freq_kw
+            ]
             if not matched and all_habits:
                 # fallback: count all
                 matched = all_habits
@@ -2329,8 +2754,10 @@ async def handle_inbound(
         if m_hstreak:
             streak_raw = (m_hstreak.group(1) or "").strip()
             streak_kw = streak_raw.lower() if streak_raw else ""
+            from datetime import timedelta as _td
+
             from sqlalchemy import select as _sel
-            from datetime import date as _date, timedelta as _td
+
             res_hs = await session.execute(
                 _sel(HabitLog.log_date, HabitLog.activity)
                 .where(HabitLog.member_id == member.id)
@@ -2339,7 +2766,9 @@ async def handle_inbound(
             all_logs = res_hs.all()  # list of (log_date, activity)
             # Filter by activity keyword if provided
             if streak_kw:
-                filtered = [(d, a) for d, a in all_logs if streak_kw in a.lower() or a.lower() in streak_kw]
+                filtered = [
+                    (d, a) for d, a in all_logs if streak_kw in a.lower() or a.lower() in streak_kw
+                ]
             else:
                 filtered = list(all_logs)
             # Deduplicate dates, keep sorted desc
@@ -2355,7 +2784,9 @@ async def handle_inbound(
             if not unique_dates:
                 reply = _t("habit_streak_none", lang, activity=streak_kw or "hábito")
             else:
-                from datetime import date as _date2, timedelta as _td2
+                from datetime import date as _date2
+                from datetime import timedelta as _td2
+
                 today = _date2.today()
                 yesterday = today - _td2(days=1)
                 most_recent = unique_dates[0]
@@ -2382,10 +2813,9 @@ async def handle_inbound(
             habit_activity = m_habit.group("activity").strip()
             # Try to link to a matching active goal
             from sqlalchemy import select as _sel
+
             res_hg = await session.execute(
-                _sel(Goal)
-                .where(Goal.member_id == member.id)
-                .where(Goal.active.is_(True))
+                _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
             )
             linked_goal = None
             for g in res_hg.scalars().all():
@@ -2397,11 +2827,13 @@ async def handle_inbound(
                 member_id=member.id,
                 goal_id=linked_goal.id if linked_goal else None,
                 activity=habit_activity,
-                log_date=datetime.now(timezone.utc).date(),
+                log_date=datetime.now(UTC).date(),
             )
             session.add(habit_log)
             if linked_goal:
-                reply = _t("habit_logged_with_goal", lang, activity=habit_activity, goal=linked_goal.title)
+                reply = _t(
+                    "habit_logged_with_goal", lang, activity=habit_activity, goal=linked_goal.title
+                )
             else:
                 reply = _t("habit_logged", lang, activity=habit_activity)
             await send_text(to, reply)
@@ -2411,7 +2843,10 @@ async def handle_inbound(
         # 4e-8b. M9 — log de hábito via LLM (free-form)
         # Only attempt if message is short (< 80 chars) and doesn't look like expense/workout
         _body_lower = body.lower()
-        _not_expense = not any(w in _body_lower for w in ("€", "$", "£", "gastei", "comprei", "paguei", "spent", "paid", "bought"))
+        _not_expense = not any(
+            w in _body_lower
+            for w in ("€", "$", "£", "gastei", "comprei", "paguei", "spent", "paid", "bought")
+        )
         _not_workout = not _is_command(body, _WORKOUT_WORDS)
         _not_health = not _is_command(body, _HEALTH_WORDS)
         if len(body) < 80 and _not_expense and _not_workout and _not_health:
@@ -2419,14 +2854,14 @@ async def handle_inbound(
             if habit_data:
                 h_activity = habit_data["activity"]
                 h_days_ago = habit_data.get("days_ago", 0)
-                from sqlalchemy import select as _sel
                 from datetime import timedelta as _td
-                h_date = (datetime.now(timezone.utc) - _td(days=h_days_ago)).date()
+
+                from sqlalchemy import select as _sel
+
+                h_date = (datetime.now(UTC) - _td(days=h_days_ago)).date()
                 # Try to link to goal
                 res_hg2 = await session.execute(
-                    _sel(Goal)
-                    .where(Goal.member_id == member.id)
-                    .where(Goal.active.is_(True))
+                    _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
                 )
                 linked_goal2 = None
                 for g in res_hg2.scalars().all():
@@ -2443,24 +2878,28 @@ async def handle_inbound(
                 )
                 session.add(hlog2)
                 if linked_goal2:
-                    reply = _t("habit_logged_with_goal", lang, activity=h_activity, goal=linked_goal2.title)
+                    reply = _t(
+                        "habit_logged_with_goal", lang, activity=h_activity, goal=linked_goal2.title
+                    )
                 else:
                     reply = _t("habit_logged", lang, activity=h_activity)
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
-                logger.info("conversation.habit_recorded_llm", wa_phone=to, activity=h_activity)
+                logger.info(
+                    "conversation.habit_recorded_llm", member_id=str(member.id), activity=h_activity
+                )
                 return
 
         # 4e-9. M8 — health log: medicação, humor, sono, água
         if _is_command(body, _HEALTH_WORDS):
-            from datetime import date as _date
-            today = datetime.now(timezone.utc).date()
+            today = datetime.now(UTC).date()
             health_data = await extract_health_log(body, lang=member.language or "en")
             if health_data:
                 log_date = today
                 if health_data.get("days_ago", 0) > 0:
                     from datetime import timedelta as _td
-                    log_date = (datetime.now(timezone.utc) - _td(days=health_data["days_ago"])).date()
+
+                    log_date = (datetime.now(UTC) - _td(days=health_data["days_ago"])).date()
                 hlog = HealthLog(
                     id=uuid.uuid4(),
                     member_id=member.id,
@@ -2485,12 +2924,13 @@ async def handle_inbound(
                 await _save_outbound(member, reply, session)
                 return
 
-
         # 4e-9b. M8 — mood history query
         if _HEALTH_MOOD_QUERY_RE.search(body):
-            from sqlalchemy import select as _sel
             from datetime import timedelta as _td
-            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+
+            from sqlalchemy import select as _sel
+
+            week_ago = datetime.now(UTC).date() - _td(days=7)
             res_mq = await session.execute(
                 _sel(HealthLog)
                 .where(HealthLog.member_id == member.id)
@@ -2502,7 +2942,9 @@ async def handle_inbound(
             if not mood_rows:
                 reply = _t("health_mood_empty", lang)
             else:
-                entries = ", ".join(f"{r.value}/10 ({r.log_date.strftime('%a')})" for r in mood_rows[:7])
+                entries = ", ".join(
+                    f"{r.value}/10 ({r.log_date.strftime('%a')})" for r in mood_rows[:7]
+                )
                 reply = _t("health_mood_history", lang, entries=entries)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
@@ -2510,9 +2952,11 @@ async def handle_inbound(
 
         # 4e-9c. M8 — sleep average query
         if _HEALTH_SLEEP_QUERY_RE.search(body):
-            from sqlalchemy import select as _sel
             from datetime import timedelta as _td
-            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+
+            from sqlalchemy import select as _sel
+
+            week_ago = datetime.now(UTC).date() - _td(days=7)
             res_sq = await session.execute(
                 _sel(HealthLog)
                 .where(HealthLog.member_id == member.id)
@@ -2535,9 +2979,11 @@ async def handle_inbound(
 
         # 4e-9d. M8 — medication adherence query
         if _HEALTH_MED_QUERY_RE.search(body):
-            from sqlalchemy import select as _sel
             from datetime import timedelta as _td
-            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+
+            from sqlalchemy import select as _sel
+
+            week_ago = datetime.now(UTC).date() - _td(days=7)
             res_medq = await session.execute(
                 _sel(HealthLog)
                 .where(HealthLog.member_id == member.id)
@@ -2549,9 +2995,15 @@ async def handle_inbound(
                 reply = _t("health_medication_empty", lang)
             else:
                 unique_days = len({r.log_date for r in med_rows})
-                total_days = min(7, (datetime.now(timezone.utc).date() - week_ago).days + 1)
+                total_days = min(7, (datetime.now(UTC).date() - week_ago).days + 1)
                 day_labels = ", ".join(sorted({r.log_date.strftime("%a") for r in med_rows}))
-                reply = _t("health_medication_adherence", lang, n=unique_days, total=total_days, days=day_labels)
+                reply = _t(
+                    "health_medication_adherence",
+                    lang,
+                    n=unique_days,
+                    total=total_days,
+                    days=day_labels,
+                )
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -2559,7 +3011,8 @@ async def handle_inbound(
         # 4e-9e. M8 — water intake query
         if _HEALTH_WATER_QUERY_RE.search(body):
             from sqlalchemy import select as _sel
-            today_wq = datetime.now(timezone.utc).date()
+
+            today_wq = datetime.now(UTC).date()
             res_wq = await session.execute(
                 _sel(HealthLog)
                 .where(HealthLog.member_id == member.id)
@@ -2581,14 +3034,14 @@ async def handle_inbound(
 
         # 4e-10. M7 — treino: "corri 30 min"
         if _is_command(body, _WORKOUT_WORDS):
-            from datetime import date as _date
-            today = datetime.now(timezone.utc).date()
+            today = datetime.now(UTC).date()
             workout_data = await extract_workout(body, lang=member.language or "en")
             if workout_data:
                 from datetime import timedelta as _td
+
                 wo_date = today
                 if workout_data.get("days_ago", 0) > 0:
-                    wo_date = (datetime.now(timezone.utc) - _td(days=workout_data["days_ago"])).date()
+                    wo_date = (datetime.now(UTC) - _td(days=workout_data["days_ago"])).date()
                 ws = WorkoutSession(
                     id=uuid.uuid4(),
                     member_id=member.id,
@@ -2608,24 +3061,37 @@ async def handle_inbound(
                         else ""
                     )
                 )
-                reply = _t("workout_saved", lang,
-                           activity=workout_data["activity_type"],
-                           duration=dur_str)
+                reply = _t(
+                    "workout_saved", lang, activity=workout_data["activity_type"], duration=dur_str
+                )
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
                 logger.info(
                     "conversation.workout_recorded",
-                    wa_phone=to,
+                    member_id=str(member.id),
                     activity=workout_data["activity_type"],
                 )
                 return
 
         # 4e-11. M7 — query de treinos: "treinos desta semana"
-        if _is_command(body, {"treinos", "workouts", "trainingen", "trainings", "mes treinos",
-                               "my workouts", "treinos desta semana", "workouts this week"}):
-            from sqlalchemy import select as _sel
+        if _is_command(
+            body,
+            {
+                "treinos",
+                "workouts",
+                "trainingen",
+                "trainings",
+                "mes treinos",
+                "my workouts",
+                "treinos desta semana",
+                "workouts this week",
+            },
+        ):
             from datetime import timedelta as _td
-            week_ago = datetime.now(timezone.utc).date() - _td(days=7)
+
+            from sqlalchemy import select as _sel
+
+            week_ago = datetime.now(UTC).date() - _td(days=7)
             result = await session.execute(
                 _sel(WorkoutSession)
                 .where(WorkoutSession.member_id == member.id)
@@ -2638,22 +3104,29 @@ async def handle_inbound(
             else:
                 lines = [_t("workout_summary_header", lang, n=len(sessions_list))]
                 for ws in sessions_list:
-                    dur = f"{ws.duration_minutes}min" if ws.duration_minutes else (
-                        f"{ws.distance_km}km" if ws.distance_km else ""
+                    dur = (
+                        f"{ws.duration_minutes}min"
+                        if ws.duration_minutes
+                        else (f"{ws.distance_km}km" if ws.distance_km else "")
                     )
-                    lines.append(_t("workout_summary_row", lang,
-                                    date=str(ws.workout_date),
-                                    activity=ws.activity_type,
-                                    duration=dur))
+                    lines.append(
+                        _t(
+                            "workout_summary_row",
+                            lang,
+                            date=str(ws.workout_date),
+                            activity=ws.activity_type,
+                            duration=dur,
+                        )
+                    )
                 reply = "\n".join(lines)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
 
-
         # 4e-11b. M7 — delete workout: "apaga o treino de hoje"
         if _WORKOUT_DELETE_RE.search(body):
             from sqlalchemy import select as _sel
+
             res_wd = await session.execute(
                 _sel(WorkoutSession)
                 .where(WorkoutSession.member_id == member.id)
@@ -2672,12 +3145,23 @@ async def handle_inbound(
 
         # 4e-11c. M7 — workout monthly summary: "treinos deste mês"
         if _WORKOUT_MONTH_RE.search(body):
-            from sqlalchemy import select as _sel
             from datetime import timedelta as _td
-            now_wm = datetime.now(timezone.utc)
+
+            from sqlalchemy import select as _sel
+
+            now_wm = datetime.now(UTC)
             # Check if "mes passado" / "last month"
             _bl = body.lower()
-            if any(w in _bl for w in ("mes passado", "last month", "vorige maand", "mois dernier", "letzten monat")):
+            if any(
+                w in _bl
+                for w in (
+                    "mes passado",
+                    "last month",
+                    "vorige maand",
+                    "mois dernier",
+                    "letzten monat",
+                )
+            ):
                 first_this = now_wm.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                 prev_last = first_this - _td(seconds=1)
                 start_wm = prev_last.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -2698,13 +3182,26 @@ async def handle_inbound(
             n_wm = len(wm_sessions)
             total_km = round(sum(s.distance_km or 0 for s in wm_sessions), 1)
             total_min = sum(s.duration_minutes or 0 for s in wm_sessions)
-            reply = _t("workout_month_header", lang, month=month_label, n=n_wm, km=total_km, min=total_min)
+            reply = _t(
+                "workout_month_header", lang, month=month_label, n=n_wm, km=total_km, min=total_min
+            )
             if wm_sessions:
                 lines = [reply]
                 for ws_m in wm_sessions[:5]:
-                    dur_m = f"{ws_m.duration_minutes}min" if ws_m.duration_minutes else (
-                        f"{ws_m.distance_km}km" if ws_m.distance_km else "")
-                    lines.append(_t("workout_summary_row", lang, date=str(ws_m.workout_date), activity=ws_m.activity_type, duration=dur_m))
+                    dur_m = (
+                        f"{ws_m.duration_minutes}min"
+                        if ws_m.duration_minutes
+                        else (f"{ws_m.distance_km}km" if ws_m.distance_km else "")
+                    )
+                    lines.append(
+                        _t(
+                            "workout_summary_row",
+                            lang,
+                            date=str(ws_m.workout_date),
+                            activity=ws_m.activity_type,
+                            duration=dur_m,
+                        )
+                    )
                 reply = "\n".join(lines)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
@@ -2712,9 +3209,11 @@ async def handle_inbound(
 
         # 4e-11d. M7 — workout activity count: "quantas vezes corri esta semana"
         if _WORKOUT_ACTIVITY_RE.search(body):
-            from sqlalchemy import select as _sel
             from datetime import timedelta as _td
-            week_ago_wa = datetime.now(timezone.utc).date() - _td(days=7)
+
+            from sqlalchemy import select as _sel
+
+            week_ago_wa = datetime.now(UTC).date() - _td(days=7)
             res_wa = await session.execute(
                 _sel(WorkoutSession)
                 .where(WorkoutSession.member_id == member.id)
@@ -2724,9 +3223,16 @@ async def handle_inbound(
             _bl2 = body.lower()
             # Detect activity keyword
             _act_map = {
-                "corri": "running", "ran": "running", "liep": "running", "couru": "running",
-                "nadei": "swimming", "swam": "swimming", "zwom": "swimming",
-                "ginasio": "strength", "gym": "strength", "treino": "strength",
+                "corri": "running",
+                "ran": "running",
+                "liep": "running",
+                "couru": "running",
+                "nadei": "swimming",
+                "swam": "swimming",
+                "zwom": "swimming",
+                "ginasio": "strength",
+                "gym": "strength",
+                "treino": "strength",
             }
             matched_act = None
             for kw, act in _act_map.items():
@@ -2744,7 +3250,7 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-                # 4e-pre. M14 — trip commands
+            # 4e-pre. M14 — trip commands
         trip_reply = await _handle_trip(body, member, lang, session)
         if trip_reply is not None:
             await send_text(to, trip_reply)
@@ -2754,13 +3260,20 @@ async def handle_inbound(
         # 4e-0d. Amount correction: "errei foram 42€" / "na verdade foram 32"
         m_amt = _AMOUNT_CORRECTION_RE.search(body)
         if m_amt:
-            raw_amt = m_amt.group(1).replace("€", "").replace("$", "").replace("£", "").replace(",", ".").strip()
+            raw_amt = (
+                m_amt.group(1)
+                .replace("€", "")
+                .replace("$", "")
+                .replace("£", "")
+                .replace(",", ".")
+                .strip()
+            )
             try:
                 new_amount = float(raw_amt)
             except ValueError:
                 new_amount = None
             if new_amount and new_amount > 0:
-                cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+                cutoff = datetime.now(UTC) - timedelta(hours=24)
                 res = await session.execute(
                     select(Expense)
                     .where(
@@ -2779,7 +3292,11 @@ async def handle_inbound(
                     reply = _t("expense_recorded", lang, amount=_fmt_eur(new_amount), name=name)
                     await send_text(to, reply)
                     await _save_outbound(member, reply, session)
-                    logger.info("conversation.expense_amount_corrected", wa_phone=to, new_amount=new_amount)
+                    logger.info(
+                        "conversation.expense_amount_corrected",
+                        member_id=str(member.id),
+                        new_amount=new_amount,
+                    )
                     return
                 else:
                     # m_amt matched but no recent expense found — don't create a new one
@@ -2788,11 +3305,13 @@ async def handle_inbound(
                     await _save_outbound(member, reply, session)
                     return
 
-        expense_data = await extract_expense(message.body or "", merchant_overrides=member_overrides, lang=member.language or "en")
+        expense_data = await extract_expense(
+            message.body or "", merchant_overrides=member_overrides, lang=member.language or "en"
+        )
         if expense_data:
             txn_type = expense_data.get("type", "expense")
             days_ago = expense_data.get("days_ago", 0)
-            expense_date = datetime.now(timezone.utc) - timedelta(days=days_ago)
+            expense_date = datetime.now(UTC) - timedelta(days=days_ago)
 
             expense = Expense(
                 id=uuid.uuid4(),
@@ -2815,7 +3334,9 @@ async def handle_inbound(
             if active_trip:
                 expense.trip_id = active_trip.id
 
-            name = expense_data["merchant"] or expense_data["description"] or expense_data["category"]
+            name = (
+                expense_data["merchant"] or expense_data["description"] or expense_data["category"]
+            )
             amt_fmt = _fmt_eur(expense_data["amount"])
             key = "income_recorded" if txn_type == "income" else "expense_recorded"
             reply = _t(key, lang, amount=amt_fmt, name=name)
@@ -2824,15 +3345,20 @@ async def handle_inbound(
             # BUG-07 fix: show cumulative trip total when expense tagged to trip
             if active_trip and txn_type == "expense":
                 from sqlalchemy import func as sa_func
+
                 trip_total_res = await session.execute(
-                    select(sa_func.coalesce(sa_func.sum(Expense.amount), 0))
-                    .where(
+                    select(sa_func.coalesce(sa_func.sum(Expense.amount), 0)).where(
                         Expense.trip_id == active_trip.id,
                         Expense.transaction_type == "expense",
                     )
                 )
                 trip_total = float(trip_total_res.scalar() or 0) + expense_data["amount"]
-                reply += _t("trip_expense_total", lang, dest=active_trip.destination, total=_fmt_eur(trip_total))
+                reply += _t(
+                    "trip_expense_total",
+                    lang,
+                    dest=active_trip.destination,
+                    total=_fmt_eur(trip_total),
+                )
             # BUG-09: prompt for category when merchant unknown and category is overig
             if (
                 txn_type == "expense"
@@ -2846,7 +3372,7 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             logger.info(
                 "conversation.expense_recorded",
-                wa_phone=to,
+                member_id=str(member.id),
                 type=txn_type,
                 amount=expense_data["amount"],
                 category=expense_data["category"],
@@ -2881,13 +3407,15 @@ async def handle_inbound(
             if reply:
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
-                logger.info("conversation.query_replied", wa_phone=to, query_type=qtype)
+                logger.info(
+                    "conversation.query_replied", member_id=str(member.id), query_type=qtype
+                )
                 return
 
                 # 4g. General LLM reply with conversation history
-        history = await _load_history(member, session)
+        history = await _load_history(member, session, exclude_id=message.id)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
         await send_text(to, reply)
         await _save_outbound(member, reply, session)
-        logger.info("conversation.reply_sent", wa_phone=to)
+        logger.info("conversation.reply_sent", member_id=str(member.id))
         return

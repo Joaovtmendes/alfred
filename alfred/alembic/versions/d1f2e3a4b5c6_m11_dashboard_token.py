@@ -4,11 +4,13 @@ Revision ID: d1f2e3a4b5c6
 Revises: c4e8b1a3f7d2
 Create Date: 2026-09-26
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "d1f2e3a4b5c6"
 down_revision = "c4e8b1a3f7d2"
@@ -25,9 +27,7 @@ def upgrade() -> None:
             nullable=True,
         ),
     )
-    op.create_unique_constraint(
-        "uq_member_dashboard_token", "member", ["dashboard_token"]
-    )
+    op.create_unique_constraint("uq_member_dashboard_token", "member", ["dashboard_token"])
 
 
 def downgrade() -> None:

@@ -1,16 +1,17 @@
 """Alfred FastAPI application entry point."""
+
 from __future__ import annotations
 
 import time
 from contextlib import asynccontextmanager
-from typing import Any
 
 import structlog
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from alfred.settings import settings
 from alfred.dashboard import router as dashboard_router
+from alfred.legal import router as legal_router
+from alfred.settings import settings
 from alfred.webhook import router as webhook_router
 
 logger = structlog.get_logger(__name__)
@@ -20,7 +21,9 @@ _start_time = time.time()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
-    logger.info("alfred.startup", environment=settings.environment, base_url=settings.base_url or "<EMPTY>")
+    logger.info(
+        "alfred.startup", environment=settings.environment, base_url=settings.base_url or "<EMPTY>"
+    )
     yield
     logger.info("alfred.shutdown")
 
@@ -36,6 +39,7 @@ app = FastAPI(
 
 app.include_router(webhook_router)
 app.include_router(dashboard_router)
+app.include_router(legal_router)
 
 
 @app.get("/health", tags=["ops"])

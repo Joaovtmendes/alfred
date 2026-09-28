@@ -1,13 +1,38 @@
 """LLM integration — supports Anthropic direct API and AWS Bedrock."""
+
 from __future__ import annotations
 
+import asyncio
 import json
+from typing import Any
+
 import structlog
 
 from alfred.models import Member, Message
 from alfred.settings import settings
 
 logger = structlog.get_logger()
+
+# One shared async client per process: reuses the HTTP connection pool and never
+# blocks the event loop (the old code built a sync client inside every call).
+_client: Any = None
+_client_key: str | None = None
+
+
+def _get_client(api_key: str) -> Any:
+    """Return a cached ``anthropic.AsyncAnthropic`` with timeout + retries."""
+    global _client, _client_key
+    if _client is None or _client_key != api_key:
+        import anthropic
+
+        _client = anthropic.AsyncAnthropic(
+            api_key=api_key,
+            timeout=settings.llm_timeout_seconds,
+            max_retries=2,
+        )
+        _client_key = api_key
+    return _client
+
 
 _SYSTEM_PROMPT = """Je bent Alfred, een persoonlijke assistent via WhatsApp.
 Je helpt met uitgaven bijhouden, afspraken en herinneringen.
@@ -22,9 +47,10 @@ STIJLREGELS (VERPLICHT):
 - Begin NOOIT met "Hallo!", "Goedemiddag!" of vergelijkbare begroetingen na het eerste bericht.
 - GEBRUIK ABSOLUUT GEEN EMOJI. Geen 👋, geen ✅, geen 💰, geen enkel emoji-karakter. Nooit. Altijd platte tekst.
 
-Als de gebruiker een uitgave meldt: bevestig kort, de registratie verloopt automatisch.
-Als de gebruiker om een overzicht vraagt: zeg dat je het ophaalt."""
-
+BELANGRIJK — je registreert zelf NIETS en je hebt geen toegang tot gegevens:
+- Als dit bericht een uitgave of inkomen lijkt: het is NIET geregistreerd. Bevestig nooit een registratie.
+  Vraag de gebruiker het opnieuw te sturen met bedrag en omschrijving, bijvoorbeeld: "Jumbo 23,50".
+- Als de gebruiker om een overzicht vraagt: verzin geen cijfers. Verwijs naar het commando "resumo" / "overzicht" / "summary" of "saldo"."""
 
 
 _LLM_ERROR: dict[str, str] = {
@@ -39,9 +65,10 @@ _LANG_INSTRUCTION: dict[str, str] = {
     "pt": "Responde SEMPRE em português. Nunca mistures com inglês ou neerlandês, mesmo que o histórico contenha outras línguas.",
     "nl": "Antwoord ALTIJD in het Nederlands. Gebruik nooit Engels of Portugees, ook niet als de geschiedenis andere talen bevat.",
     "en": "ALWAYS respond in English. Never mix in Portuguese or Dutch, even if the conversation history contains other languages.",
-    "fr": "Réponds TOUJOURS em français. Ne mélange jamais avec l'anglais ou le néerlandais, même si l'historique contient d'autres langues.",
+    "fr": "Réponds TOUJOURS en français. Ne mélange jamais avec l'anglais ou le néerlandais, même si l'historique contient d'autres langues.",
     "de": "Antworte IMMER auf Deutsch. Vermische niemals mit Englisch oder Niederländisch, auch wenn der Gesprächsverlauf andere Sprachen enthält.",
 }
+
 
 def _bedrock_model_id(model: str) -> str:
     """Normalise model name for Bedrock (adds prefix if needed)."""
@@ -93,15 +120,13 @@ async def _reply_anthropic(
 ) -> str:
     """Call Anthropic API directly."""
     try:
-        import anthropic  # type: ignore[import]
-
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             logger.warning("llm.anthropic_key_missing")
             return _LLM_ERROR.get(getattr(member, "language", "en"), _LLM_ERROR["en"])
 
         model = _anthropic_model_id(settings.llm_model)
-        client = anthropic.Anthropic(api_key=api_key)
+        client = _get_client(api_key)
 
         messages: list[dict] = list(history or [])
         messages.append({"role": "user", "content": message.body or ""})
@@ -110,7 +135,7 @@ async def _reply_anthropic(
         lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
         system_prompt = f"{_SYSTEM_PROMPT}\n\n{lang_instr}"
 
-        response = client.messages.create(
+        response = await client.messages.create(
             model=model,
             max_tokens=512,
             system=system_prompt,
@@ -122,7 +147,7 @@ async def _reply_anthropic(
             "llm.reply_generated",
             provider="anthropic",
             model=model,
-            wa_phone=member.wa_phone,
+            member_id=str(member.id),
             history_turns=len(history) if history else 0,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
@@ -156,14 +181,17 @@ async def _reply_bedrock(
         lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
         system_prompt = f"{_SYSTEM_PROMPT}\n\n{lang_instr}"
 
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 512,
-            "system": system_prompt,
-            "messages": messages,
-        })
+        body = json.dumps(
+            {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 512,
+                "system": system_prompt,
+                "messages": messages,
+            }
+        )
 
-        response = client.invoke_model(
+        response = await asyncio.to_thread(
+            client.invoke_model,
             modelId=model,
             body=body,
             contentType="application/json",
@@ -177,7 +205,7 @@ async def _reply_bedrock(
             "llm.reply_generated",
             provider="bedrock",
             model=model,
-            wa_phone=member.wa_phone,
+            member_id=str(member.id),
             history_turns=len(history) if history else 0,
             input_tokens=result.get("usage", {}).get("input_tokens"),
             output_tokens=result.get("usage", {}).get("output_tokens"),
@@ -207,14 +235,12 @@ async def classify_query(text: str) -> dict | None:
 
 async def _classify_query_anthropic(text: str) -> dict | None:
     try:
-        import anthropic  # type: ignore[import]
-
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             return None
 
         model = _anthropic_model_id(settings.llm_model)
-        client = anthropic.Anthropic(api_key=api_key)
+        client = _get_client(api_key)
 
         system = """You are a financial query classifier for a WhatsApp assistant.
 The user writes in Portuguese, Dutch, English, French, or German.
@@ -257,7 +283,7 @@ EXAMPLES:
 "qual é o tempo hoje?" → {"is_query": false}
 "resumo" → {"is_query": false}"""
 
-        response = client.messages.create(
+        response = await client.messages.create(
             model=model,
             max_tokens=128,
             system=system,
@@ -332,14 +358,12 @@ async def extract_expense(
 
 async def _extract_expense_anthropic(text: str, lang: str = "en") -> dict | None:
     try:
-        import anthropic  # type: ignore[import]
-
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             return None
 
         model = _anthropic_model_id(settings.llm_model)
-        client = anthropic.Anthropic(api_key=api_key)
+        client = _get_client(api_key)
 
         system = """You are a financial transaction parser for a WhatsApp assistant.
 The user writes in Portuguese, Dutch, English, French, or German — handle all five.
@@ -395,7 +419,7 @@ User: "resumo"
             + "\nIMPORTANT: The 'category' field MUST always use the Dutch canonical values listed above."
             + " The 'description' field MUST be in the user's language."
         )
-        response = client.messages.create(
+        response = await client.messages.create(
             model=model,
             max_tokens=256,
             system=system,
@@ -441,19 +465,19 @@ Return JSON only, no markdown fences. Fields:
 If not a workout entry, return {"is_workout": false}.
 """
 
+
 async def extract_workout(text: str, lang: str = "en") -> dict | None:
     """Extract workout session data from natural language text."""
     try:
-        import anthropic  # type: ignore[import]
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             return None
         model = _anthropic_model_id(settings.llm_model)
-        client = anthropic.Anthropic(api_key=api_key)
+        client = _get_client(api_key)
         lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
         workout_system = _WORKOUT_SYSTEM + f"\n\n{lang_instr}"
 
-        response = client.messages.create(
+        response = await client.messages.create(
             model=model,
             max_tokens=256,
             system=workout_system,
@@ -499,19 +523,19 @@ Examples:
 - "bebi 2L de água" → {is_health:true, log_type:"water", value:"2", unit:"L"}
 """
 
+
 async def extract_health_log(text: str, lang: str = "en") -> dict | None:
     """Extract health log entry from natural language text."""
     try:
-        import anthropic  # type: ignore[import]
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             return None
         model = _anthropic_model_id(settings.llm_model)
-        client = anthropic.Anthropic(api_key=api_key)
+        client = _get_client(api_key)
         lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
         health_system = _HEALTH_SYSTEM + f"\n\n{lang_instr}"
 
-        response = client.messages.create(
+        response = await client.messages.create(
             model=model,
             max_tokens=256,
             system=health_system,
@@ -556,19 +580,19 @@ Examples:
 - "corri 5km" → {"is_habit":false}
 """
 
+
 async def extract_habit(text: str, lang: str = "en") -> dict | None:
     """Extract habit log entry from natural language text."""
     try:
-        import anthropic  # type: ignore[import]
         api_key = settings.llm_api_key.get_secret_value()
         if not api_key:
             return None
         model = _anthropic_model_id(settings.llm_model)
-        client = anthropic.Anthropic(api_key=api_key)
+        client = _get_client(api_key)
         lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
         habit_system = _HABIT_SYSTEM + f"\n\n{lang_instr}"
 
-        response = client.messages.create(
+        response = await client.messages.create(
             model=model,
             max_tokens=256,
             system=habit_system,
@@ -596,4 +620,3 @@ async def extract_habit(text: str, lang: str = "en") -> dict | None:
     except Exception as exc:
         logger.warning("llm.extract_habit_failed", error=str(exc))
         return None
-

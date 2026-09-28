@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: alfred
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: alfred
+          POSTGRES_PASSWORD: alfred
+          POSTGRES_DB: alfred
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U alfred" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://alfred:alfred@localhost:5432/alfred
+      ALFRED_TEST_DB: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: alfred/pyproject.toml
+      - run: pip install -e ".[dev]"
+      - name: Lint
+        run: |
+          ruff check src scripts tests alembic
+          ruff format --check src scripts tests alembic
+      - name: Migrations (upgrade, downgrade one step, upgrade)
+        run: |
+          alembic upgrade head
+          alembic downgrade -1
+          alembic upgrade head
+      - name: Tests
+        run: pytest -q

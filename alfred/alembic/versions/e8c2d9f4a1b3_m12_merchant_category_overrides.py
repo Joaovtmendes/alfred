@@ -4,12 +4,15 @@ Revision ID: e8c2d9f4a1b3
 Revises: d9e4f2a1b7c8
 Create Date: 2026-09-26 10:00:00.000000
 """
+
 from __future__ import annotations
 
 import uuid
-from alembic import op
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "e8c2d9f4a1b3"
 down_revision = "d9e4f2a1b7c8"

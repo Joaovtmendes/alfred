@@ -32,8 +32,7 @@ USER alfred
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
+  CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 CMD ["bash", "/app/start.sh"]
 
-# rebuild 20260925

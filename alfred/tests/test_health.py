@@ -1,4 +1,5 @@
 """Tests for the /health and /ready endpoints."""
+
 from __future__ import annotations
 
 import pytest
@@ -9,9 +10,7 @@ from alfred.main import app
 
 @pytest.fixture
 async def client():
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 

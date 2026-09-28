@@ -4,10 +4,12 @@ Revision ID: c3f1b8e2a7d5
 Revises: a8c3d1e2f9b4
 Create Date: 2026-09-24
 """
+
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "c3f1b8e2a7d5"
 down_revision = "a8c3d1e2f9b4"

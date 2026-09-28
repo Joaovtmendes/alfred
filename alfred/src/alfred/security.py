@@ -3,6 +3,7 @@
 Meta signs every POST with X-Hub-Signature-256: sha256=<hex>
 Reference: https://developers.facebook.com/docs/messenger-platform/webhooks#validate-payloads
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -23,7 +24,16 @@ async def verify_whatsapp_signature(
     request: Request,
     x_hub_signature_256: str = Header(default=""),
 ) -> None:
-    """FastAPI dependency — raises 401 if signature is missing or invalid."""
+    """FastAPI dependency — raises 401 if signature is missing or invalid.
+
+    Fails closed: with no app secret configured every request is rejected.
+    (An empty key would let anyone forge a valid HMAC.)
+    """
+    if not settings.whatsapp_app_secret.get_secret_value():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Webhook secret not configured",
+        )
     body = await request.body()
     expected = _expected_signature(body)
     if not hmac.compare_digest(expected, x_hub_signature_256):

@@ -48,3 +48,11 @@ alembic/__pycache__/
 *.log
 logs/
 .env.save
+
+# Local-only artefacts
+.env.*
+!.env.example
+graphify-out/
+_arquivo/
+Claude outputs/
+*.patch
