@@ -84,6 +84,7 @@ def make_session(records: list[Any] | None = None) -> MagicMock:
     result.scalar.return_value = 0
     result.all.return_value = []
     session.execute = AsyncMock(return_value=result)
+    session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
     session.delete = AsyncMock()
     return session

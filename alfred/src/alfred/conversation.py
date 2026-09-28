@@ -41,6 +41,14 @@ from alfred.models import (
     Trip,
     WorkoutSession,
 )
+from alfred.parsing import (
+    CORRECTION_PRONOUNS,
+    TRIP_END_RE,
+    TRIP_LIST_RE,
+    TRIP_QUERY_RE,
+    match_trip_start,
+    parse_category_correction,
+)
 from alfred.whatsapp import send_text
 
 logger = structlog.get_logger()
@@ -1102,15 +1110,6 @@ _LEMBRETE_RE = re.compile(
 )
 
 
-# M12 — Category correction patterns
-# "Jumbo é supermarkt" / "Albert Heijn is not restaurant, is supermarkt" / "isso não é wonen, é transport"
-_CORRECTION_RE = re.compile(
-    r"(?:(?P<merchant>[\w\s\-&\'\.]+?)\s+)?(?:não\s+é|nao\s+e|is\s+not|niet|n\'?est\s+pas|ist\s+nicht|ist\s+kein)\s+"
-    r"[\w]+.*?(?:é|e|is|ist|est)\s+(?P<fix_cat>[\w]+)|"
-    r"(?:(?P<merchant2>[\w\s\-&\'\.]+?)\s+)?(?:é|e|is|ist|est)\s+(?P<cat2>[\w]+)\b",
-    re.IGNORECASE,
-)
-
 _VALID_CATEGORIES = frozenset(
     {
         "supermarkt",
@@ -1606,53 +1605,6 @@ _TASK_DELETE_RE = re.compile(
     re.IGNORECASE,
 )
 
-# ── M14 — Viagem patterns ────────────────────────────────────────────────────
-
-_TRIP_START_RE = re.compile(
-    r"(?:"
-    r"(?:em\s+)?viagem\s+(?:a|para|em)\s+(.+)"
-    r"|trip[:\s]+(.+)"
-    r"|op\s+reis\s+naar\s+(.+)"
-    r"|voyage\s+(?:\xc0|a|en|au|aux)\s+(.+)"
-    r"|reise\s+nach\s+(.+)"
-    r"|(?:vou|estou)\s+(?:de\s+)?viagem\s+(?:para|a)\s+(.+)"
-    r")",
-    re.IGNORECASE,
-)
-
-_TRIP_END_RE = re.compile(
-    r"\b(?:"
-    r"voltei|cheguei\s+(?:a\s+casa|de\s+volta)|viagem\s+terminada|fim\s+da\s+viagem"
-    r"|trip\s+(?:end(?:ed)?|done|finished?)|back\s+(?:home|to\s+amsterdam)"
-    r"|(?:ik\s+ben\s+)?terug(?:\s+thuis)?"
-    r"|rentr[e\xe9][e]?|de\s+retour"
-    r"|(?:wieder\s+)?zuhause|zur\xfcck"
-    r")\b",
-    re.IGNORECASE,
-)
-
-_TRIP_QUERY_RE = re.compile(
-    r"\b(?:"
-    r"quanto\s+gastei\s+(?:n[ao]\s+)?viagem|resumo\s+(?:da\s+)?viagem|despesas\s+(?:da\s+)?viagem"
-    r"|trip\s+(?:summary|expenses?|total|spending)"
-    r"|reis(?:kosten)?(?:\s+overzicht)?"
-    r"|d[e\xe9]penses?\s+(?:du\s+)?voyage|r[e\xe9]sum[e\xe9]\s+(?:du\s+)?voyage"
-    r"|reisekosten(?:\s+(?:zusammenfassung|\xfcberblick))?"
-    r")\b",
-    re.IGNORECASE,
-)
-
-_TRIP_LIST_RE = re.compile(
-    r"\b(?:"
-    r"(?:as\s+minhas\s+)?viagens(?:\s+anteriores)?|lista\s+(?:de\s+)?viagens"
-    r"|(?:my\s+)?trip(?:s|\s+history)"
-    r"|mijn\s+reizen?"
-    r"|mes\s+voyages?"
-    r"|meine\s+reisen?"
-    r")\b",
-    re.IGNORECASE,
-)
-
 _JOB_TYPE_MAP: dict[str, str] = {
     "medicamento": "medication_reminder",
     "medicine": "medication_reminder",
@@ -1712,12 +1664,8 @@ async def _handle_trip(
     from sqlalchemy import select
 
     # ── start trip ────────────────────────────────────────────────────────
-    m = _TRIP_START_RE.search(body)
-    if m:
-        dest = next((g.strip().title() for g in m.groups() if g), None)
-        if not dest:
-            return None
-
+    dest = match_trip_start(body)
+    if dest:
         active = await session.scalar(
             select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
         )
@@ -1735,7 +1683,7 @@ async def _handle_trip(
         return _t("trip_started", lang, dest=dest)
 
     # ── end trip ──────────────────────────────────────────────────────────
-    if _TRIP_END_RE.search(body):
+    if TRIP_END_RE.match(body.strip()):
         active = await session.scalar(
             select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
         )
@@ -1761,7 +1709,7 @@ async def _handle_trip(
         return _t("trip_ended", lang, dest=active.destination, total=_fmt_eur(total), count=count)
 
     # ── trip summary ──────────────────────────────────────────────────────
-    if _TRIP_QUERY_RE.search(body):
+    if TRIP_QUERY_RE.match(body.strip()):
         trip = await session.scalar(
             select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
         )
@@ -1808,7 +1756,7 @@ async def _handle_trip(
         return "\n".join(lines)
 
     # ── trip list ─────────────────────────────────────────────────────────
-    if _TRIP_LIST_RE.search(body):
+    if TRIP_LIST_RE.match(body.strip()):
         trips = (
             (
                 await session.execute(
@@ -2142,6 +2090,78 @@ async def _upsert_merchant_override(
     await session.execute(stmt)
 
 
+async def _handle_category_correction(
+    body: str,
+    member: Member,
+    lang: str,
+    session: AsyncSession,
+    member_overrides: dict[str, str] | None,
+) -> str | None:
+    """Reply if ``body`` is a short "<merchant> é <categoria>" correction, else None.
+
+    Conservative on purpose: the category must be valid AND the merchant must be
+    one this member already has (an override or a past expense), or a pronoun
+    ("isso é transport") that points at the most recent expense. Anything else
+    falls through to the other handlers instead of being silently swallowed.
+    """
+    parsed = parse_category_correction(body)
+    if parsed is None:
+        return None
+    raw_merchant, raw_cat = parsed
+    canonical = _canonical_category(raw_cat)
+    if canonical is None:
+        return None
+
+    merchant_key = raw_merchant.lower().strip()
+    known = merchant_key in (member_overrides or {})
+
+    if merchant_key in CORRECTION_PRONOUNS:
+        last = (
+            await session.execute(
+                select(Expense)
+                .where(Expense.member_id == member.id, Expense.transaction_type == "expense")
+                .order_by(Expense.created_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if last is None or not last.merchant:
+            return None
+        raw_merchant, merchant_key, known = last.merchant, last.merchant.lower(), True
+
+    if not known:
+        seen = await session.scalar(
+            select(Expense.id)
+            .where(Expense.member_id == member.id, Expense.merchant.ilike(raw_merchant))
+            .limit(1)
+        )
+        if seen is None:
+            return None
+
+    await _upsert_merchant_override(member, raw_merchant, canonical, session)
+    # Patch the most recent expense with this merchant (last 7 days)
+    cutoff = datetime.now(UTC) - timedelta(days=7)
+    last_expense = (
+        await session.execute(
+            select(Expense)
+            .where(
+                Expense.member_id == member.id,
+                Expense.merchant.ilike(raw_merchant),
+                Expense.created_at >= cutoff,
+            )
+            .order_by(Expense.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if last_expense:
+        last_expense.category = canonical
+        session.add(last_expense)
+
+    logger.info(
+        "conversation.category_override_saved", member_id=str(member.id), category=canonical
+    )
+    return _t("category_corrected", lang, merchant=raw_merchant.title(), category=canonical)
+
+
 async def handle_flow_onboarding(
     member: Member,
     message: Message,
@@ -2436,43 +2456,13 @@ async def handle_inbound(
             return
 
         # 4e-1. M12 — category correction: "Jumbo é supermarkt"
-        m_corr = _CORRECTION_RE.search(body)
-        if m_corr:
-            raw_merchant = (m_corr.group("merchant") or m_corr.group("merchant2") or "").strip()
-            raw_cat = (m_corr.group("fix_cat") or m_corr.group("cat2") or "").strip()
-            canonical = _canonical_category(raw_cat) if raw_cat else None
-
-            if raw_merchant and canonical:
-                await _upsert_merchant_override(member, raw_merchant, canonical, session)
-                # Patch the most recent expense with this merchant (last 7 days)
-                cutoff = datetime.now(UTC) - timedelta(days=7)
-                res = await session.execute(
-                    select(Expense)
-                    .where(
-                        Expense.member_id == member.id,
-                        Expense.merchant.ilike(f"%{raw_merchant}%"),
-                        Expense.created_at >= cutoff,
-                    )
-                    .order_by(Expense.created_at.desc())
-                    .limit(1)
-                )
-                last_expense = res.scalar_one_or_none()
-                if last_expense:
-                    last_expense.category = canonical
-                    session.add(last_expense)
-
-                reply = _t(
-                    "category_corrected", lang, merchant=raw_merchant.title(), category=canonical
-                )
-                logger.info(
-                    "conversation.category_override_saved",
-                    member_id=str(member.id),
-                    merchant=raw_merchant,
-                    category=canonical,
-                )
-                await send_text(to, reply)
-                await _save_outbound(member, reply, session)
-                return
+        corr_reply = await _handle_category_correction(
+            body, member, lang, session, member_overrides
+        )
+        if corr_reply is not None:
+            await send_text(to, corr_reply)
+            await _save_outbound(member, corr_reply, session)
+            return
 
         # 4e-2. M10 — nota rápida: "nota: X"
         m_note = _NOTE_RE.match(body)
@@ -3313,6 +3303,11 @@ async def handle_inbound(
             days_ago = expense_data.get("days_ago", 0)
             expense_date = datetime.now(UTC) - timedelta(days=days_ago)
 
+            # M14 — auto-tag with the active trip. Looked up BEFORE the expense is
+            # created so it is inserted once, already tagged.
+            active_trip = await session.scalar(
+                select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
+            )
             expense = Expense(
                 id=uuid.uuid4(),
                 member_id=member.id,
@@ -3324,15 +3319,9 @@ async def handle_inbound(
                 category=expense_data["category"],
                 description=expense_data["description"],
                 expense_date=expense_date,
+                trip_id=active_trip.id if active_trip else None,
             )
             session.add(expense)
-
-            # M14 — auto-tag with active trip
-            active_trip = await session.scalar(
-                select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
-            )
-            if active_trip:
-                expense.trip_id = active_trip.id
 
             name = (
                 expense_data["merchant"] or expense_data["description"] or expense_data["category"]
@@ -3346,13 +3335,15 @@ async def handle_inbound(
             if active_trip and txn_type == "expense":
                 from sqlalchemy import func as sa_func
 
+                await session.flush()  # make the new row visible to the SUM below
                 trip_total_res = await session.execute(
                     select(sa_func.coalesce(sa_func.sum(Expense.amount), 0)).where(
                         Expense.trip_id == active_trip.id,
                         Expense.transaction_type == "expense",
                     )
                 )
-                trip_total = float(trip_total_res.scalar() or 0) + expense_data["amount"]
+                # The SUM already includes this expense (flushed above): do NOT add it again.
+                trip_total = float(trip_total_res.scalar() or 0)
                 reply += _t(
                     "trip_expense_total",
                     lang,
