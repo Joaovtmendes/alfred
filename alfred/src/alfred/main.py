@@ -41,6 +41,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
     docs_url="/docs" if settings.environment != "production" else None,
+    openapi_url="/openapi.json" if settings.environment != "production" else None,
     redoc_url=None,
 )
 

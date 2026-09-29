@@ -52,6 +52,38 @@ async def test_webhook_verify_wrong_token(client: AsyncClient) -> None:
     assert resp.status_code == 403
 
 
+async def test_webhook_verify_rejects_placeholder_token_in_production(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "environment", "production")
+    monkeypatch.setattr(settings, "whatsapp_verify_token", "dev_verify_token")
+    resp = await client.get(
+        "/webhook/whatsapp",
+        params={
+            "hub.mode": "subscribe",
+            "hub.verify_token": "dev_verify_token",
+            "hub.challenge": "xyz",
+        },
+    )
+    assert resp.status_code == 403
+
+
+async def test_webhook_verify_accepts_real_token_in_production(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "environment", "production")
+    monkeypatch.setattr(settings, "whatsapp_verify_token", "a-long-random-secret")
+    resp = await client.get(
+        "/webhook/whatsapp",
+        params={
+            "hub.mode": "subscribe",
+            "hub.verify_token": "a-long-random-secret",
+            "hub.challenge": "xyz",
+        },
+    )
+    assert resp.status_code == 200 and resp.text == "xyz"
+
+
 # --- POST signature validation ---
 
 
