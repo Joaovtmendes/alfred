@@ -43,8 +43,9 @@ class Settings(BaseSettings):
     privacy_contact_email: str = ""  # shown on /privacy
     base_url: str = ""  # e.g. https://alfred.up.railway.app
 
-    # Security
-    secret_key: SecretStr = SecretStr("change-me-in-production")
+    # Expenses at or above this amount get an explicit "is this right?" hint (undo via
+    # "apaga" / "errei foram X"). Nothing is blocked: a hint costs no state and no round trip.
+    high_value_threshold: float = 1000.0
 
 
 settings = Settings()

@@ -26,6 +26,7 @@ class Lab:
         self.expense = AsyncMock(return_value=None)
         self.llm_reply = AsyncMock(return_value="[llm]")
         self.classify = AsyncMock(return_value=None)
+        self.multi = AsyncMock(return_value=[])
 
     async def say(self, body: str) -> str:
         """Send one message; returns the reply text."""
@@ -38,6 +39,7 @@ class Lab:
         with (
             patch("alfred.conversation.send_text", fake_send),
             patch("alfred.conversation.extract_expense", self.expense),
+            patch("alfred.conversation.extract_expenses_multi", self.multi),
             patch("alfred.conversation.extract_habit", AsyncMock(return_value=None)),
             patch("alfred.conversation.extract_health_log", AsyncMock(return_value=None)),
             patch("alfred.conversation.extract_workout", AsyncMock(return_value=None)),

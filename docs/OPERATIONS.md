@@ -85,3 +85,12 @@ python scripts/hard_test.py --blocos A,K --delay 2    # E2E contra produção
 chegam ao WhatsApp de teste. Corre-o **no Terminal do teu Mac**: dentro das sessões
 do Claude o proxy de rede bloqueia o domínio do Railway. Esse era o "403" registado
 em 28/09 — não era um firewall do Railway.
+
+## Regras de registo (Sprint 3)
+
+- Só euros: uma despesa em USD/GBP não é gravada (a resposta pede conversão). Somar moedas misturadas seria errado.
+- Mensagem com 2+ valores ("mercado 20 e farmácia 10") passa por `extract_expenses_multi`; cada item é gravado e os não-EUR são listados como ignorados.
+- Valores >= `HIGH_VALUE_THRESHOLD` (default 1000) recebem um aviso com o caminho de desfazer ("apaga" / "errei foram X"); não há bloqueio nem estado pendente.
+- "errei foram X" só corrige uma despesa criada nas últimas 2 h (`CORRECTION_WINDOW_HOURS`).
+- Fallback do LLM: se a resposta afirma "registada/saved/…", é substituída por `fallback_no_record` (nada foi gravado nesse caminho; o log tem `conversation.llm_false_record_claim`).
+- `SECRET_KEY` foi removida: nada a usava (o dashboard usa tokens UUID por membro).

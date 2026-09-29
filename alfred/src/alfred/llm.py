@@ -449,6 +449,57 @@ User: "resumo"
         return None
 
 
+_MULTI_SYSTEM = """You split ONE WhatsApp message into its separate financial transactions.
+The user writes in Portuguese, Dutch, English, French, or German.
+
+Return ONLY valid JSON (no other text):
+{"items": [{"type": "expense"|"income", "amount": <float>, "currency": "EUR"|"USD"|"GBP", "merchant": "<store/person or null>", "category": "<category>", "description": "<short description>", "days_ago": <int>}]}
+
+Categories: supermarkt, restaurant, transport, gezondheid, entertainment, wonen, kleding, abonnement, inkomen, overig
+Only include items that have BOTH an amount and something it was spent on / received for.
+If the message is not a list of transactions, return {"items": []}.
+Do not invent amounts. Amounts are positive numbers; the sign lives in "type"."""
+
+MAX_MULTI_ITEMS = 10
+
+
+async def extract_expenses_multi(text: str, lang: str = "en") -> list[dict]:
+    """Split a message with several transactions ("mercado 20 e farmácia 10").
+
+    Returns the sanitized items (possibly empty). Items the model got wrong are dropped by
+    ``sanitize_expense`` rather than guessed at.
+    """
+    try:
+        api_key = settings.llm_api_key.get_secret_value()
+        if not api_key or settings.llm_provider.lower() not in ("anthropic", "bedrock"):
+            return []
+        client = _get_client(api_key)
+        lang_instr = _LANG_INSTRUCTION.get(lang, _LANG_INSTRUCTION["en"])
+        response = await client.messages.create(
+            model=_anthropic_model_id(settings.llm_model),
+            max_tokens=768,
+            system=(
+                _MULTI_SYSTEM
+                + f"\n\n{lang_instr}"
+                + "\nThe 'category' field MUST use the Dutch canonical values above;"
+                + " 'description' MUST be in the user's language."
+            ),
+            messages=[{"role": "user", "content": text}],
+        )
+        data = parse_llm_json(response.content[0].text)
+        if not isinstance(data, dict) or not isinstance(data.get("items"), list):
+            return []
+        items = []
+        for raw in data["items"][:MAX_MULTI_ITEMS]:
+            clean = sanitize_expense(raw) if isinstance(raw, dict) else None
+            if clean:
+                items.append(clean)
+        return items
+    except Exception as exc:
+        logger.warning("llm.extract_multi_failed", error=str(exc))
+        return []
+
+
 # ── M7 — extract_workout ────────────────────────────────────────────────────
 
 _WORKOUT_SYSTEM = """You extract workout/exercise session data from a user message.

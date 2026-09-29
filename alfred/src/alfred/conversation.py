@@ -35,6 +35,7 @@ from alfred.labels import category_label
 from alfred.llm import (
     classify_query,
     extract_expense,
+    extract_expenses_multi,
     extract_habit,
     extract_health_log,
     extract_workout,
@@ -69,6 +70,7 @@ from alfred.parsing import (
     parse_period,
     strip_accents,
 )
+from alfred.settings import settings
 from alfred.validation import MAX_AMOUNT
 from alfred.whatsapp import send_text
 
@@ -425,6 +427,41 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "yesterday",
         "fr": "hier",
         "de": "gestern",
+    },
+    "currency_unsupported": {
+        "pt": 'Por agora só registo em euros — {cur} não foi guardado. Converte para € e envia de novo (ex.: "Jumbo 23,50").',
+        "nl": 'Ik registreer voorlopig alleen euro\'s — {cur} is niet opgeslagen. Reken om naar € en stuur opnieuw (bijv. "Jumbo 23,50").',
+        "en": 'I only record euros for now — {cur} was not saved. Convert to € and send it again (e.g. "Jumbo 23.50").',
+        "fr": "Je n'enregistre que des euros pour l'instant — {cur} n'a pas été enregistré. Convertis en € et renvoie (ex. « Jumbo 23,50 »).",
+        "de": "Ich erfasse vorerst nur Euro — {cur} wurde nicht gespeichert. Rechne in € um und sende es erneut (z. B. „Jumbo 23,50“).",
+    },
+    "high_value_hint": {
+        "pt": '\nValor alto — se estiver errado: "errei foram X" ou "apaga".',
+        "nl": '\nHoog bedrag — klopt het niet: "errei foram X" of "apaga".',
+        "en": '\nHigh amount — if it\'s wrong: "errei foram X" or "apaga".',
+        "fr": '\nMontant élevé — si c\'est faux : "errei foram X" ou "apaga".',
+        "de": '\nHoher Betrag — falls falsch: "errei foram X" oder "apaga".',
+    },
+    "multi_recorded_title": {
+        "pt": "Registadas {n} transações:",
+        "nl": "{n} transacties geregistreerd:",
+        "en": "Recorded {n} transactions:",
+        "fr": "{n} transactions enregistrées :",
+        "de": "{n} Buchungen erfasst:",
+    },
+    "multi_skipped_currency": {
+        "pt": "Não guardei {cur} (só euros): {name}.",
+        "nl": "Niet opgeslagen ({cur}, alleen euro's): {name}.",
+        "en": "Not saved ({cur}, euros only): {name}.",
+        "fr": "Non enregistré ({cur}, euros uniquement) : {name}.",
+        "de": "Nicht gespeichert ({cur}, nur Euro): {name}.",
+    },
+    "fallback_no_record": {
+        "pt": "Não registei nada. Envia uma despesa por linha com valor e descrição, por exemplo:\nMercado 20\nFarmácia 10",
+        "nl": "Ik heb niets geregistreerd. Stuur één uitgave per regel met bedrag en omschrijving, bijvoorbeeld:\nMercado 20\nFarmácia 10",
+        "en": "I didn't record anything. Send one expense per line with amount and description, e.g.:\nGroceries 20\nPharmacy 10",
+        "fr": "Je n'ai rien enregistré. Envoie une dépense par ligne avec montant et description, par ex. :\nCourses 20\nPharmacie 10",
+        "de": "Ich habe nichts erfasst. Sende eine Ausgabe pro Zeile mit Betrag und Beschreibung, z. B.:\nEinkauf 20\nApotheke 10",
     },
     "expense_corrected": {
         "pt": "Corrigido — {name}: {old} → {amount}",
@@ -1322,6 +1359,9 @@ _CAT_ALIAS: dict[str, str] = {
 }
 
 
+# A correction only rewrites an expense recorded moments ago; older ones are deleted/re-entered.
+CORRECTION_WINDOW_HOURS = 2
+
 _AMOUNT_CORRECTION_RE = re.compile(
     # The whole message must be the correction: "errei, foram 42€", "na verdade foram 32".
     # "actually I spent 20 at Lidl" is a new expense and must NOT rewrite the last one.
@@ -2019,6 +2059,28 @@ async def _save_outbound(
     session.add(outbound)
 
 
+_RECORDED_CLAIM_RE = re.compile(
+    r"registad[oa]s?|registei|guardad[oa]s?|recorded|saved|logged|"
+    r"geregistreerd|opgeslagen|enregistr[ée]e?s?|erfasst|gespeichert",
+    re.IGNORECASE,
+)
+_NUMBER_RE = re.compile(r"\d+(?:[.,]\d{1,2})?")
+
+
+def _claims_recorded(reply: str) -> bool:
+    """True when free-form LLM text says something was recorded/saved.
+
+    On the LLM fallback path nothing has been written, so such a sentence is always false;
+    the caller replaces the whole reply instead of letting the model invent a confirmation.
+    """
+    return bool(_RECORDED_CLAIM_RE.search(reply))
+
+
+def _looks_multi(body: str) -> bool:
+    """A message carrying two or more amounts may be several transactions."""
+    return len(_NUMBER_RE.findall(body)) >= 2
+
+
 def _fmt_eur(amount: float) -> str:
     """Format a float as PT-style euro: €1.234,56"""
     return f"€{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -2207,7 +2269,7 @@ async def _build_recent(member: Member, session: AsyncSession, n: int) -> str:
     lang = member.language or "en"
     res = await session.execute(
         select(Expense)
-        .where(Expense.member_id == member.id)
+        .where(Expense.member_id == member.id, Expense.transaction_type == "expense")
         .order_by(Expense.expense_date.desc(), Expense.created_at.desc())
         .limit(n)
     )
@@ -2216,10 +2278,9 @@ async def _build_recent(member: Member, session: AsyncSession, n: int) -> str:
         return _t("expense_delete_none", lang)
     lines = [f"{_t('last_expenses_title', lang, n=len(rows))}\n"]
     for e in rows:
-        sign = "+" if e.transaction_type == "income" else ""
         name = e.merchant or e.description or category_label(e.category, lang)
         day = to_local(e.expense_date).strftime("%d/%m")
-        lines.append(f"• {day} {name}: {sign}{_fmt_eur(e.amount)}")
+        lines.append(f"• {day} {name}: {_fmt_eur(e.amount)}")
     return "\n".join(lines)
 
 
@@ -3553,7 +3614,7 @@ async def handle_inbound(
                 new_amount = None
             # bounded: NUMERIC(12,2) would overflow (and the reply was already sent)
             if new_amount and 0 < round(new_amount, 2) <= MAX_AMOUNT:
-                cutoff = datetime.now(UTC) - timedelta(hours=24)
+                cutoff = datetime.now(UTC) - timedelta(hours=CORRECTION_WINDOW_HOURS)
                 res = await session.execute(
                     select(Expense)
                     .where(
@@ -3592,9 +3653,73 @@ async def handle_inbound(
                     await _save_outbound(member, reply, session)
                     return
 
+        # 4e-0e. Several transactions in one message: "mercado 20 e farmácia 10".
+        if _looks_multi(body):
+            items = await extract_expenses_multi(message.body or "", lang=member.language or "en")
+            if len(items) >= 2:
+                active_trip = await session.scalar(
+                    select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
+                )
+                any_high = False
+                lines: list[str] = []
+                skipped: list[str] = []
+                for item in items:
+                    item_name = item["merchant"] or item["description"] or item["category"]
+                    if item["currency"] != "EUR":
+                        skipped.append(
+                            _t(
+                                "multi_skipped_currency",
+                                lang,
+                                cur=item["currency"],
+                                name=item_name,
+                            )
+                        )
+                        continue
+                    session.add(
+                        Expense(
+                            id=uuid.uuid4(),
+                            member_id=member.id,
+                            household_id=member.household_id,
+                            transaction_type=item["type"],
+                            amount=item["amount"],
+                            currency="EUR",
+                            merchant=item["merchant"],
+                            category=item["category"],
+                            description=item["description"],
+                            expense_date=now_local() - timedelta(days=item["days_ago"]),
+                            trip_id=active_trip.id if active_trip else None,
+                        )
+                    )
+                    sign = "+" if item["type"] == "income" else ""
+                    lines.append(f"• {item_name}: {sign}{_fmt_eur(item['amount'])}")
+                    if item["amount"] >= settings.high_value_threshold:
+                        any_high = True
+                if lines:
+                    reply = "\n".join([_t("multi_recorded_title", lang, n=len(lines)), *lines])
+                    if any_high:
+                        reply += _t("high_value_hint", lang)
+                    if skipped:
+                        reply += "\n" + "\n".join(skipped)
+                else:
+                    reply = "\n".join(skipped)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                logger.info(
+                    "conversation.multi_expense_recorded",
+                    member_id=str(member.id),
+                    recorded=len(lines),
+                    skipped=len(skipped),
+                )
+                return
+
         expense_data = await extract_expense(
             message.body or "", merchant_overrides=member_overrides, lang=member.language or "en"
         )
+        if expense_data and expense_data["currency"] != "EUR":
+            reply = _t("currency_unsupported", lang, cur=expense_data["currency"])
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
         if expense_data:
             txn_type = expense_data.get("type", "expense")
             days_ago = expense_data.get("days_ago", 0)
@@ -3660,6 +3785,8 @@ async def handle_inbound(
             ):
                 reply += _t("category_hint_overig", lang, merchant=expense_data["merchant"])
 
+            if expense_data["amount"] >= settings.high_value_threshold:
+                reply += _t("high_value_hint", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             logger.info(
@@ -3711,6 +3838,10 @@ async def handle_inbound(
                 # 4g. General LLM reply with conversation history
         history = await _load_history(member, session, exclude_id=message.id)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
+        if _claims_recorded(reply):
+            # Nothing was written on this path: never let the model confirm a phantom record.
+            logger.warning("conversation.llm_false_record_claim", member_id=str(member.id))
+            reply = _t("fallback_no_record", lang)
         await send_text(to, reply)
         await _save_outbound(member, reply, session)
         logger.info("conversation.reply_sent", member_id=str(member.id))
