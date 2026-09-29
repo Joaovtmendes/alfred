@@ -94,3 +94,9 @@ em 28/09 — não era um firewall do Railway.
 - "errei foram X" só corrige uma despesa criada nas últimas 2 h (`CORRECTION_WINDOW_HOURS`).
 - Fallback do LLM: se a resposta afirma "registada/saved/…", é substituída por `fallback_no_record` (nada foi gravado nesse caminho; o log tem `conversation.llm_false_record_claim`).
 - `SECRET_KEY` foi removida: nada a usava (o dashboard usa tokens UUID por membro).
+
+## Endurecimento (Sprint 4a)
+
+- `GET /webhook/whatsapp` (verificação da Meta) recusa em produção o token vazio ou o placeholder `dev_verify_token` e compara em tempo constante. Definir `WHATSAPP_VERIFY_TOKEN` (valor aleatório) no Railway e o mesmo valor no webhook da Meta.
+- `/openapi.json` e `/docs` estão desligados em produção.
+- Scan estático: Bandit limpo (semgrep depende de semgrep.dev, bloqueado no ambiente do Claude; correr localmente com `semgrep --config p/python --config p/security-audit --metrics=off`).
