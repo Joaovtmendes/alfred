@@ -47,6 +47,9 @@ A lista completa, com explicação, está em `alfred/.env.example`. As críticas
 - Deploy: a migração `a1d5c7e9b3f2` marca as mensagens antigas como processadas e converte
   valores inválidos (NaN/inf/≥1e10) em 0,00 em vez de falhar. Numa segunda instância em
   paralelo (deploy rolling), a linha da mensagem é reservada com `SKIP LOCKED`.
+- Ordem das respostas: quem obtém o lock do membro processa a mensagem mais antiga ainda por
+  responder (não necessariamente a sua), até chegar à sua. Uma mensagem que falha é tentada
+  uma vez por rajada e não bloqueia as seguintes.
 
 ## Lembretes (cron)
 
