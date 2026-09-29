@@ -2671,7 +2671,8 @@ async def handle_inbound(
                 # Validate HH:MM
                 try:
                     hh, mm = time_str.split(":")
-                    assert 0 <= int(hh) <= 23 and 0 <= int(mm) <= 59
+                    if not (0 <= int(hh) <= 23 and 0 <= int(mm) <= 59):
+                        raise ValueError("time out of range")
                 except Exception:
                     reply = _t("lembrete_invalid", lang)
                     await send_text(to, reply)

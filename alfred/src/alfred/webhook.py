@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import hmac
 import uuid
 import weakref
 from dataclasses import dataclass
@@ -97,7 +98,17 @@ async def verify_webhook(
     hub_verify_token: str = Query(alias="hub.verify_token", default=""),
     hub_challenge: str = Query(alias="hub.challenge", default=""),
 ) -> Response:
-    if hub_mode == "subscribe" and hub_verify_token == settings.whatsapp_verify_token:
+    expected = settings.whatsapp_verify_token
+    # In production a missing/placeholder verify token must not be accepted: the placeholder is
+    # public in the repo. (Meta only calls this when the webhook is (re)configured.)
+    insecure = settings.environment == "production" and expected in ("", "dev_verify_token")
+    if insecure:
+        logger.error("webhook.verify_token_not_configured")
+    if (
+        hub_mode == "subscribe"
+        and not insecure
+        and hmac.compare_digest(hub_verify_token.encode(), expected.encode())
+    ):
         logger.info("webhook.verified")
         return Response(content=hub_challenge, media_type="text/plain")
     logger.warning("webhook.verify_failed", mode=hub_mode)
