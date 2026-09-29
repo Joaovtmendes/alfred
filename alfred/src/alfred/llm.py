@@ -11,6 +11,7 @@ import structlog
 from alfred.models import Member, Message
 from alfred.settings import settings
 from alfred.validation import (
+    parse_llm_json,
     sanitize_expense,
     sanitize_habit,
     sanitize_health,
@@ -57,7 +58,11 @@ STIJLREGELS (VERPLICHT):
 BELANGRIJK — je registreert zelf NIETS en je hebt geen toegang tot gegevens:
 - Als dit bericht een uitgave of inkomen lijkt: het is NIET geregistreerd. Bevestig nooit een registratie.
   Vraag de gebruiker het opnieuw te sturen met bedrag en omschrijving, bijvoorbeeld: "Jumbo 23,50".
-- Als de gebruiker om een overzicht vraagt: verzin geen cijfers. Verwijs naar het commando "resumo" / "overzicht" / "summary" of "saldo"."""
+- Als de gebruiker om een overzicht vraagt: verzin geen cijfers. Verwijs naar het commando "resumo" / "overzicht" / "summary" of "saldo".
+- Je zegt NOOIT dat je geen toegang hebt of iets niet kunt verwijderen als het een van deze commando's is;
+  verwijs er dan naar. Bestaande commando's: "saldo", "gastos de hoje/ontem/setembro/este ano",
+  "ultimas 5 despesas", "top categorias", "apaga" (wist de laatste uitgave),
+  "errei foram 42" (corrigeert de laatste uitgave), "dashboard"."""
 
 
 _LLM_ERROR: dict[str, str] = {
@@ -297,12 +302,11 @@ EXAMPLES:
             messages=[{"role": "user", "content": text}],
         )
 
-        raw = response.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw.strip())
+        raw = response.content[0].text
+        data = parse_llm_json(raw)
+        if data is None:
+            logger.info("llm.no_json_object", chars=len(raw))
+            return None
 
         if not data.get("is_query"):
             return None
@@ -429,13 +433,11 @@ User: "resumo"
             messages=[{"role": "user", "content": text}],
         )
 
-        raw = response.content[0].text.strip()
-        # Strip markdown code fences if present
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw.strip())
+        raw = response.content[0].text
+        data = parse_llm_json(raw)
+        if data is None:
+            logger.info("llm.no_json_object", chars=len(raw))
+            return None
 
         if not data.get("is_expense"):
             return None
@@ -478,12 +480,11 @@ async def extract_workout(text: str, lang: str = "en") -> dict | None:
             system=workout_system,
             messages=[{"role": "user", "content": text}],
         )
-        raw = response.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw.strip())
+        raw = response.content[0].text
+        data = parse_llm_json(raw)
+        if data is None:
+            logger.info("llm.no_json_object", chars=len(raw))
+            return None
 
         if not data.get("is_workout"):
             return None
@@ -530,12 +531,11 @@ async def extract_health_log(text: str, lang: str = "en") -> dict | None:
             system=health_system,
             messages=[{"role": "user", "content": text}],
         )
-        raw = response.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw.strip())
+        raw = response.content[0].text
+        data = parse_llm_json(raw)
+        if data is None:
+            logger.info("llm.no_json_object", chars=len(raw))
+            return None
 
         if not data.get("is_health"):
             return None
@@ -581,12 +581,11 @@ async def extract_habit(text: str, lang: str = "en") -> dict | None:
             system=habit_system,
             messages=[{"role": "user", "content": text}],
         )
-        raw = response.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw.strip())
+        raw = response.content[0].text
+        data = parse_llm_json(raw)
+        if data is None:
+            logger.info("llm.no_json_object", chars=len(raw))
+            return None
 
         if not data.get("is_habit"):
             return None

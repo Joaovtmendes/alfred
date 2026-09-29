@@ -292,3 +292,76 @@ async def test_two_workers_never_handle_the_same_message(client) -> None:
         first_ok = await first
     assert calls == ["run"] and first_ok is True and second is False
     await _cleanup(phone)
+
+
+async def test_replies_follow_arrival_order_even_if_tasks_start_out_of_order(client) -> None:
+    """A burst: the background task of the NEWER message gets the lock first. The older
+    message must still be answered first (replies used to arrive shuffled)."""
+    from alfred.webhook import Inbound, dispatch_inbound
+
+    phone = "3160" + uuid.uuid4().hex[:7]
+    with patch("alfred.webhook.dispatch_inbound", new_callable=AsyncMock):
+        for text in ("primeira", "segunda", "terceira"):
+            await _post(client, _payload(phone, text))
+    async with AsyncSessionLocal() as s:
+        member = (await s.execute(select(Member).where(Member.wa_phone == phone))).scalar_one()
+        msgs = (
+            (
+                await s.execute(
+                    select(Message)
+                    .where(Message.author_id == member.id)
+                    .order_by(Message.created_at.asc())
+                )
+            )
+            .scalars()
+            .all()
+        )
+        items = [Inbound(member.id, m.id, m.wa_message_id) for m in msgs]
+
+    handled: list[str] = []
+
+    async def handler(member, message, session):
+        handled.append(message.body)
+
+    with patch("alfred.conversation.handle_inbound", handler):
+        # the third task runs first, then the others: each finds its work already done
+        results = [await dispatch_inbound(i) for i in reversed(items)]
+    assert handled == ["primeira", "segunda", "terceira"]
+    assert results == [True, True, True]
+    await _cleanup(phone)
+
+
+async def test_a_failing_older_message_does_not_block_or_loop(client) -> None:
+    from alfred.webhook import Inbound, dispatch_inbound
+
+    phone = "3160" + uuid.uuid4().hex[:7]
+    with patch("alfred.webhook.dispatch_inbound", new_callable=AsyncMock):
+        await _post(client, _payload(phone, "quebra"))
+        await _post(client, _payload(phone, "normal"))
+    async with AsyncSessionLocal() as s:
+        member = (await s.execute(select(Member).where(Member.wa_phone == phone))).scalar_one()
+        msgs = (
+            (
+                await s.execute(
+                    select(Message)
+                    .where(Message.author_id == member.id)
+                    .order_by(Message.created_at.asc())
+                )
+            )
+            .scalars()
+            .all()
+        )
+        newer = Inbound(member.id, msgs[1].id, msgs[1].wa_message_id)
+
+    handled: list[str] = []
+
+    async def handler(member, message, session):
+        handled.append(message.body)
+        if message.body == "quebra":
+            raise RuntimeError("boom")
+
+    with patch("alfred.conversation.handle_inbound", handler):
+        ok = await dispatch_inbound(newer)
+    assert handled == ["quebra", "normal"]  # tried once, then moved on
+    assert ok is True
+    await _cleanup(phone)

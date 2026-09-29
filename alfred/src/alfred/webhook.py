@@ -27,7 +27,7 @@ from dataclasses import dataclass
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import select, true
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -232,8 +232,6 @@ async def dispatch_inbound(item: Inbound) -> bool:
     where an exception would just be lost); failures are logged and leave the message
     ``processed = false`` so ``recover_unprocessed`` can retry.
     """
-    from alfred.conversation import handle_inbound
-
     log = logger.bind(wa_message_id=item.wa_message_id, member_id=str(item.member_id))
     try:
         # member lock first (waiters must not hold a slot), then the concurrency slot
@@ -243,35 +241,70 @@ async def dispatch_inbound(item: Inbound) -> bool:
             AsyncSessionLocal() as session,
         ):
             member = await session.get(Member, item.member_id)
-            # Claim the row: held until commit, so another process (rolling deploy, the
-            # recovery sweep) skips it instead of answering the same message twice.
-            stored = (
-                await session.execute(
-                    select(Message)
-                    .where(Message.id == item.message_id)
-                    .with_for_update(skip_locked=True)
-                )
-            ).scalar_one_or_none()
-            if member is None or stored is None:
-                log.info("webhook.dispatch_skipped", reason="missing_or_claimed")
+            if member is None:
+                log.info("webhook.dispatch_skipped", reason="missing_member")
                 return False
-            if stored.processed:
-                return True  # another worker got there first
-            try:
-                # SAVEPOINT: if the handler fails half-way, its partial writes are
-                # rolled back but the inbound message stays stored.
-                async with session.begin_nested():
-                    await handle_inbound(member, stored, session)
-            except Exception as exc:
-                log.error("webhook.handle_inbound_failed", error=str(exc), exc_info=True)
-                await session.commit()  # keep whatever the savepoint left (the message)
-                return False
-            stored.processed = True
-            await session.commit()
-            return True
+            # Answer in arrival order: requests finish (and start their background task)
+            # in any order, so whichever task gets the lock first takes the OLDEST unanswered
+            # message of this member, not necessarily its own. Repeat until ours is done.
+            attempted: set[uuid.UUID] = set()
+            oldest_allowed = datetime.datetime.now(datetime.UTC) - RECOVER_MAX_AGE
+            while True:
+                # Claim the row: held until commit, so another process (rolling deploy, the
+                # recovery sweep) skips it instead of answering the same message twice.
+                stored = (
+                    await session.execute(
+                        select(Message)
+                        .where(
+                            Message.author_id == item.member_id,
+                            Message.direction == "inbound",
+                            Message.processed.is_(False),
+                            Message.created_at >= oldest_allowed,
+                            Message.id.not_in(attempted) if attempted else true(),
+                        )
+                        .order_by(Message.created_at.asc(), Message.id.asc())
+                        .limit(1)
+                        .with_for_update(skip_locked=True)
+                    )
+                ).scalar_one_or_none()
+                if stored is None:
+                    # nothing left to claim: ours is done (True) or held by another worker
+                    done = await session.scalar(
+                        select(Message.processed).where(Message.id == item.message_id)
+                    )
+                    if not done:
+                        log.info("webhook.dispatch_skipped", reason="missing_or_claimed")
+                    return bool(done)
+                attempted.add(stored.id)
+                ok = await _handle_one(member, stored, session, log)
+                if stored.id == item.message_id:
+                    return ok
     except Exception as exc:  # DB down etc. — the message is stored; recovery retries
         log.error("webhook.dispatch_failed", error=str(exc), exc_info=True)
         return False
+
+
+async def _handle_one(member, stored, session, log) -> bool:
+    """Run the handler for one claimed message; commit either way. True when it finished."""
+    from alfred.conversation import handle_inbound
+
+    try:
+        # SAVEPOINT: if the handler fails half-way, its partial writes are rolled back
+        # but the inbound message stays stored.
+        async with session.begin_nested():
+            await handle_inbound(member, stored, session)
+    except Exception as exc:
+        log.error(
+            "webhook.handle_inbound_failed",
+            wa_message_id=stored.wa_message_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        await session.commit()  # keep whatever the savepoint left (the message)
+        return False
+    stored.processed = True
+    await session.commit()
+    return True
 
 
 async def recover_unprocessed(now: datetime.datetime | None = None, limit: int = 20) -> int:
