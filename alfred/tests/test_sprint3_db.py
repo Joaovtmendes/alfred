@@ -1,0 +1,152 @@
+"""Sprint 3: no phantom confirmations, euro-only, several items per message, safer edits.
+
+Real PostgreSQL (ALFRED_TEST_DB=1); see labkit.
+"""
+
+from __future__ import annotations
+
+import os
+from datetime import timedelta
+
+import pytest
+from sqlalchemy import func, select
+
+from alfred.clock import now_local
+from alfred.conversation import _claims_recorded, _looks_multi
+from alfred.models import Expense
+from tests.labkit import Lab
+
+
+def test_claims_recorded_detects_false_confirmations() -> None:
+    assert _claims_recorded("Pizza — €12,00 registada.")
+    assert _claims_recorded("Farmácia foi registado: 10,00.")
+    assert _claims_recorded("Saved your expense")
+    assert not _claims_recorded("Envia cada despesa separada: Mercado 25")
+
+
+def test_looks_multi_needs_two_amounts() -> None:
+    assert _looks_multi("fui no mercado e gastei 20,00 e 10 de farmácia")
+    assert _looks_multi("Mercado 20\nFarmácia 10")
+    assert not _looks_multi("Jumbo 23,50")
+    assert not _looks_multi("olá")
+
+
+pytestmark_db = pytest.mark.skipif(os.environ.get("ALFRED_TEST_DB") != "1", reason="needs test DB")
+
+
+def _item(amount, name, *, category="supermarkt", currency="EUR", kind="expense"):
+    return {
+        "amount": amount,
+        "currency": currency,
+        "merchant": name,
+        "category": category,
+        "description": name,
+        "type": kind,
+        "days_ago": 0,
+    }
+
+
+async def _count(lab: Lab) -> int:
+    return await lab.scalar(
+        select(func.count()).select_from(Expense).where(Expense.member_id == lab.member_id)
+    )
+
+
+@pytestmark_db
+async def test_llm_false_record_claim_is_replaced(lab: Lab) -> None:
+    lab.llm_reply.return_value = "Pizza — €12,00 registada. Renda — €99.999,00 registada."
+    reply = await lab.say("vou ao cinema e depois janto fora")
+    assert "registada" not in reply.lower().replace("não registei", "")
+    assert "Não registei nada" in reply
+    assert await _count(lab) == 0
+
+
+@pytestmark_db
+async def test_multi_expense_message_records_every_item(lab: Lab) -> None:
+    lab.multi.return_value = [
+        _item(20, "Mercado"),
+        _item(10, "Farmácia", category="gezondheid"),
+    ]
+    reply = await lab.say("Fui no mercado e gastei 20,00 e 10 de farmácia")
+    assert "2 transações" in reply
+    assert "Mercado" in reply and "Farmácia" in reply
+    assert await _count(lab) == 2
+    lab.llm_reply.assert_not_awaited()
+
+
+@pytestmark_db
+async def test_multi_skips_foreign_currency_but_records_euro_items(lab: Lab) -> None:
+    lab.multi.return_value = [_item(20, "Mercado"), _item(50, "Hotel", currency="USD")]
+    reply = await lab.say("Mercado 20 e hotel 50 dollars")
+    assert await _count(lab) == 1
+    assert "USD" in reply and "só euros" in reply
+
+
+@pytestmark_db
+async def test_single_foreign_currency_is_not_stored(lab: Lab) -> None:
+    lab.expense.return_value = _item(50, "Amazon", currency="USD")
+    reply = await lab.say("Amazon 50 dollars")
+    assert "só registo em euros" in reply
+    assert await _count(lab) == 0
+
+
+@pytestmark_db
+async def test_high_value_gets_a_hint_and_small_does_not(lab: Lab) -> None:
+    lab.expense.return_value = _item(1200, "Computador", category="overig")
+    big = await lab.say("computador 1200")
+    assert "Valor alto" in big
+    lab.expense.return_value = _item(23, "Jumbo")
+    assert "Valor alto" not in await lab.say("jumbo 23")
+
+
+@pytestmark_db
+async def test_ultimas_despesas_excludes_income(lab: Lab) -> None:
+    await lab.add(
+        Expense(
+            member_id=lab.member_id,
+            household_id=lab.household_id,
+            transaction_type="income",
+            amount=3000,
+            merchant="Salário",
+            category="inkomen",
+            expense_date=now_local(),
+        ),
+        Expense(
+            member_id=lab.member_id,
+            household_id=lab.household_id,
+            transaction_type="expense",
+            amount=25,
+            merchant="Mercado",
+            category="supermarkt",
+            expense_date=now_local() - timedelta(days=1),
+        ),
+    )
+    reply = await lab.say("ultimas 5 despesas")
+    assert "Mercado" in reply and "Salário" not in reply
+
+
+@pytestmark_db
+async def test_correction_ignores_expenses_older_than_the_window(lab: Lab) -> None:
+    old = Expense(
+        member_id=lab.member_id,
+        household_id=lab.household_id,
+        transaction_type="expense",
+        amount=1200,
+        merchant="Computador",
+        category="overig",
+        expense_date=now_local(),
+    )
+    await lab.add(old)
+    async with __import__("alfred.db", fromlist=["AsyncSessionLocal"]).AsyncSessionLocal() as s:
+        from sqlalchemy import update
+
+        await s.execute(
+            update(Expense)
+            .where(Expense.id == old.id)
+            .values(created_at=now_local() - timedelta(hours=5))
+        )
+        await s.commit()
+    reply = await lab.say("errei foram 99")
+    assert "Corrigido" not in reply
+    amount = await lab.scalar(select(Expense.amount).where(Expense.id == old.id))
+    assert float(amount) == 1200.0
