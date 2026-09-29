@@ -1,0 +1,89 @@
+"""Shared harness for DB-backed router tests: a real member + ``say()``.
+
+Only the WhatsApp sender and the LLM calls are patched; router, SQL and models are real.
+"""
+
+from __future__ import annotations
+
+import uuid
+from unittest.mock import AsyncMock, patch
+
+import pytest
+from sqlalchemy import delete
+
+from alfred.conversation import handle_inbound
+from alfred.db import AsyncSessionLocal, engine
+from alfred.models import Base, Household, Member, Message
+from tests.conftest import make_message
+
+
+class Lab:
+    """A member in a real DB plus a ``say()`` that runs one inbound message."""
+
+    def __init__(self, member_id: uuid.UUID, household_id: uuid.UUID, phone: str) -> None:
+        self.member_id, self.household_id, self.phone = member_id, household_id, phone
+        self.sent: list[str] = []
+        self.expense = AsyncMock(return_value=None)
+        self.llm_reply = AsyncMock(return_value="[llm]")
+        self.classify = AsyncMock(return_value=None)
+
+    async def say(self, body: str) -> str:
+        """Send one message; returns the reply text."""
+        before = len(self.sent)
+
+        async def fake_send(to: str, text: str) -> dict:
+            self.sent.append(text)
+            return {}
+
+        with (
+            patch("alfred.conversation.send_text", fake_send),
+            patch("alfred.conversation.extract_expense", self.expense),
+            patch("alfred.conversation.extract_habit", AsyncMock(return_value=None)),
+            patch("alfred.conversation.extract_health_log", AsyncMock(return_value=None)),
+            patch("alfred.conversation.extract_workout", AsyncMock(return_value=None)),
+            patch("alfred.conversation.classify_query", self.classify),
+            patch("alfred.conversation.generate_reply", self.llm_reply),
+        ):
+            async with AsyncSessionLocal() as s:
+                member = await s.get(Member, self.member_id)
+                await handle_inbound(member, make_message(body), s)
+                await s.commit()
+        assert len(self.sent) == before + 1, f"expected exactly one reply, got {self.sent[before:]}"
+        return self.sent[-1]
+
+    async def scalar(self, stmt):
+        async with AsyncSessionLocal() as s:
+            return (await s.execute(stmt)).scalar()
+
+    async def rows(self, stmt) -> list:
+        async with AsyncSessionLocal() as s:
+            return list((await s.execute(stmt)).all())
+
+    async def add(self, *rows) -> None:
+        async with AsyncSessionLocal() as s:
+            s.add_all(rows)
+            await s.commit()
+
+
+@pytest.fixture
+async def lab():
+    await engine.dispose()  # each test runs in its own event loop
+    phone = "3160" + uuid.uuid4().hex[:7]
+    async with AsyncSessionLocal() as s:
+        hh = Household(name="bugs")
+        s.add(hh)
+        await s.flush()
+        m = Member(household_id=hh.id, wa_phone=phone, consent_state="accepted", language="pt")
+        s.add(m)
+        await s.commit()
+        lab = Lab(m.id, hh.id, phone)
+    yield lab
+    async with AsyncSessionLocal() as s:
+        # every table that hangs off the member, children first
+        for table in reversed(Base.metadata.sorted_tables):
+            if "member_id" in table.c and table.name != "member":
+                await s.execute(delete(table).where(table.c.member_id == lab.member_id))
+        await s.execute(delete(Message).where(Message.household_id == lab.household_id))
+        await s.execute(delete(Member).where(Member.id == lab.member_id))
+        await s.execute(delete(Household).where(Household.id == lab.household_id))
+        await s.commit()

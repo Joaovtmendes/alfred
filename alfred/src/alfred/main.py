@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from contextlib import asynccontextmanager
 
@@ -12,6 +13,7 @@ from fastapi.responses import JSONResponse
 from alfred.dashboard import router as dashboard_router
 from alfred.legal import router as legal_router
 from alfred.settings import settings
+from alfred.webhook import recovery_loop
 from alfred.webhook import router as webhook_router
 
 logger = structlog.get_logger(__name__)
@@ -24,8 +26,13 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     logger.info(
         "alfred.startup", environment=settings.environment, base_url=settings.base_url or "<EMPTY>"
     )
-    yield
-    logger.info("alfred.shutdown")
+    # Safety net for the webhook's background processing (see alfred.webhook).
+    recovery = asyncio.create_task(recovery_loop(), name="webhook-recovery")
+    try:
+        yield
+    finally:
+        recovery.cancel()
+        logger.info("alfred.shutdown")
 
 
 app = FastAPI(

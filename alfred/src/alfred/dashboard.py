@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred.clock import day_start, month_name, to_local, today_local
 from alfred.db import get_session
 from alfred.models import Expense, Goal, HabitLog, HealthLog, Member, Note, Task
 
@@ -40,6 +41,19 @@ async def _get_member(token_str: str, session: AsyncSession) -> Member:
     return member
 
 
+def _parse_month(raw: str | None, today: date) -> tuple[int, int]:
+    """``YYYY-MM`` → (year, month); anything malformed or out of range → current month."""
+    if raw:
+        try:
+            year_s, month_s = raw.split("-")
+            year, month = int(year_s), int(month_s)
+            if 2000 <= year <= today.year + 1 and 1 <= month <= 12:
+                return year, month
+        except ValueError:
+            pass
+    return today.year, today.month
+
+
 # ── JSON API ──────────────────────────────────────────────────────────────────
 
 
@@ -51,18 +65,14 @@ async def dashboard_api(
 ) -> JSONResponse:
     member = await _get_member(token, session)
 
-    today = date.today()
-    if month:
-        try:
-            sel_year, sel_month = (int(x) for x in month.split("-"))
-        except (ValueError, AttributeError):
-            sel_year, sel_month = today.year, today.month
-    else:
-        sel_year, sel_month = today.year, today.month
+    today = today_local()
+    sel_year, sel_month = _parse_month(month, today)
 
     month_start = date(sel_year, sel_month, 1)
     _, last_day = monthrange(sel_year, sel_month)
     month_end = date(sel_year, sel_month, last_day)
+    # [start, end) in the user's timezone — index-friendly, unlike func.date(...)
+    month_lo, month_hi = day_start(month_start), day_start(month_end + timedelta(days=1))
 
     # ── Financial ─────────────────────────────────────────────────────────────
     exp_q = await session.execute(
@@ -70,17 +80,17 @@ async def dashboard_api(
         .where(
             and_(
                 Expense.member_id == member.id,
-                func.date(Expense.expense_date) >= month_start,
-                func.date(Expense.expense_date) <= month_end,
+                Expense.expense_date >= month_lo,
+                Expense.expense_date < month_hi,
             )
         )
         .order_by(Expense.expense_date.desc())
     )
     month_txs = exp_q.scalars().all()
 
-    total_expense = sum(e.amount for e in month_txs if e.transaction_type == "expense")
-    total_income = sum(e.amount for e in month_txs if e.transaction_type == "income")
-    balance = total_income - total_expense
+    total_expense = round(sum(e.amount for e in month_txs if e.transaction_type == "expense"), 2)
+    total_income = round(sum(e.amount for e in month_txs if e.transaction_type == "income"), 2)
+    balance = round(total_income - total_expense, 2)
 
     cat_totals: dict[str, float] = defaultdict(float)
     for e in month_txs:
@@ -102,8 +112,8 @@ async def dashboard_api(
             select(Expense).where(
                 and_(
                     Expense.member_id == member.id,
-                    func.date(Expense.expense_date) >= ms,
-                    func.date(Expense.expense_date) <= me,
+                    Expense.expense_date >= day_start(ms),
+                    Expense.expense_date < day_start(me + timedelta(days=1)),
                 )
             )
         )
@@ -111,7 +121,7 @@ async def dashboard_api(
         history.append(
             {
                 "month": f"{y:04d}-{m:02d}",
-                "label": ms.strftime("%b %y"),
+                "label": f"{month_name(ms, member.language or 'pt')[:3]} {ms.year % 100:02d}",
                 "total_expense": round(
                     sum(e.amount for e in h if e.transaction_type == "expense"), 2
                 ),
@@ -123,7 +133,7 @@ async def dashboard_api(
 
     recent_transactions = [
         {
-            "date": e.expense_date.strftime("%d/%m") if e.expense_date else "",
+            "date": to_local(e.expense_date).strftime("%d/%m") if e.expense_date else "",
             "merchant": e.merchant or "-",
             "category": e.category or "Outros",
             "amount": round(e.amount, 2),
@@ -196,7 +206,8 @@ async def dashboard_api(
         select(Note).where(Note.member_id == member.id).order_by(Note.created_at.desc()).limit(6)
     )
     notes = [
-        {"body": n.body, "date": n.created_at.strftime("%d/%m/%Y")} for n in nq.scalars().all()
+        {"body": n.body, "date": to_local(n.created_at).strftime("%d/%m/%Y")}
+        for n in nq.scalars().all()
     ]
 
     # ── Health ─────────────────────────────────────────────────────────────────
@@ -512,12 +523,12 @@ function render(d){
   } else {
     txList.innerHTML = d.recent_transactions.map(t => `
       <div class="tx-row">
-        <div class="tx-date">${t.date}</div>
+        <div class="tx-date">${esc(t.date)}</div>
         <div class="tx-info">
           <div class="tx-merchant">${esc(t.merchant)}</div>
           <div class="tx-cat">${esc(t.category)}</div>
         </div>
-        <div class="tx-amt ${t.type}">${t.type==="income"?"+":"−"}${fmtEur(t.amount)}</div>
+        <div class="tx-amt ${t.type==="income"?"income":"expense"}">${t.type==="income"?"+":"−"}${fmtEur(t.amount)}</div>
       </div>`).join("");
   }
 
@@ -529,7 +540,7 @@ function render(d){
     goalsList.innerHTML = d.goals.map(g => `
       <div class="goal-item">
         <div class="goal-title">${esc(g.title)}</div>
-        <div class="goal-meta">${g.target ? esc(g.target) : ""}${g.deadline ? " · " + g.deadline : ""}</div>
+        <div class="goal-meta">${g.target ? esc(g.target) : ""}${g.deadline ? " · " + esc(g.deadline) : ""}</div>
       </div>`).join("");
   }
 
@@ -554,7 +565,7 @@ function render(d){
     tasksList.innerHTML = d.tasks.map(t => `
       <div class="task-item">
         <div class="task-body">${esc(t.body)}</div>
-        ${t.due_date ? `<div class="task-due">📅 ${t.due_date}</div>` : ""}
+        ${t.due_date ? `<div class="task-due">📅 ${esc(t.due_date)}</div>` : ""}
       </div>`).join("");
   }
 
@@ -566,7 +577,7 @@ function render(d){
     notesList.innerHTML = d.notes.map(n => `
       <div class="note-item">
         <div class="tx-merchant">${esc(n.body)}</div>
-        <div class="note-date">${n.date}</div>
+        <div class="note-date">${esc(n.date)}</div>
       </div>`).join("");
   }
 
@@ -577,7 +588,7 @@ function render(d){
   } else {
     const labels = {medication:"💊 Medicação",mood:"😊 Humor",sleep:"😴 Sono",water:"💧 Água"};
     chips.innerHTML = d.health.map(h => `
-      <div class="chip">${labels[h.type]||h.type}: <span>${h.count}x</span></div>`).join("");
+      <div class="chip">${esc(labels[h.type]||h.type)}: <span>${Number(h.count)}x</span></div>`).join("");
   }
 }
 
@@ -682,7 +693,8 @@ function renderBar(history){
 
 function esc(s){
   if(!s) return "";
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
 
 // Re-render charts on resize / orientation change

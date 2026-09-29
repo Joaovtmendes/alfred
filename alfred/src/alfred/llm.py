@@ -10,6 +10,13 @@ import structlog
 
 from alfred.models import Member, Message
 from alfred.settings import settings
+from alfred.validation import (
+    sanitize_expense,
+    sanitize_habit,
+    sanitize_health,
+    sanitize_query,
+    sanitize_workout,
+)
 
 logger = structlog.get_logger()
 
@@ -306,11 +313,7 @@ EXAMPLES:
             category=data.get("category"),
             period=data.get("period"),
         )
-        return {
-            "query_type": data.get("query_type", "period"),
-            "category": data.get("category") or None,
-            "period": data.get("period") or "current_month",
-        }
+        return sanitize_query(data)
 
     except Exception as exc:
         logger.warning("llm.classify_query_failed", error=str(exc))
@@ -437,15 +440,7 @@ User: "resumo"
         if not data.get("is_expense"):
             return None
 
-        return {
-            "amount": float(data.get("amount", 0)),
-            "currency": data.get("currency", "EUR"),
-            "merchant": data.get("merchant") or None,
-            "category": data.get("category", "overig"),
-            "description": data.get("description", ""),
-            "type": data.get("type", "expense"),
-            "days_ago": int(data.get("days_ago", 0)),
-        }
+        return sanitize_expense(data)
 
     except Exception as exc:
         logger.warning("llm.extract_expense_failed", error=str(exc))
@@ -493,13 +488,7 @@ async def extract_workout(text: str, lang: str = "en") -> dict | None:
         if not data.get("is_workout"):
             return None
 
-        return {
-            "activity_type": data.get("activity_type", "other"),
-            "duration_minutes": data.get("duration_minutes"),
-            "distance_km": data.get("distance_km"),
-            "notes": data.get("notes"),
-            "days_ago": int(data.get("days_ago", 0)),
-        }
+        return sanitize_workout(data)
     except Exception as exc:
         logger.warning("llm.extract_workout_failed", error=str(exc))
         return None
@@ -551,13 +540,7 @@ async def extract_health_log(text: str, lang: str = "en") -> dict | None:
         if not data.get("is_health"):
             return None
 
-        return {
-            "log_type": data.get("log_type", "medication"),
-            "value": str(data.get("value", "")),
-            "unit": data.get("unit"),
-            "notes": data.get("notes"),
-            "days_ago": int(data.get("days_ago", 0)),
-        }
+        return sanitize_health(data)
     except Exception as exc:
         logger.warning("llm.extract_health_log_failed", error=str(exc))
         return None
@@ -608,15 +591,7 @@ async def extract_habit(text: str, lang: str = "en") -> dict | None:
         if not data.get("is_habit"):
             return None
 
-        activity = str(data.get("activity") or "").strip()
-        if not activity:
-            return None
-
-        return {
-            "activity": activity,
-            "notes": data.get("notes"),
-            "days_ago": int(data.get("days_ago", 0)),
-        }
+        return sanitize_habit(data)
     except Exception as exc:
         logger.warning("llm.extract_habit_failed", error=str(exc))
         return None

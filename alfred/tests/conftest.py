@@ -24,6 +24,8 @@ from pydantic import SecretStr
 from alfred.main import app
 from alfred.settings import settings
 
+pytest_plugins = ["tests.labkit"]  # provides the ``lab`` fixture (DB-backed router tests)
+
 TEST_APP_SECRET = "test-app-secret"
 
 
@@ -84,6 +86,7 @@ def make_session(records: list[Any] | None = None) -> MagicMock:
     result.scalar.return_value = 0
     result.all.return_value = []
     session.execute = AsyncMock(return_value=result)
+    session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
     session.delete = AsyncMock()
     return session
