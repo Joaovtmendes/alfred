@@ -436,11 +436,18 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Ich erfasse vorerst nur Euro — {cur} wurde nicht gespeichert. Rechne in € um und sende es erneut (z. B. „Jumbo 23,50“).",
     },
     "high_value_hint": {
-        "pt": '\nValor alto — se estiver errado: "errei foram X" ou "apaga".',
-        "nl": '\nHoog bedrag — klopt het niet: "errei foram X" of "apaga".',
-        "en": '\nHigh amount — if it\'s wrong: "errei foram X" or "apaga".',
-        "fr": '\nMontant élevé — si c\'est faux : "errei foram X" ou "apaga".',
-        "de": '\nHoher Betrag — falls falsch: "errei foram X" oder "apaga".',
+        "pt": "\nValor alto — tens a certeza do valor?",
+        "nl": "\nHoog bedrag — weet je zeker dat het bedrag klopt?",
+        "en": "\nHigh amount — are you sure about the value?",
+        "fr": "\nMontant élevé — es-tu sûr du montant ?",
+        "de": "\nHoher Betrag — bist du sicher beim Betrag?",
+    },
+    "invalid_amount_check": {
+        "pt": "Valor inválido (zero ou negativo) — não registei nada. Confere e envia de novo.",
+        "nl": "Ongeldig bedrag (nul of negatief) — niets geregistreerd. Controleer en stuur opnieuw.",
+        "en": "Invalid amount (zero or negative) — nothing recorded. Check it and send again.",
+        "fr": "Montant invalide (zéro ou négatif) — rien enregistré. Vérifie et renvoie.",
+        "de": "Ungültiger Betrag (null oder negativ) — nichts erfasst. Prüfe ihn und sende erneut.",
     },
     "multi_recorded_title": {
         "pt": "Registadas {n} transações:",
@@ -2065,6 +2072,20 @@ _RECORDED_CLAIM_RE = re.compile(
     re.IGNORECASE,
 )
 _NUMBER_RE = re.compile(r"\d+(?:[.,]\d{1,2})?")
+# The LLM sometimes invents a confirmation flow ("aguarda confirmação", "reply sim/não"): the app
+# has no pending state, so such a reply promises something that can never happen.
+_FAKE_CONFIRM_RE = re.compile(
+    r"aguarda\w*\s+confirma|confirma\s+(?:cada|com)|\"?sim\"?\s*(?:/|ou)\s*\"?n[ãa]o|"
+    r"awaiting\s+confirm|confirm\s+each|yes\s*/\s*no|wacht\w*\s+op\s+bevestig|"
+    r"en\s+attente\s+de\s+confirm|warte\w*\s+auf\s+best",
+    re.IGNORECASE,
+)
+_ZERO_OR_NEG_RE = re.compile(r"(?<![\d.,])(?:-\s*\d|0+(?:[.,]0+)?(?![\d.,]))")
+
+
+def _has_zero_or_negative_amount(body: str) -> bool:
+    """A message with a bare 0 or a leading-minus amount that the extractors will drop."""
+    return bool(_ZERO_OR_NEG_RE.search(body))
 
 
 def _claims_recorded(reply: str) -> bool:
@@ -3843,6 +3864,15 @@ async def handle_inbound(
             # Nothing was written on this path: never let the model confirm a phantom record.
             logger.warning("conversation.llm_false_record_claim", member_id=str(member.id))
             reply = _t("fallback_no_record", lang)
+        elif _FAKE_CONFIRM_RE.search(reply):
+            # There is no pending-confirmation state: replace the invented flow with a real ask.
+            logger.warning("conversation.llm_fake_confirmation", member_id=str(member.id))
+            reply = _t(
+                "invalid_amount_check"
+                if _has_zero_or_negative_amount(body)
+                else "fallback_no_record",
+                lang,
+            )
         await send_text(to, reply)
         await _save_outbound(member, reply, session)
         logger.info("conversation.reply_sent", member_id=str(member.id))

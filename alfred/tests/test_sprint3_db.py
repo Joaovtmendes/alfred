@@ -12,7 +12,12 @@ import pytest
 from sqlalchemy import func, select
 
 from alfred.clock import now_local
-from alfred.conversation import _claims_recorded, _looks_multi
+from alfred.conversation import (
+    _FAKE_CONFIRM_RE,
+    _claims_recorded,
+    _has_zero_or_negative_amount,
+    _looks_multi,
+)
 from alfred.models import Expense
 from tests.labkit import Lab
 
@@ -95,6 +100,7 @@ async def test_high_value_gets_a_hint_and_small_does_not(lab: Lab) -> None:
     lab.expense.return_value = _item(1200, "Computador", category="overig")
     big = await lab.say("computador 1200")
     assert "Valor alto" in big
+    assert "tens a certeza do valor" in big
     lab.expense.return_value = _item(23, "Jumbo")
     assert "Valor alto" not in await lab.say("jumbo 23")
 
@@ -150,3 +156,29 @@ async def test_correction_ignores_expenses_older_than_the_window(lab: Lab) -> No
     assert "Corrigido" not in reply
     amount = await lab.scalar(select(Expense.amount).where(Expense.id == old.id))
     assert float(amount) == 1200.0
+
+
+def test_fake_confirmation_and_zero_negative_detectors() -> None:
+    assert _FAKE_CONFIRM_RE.search(
+        'Café 0,00 - aguarda confirmação. Confirma cada um com "sim" ou "não"'
+    )
+    assert _FAKE_CONFIRM_RE.search("Please reply yes / no to confirm")
+    assert not _FAKE_CONFIRM_RE.search("Envia cada despesa separada: Mercado 25")
+    assert _has_zero_or_negative_amount("Café 0 e reembolso -15")
+    assert _has_zero_or_negative_amount("café 0,00")
+    assert not _has_zero_or_negative_amount("Mercado 20 e farmácia 10,50")
+    assert not _has_zero_or_negative_amount("renda 100 e gás 205")
+
+
+@pytestmark_db
+async def test_llm_invented_confirmation_is_replaced_with_real_question(lab: Lab) -> None:
+    lab.multi.return_value = []
+    lab.expense.return_value = None
+    lab.llm_reply.return_value = (
+        "Recebi 2 registos:\n• Café 0,00 - aguarda confirmação\n"
+        'Confirma cada um com "sim" ou "não".'
+    )
+    reply = await lab.say("Café 0 e reembolso -15")
+    assert "aguarda confirmação" not in reply
+    assert "Valor inválido" in reply
+    assert await _count(lab) == 0
