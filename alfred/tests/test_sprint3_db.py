@@ -182,3 +182,23 @@ async def test_llm_invented_confirmation_is_replaced_with_real_question(lab: Lab
     assert "aguarda confirmação" not in reply
     assert "Valor inválido" in reply
     assert await _count(lab) == 0
+
+
+def test_fake_question_patterns_and_bare_zero_negative() -> None:
+    assert _FAKE_CONFIRM_RE.search("Supermercado 23\nMercado 25\n\nÉ isto correto?")
+    assert _FAKE_CONFIRM_RE.search("Ginásio — quanto?")
+    assert not _FAKE_CONFIRM_RE.search("Ginásio — €10,00 registado")
+    assert _has_zero_or_negative_amount("Café 0")
+    assert _has_zero_or_negative_amount("reembolso -15")
+    assert not _has_zero_or_negative_amount("hotel 120 - 3 noites")
+    assert not _has_zero_or_negative_amount("almoço 20 de 2026-05-10")
+
+
+@pytestmark_db
+async def test_zero_and_negative_amounts_get_deterministic_reply_without_llm(lab: Lab) -> None:
+    lab.multi.return_value = []
+    lab.expense.return_value = None
+    reply = await lab.say("Café 0 e reembolso -15")
+    assert "Valor inválido" in reply
+    assert await _count(lab) == 0
+    lab.llm_reply.assert_not_awaited()

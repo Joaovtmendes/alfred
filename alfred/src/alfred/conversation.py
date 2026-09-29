@@ -2077,10 +2077,14 @@ _NUMBER_RE = re.compile(r"\d+(?:[.,]\d{1,2})?")
 _FAKE_CONFIRM_RE = re.compile(
     r"aguarda\w*\s+confirma|confirma\s+(?:cada|com)|\"?sim\"?\s*(?:/|ou)\s*\"?n[ãa]o|"
     r"awaiting\s+confirm|confirm\s+each|yes\s*/\s*no|wacht\w*\s+op\s+bevestig|"
-    r"en\s+attente\s+de\s+confirm|warte\w*\s+auf\s+best",
+    r"en\s+attente\s+de\s+confirm|warte\w*\s+auf\s+best|"
+    # "É isto correto?" / "Ginásio — quanto?": questions the app has no state to receive
+    r"[ée]\s+isto\s+correto|is\s+this\s+correct|klopt\s+dit|est-ce\s+correct|ist\s+das\s+richtig|"
+    r"[—-]\s*(?:quanto|how\s+much|hoeveel|combien|wie\s+viel)\s*\?",
     re.IGNORECASE,
 )
-_ZERO_OR_NEG_RE = re.compile(r"(?<![\d.,])(?:-\s*\d|0+(?:[.,]0+)?(?![\d.,]))")
+# A bare 0 amount ("Café 0") or a leading-minus amount ("reembolso -15") the extractors drop.
+_ZERO_OR_NEG_RE = re.compile(r"(?<!\S)-\d|(?<![\d.,-])0+(?:[.,]0+)?(?![\d.,])")
 
 
 def _has_zero_or_negative_amount(body: str) -> bool:
@@ -3858,6 +3862,13 @@ async def handle_inbound(
                 return
 
                 # 4g. General LLM reply with conversation history
+        if _has_zero_or_negative_amount(body):
+            # Zero/negative amounts are never stored: answer deterministically, skip the LLM.
+            reply = _t("invalid_amount_check", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            logger.info("conversation.invalid_amount", member_id=str(member.id))
+            return
         history = await _load_history(member, session, exclude_id=message.id)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
         if _claims_recorded(reply):
