@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from dataclasses import dataclass
+from datetime import date, timedelta
 
 # ── Text normalisation ────────────────────────────────────────────────────────
 
@@ -299,3 +301,132 @@ def parse_budget(text: str) -> float | None:
     if not m:
         return None
     return to_amount(m.group("a") or m.group("b"))
+
+
+# ── Expense-query windows ("ontem", "de setembro", "este ano") ────────────────
+# The LLM classifier only knows today/week/month, so "ontem" used to be answered as
+# "hoje" and "resumo de setembro" as last month. Dates are cheap to parse exactly, so
+# they are resolved here (accent-free, lower-case input) and override the LLM's guess.
+
+
+@dataclass(frozen=True)
+class DateWindow:
+    """[start, end) in local dates; ``end=None`` means "up to now"."""
+
+    kind: str  # today|yesterday|current_week|last_week|current_month|last_month|month|year
+    start: date
+    end: date | None = None
+
+
+def _w(*phrases: str) -> re.Pattern[str]:
+    return re.compile(r"\b(?:" + "|".join(phrases) + r")\b")
+
+
+_YESTERDAY_RE = _w("ontem", "yesterday", "gisteren", "hier", "gestern")
+_TODAY_RE = _w("hoje", "today", "vandaag", "aujourd hui", "aujourdhui", "heute")
+_LAST_WEEK_RE = _w(
+    "semana passada",
+    "ultima semana",
+    "last week",
+    "vorige week",
+    "semaine derniere",
+    "letzte woche",
+    "letzten woche",
+)
+_THIS_WEEK_RE = _w(
+    "esta semana", "this week", "deze week", "cette semaine", "diese woche", "diesen woche"
+)
+_LAST_MONTH_RE = _w(
+    "mes passado",
+    "last month",
+    "vorige maand",
+    "mois dernier",
+    "letzten monat",
+    "letzter monat",
+)
+_THIS_MONTH_RE = _w(
+    "este mes", "neste mes", "this month", "deze maand", "ce mois", "diesen monat", "dieser monat"
+)
+_LAST_YEAR_RE = _w(
+    "ano passado", "last year", "vorig jaar", "annee derniere", "letztes jahr", "letzten jahr"
+)
+_THIS_YEAR_RE = _w(
+    "este ano",
+    "neste ano",
+    "ano todo",
+    "this year",
+    "year to date",
+    "dit jaar",
+    "cette annee",
+    "dieses jahr",
+    "diesem jahr",
+)
+_YEAR_NUM_RE = re.compile(r"\b(20\d{2})\b")
+
+
+def parse_period(text_plain: str, today: date) -> DateWindow | None:
+    """Resolve the time expression in an (accent-free, lower-case) query, or None.
+
+    Most specific phrases win ("semana passada" before "hoje"); a named month means its
+    most recent occurrence unless a year is given ("agosto 2025").
+    """
+    t = text_plain
+    week0 = today - timedelta(days=today.weekday())
+    if _YESTERDAY_RE.search(t):
+        y = today - timedelta(days=1)
+        return DateWindow("yesterday", y, today)
+    if _LAST_WEEK_RE.search(t):
+        return DateWindow("last_week", week0 - timedelta(days=7), week0)
+    if _THIS_WEEK_RE.search(t):
+        return DateWindow("current_week", week0, None)
+    if _LAST_YEAR_RE.search(t):
+        return DateWindow("year", date(today.year - 1, 1, 1), date(today.year, 1, 1))
+    if _THIS_YEAR_RE.search(t):
+        return DateWindow("year", date(today.year, 1, 1), None)
+    if _LAST_MONTH_RE.search(t):
+        first = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
+        return DateWindow("last_month", first, today.replace(day=1))
+    if _THIS_MONTH_RE.search(t):
+        return DateWindow("current_month", today.replace(day=1), None)
+    for word in re.findall(r"[a-z]+", t):
+        month = MONTH_WORDS.get(word)
+        if month and len(word) > 3:  # "mar"/"set" are also ordinary words
+            ym = _YEAR_NUM_RE.search(t)
+            year = (
+                int(ym.group(1)) if ym else (today.year if month <= today.month else today.year - 1)
+            )
+            start = date(year, month, 1)
+            nxt = date(year + (month == 12), month % 12 + 1, 1)
+            is_now = start == today.replace(day=1)
+            return DateWindow("month", start, None if is_now else nxt)
+    if _TODAY_RE.search(t):
+        return DateWindow("today", today, today + timedelta(days=1))
+    return None
+
+
+_EXPENSE_WORDS = (
+    r"(?:despesas?|gastos?|compras?|transacoes|transacao|expenses?|uitgaven?|"
+    r"depenses?|achats?|ausgaben?|kaeufe)"
+)
+_LAST_WORDS = r"(?:ultim[ao]s?|last|latest|recent[es]*|laatste|derniere?s?|letzte[n]?)"
+LAST_N_RE = re.compile(
+    rf"^(?:(?:mostra|mostrar|show|toon|montre|zeig)\s+)?(?:(?:as|os|my|mijn|mes|meine)\s+)?"
+    rf"{_LAST_WORDS}\s*(\d{{1,2}})?\s*{_EXPENSE_WORDS}\s*\??$"
+)
+TOP_CATEGORIES_RE = re.compile(
+    r"^(?:top|maiores?|biggest|largest|grootste|principales?|groessten?)\s+"
+    r"(?:categorias?|categories|categorieen|kategorien)\b"
+)
+DELETE_LAST_EXPENSE_RE = re.compile(
+    rf"^(?:apaga|apagar|elimina|eliminar|remove|delete|verwijder|supprime|supprimer|loesch|loeschen)"
+    rf"(?:\s+(?:a\s+|o\s+|the\s+|de\s+|die\s+|la\s+|le\s+|den\s+|das\s+)?{_LAST_WORDS}"
+    rf"(?:\s+{_EXPENSE_WORDS})?)?\s*[.!]?$"
+)
+
+
+def parse_last_n(text_plain: str) -> int | None:
+    """ "ultimas 5 despesas" → 5 (default 5, capped at 20); None when it is not that command."""
+    m = LAST_N_RE.match(text_plain.strip())
+    if not m:
+        return None
+    return max(1, min(int(m.group(1)), 20)) if m.group(1) else 5
