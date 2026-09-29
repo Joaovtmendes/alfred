@@ -9,6 +9,7 @@ payload is unusable (the caller then treats the message as "not an X").
 
 from __future__ import annotations
 
+import json
 import math
 from typing import Any
 
@@ -155,3 +156,22 @@ def sanitize_query(data: dict) -> dict:
         "category": category if category in CATEGORIES else None,
         "period": period if period in PERIODS else "current_month",
     }
+
+
+def parse_llm_json(raw: str) -> dict | None:
+    """First JSON *object* in a model reply, or None.
+
+    Models wrap JSON in code fences, add a sentence before/after it, or return a list
+    (several expenses in one message). ``json.loads`` on the whole text fails on all of
+    those with "Extra data"/"Expecting value", so the first object is decoded in place.
+    """
+    text = raw.strip()
+    start = text.find("{")
+    bracket = text.find("[")
+    if start < 0 or (0 <= bracket < start):
+        return None  # a list (several items): taking just the first would drop the rest
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(text[start:])
+    except ValueError:
+        return None
+    return obj if isinstance(obj, dict) else None

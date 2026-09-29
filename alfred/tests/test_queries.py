@@ -137,7 +137,7 @@ async def test_build_summary_with_category_filters():
     expense = _make_expense(45.0, category="supermarkt", merchant="Jumbo")
     session = _mock_session(records=[expense])
     result = await _build_summary(member, session, category="supermarkt")
-    assert "Supermarkt" in result or "supermarkt" in result.lower()
+    assert "supermercado" in result.lower()  # localised (pt), not the Dutch identifier
     assert "45" in result
 
 

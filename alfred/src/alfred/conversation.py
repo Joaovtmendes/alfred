@@ -31,6 +31,7 @@ from alfred.clock import (
     week_start,
     weekday_abbr,
 )
+from alfred.labels import category_label
 from alfred.llm import (
     classify_query,
     extract_expense,
@@ -54,7 +55,9 @@ from alfred.models import (
 )
 from alfred.parsing import (
     CORRECTION_PRONOUNS,
+    DELETE_LAST_EXPENSE_RE,
     MONTH_WORDS,
+    TOP_CATEGORIES_RE,
     TRIP_END_RE,
     TRIP_LIST_RE,
     TRIP_QUERY_RE,
@@ -62,6 +65,8 @@ from alfred.parsing import (
     match_trip_start,
     parse_budget,
     parse_category_correction,
+    parse_last_n,
+    parse_period,
     strip_accents,
 )
 from alfred.validation import MAX_AMOUNT
@@ -413,6 +418,48 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": " _({n}d ago)_",
         "fr": " _(il y a {n}j)_",
         "de": " _(vor {n}T)_",
+    },
+    "period_yesterday": {
+        "pt": "ontem",
+        "nl": "gisteren",
+        "en": "yesterday",
+        "fr": "hier",
+        "de": "gestern",
+    },
+    "expense_corrected": {
+        "pt": "Corrigido — {name}: {old} → {amount}",
+        "nl": "Gecorrigeerd — {name}: {old} → {amount}",
+        "en": "Corrected — {name}: {old} → {amount}",
+        "fr": "Corrigé — {name} : {old} → {amount}",
+        "de": "Korrigiert — {name}: {old} → {amount}",
+    },
+    "expense_deleted": {
+        "pt": "Apagada — {amount} em *{name}* ({date}).",
+        "nl": "Verwijderd — {amount} bij *{name}* ({date}).",
+        "en": "Deleted — {amount} at *{name}* ({date}).",
+        "fr": "Supprimée — {amount} chez *{name}* ({date}).",
+        "de": "Gelöscht — {amount} bei *{name}* ({date}).",
+    },
+    "expense_delete_none": {
+        "pt": "Não tenho nenhuma despesa para apagar.",
+        "nl": "Ik heb geen uitgave om te verwijderen.",
+        "en": "I have no expense to delete.",
+        "fr": "Je n'ai aucune dépense à supprimer.",
+        "de": "Ich habe keine Ausgabe zum Löschen.",
+    },
+    "last_expenses_title": {
+        "pt": "Últimas {n} despesas",
+        "nl": "Laatste {n} uitgaven",
+        "en": "Last {n} expenses",
+        "fr": "Dernières {n} dépenses",
+        "de": "Letzte {n} Ausgaben",
+    },
+    "top_categories_title": {
+        "pt": "Top categorias — {period_label}",
+        "nl": "Top categorieën — {period_label}",
+        "en": "Top categories — {period_label}",
+        "fr": "Top catégories — {period_label}",
+        "de": "Top-Kategorien — {period_label}",
     },
     "period_today": {
         "pt": "hoje",
@@ -2021,6 +2068,24 @@ def _period_range(period: str, lang: str = "en") -> tuple[datetime, datetime | N
     return day_start(month_start(today)), None, month_name(today, lang, year=True)
 
 
+def _window_range(window, lang: str) -> tuple[datetime, datetime | None, str]:
+    """(start, end_exclusive, label) for a parsed ``DateWindow``."""
+    start, end = day_start(window.start), (day_start(window.end) if window.end else None)
+    if window.kind == "today":
+        label = _t("period_today", lang)
+    elif window.kind == "yesterday":
+        label = _t("period_yesterday", lang)
+    elif window.kind == "current_week":
+        label = _t("period_current_week", lang)
+    elif window.kind == "last_week":
+        label = _t("period_last_week", lang)
+    elif window.kind == "year":
+        label = str(window.start.year)
+    else:  # current_month / last_month / month
+        label = month_name(window.start, lang, year=True)
+    return start, end, label
+
+
 _LAST_MONTH_WORDS = (
     "mes passado",
     "last month",
@@ -2057,10 +2122,15 @@ async def _build_summary(
     *,
     period: str = "current_month",
     category: str | None = None,
+    window=None,
+    top: bool = False,
 ) -> str:
     """Query expenses/income for a period (optionally filtered by category)."""
     lang = member.language or "en"
-    start, end_excl, period_label = _period_range(period, lang)
+    if window is not None:
+        start, end_excl, period_label = _window_range(window, lang)
+    else:
+        start, end_excl, period_label = _period_range(period, lang)
 
     filters = [
         Expense.member_id == member.id,
@@ -2079,7 +2149,10 @@ async def _build_summary(
     if not records:
         if category:
             return _t(
-                "no_records_scope", lang, category=category.capitalize(), period_label=period_label
+                "no_records_scope",
+                lang,
+                category=category_label(category, lang),
+                period_label=period_label,
             )
         return _t("no_records_period", lang, period_label=period_label)
 
@@ -2091,7 +2164,10 @@ async def _build_summary(
     if category:
         # Category view: list individual transactions
         title = _t(
-            "category_title", lang, category=category.capitalize(), period_label=period_label
+            "category_title",
+            lang,
+            category=category_label(category, lang),
+            period_label=period_label,
         )
         lines = [f"{title}\n"]
         for e in outflows[:10]:
@@ -2107,9 +2183,11 @@ async def _build_summary(
             cat = e.category or "overig"
             by_cat[cat] = by_cat.get(cat, 0) + e.amount
 
-        lines = [f"{_t('summary_title', lang, period_label=period_label)}\n"]
-        for cat, amt in sorted(by_cat.items(), key=lambda x: -x[1]):
-            lines.append(f"• {cat.capitalize()}: {_fmt_eur(amt)}")
+        title_key = "top_categories_title" if top else "summary_title"
+        lines = [f"{_t(title_key, lang, period_label=period_label)}\n"]
+        ranked = sorted(by_cat.items(), key=lambda x: -x[1])
+        for cat, amt in ranked[:3] if top else ranked:
+            lines.append(f"• {category_label(cat, lang)}: {_fmt_eur(amt)}")
 
         lines.append(f"\n{_t('total_expenses', lang, amount=_fmt_eur(total_out))}")
 
@@ -2121,6 +2199,27 @@ async def _build_summary(
 
         lines.append(_t("transactions_count", lang, n=len(outflows)))
 
+    return "\n".join(lines)
+
+
+async def _build_recent(member: Member, session: AsyncSession, n: int) -> str:
+    """The ``n`` most recent transactions (real rows, newest first)."""
+    lang = member.language or "en"
+    res = await session.execute(
+        select(Expense)
+        .where(Expense.member_id == member.id)
+        .order_by(Expense.expense_date.desc(), Expense.created_at.desc())
+        .limit(n)
+    )
+    rows = res.scalars().all()
+    if not rows:
+        return _t("expense_delete_none", lang)
+    lines = [f"{_t('last_expenses_title', lang, n=len(rows))}\n"]
+    for e in rows:
+        sign = "+" if e.transaction_type == "income" else ""
+        name = e.merchant or e.description or category_label(e.category, lang)
+        day = to_local(e.expense_date).strftime("%d/%m")
+        lines.append(f"• {day} {name}: {sign}{_fmt_eur(e.amount)}")
     return "\n".join(lines)
 
 
@@ -3395,6 +3494,48 @@ async def handle_inbound(
             await _save_outbound(member, trip_reply, session)
             return
 
+        # 4e-0c. Real commands the LLM used to improvise (and get wrong):
+        # "apaga", "ultimas 5 despesas", "top categorias este mes".
+        if DELETE_LAST_EXPENSE_RE.match(body_plain.strip()):
+            last = await session.scalar(
+                select(Expense)
+                .where(Expense.member_id == member.id)
+                .order_by(Expense.created_at.desc())
+                .limit(1)
+            )
+            if last is None:
+                reply = _t("expense_delete_none", lang)
+            else:
+                name = last.merchant or last.description or category_label(last.category, lang)
+                reply = _t(
+                    "expense_deleted",
+                    lang,
+                    amount=_fmt_eur(last.amount),
+                    name=name,
+                    date=to_local(last.expense_date).strftime("%d/%m"),
+                )
+                await session.delete(last)
+                logger.info("conversation.expense_deleted", member_id=str(member.id))
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        n_last = parse_last_n(body_plain)
+        if n_last:
+            reply = await _build_recent(member, session, n_last)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        if TOP_CATEGORIES_RE.match(body_plain.strip()):
+            win = parse_period(body_plain, today_local())
+            reply = await _build_summary(
+                member, session, period="current_month", window=win, top=True
+            )
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
         # 4e-0d. Amount correction: "errei foram 42€" / "na verdade foram 32"
         m_amt = _AMOUNT_CORRECTION_RE.search(body)
         if m_amt:
@@ -3425,10 +3566,17 @@ async def handle_inbound(
                 )
                 last_exp = res.scalar_one_or_none()
                 if last_exp:
+                    old_amount = last_exp.amount
                     last_exp.amount = new_amount
                     session.add(last_exp)
-                    name = last_exp.merchant or last_exp.category or ""
-                    reply = _t("expense_recorded", lang, amount=_fmt_eur(new_amount), name=name)
+                    name = last_exp.merchant or category_label(last_exp.category, lang)
+                    reply = _t(
+                        "expense_corrected",
+                        lang,
+                        name=name,
+                        old=_fmt_eur(old_amount),
+                        amount=_fmt_eur(new_amount),
+                    )
                     await send_text(to, reply)
                     await _save_outbound(member, reply, session)
                     logger.info(
@@ -3536,13 +3684,17 @@ async def handle_inbound(
             qtype = query.get("query_type")
             period = query.get("period") or "current_month"
             category = query.get("category")
+            # Dates are parsed exactly here; the LLM only guesses today/week/month.
+            window = parse_period(body_plain, today_local())
 
             if qtype == "balance":
                 reply = await _build_saldo(member, session)
             elif qtype == "category" and category:
-                reply = await _build_summary(member, session, period=period, category=category)
+                reply = await _build_summary(
+                    member, session, period=period, category=category, window=window
+                )
             elif qtype == "period":
-                reply = await _build_summary(member, session, period=period)
+                reply = await _build_summary(member, session, period=period, window=window)
             elif qtype == "comparison":
                 reply = await _build_comparison(member, session)
             else:

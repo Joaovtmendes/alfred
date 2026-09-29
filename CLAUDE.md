@@ -16,7 +16,9 @@ alfred/                    ← raiz do serviço (Railway "Root Directory")
     security.py            validação HMAC-SHA256 (fail-closed sem segredo)
     conversation.py        router de mensagens: consentimento, i18n, todos os handlers
     parsing.py             regex/parsers puros e ancorados (viagem, correcção, orçamento, acentos)
-    validation.py          sanitiza TODO o JSON devolvido pelo LLM antes de gravar
+                           (inclui parse_period: ontem/mês/ano exatos; comandos "apaga", "ultimas N")
+    validation.py          sanitiza TODO o JSON do LLM (parse_llm_json tolera texto/cercas à volta)
+    labels.py              nomes das categorias na língua do utilizador (BD guarda os holandeses)
     clock.py               "hoje/semana/mês" em Europe/Amsterdam + nomes de meses/dias i18n
     llm.py                 cliente AsyncAnthropic partilhado + extractors (JSON)
     models.py              ORM (13 tabelas)

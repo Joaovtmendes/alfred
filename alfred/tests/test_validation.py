@@ -105,3 +105,29 @@ def test_string_amounts_and_tiny_amounts() -> None:
     assert sanitize_expense(_exp(amount="12,50"))["amount"] == 12.5
     assert sanitize_expense(_exp(amount="€ 12"))["amount"] == 12.0
     assert sanitize_expense(_exp(amount=0.004)) is None  # would be stored as 0.00
+
+
+# ── parse_llm_json: what models actually return ───────────────────────────────
+
+from alfred.validation import parse_llm_json  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('{"is_habit": true, "activity": "gym"}', {"is_habit": True, "activity": "gym"}),
+        ('```json\n{"a": 1}\n```', {"a": 1}),
+        ('{"a": 1}\n\nNota: isto é um hábito.', {"a": 1}),  # "Extra data" in production
+        ('Claro! {"a": 1}', {"a": 1}),
+        ('{"a": {"b": [1, 2]}} trailing {"c": 2}', {"a": {"b": [1, 2]}}),
+    ],
+)
+def test_parse_llm_json_accepts_wrapped_objects(raw, expected):
+    assert parse_llm_json(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw", ["", "sem json", "[1, 2]", '[{"amount": 5}, {"amount": 6}]', '{"unterminated": ']
+)
+def test_parse_llm_json_rejects_everything_else(raw):
+    assert parse_llm_json(raw) is None
