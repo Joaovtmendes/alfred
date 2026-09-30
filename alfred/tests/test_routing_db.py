@@ -40,7 +40,7 @@ async def _workouts(lab: Lab, *days_ago: int, activity: str = "running") -> None
 async def test_quantas_vezes_corri_goes_to_workouts_not_habits(lab: Lab) -> None:
     await _workouts(lab, 0, 2)
     reply = await lab.say("quantas vezes corri esta semana?")
-    assert reply == _t("workout_activity_summary", "pt", activity="running", n=2)
+    assert reply == _t("workout_activity_summary", "pt", activity="corrida", n=2)
 
 
 async def test_como_vai_a_vida_is_chat_not_the_goals_list(lab: Lab) -> None:

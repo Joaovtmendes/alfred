@@ -33,6 +33,7 @@ from alfred.clock import (
     week_start,
     weekday_abbr,
 )
+from alfred.labels import activity_label as activity_name
 from alfred.labels import category_label
 from alfred.llm import (
     classify_query,
@@ -355,10 +356,26 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Feito, {amount} em *{name}*.",
             "Registrado: *{name}*, {amount}.",
         ),
-        "nl": "Uitgave geregistreerd — {amount} bij *{name}*",
-        "en": "Expense recorded — {amount} at *{name}*",
-        "fr": "Dépense enregistrée — {amount} chez *{name}*",
-        "de": "Ausgabe erfasst — {amount} bei *{name}*",
+        "nl": (
+            "Genoteerd: {amount} bij *{name}*.",
+            "Gedaan, {amount} bij *{name}*.",
+            "Vastgelegd: *{name}*, {amount}.",
+        ),
+        "en": (
+            "Noted: {amount} at *{name}*.",
+            "Done, {amount} at *{name}*.",
+            "Logged: *{name}*, {amount}.",
+        ),
+        "fr": (
+            "C’est noté : {amount} chez *{name}*.",
+            "Fait, {amount} chez *{name}*.",
+            "Enregistré : *{name}*, {amount}.",
+        ),
+        "de": (
+            "Notiert: {amount} bei *{name}*.",
+            "Erledigt, {amount} bei *{name}*.",
+            "Eingetragen: *{name}*, {amount}.",
+        ),
     },
     "income_recorded": {
         "pt": (
@@ -366,10 +383,26 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Anotei a receita: {amount} de *{name}*.",
             "Registrado: {amount} de *{name}*.",
         ),
-        "nl": "Inkomsten geregistreerd — {amount} van *{name}*",
-        "en": "Income recorded — {amount} from *{name}*",
-        "fr": "Revenu enregistré — {amount} de *{name}*",
-        "de": "Einnahme erfasst — {amount} von *{name}*",
+        "nl": (
+            "Mooi, er is {amount} binnengekomen van *{name}*.",
+            "Inkomen genoteerd: {amount} van *{name}*.",
+            "Vastgelegd: {amount} van *{name}*.",
+        ),
+        "en": (
+            "Nice, {amount} came in from *{name}*.",
+            "Income noted: {amount} from *{name}*.",
+            "Logged: {amount} from *{name}*.",
+        ),
+        "fr": (
+            "Super, {amount} sont arrivés de *{name}*.",
+            "Revenu noté : {amount} de *{name}*.",
+            "Enregistré : {amount} de *{name}*.",
+        ),
+        "de": (
+            "Schön, {amount} von *{name}* sind eingegangen.",
+            "Einnahme notiert: {amount} von *{name}*.",
+            "Eingetragen: {amount} von *{name}*.",
+        ),
     },
     "category_corrected": {
         "pt": "Combinado, a partir de agora *{merchant}* fica em *{category}*.",
@@ -432,10 +465,22 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             " Já são {total} em {category} este mês.",
             " Com essa, {category} chega a {total} no mês.",
         ),
-        "nl": " Dat is {total} aan {category} deze maand.",
-        "en": " That makes {total} on {category} this month.",
-        "fr": " Cela fait {total} en {category} ce mois-ci.",
-        "de": " Damit sind es {total} für {category} in diesem Monat.",
+        "nl": (
+            " Dat is al {total} aan {category} deze maand.",
+            " Met deze erbij is {category} deze maand op {total}.",
+        ),
+        "en": (
+            " That's {total} on {category} so far this month.",
+            " With this one, {category} is at {total} for the month.",
+        ),
+        "fr": (
+            " Cela fait déjà {total} en {category} ce mois-ci.",
+            " Avec celle-ci, {category} monte à {total} ce mois-ci.",
+        ),
+        "de": (
+            " Das sind schon {total} für {category} in diesem Monat.",
+            " Damit liegt {category} diesen Monat bei {total}.",
+        ),
     },
     "health_unsupported": {
         "pt": "Ainda não acompanho peso nem pressão, só medicação, humor, sono e água. Se quiser, guardo como nota: “nota: peso 75 kg”.",
@@ -484,10 +529,22 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Essa escapou de mim. Pode dizer de outro jeito? Por exemplo: “Mercado 20”, “corri 5km” ou “dormi 7h”.",
             "Não entendi essa. Tente algo como “Mercado 20”, “corri 5km” ou “dormi 7h”.",
         ),
-        "nl": "Die snap ik niet helemaal. Kun je het anders zeggen? Bijvoorbeeld: “Jumbo 20”, “ik heb 5 km gerend” of “ik sliep 7 uur”.",
-        "en": "I didn't quite get that. Could you say it another way? For example: “Groceries 20”, “ran 5km” or “slept 7h”.",
-        "fr": "Je n'ai pas bien compris. Peux-tu le dire autrement ? Par exemple : « Courses 20 », « couru 5 km » ou « dormi 7 h ».",
-        "de": "Das habe ich nicht ganz verstanden. Kannst du es anders sagen? Zum Beispiel: „Einkauf 20“, „5 km gelaufen“ oder „7 Std. geschlafen“.",
+        "nl": (
+            "Die is me ontglipt. Kun je het anders zeggen? Bijvoorbeeld: “Jumbo 20”, “ik heb 5 km gerend” of “ik sliep 7 uur”.",
+            "Dat snap ik niet. Probeer iets als “Jumbo 20”, “ik heb 5 km gerend” of “ik sliep 7 uur”.",
+        ),
+        "en": (
+            "That one slipped past me. Could you put it another way? For example: “Groceries 20”, “ran 5km” or “slept 7h”.",
+            "I didn't get that. Try something like “Groceries 20”, “ran 5km” or “slept 7h”.",
+        ),
+        "fr": (
+            "Celle-ci m’a échappé. Tu peux la formuler autrement ? Par exemple : « Courses 20 », « couru 5 km » ou « dormi 7 h ».",
+            "Je n’ai pas compris. Essaie par exemple : « Courses 20 », « couru 5 km » ou « dormi 7 h ».",
+        ),
+        "de": (
+            "Das ist mir entgangen. Kannst du es anders sagen? Zum Beispiel: „Einkauf 20“, „5 km gelaufen“ oder „7 Std. geschlafen“.",
+            "Das habe ich nicht verstanden. Versuch es mit „Einkauf 20“, „5 km gelaufen“ oder „7 Std. geschlafen“.",
+        ),
     },
     "bare_yes": {
         "pt": "Tudo certo, mas não tenho nada esperando confirmação. Quer registrar alguma coisa? Por exemplo: “Mercado 20”.",
@@ -579,10 +636,26 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Beleza, fica assim.",
             "Perfeito, deixo assim.",
         ),
-        "nl": "Prima, het staat erin.",
-        "en": "Great, it stays recorded.",
-        "fr": "Parfait, c'est enregistré.",
-        "de": "Alles klar, es bleibt erfasst.",
+        "nl": (
+            "Top, het blijft zo.",
+            "Prima, zo laat ik het.",
+            "Helder, het staat erin.",
+        ),
+        "en": (
+            "Great, it stays as is.",
+            "Perfect, I'll leave it.",
+            "Got it, it stays recorded.",
+        ),
+        "fr": (
+            "Parfait, on laisse comme ça.",
+            "Super, je garde ça.",
+            "Compris, c’est enregistré.",
+        ),
+        "de": (
+            "Super, es bleibt so.",
+            "Alles klar, ich lasse es so.",
+            "Verstanden, es bleibt eingetragen.",
+        ),
     },
     "button_edit_hint": {
         "pt": "Qual é o valor certo? Por exemplo: *na verdade foi 25*",
@@ -603,10 +676,22 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Apaguei: {amount} em *{name}* ({date}).",
             "Pronto, apaguei {amount} em *{name}* ({date}).",
         ),
-        "nl": "Verwijderd — {amount} bij *{name}* ({date}).",
-        "en": "Deleted — {amount} at *{name}* ({date}).",
-        "fr": "Supprimée — {amount} chez *{name}* ({date}).",
-        "de": "Gelöscht — {amount} bei *{name}* ({date}).",
+        "nl": (
+            "Verwijderd: {amount} bij *{name}* ({date}).",
+            "Klaar, {amount} bij *{name}* ({date}) is weg.",
+        ),
+        "en": (
+            "Deleted: {amount} at *{name}* ({date}).",
+            "Done, removed {amount} at *{name}* ({date}).",
+        ),
+        "fr": (
+            "Supprimé : {amount} chez *{name}* ({date}).",
+            "C’est fait, {amount} chez *{name}* ({date}) est supprimé.",
+        ),
+        "de": (
+            "Gelöscht: {amount} bei *{name}* ({date}).",
+            "Erledigt, {amount} bei *{name}* ({date}) ist weg.",
+        ),
     },
     "expense_delete_none": {
         "pt": "Não tenho nenhuma despesa para apagar.",
@@ -653,14 +738,30 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     # ── M7 — Treino ─────────────────────────────────────────────────────────
     "workout_saved": {
         "pt": (
-            "Boa! {activity} anotado: {duration}. 💪",
+            "Boa! Treino anotado: {activity}, {duration}. 💪",
             "Treino anotado: {activity}, {duration}.",
-            "{activity} registrado, {duration}. Bom trabalho!",
+            "Registrado: {activity}, {duration}. Bom trabalho!",
         ),
-        "nl": "Training opgeslagen: {activity} — {duration}",
-        "en": "Workout logged: {activity} — {duration}",
-        "fr": "Entraînement enregistré : {activity} — {duration}",
-        "de": "Training gespeichert: {activity} — {duration}",
+        "nl": (
+            "Mooi! Training genoteerd: {activity}, {duration}. 💪",
+            "Training genoteerd: {activity}, {duration}.",
+            "Vastgelegd: {activity}, {duration}. Goed bezig!",
+        ),
+        "en": (
+            "Nice! Workout noted: {activity}, {duration}. 💪",
+            "Workout noted: {activity}, {duration}.",
+            "Logged: {activity}, {duration}. Nice work!",
+        ),
+        "fr": (
+            "Bravo ! Séance notée : {activity}, {duration}. 💪",
+            "Séance notée : {activity}, {duration}.",
+            "Enregistré : {activity}, {duration}. Beau travail !",
+        ),
+        "de": (
+            "Stark! Training notiert: {activity}, {duration}. 💪",
+            "Training notiert: {activity}, {duration}.",
+            "Eingetragen: {activity}, {duration}. Gut gemacht!",
+        ),
     },
     "workout_summary_header": {
         "pt": "Treinos desta semana ({n} sessões):",
@@ -689,40 +790,88 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Anotei: você tomou {value}.",
             "Registrado: {value} tomado.",
         ),
-        "nl": "Medicatie gelogd: {value}",
-        "en": "Medication logged: {value}",
-        "fr": "Médicament enregistré : {value}",
-        "de": "Medikament eingetragen: {value}",
+        "nl": (
+            "Genoteerd: je hebt {value} genomen.",
+            "Vastgelegd: {value} ingenomen.",
+        ),
+        "en": (
+            "Noted: you took {value}.",
+            "Logged: {value} taken.",
+        ),
+        "fr": (
+            "C’est noté : tu as pris {value}.",
+            "Enregistré : {value} pris.",
+        ),
+        "de": (
+            "Notiert: Du hast {value} genommen.",
+            "Eingetragen: {value} eingenommen.",
+        ),
     },
     "health_saved_mood": {
         "pt": (
             "Anotado: {value} de 10 hoje.",
             "Humor de hoje: {value}/10, anotado.",
         ),
-        "nl": "Stemming gelogd: {value}/10",
-        "en": "Mood logged: {value}/10",
-        "fr": "Humeur enregistrée : {value}/10",
-        "de": "Stimmung eingetragen: {value}/10",
+        "nl": (
+            "Genoteerd: {value} van 10 vandaag.",
+            "Stemming van vandaag: {value}/10, genoteerd.",
+        ),
+        "en": (
+            "Noted: {value} out of 10 today.",
+            "Today's mood: {value}/10, noted.",
+        ),
+        "fr": (
+            "Noté : {value} sur 10 aujourd’hui.",
+            "Humeur du jour : {value}/10, notée.",
+        ),
+        "de": (
+            "Notiert: heute {value} von 10.",
+            "Stimmung heute: {value}/10, notiert.",
+        ),
     },
     "health_saved_sleep": {
         "pt": (
             "Anotei: {value}h de sono.",
             "Sono registrado: {value}h.",
         ),
-        "nl": "Slaap gelogd: {value}h",
-        "en": "Sleep logged: {value}h",
-        "fr": "Sommeil enregistré : {value}h",
-        "de": "Schlaf eingetragen: {value}h",
+        "nl": (
+            "Genoteerd: {value}u slaap.",
+            "Slaap vastgelegd: {value}u.",
+        ),
+        "en": (
+            "Noted: {value}h of sleep.",
+            "Sleep logged: {value}h.",
+        ),
+        "fr": (
+            "Noté : {value} h de sommeil.",
+            "Sommeil enregistré : {value} h.",
+        ),
+        "de": (
+            "Notiert: {value} Std. Schlaf.",
+            "Schlaf eingetragen: {value} Std.",
+        ),
     },
     "health_saved_water": {
         "pt": (
             "Anotei {value} L de água.",
             "Água registrada: {value} L.",
         ),
-        "nl": "Water gelogd: {value}L",
-        "en": "Water logged: {value}L",
-        "fr": "Eau enregistrée : {value}L",
-        "de": "Wasser eingetragen: {value}L",
+        "nl": (
+            "Genoteerd: {value} L water.",
+            "Water vastgelegd: {value} L.",
+        ),
+        "en": (
+            "Noted: {value} L of water.",
+            "Water logged: {value} L.",
+        ),
+        "fr": (
+            "Noté : {value} L d’eau.",
+            "Eau enregistrée : {value} L.",
+        ),
+        "de": (
+            "Notiert: {value} L Wasser.",
+            "Wasser eingetragen: {value} L.",
+        ),
     },
     # ── M9 — Metas & Hábitos ─────────────────────────────────────────────────
     "goal_created": {
@@ -737,10 +886,22 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Anotei: {activity}.",
             "{activity}: anotado. Mais um dia!",
         ),
-        "nl": "Gewoonte gelogd: {activity}",
-        "en": "Habit logged: {activity}",
-        "fr": "Habitude enregistrée : {activity}",
-        "de": "Gewohnheit eingetragen: {activity}",
+        "nl": (
+            "Genoteerd: {activity}.",
+            "{activity}: genoteerd. Weer een dag erbij!",
+        ),
+        "en": (
+            "Noted: {activity}.",
+            "{activity}: logged. One more day!",
+        ),
+        "fr": (
+            "Noté : {activity}.",
+            "{activity} : noté. Un jour de plus !",
+        ),
+        "de": (
+            "Notiert: {activity}.",
+            "{activity}: eingetragen. Wieder ein Tag mehr!",
+        ),
     },
     "goals_list_header": {
         "pt": "Suas metas ativas ({n}):",
@@ -770,30 +931,70 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Guardei a nota.",
             "Nota salva.",
         ),
-        "nl": "Notitie opgeslagen.",
-        "en": "Note saved.",
-        "fr": "Note enregistrée.",
-        "de": "Notiz gespeichert.",
+        "nl": (
+            "Genoteerd.",
+            "Notitie bewaard.",
+            "Staat erin.",
+        ),
+        "en": (
+            "Noted.",
+            "Note saved.",
+            "Got it, saved.",
+        ),
+        "fr": (
+            "Noté.",
+            "Note gardée.",
+            "C’est dans ton carnet.",
+        ),
+        "de": (
+            "Notiert.",
+            "Notiz gespeichert.",
+            "Ist gespeichert.",
+        ),
     },
     "task_saved": {
         "pt": (
             "Tarefa adicionada: *{body}*",
             "Anotei a tarefa: *{body}*",
         ),
-        "nl": "Taak toegevoegd: *{body}*",
-        "en": "Task added: *{body}*",
-        "fr": "Tâche ajoutée : *{body}*",
-        "de": "Aufgabe hinzugefügt: *{body}*",
+        "nl": (
+            "Taak toegevoegd: *{body}*",
+            "Taak genoteerd: *{body}*",
+        ),
+        "en": (
+            "Task added: *{body}*",
+            "Noted the task: *{body}*",
+        ),
+        "fr": (
+            "Tâche ajoutée : *{body}*",
+            "J’ai noté la tâche : *{body}*",
+        ),
+        "de": (
+            "Aufgabe hinzugefügt: *{body}*",
+            "Aufgabe notiert: *{body}*",
+        ),
     },
     "task_done": {
         "pt": (
             "Tarefa concluída.",
             "Feito, tarefa concluída.",
         ),
-        "nl": "Taak afgerond.",
-        "en": "Task done.",
-        "fr": "Tâche terminée.",
-        "de": "Aufgabe erledigt.",
+        "nl": (
+            "Taak afgerond.",
+            "Klaar, taak afgerond.",
+        ),
+        "en": (
+            "Task done.",
+            "Done, task completed.",
+        ),
+        "fr": (
+            "Tâche terminée.",
+            "C’est fait, tâche terminée.",
+        ),
+        "de": (
+            "Aufgabe erledigt.",
+            "Erledigt, Aufgabe abgeschlossen.",
+        ),
     },
     "task_not_found": {
         "pt": "Não achei essa tarefa em aberto. Diga “minhas tarefas” para ver a lista.",
@@ -2399,7 +2600,7 @@ async def _save_outbound(
 _RECORDED_CLAIM_RE = re.compile(
     r"registad[oa]s?|registrad[oa]s?|registei|registrei|anotei|anotad[oa]s?|guardad[oa]s?|"
     r"recorded|saved|logged|"
-    r"geregistreerd|opgeslagen|enregistr[ée]e?s?|erfasst|gespeichert",
+    r"geregistreerd|opgeslagen|genoteerd|vastgelegd|enregistr[ée]e?s?|not[ée]e?s?\b|erfasst|gespeichert|notiert|eingetragen|noted",
     re.IGNORECASE,
 )
 _NUMBER_RE = re.compile(r"\d+(?:[.,]\d{1,2})?")
@@ -3900,7 +4101,10 @@ async def handle_inbound(
                     workout_data.get("duration_minutes"), workout_data.get("distance_km"), lang
                 )
                 reply = _t(
-                    "workout_saved", lang, activity=workout_data["activity_type"], duration=dur_str
+                    "workout_saved",
+                    lang,
+                    activity=activity_name(workout_data["activity_type"], lang),
+                    duration=dur_str,
                 )
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
@@ -3948,7 +4152,7 @@ async def handle_inbound(
                             "workout_summary_row",
                             lang,
                             date=ws.workout_date.strftime("%d/%m"),
-                            activity=ws.activity_type,
+                            activity=activity_name(ws.activity_type, lang),
                             duration=dur,
                         )
                     )
@@ -4021,7 +4225,7 @@ async def handle_inbound(
                             "workout_summary_row",
                             lang,
                             date=ws_m.workout_date.strftime("%d/%m"),
-                            activity=ws_m.activity_type,
+                            activity=activity_name(ws_m.activity_type, lang),
                             duration=dur_m,
                         )
                     )
@@ -4064,11 +4268,16 @@ async def handle_inbound(
                     break
             if matched_act:
                 count = sum(1 for s in wa_sessions if matched_act in s.activity_type.lower())
-                activity_label = matched_act
+                activity_label_key = matched_act
             else:
                 count = len(wa_sessions)
-                activity_label = "workout"
-            reply = _t("workout_activity_summary", lang, activity=activity_label, n=count)
+                activity_label_key = "workout"
+            reply = _t(
+                "workout_activity_summary",
+                lang,
+                activity=activity_name(activity_label_key, lang),
+                n=count,
+            )
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
