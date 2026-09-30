@@ -113,6 +113,9 @@ class Message(Base):
     body: Mapped[str | None] = mapped_column(Text)
     wa_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # A handler run failed AFTER the reply went out: the retry redoes the work but must not
+    # send it again (see alfred.delivery).
+    reply_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     raw: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

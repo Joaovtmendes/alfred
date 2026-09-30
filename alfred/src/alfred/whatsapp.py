@@ -5,6 +5,7 @@ from __future__ import annotations
 import httpx
 import structlog
 
+from alfred import delivery
 from alfred.settings import settings
 
 logger = structlog.get_logger()
@@ -27,6 +28,9 @@ async def send_text(to: str, body: str) -> dict:
     Raises:
         httpx.HTTPStatusError: on non-2xx response.
     """
+    if delivery.suppressed():
+        logger.info("whatsapp.send_suppressed", to=to)
+        return {"suppressed": True}
     url = f"{_GRAPH_URL}/{settings.whatsapp_phone_number_id}/messages"
     payload = {
         "messaging_product": "whatsapp",
@@ -57,6 +61,7 @@ async def send_text(to: str, body: str) -> dict:
         to=to,
         wa_message_id=data.get("messages", [{}])[0].get("id"),
     )
+    delivery.note_sent()
     return data
 
 
@@ -77,6 +82,9 @@ async def send_template(
     Returns:
         Meta API response dict.
     """
+    if delivery.suppressed():
+        logger.info("whatsapp.send_suppressed", to=to)
+        return {"suppressed": True}
     url = f"{_GRAPH_URL}/{settings.whatsapp_phone_number_id}/messages"
     template: dict = {
         "name": template_name,
@@ -117,6 +125,7 @@ async def send_template(
         lang=lang_code,
         wa_message_id=data.get("messages", [{}])[0].get("id"),
     )
+    delivery.note_sent()
     return data
 
 
@@ -132,6 +141,9 @@ async def send_buttons(to: str, body: str, buttons: list[tuple[str, str]]) -> di
     Falls back to a plain text message when Meta rejects the interactive payload, so a
     button problem never loses the confirmation itself.
     """
+    if delivery.suppressed():
+        logger.info("whatsapp.send_suppressed", to=to)
+        return {"suppressed": True}
     url = f"{_GRAPH_URL}/{settings.whatsapp_phone_number_id}/messages"
     payload = {
         "messaging_product": "whatsapp",
@@ -173,4 +185,5 @@ async def send_buttons(to: str, body: str, buttons: list[tuple[str, str]]) -> di
         to=to,
         wa_message_id=data.get("messages", [{}])[0].get("id"),
     )
+    delivery.note_sent()
     return data
