@@ -11,7 +11,9 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from alfred.dashboard import router as dashboard_router
+from alfred.internal import router as internal_router
 from alfred.legal import router as legal_router
+from alfred.observability import init_sentry
 from alfred.settings import settings
 from alfred.web_security import SecurityHeadersMiddleware
 from alfred.webhook import recovery_loop
@@ -20,6 +22,7 @@ from alfred.webhook import router as webhook_router
 logger = structlog.get_logger(__name__)
 
 _start_time = time.time()
+init_sentry("web")
 
 
 @asynccontextmanager
@@ -52,6 +55,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(webhook_router)
 app.include_router(dashboard_router)
 app.include_router(legal_router)
+app.include_router(internal_router)
 
 
 @app.get("/health", tags=["ops"])

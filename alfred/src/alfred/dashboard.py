@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred.audit import audit
 from alfred.clock import day_start, month_name, to_local, today_local
 from alfred.db import get_session
 from alfred.models import Expense, Goal, HabitLog, HealthLog, Member, Note, Task
@@ -41,6 +42,17 @@ async def _get_member(token_str: str, session: AsyncSession) -> Member:
     if member is None or token_expired(member):
         raise HTTPException(status_code=404, detail="Dashboard not found") from None
     return member
+
+
+async def ensure_dashboard_token(session: AsyncSession, member: Member) -> None:
+    """Give ``member`` a valid dashboard token: issue if missing, rotate if expired."""
+    if member.dashboard_token is not None and not token_expired(member):
+        return
+    rotated = member.dashboard_token is not None
+    member.dashboard_token = uuid.uuid4()
+    member.dashboard_token_created_at = datetime.now(UTC)
+    audit(session, "dashboard_link_rotated" if rotated else "dashboard_link_issued", member.id)
+    await session.flush()
 
 
 def token_expired(member: Member, now: datetime | None = None) -> bool:
@@ -254,6 +266,24 @@ async def dashboard_api(
             "notes": notes,
             "health": health,
         }
+    )
+
+
+@router.get(
+    "/api/d/{token}/export", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
+)
+async def dashboard_export(
+    token: str,
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    """GDPR access/portability: everything stored about the member, as a JSON download."""
+    from alfred.privacy import export_member_data
+
+    member = await _get_member(token, session)
+    audit(session, "data_exported", member.id)
+    return JSONResponse(
+        await export_member_data(session, member),
+        headers={"Content-Disposition": 'attachment; filename="alfred-data.json"'},
     )
 
 

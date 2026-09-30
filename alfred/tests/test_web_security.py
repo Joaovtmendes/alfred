@@ -6,15 +6,12 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
-import pytest
 from sqlalchemy import select
 
 from alfred import dashboard
 from alfred.db import engine
 from alfred.models import AuditLog, Member
 from alfred.web_security import RateLimiter, _dashboard_limiter
-
-pytestmark = pytest.mark.asyncio
 
 
 async def test_security_headers_on_every_response(client) -> None:
