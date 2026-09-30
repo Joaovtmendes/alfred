@@ -76,3 +76,10 @@ docker compose up                           # app + Postgres local
 
 Push/merge em `master` → Railway faz build do `alfred/Dockerfile` e corre
 `alembic upgrade head` no arranque (`start.sh`). Checklist: skill `/deploy-checklist`.
+
+## Grafo do código (graphify)
+
+`graphify-out/` (ignorado pelo git) tem o grafo do repo: `GRAPH_REPORT.md` (visão geral),
+`graph.json` (consultas). Antes de fazer grep em várias pastas, consulta o grafo:
+`python3 -m graphify query "<pergunta>"`, `... explain "<nó>"`, `... path "A" "B"`.
+Depois de mudar código: `python3 -m graphify update .` (local, sem LLM, ~segundos).
