@@ -34,6 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.db import AsyncSessionLocal, get_session
 from alfred.models import Household, Member, Message
+from alfred.observability import alert
 from alfred.security import verify_whatsapp_signature
 from alfred.settings import settings
 
@@ -360,7 +361,7 @@ async def recover_unprocessed(now: datetime.datetime | None = None, limit: int =
     for row in stale:
         if row.id not in _WARNED_STALE:
             _WARNED_STALE.add(row.id)
-            logger.error("webhook.stale_unprocessed_message", wa_message_id=row.wa_message_id)
+            alert("webhook.stale_unprocessed_message", wa_message_id=row.wa_message_id)
     return len(rows)
 
 

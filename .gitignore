@@ -1,3 +1,6 @@
 # Claude Code — personal settings stay local
 .claude/settings.local.json
 .DS_Store
+
+# graphify — grafo regenerável (python3 -m graphify update .)
+graphify-out/

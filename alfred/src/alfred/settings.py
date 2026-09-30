@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     # Dashboard / public pages
     privacy_contact_email: str = ""  # shown on /privacy
     base_url: str = ""  # e.g. https://alfred.up.railway.app
+    dashboard_token_ttl_days: int = 90  # older links stop working; "meu dashboard" issues a new one
+    dashboard_rate_limit_per_minute: int = 60  # per client IP, token routes only
+
+    # Observability / ops
+    sentry_dsn: str = ""  # empty → error tracking off
+    internal_metrics_token: SecretStr = SecretStr("")  # empty → /internal/metrics is a 404
 
     # Expenses at or above this amount get an explicit "is this right?" hint (undo via
     # "apaga" / "errei foram X"). Nothing is blocked: a hint costs no state and no round trip.

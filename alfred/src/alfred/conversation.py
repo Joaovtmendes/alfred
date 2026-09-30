@@ -20,6 +20,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred.audit import audit
 from alfred.clock import (
     day_start,
     month_name,
@@ -54,6 +55,7 @@ from alfred.models import (
     Trip,
     WorkoutSession,
 )
+from alfred.observability import alert
 from alfred.parsing import (
     CORRECTION_PRONOUNS,
     DELETE_LAST_EXPENSE_RE,
@@ -72,7 +74,7 @@ from alfred.parsing import (
 )
 from alfred.settings import settings
 from alfred.validation import MAX_AMOUNT
-from alfred.whatsapp import send_text
+from alfred.whatsapp import send_buttons, send_text
 
 logger = structlog.get_logger()
 
@@ -476,6 +478,97 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Corrected — {name}: {old} → {amount}",
         "fr": "Corrigé — {name} : {old} → {amount}",
         "de": "Korrigiert — {name}: {old} → {amount}",
+    },
+    "wipe_ask": {
+        "pt": "Vou apagar *todos* os teus dados (despesas, notas, metas, mensagens…). Isto não se desfaz. Confirmas?",
+        "nl": "Ik verwijder *al* je gegevens (uitgaven, notities, doelen, berichten…). Dit kan niet ongedaan worden gemaakt. Bevestig je?",
+        "en": "I'll delete *all* your data (expenses, notes, goals, messages…). This can't be undone. Confirm?",
+        "fr": "Je vais supprimer *toutes* tes données (dépenses, notes, objectifs, messages…). C'est irréversible. Tu confirmes ?",
+        "de": "Ich lösche *alle* deine Daten (Ausgaben, Notizen, Ziele, Nachrichten…). Das lässt sich nicht rückgängig machen. Bestätigst du?",
+    },
+    "btn_wipe": {
+        "pt": "Apagar tudo",
+        "nl": "Alles verwijderen",
+        "en": "Delete everything",
+        "fr": "Tout supprimer",
+        "de": "Alles löschen",
+    },
+    "btn_cancel": {
+        "pt": "Cancelar",
+        "nl": "Annuleren",
+        "en": "Cancel",
+        "fr": "Annuler",
+        "de": "Abbrechen",
+    },
+    "wipe_done": {
+        "pt": "Feito. Apaguei todos os teus dados. Se quiseres voltar, é só enviar uma mensagem.",
+        "nl": "Klaar. Ik heb al je gegevens verwijderd. Wil je terugkomen, stuur dan gewoon een bericht.",
+        "en": "Done. I deleted all your data. If you want to come back, just send a message.",
+        "fr": "C'est fait. J'ai supprimé toutes tes données. Pour revenir, envoie simplement un message.",
+        "de": "Erledigt. Ich habe alle deine Daten gelöscht. Wenn du zurückkommen willst, schreib einfach eine Nachricht.",
+    },
+    "wipe_cancelled": {
+        "pt": "Ok, não apaguei nada.",
+        "nl": "Oké, ik heb niets verwijderd.",
+        "en": "OK, I deleted nothing.",
+        "fr": "D'accord, je n'ai rien supprimé.",
+        "de": "OK, ich habe nichts gelöscht.",
+    },
+    "wipe_expired": {
+        "pt": "Este pedido expirou. Se ainda queres apagar os teus dados, escreve *apagar meus dados* outra vez.",
+        "nl": "Dit verzoek is verlopen. Wil je je gegevens nog verwijderen, schrijf dan opnieuw *verwijder mijn gegevens*.",
+        "en": "This request expired. If you still want your data deleted, write *delete my data* again.",
+        "fr": "Cette demande a expiré. Pour supprimer tes données, écris à nouveau *supprimer mes données*.",
+        "de": "Diese Anfrage ist abgelaufen. Willst du deine Daten weiterhin löschen, schreib erneut *meine Daten löschen*.",
+    },
+    "export_link": {
+        "pt": "Aqui estão os teus dados em JSON (o link expira em {days} dias e é só teu):\n{url}",
+        "nl": "Hier zijn je gegevens als JSON (de link verloopt na {days} dagen en is alleen voor jou):\n{url}",
+        "en": "Here is your data as JSON (the link expires in {days} days and is only yours):\n{url}",
+        "fr": "Voici tes données en JSON (le lien expire dans {days} jours et n'est qu'à toi) :\n{url}",
+        "de": "Hier sind deine Daten als JSON (der Link läuft nach {days} Tagen ab und gehört nur dir):\n{url}",
+    },
+    "btn_undo": {
+        "pt": "Desfazer",
+        "nl": "Ongedaan maken",
+        "en": "Undo",
+        "fr": "Annuler",
+        "de": "Rückgängig",
+    },
+    "btn_edit": {
+        "pt": "Editar",
+        "nl": "Aanpassen",
+        "en": "Edit",
+        "fr": "Modifier",
+        "de": "Ändern",
+    },
+    "btn_ok": {
+        "pt": "Está certo",
+        "nl": "Klopt",
+        "en": "It's right",
+        "fr": "C'est bon",
+        "de": "Stimmt",
+    },
+    "button_ok_reply": {
+        "pt": "Perfeito, fica registado.",
+        "nl": "Prima, het staat erin.",
+        "en": "Great, it stays recorded.",
+        "fr": "Parfait, c'est enregistré.",
+        "de": "Alles klar, es bleibt erfasst.",
+    },
+    "button_edit_hint": {
+        "pt": "Diz-me o valor certo, por ex.: *na verdade foi 25*",
+        "nl": "Geef me het juiste bedrag, bijv.: *actually 25*",
+        "en": "Tell me the right amount, e.g.: *actually 25*",
+        "fr": "Donne-moi le bon montant, par ex. : *actually 25*",
+        "de": "Nenne mir den richtigen Betrag, z. B.: *actually 25*",
+    },
+    "button_gone": {
+        "pt": "Esse registo já não existe.",
+        "nl": "Die registratie bestaat niet meer.",
+        "en": "That entry no longer exists.",
+        "fr": "Cet enregistrement n'existe plus.",
+        "de": "Dieser Eintrag existiert nicht mehr.",
     },
     "expense_deleted": {
         "pt": "Apagada — {amount} em *{name}* ({date}).",
@@ -1369,6 +1462,21 @@ _CAT_ALIAS: dict[str, str] = {
 # A correction only rewrites an expense recorded moments ago; older ones are deleted/re-entered.
 CORRECTION_WINDOW_HOURS = 2
 
+_WIPE_RE = re.compile(
+    r"^(?:apaga(?:r)?\s+(?:os\s+)?(?:meus|todos\s+os\s+meus)\s+dados|"
+    r"delete\s+(?:all\s+)?my\s+data|erase\s+my\s+data|"
+    r"verwijder\s+(?:al\s+)?mijn\s+gegevens|"
+    r"supprime(?:r)?\s+(?:toutes\s+)?mes\s+donnees|"
+    r"(?:loesche|loeschen|losche|loschen)\s+(?:alle\s+)?meine\s+daten|meine\s+daten\s+(?:loeschen|loschen))"
+    r"\s*[.!]*$"
+)
+_EXPORT_RE = re.compile(
+    r"^(?:exporta(?:r)?\s+(?:os\s+)?(?:meus|todos\s+os\s+meus)\s+dados|"
+    r"export\s+my\s+data|exporteer\s+mijn\s+gegevens|"
+    r"exporte(?:r)?\s+mes\s+donnees|meine\s+daten\s+exportieren)\s*[.!]*$"
+)
+WIPE_CONFIRM_SECONDS = 600
+
 _AMOUNT_CORRECTION_RE = re.compile(
     # The whole message must be the correction: "errei, foram 42€", "na verdade foram 32".
     # "actually I spent 20 at Lidl" is a new expense and must NOT rewrite the last one.
@@ -2077,10 +2185,14 @@ _NUMBER_RE = re.compile(r"\d+(?:[.,]\d{1,2})?")
 _FAKE_CONFIRM_RE = re.compile(
     r"aguarda\w*\s+confirma|confirma\s+(?:cada|com)|\"?sim\"?\s*(?:/|ou)\s*\"?n[ãa]o|"
     r"awaiting\s+confirm|confirm\s+each|yes\s*/\s*no|wacht\w*\s+op\s+bevestig|"
-    r"en\s+attente\s+de\s+confirm|warte\w*\s+auf\s+best",
+    r"en\s+attente\s+de\s+confirm|warte\w*\s+auf\s+best|"
+    # "É isto correto?" / "Ginásio — quanto?": questions the app has no state to receive
+    r"[ée]\s+isto\s+correto|is\s+this\s+correct|klopt\s+dit|est-ce\s+correct|ist\s+das\s+richtig|"
+    r"[—-]\s*(?:quanto|how\s+much|hoeveel|combien|wie\s+viel)\s*\?",
     re.IGNORECASE,
 )
-_ZERO_OR_NEG_RE = re.compile(r"(?<![\d.,])(?:-\s*\d|0+(?:[.,]0+)?(?![\d.,]))")
+# A bare 0 amount ("Café 0") or a leading-minus amount ("reembolso -15") the extractors drop.
+_ZERO_OR_NEG_RE = re.compile(r"(?<!\S)-\d|(?<![\d.,-])0+(?:[.,]0+)?(?![\d.,])")
 
 
 def _has_zero_or_negative_amount(body: str) -> bool:
@@ -2587,6 +2699,81 @@ async def handle_flow_onboarding(
     return True
 
 
+async def _handle_button_reply(
+    member: Member,
+    message: Message,
+    session: AsyncSession,
+    lang: str,
+) -> bool:
+    """Handle a tap on a reply button of a confirmation (``undo:``/``edit:``/``ok:<expense id>``).
+
+    Returns True when the message was a button tap (handled, or deliberately ignored).
+    The expense id only ever selects a row of THIS member, so a forged id does nothing.
+    """
+    interactive = (message.raw or {}).get("interactive") or {}
+    if interactive.get("type") != "button_reply":
+        return False
+    button_id = str((interactive.get("button_reply") or {}).get("id") or "")
+    action, _, raw_id = button_id.partition(":")
+    to = member.wa_phone
+
+    if action == "keep":
+        reply = _t("wipe_cancelled", lang)
+        await send_text(to, reply)
+        await _save_outbound(member, reply, session)
+        return True
+    if action == "wipe":
+        try:
+            fresh = 0 <= int(datetime.now(UTC).timestamp()) - int(raw_id) <= WIPE_CONFIRM_SECONDS
+        except ValueError:
+            fresh = False
+        if not fresh:
+            reply = _t("wipe_expired", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return True
+        from alfred.privacy import erase_member
+
+        logger.info("conversation.member_erased", member_id=str(member.id))
+        await erase_member(session, member)
+        await send_text(to, _t("wipe_done", lang))  # nothing to save: the member is gone
+        return True
+
+    try:
+        expense_id = uuid.UUID(raw_id)
+    except ValueError:
+        logger.info("conversation.button_unknown", member_id=str(member.id))
+        return True
+    if action not in ("undo", "edit", "ok"):
+        logger.info("conversation.button_unknown", member_id=str(member.id))
+        return True
+
+    expense = await session.scalar(
+        select(Expense).where(Expense.id == expense_id, Expense.member_id == member.id)
+    )
+    if expense is None:
+        reply = _t("button_gone", lang)
+    elif action == "undo":
+        name = expense.merchant or expense.description or category_label(expense.category, lang)
+        reply = _t(
+            "expense_deleted",
+            lang,
+            amount=_fmt_eur(expense.amount),
+            name=name,
+            date=to_local(expense.expense_date).strftime("%d/%m"),
+        )
+        await session.delete(expense)
+        audit(session, "expense_undone", member.id)
+        logger.info("conversation.expense_undone", member_id=str(member.id))
+    elif action == "edit":
+        reply = _t("button_edit_hint", lang)
+    else:
+        reply = _t("button_ok_reply", lang)
+    await send_text(to, reply)
+    await _save_outbound(member, reply, session)
+    return True
+
+
 async def handle_inbound(
     member: Member,
     message: Message,
@@ -2626,6 +2813,7 @@ async def handle_inbound(
             reply = _t("consent_accepted", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
+            audit(session, "consent_accepted", member.id)
             logger.info("conversation.consent_accepted", member_id=str(member.id))
         elif body in _CONSENT_NO:
             member.consent_state = "rejected"
@@ -2650,6 +2838,35 @@ async def handle_inbound(
 
     # ── 4. Accepted — handle commands and LLM ────────────────────────────────
     if member.consent_state == "accepted":
+        # 4-0. Reply-button taps (Undo / Edit / It's right on a confirmation)
+        if await _handle_button_reply(member, message, session, lang):
+            return
+
+        # 4-0b. GDPR: "apagar meus dados" (two steps, buttons) / "exportar meus dados"
+        if _WIPE_RE.match(body_plain.strip()):
+            now_epoch = int(datetime.now(UTC).timestamp())
+            await send_buttons(
+                to,
+                _t("wipe_ask", lang),
+                [(f"wipe:{now_epoch}", _t("btn_wipe", lang)), ("keep:0", _t("btn_cancel", lang))],
+            )
+            await _save_outbound(member, _t("wipe_ask", lang), session)
+            return
+        if _EXPORT_RE.match(body_plain.strip()):
+            from alfred.dashboard import ensure_dashboard_token
+
+            base_url = (settings.base_url or "").rstrip("/")
+            if not base_url:
+                reply = _t("dashboard_no_base_url", lang)
+            else:
+                await ensure_dashboard_token(session, member)
+                audit(session, "data_export_link", member.id)
+                url = f"{base_url}/api/d/{member.dashboard_token}/export"
+                reply = _t("export_link", lang, url=url, days=settings.dashboard_token_ttl_days)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
         # M12 — load member's merchant→category overrides once per message
         member_overrides = await _load_merchant_overrides(member, session)
 
@@ -2966,12 +3183,11 @@ async def handle_inbound(
         if _is_command(body, _DASHBOARD_WORDS):
             import uuid as _uuid
 
+            from alfred.dashboard import ensure_dashboard_token
             from alfred.settings import settings as _settings
 
-            # Generate token if member doesn't have one
-            if member.dashboard_token is None:
-                member.dashboard_token = _uuid.uuid4()
-                await session.flush()
+            # Missing or expired (TTL) → issue a fresh one; the old link stops working.
+            await ensure_dashboard_token(session, member)
             import os as _os
 
             base_url = (
@@ -3598,6 +3814,7 @@ async def handle_inbound(
                     date=to_local(last.expense_date).strftime("%d/%m"),
                 )
                 await session.delete(last)
+                audit(session, "expense_deleted", member.id)
                 logger.info("conversation.expense_deleted", member_id=str(member.id))
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
@@ -3807,9 +4024,19 @@ async def handle_inbound(
             ):
                 reply += _t("category_hint_overig", lang, merchant=expense_data["merchant"])
 
-            if expense_data["amount"] >= settings.high_value_threshold:
+            high_value = expense_data["amount"] >= settings.high_value_threshold
+            if high_value:
                 reply += _t("high_value_hint", lang)
-            await send_text(to, reply)
+            # Reply buttons carry the expense id: no pending state needed to undo/edit.
+            first = ("ok" if high_value else "edit", "btn_ok" if high_value else "btn_edit")
+            await send_buttons(
+                to,
+                reply,
+                [
+                    (f"{first[0]}:{expense.id}", _t(first[1], lang)),
+                    (f"undo:{expense.id}", _t("btn_undo", lang)),
+                ],
+            )
             await _save_outbound(member, reply, session)
             logger.info(
                 "conversation.expense_recorded",
@@ -3858,15 +4085,22 @@ async def handle_inbound(
                 return
 
                 # 4g. General LLM reply with conversation history
+        if _has_zero_or_negative_amount(body):
+            # Zero/negative amounts are never stored: answer deterministically, skip the LLM.
+            reply = _t("invalid_amount_check", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            logger.info("conversation.invalid_amount", member_id=str(member.id))
+            return
         history = await _load_history(member, session, exclude_id=message.id)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
         if _claims_recorded(reply):
             # Nothing was written on this path: never let the model confirm a phantom record.
-            logger.warning("conversation.llm_false_record_claim", member_id=str(member.id))
+            alert("conversation.llm_false_record_claim", member_id=str(member.id))
             reply = _t("fallback_no_record", lang)
         elif _FAKE_CONFIRM_RE.search(reply):
             # There is no pending-confirmation state: replace the invented flow with a real ask.
-            logger.warning("conversation.llm_fake_confirmation", member_id=str(member.id))
+            alert("conversation.llm_fake_confirmation", member_id=str(member.id))
             reply = _t(
                 "invalid_amount_check"
                 if _has_zero_or_negative_amount(body)

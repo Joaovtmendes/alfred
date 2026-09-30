@@ -44,3 +44,12 @@ jobs:
           alembic upgrade head
       - name: Tests
         run: pytest -q
+
+  # Static security scan. Non-blocking on purpose until the first run shows the baseline:
+  # once it is clean, delete `continue-on-error` so findings fail the PR.
+  semgrep:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: pipx run semgrep --config p/python --config p/fastapi --config p/secrets --error alfred/src

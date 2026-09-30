@@ -78,6 +78,7 @@ class Member(Base):
     dashboard_token: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True, unique=True, default=None
     )
+    dashboard_token_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -403,3 +404,26 @@ class Trip(Base):
     )
 
     member: Mapped[Member] = relationship()
+
+
+# ── Sprint 4b — Audit trail ──────────────────────────────────────────────────
+
+
+class AuditLog(Base):
+    """Security/privacy event (link issued, data exported/deleted...). No message content.
+
+    ``member_id`` is set to NULL when the member is erased, so the trail survives without
+    identifying anyone.
+    """
+
+    __tablename__ = "audit_log"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id", ondelete="SET NULL"), index=True
+    )
+    event: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    detail: Mapped[dict | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

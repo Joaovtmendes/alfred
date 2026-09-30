@@ -23,6 +23,7 @@ class Lab:
     def __init__(self, member_id: uuid.UUID, household_id: uuid.UUID, phone: str) -> None:
         self.member_id, self.household_id, self.phone = member_id, household_id, phone
         self.sent: list[str] = []
+        self.buttons: list[list[tuple[str, str]]] = []  # buttons of each reply (may be empty)
         self.expense = AsyncMock(return_value=None)
         self.llm_reply = AsyncMock(return_value="[llm]")
         self.classify = AsyncMock(return_value=None)
@@ -30,14 +31,35 @@ class Lab:
 
     async def say(self, body: str) -> str:
         """Send one message; returns the reply text."""
+        return await self._run(make_message(body))
+
+    async def tap(self, button_id: str, title: str = "btn") -> str:
+        """Tap a reply button (``interactive.button_reply``); returns the reply text."""
+        raw = {
+            "type": "interactive",
+            "interactive": {
+                "type": "button_reply",
+                "button_reply": {"id": button_id, "title": title},
+            },
+        }
+        return await self._run(make_message(body=None, raw=raw))
+
+    async def _run(self, message) -> str:
         before = len(self.sent)
 
         async def fake_send(to: str, text: str) -> dict:
             self.sent.append(text)
+            self.buttons.append([])
+            return {}
+
+        async def fake_buttons(to: str, text: str, buttons: list) -> dict:
+            self.sent.append(text)
+            self.buttons.append(list(buttons))
             return {}
 
         with (
             patch("alfred.conversation.send_text", fake_send),
+            patch("alfred.conversation.send_buttons", fake_buttons),
             patch("alfred.conversation.extract_expense", self.expense),
             patch("alfred.conversation.extract_expenses_multi", self.multi),
             patch("alfred.conversation.extract_habit", AsyncMock(return_value=None)),
@@ -48,7 +70,7 @@ class Lab:
         ):
             async with AsyncSessionLocal() as s:
                 member = await s.get(Member, self.member_id)
-                await handle_inbound(member, make_message(body), s)
+                await handle_inbound(member, message, s)
                 await s.commit()
         assert len(self.sent) == before + 1, f"expected exactly one reply, got {self.sent[before:]}"
         return self.sent[-1]

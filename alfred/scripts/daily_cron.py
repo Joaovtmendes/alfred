@@ -194,11 +194,17 @@ async def run_cron() -> int:
 
 
 if __name__ == "__main__":
+    from alfred.observability import alert, init_sentry
+
+    init_sentry("cron")
     try:
         failed = asyncio.run(run_cron())
     except Exception:
         import traceback
 
         traceback.print_exc()
+        alert("cron.crashed")
         sys.exit(1)
+    if failed:
+        alert("cron.send_errors", errors=failed)
     sys.exit(1 if failed else 0)  # non-zero → Railway marks the run as failed
