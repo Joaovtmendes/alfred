@@ -11,6 +11,7 @@ State machine:
 
 from __future__ import annotations
 
+import random
 import re
 import unicodedata
 import uuid
@@ -83,13 +84,10 @@ logger = structlog.get_logger()
 
 _SUPPORTED_LANGS = ("pt", "nl", "en", "fr", "de")
 
-_STRINGS: dict[str, dict[str, str]] = {
+_STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     "disclosure": {
         "pt": (
-            "*Alfred* — assistente pessoal via WhatsApp.\n\n"
-            "Sou uma inteligência artificial, não uma pessoa. "
-            "As tuas mensagens são processadas para te dar suporte.\n\n"
-            "Escreve *sim* para continuar ou *não* para cancelar."
+            "*Alfred* — assistente pessoal pelo WhatsApp.\n\nSou uma inteligência artificial, não uma pessoa. Para ajudar você, processo as suas mensagens.\n\nResponda *sim* para continuar ou *não* para cancelar."
         ),
         "nl": (
             "*Alfred* — persoonlijke assistent via WhatsApp.\n\n"
@@ -118,11 +116,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     "consent_accepted": {
         "pt": (
-            "Tudo pronto. Podes começar agora.\n\n"
-            '• "gastei €45 no Jumbo" — registar despesa\n'
-            '• "recebi €2.800 de salário" — registar receita\n'
-            '• "resumo" — ver os gastos do mês\n'
-            '• "ajuda" — ver todos os comandos'
+            'Tudo pronto! Me diga o que você gastou e eu anoto, por exemplo:\n\n• "gastei €45 no Jumbo" — anotar uma despesa\n• "recebi €2.800 de salário" — anotar uma receita\n• "resumo" — ver os gastos do mês\n• "ajuda" — ver tudo o que sei fazer'
         ),
         "nl": (
             "Alles klaar. Je kunt nu beginnen.\n\n"
@@ -154,14 +148,14 @@ _STRINGS: dict[str, dict[str, str]] = {
         ),
     },
     "consent_rejected": {
-        "pt": "Entendido. Não vou processar mais mensagens. Para retomar, envia *START*.",
+        "pt": "Entendido, não vou processar mais mensagens. Para voltar, envie *START*.",
         "nl": "Begrepen. Ik verwerk geen berichten meer. Stuur *START* om te hervatten.",
         "en": "Understood. I won't process any more messages. Send *START* to resume.",
         "fr": "Compris. Je ne traiterai plus de messages. Envoie *START* pour reprendre.",
         "de": "Verstanden. Ich verarbeite keine Nachrichten mehr. Sende *START*, um fortzufahren.",
     },
     "consent_unknown": {
-        "pt": "Responde *sim* para continuar ou *não* para cancelar.",
+        "pt": "Responda *sim* para continuar ou *não* para cancelar.",
         "nl": "Antwoord *ja* om door te gaan of *nee* om te annuleren.",
         "en": "Reply *yes* to continue or *no* to cancel.",
         "fr": "Réponds *oui* pour continuer ou *non* pour annuler.",
@@ -169,20 +163,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     "help": {
         "pt": (
-            "*Alfred* — o que posso fazer por ti:\n\n"
-            "*Registar despesas*\n"
-            '• "gastei €45 no Jumbo"\n'
-            '• "Uber 12,50"\n'
-            '• "paguei €180 de renda"\n\n'
-            "*Registar receitas*\n"
-            '• "recebi €2.800 de salário"\n\n'
-            "*Consultas*\n"
-            '• "resumo" — gastos do mês\n'
-            '• "saldo" — balanço receitas/despesas\n'
-            '• "gastos desta semana" — por período\n'
-            '• "compara este mês com o mês passado"\n'
-            '• "ajuda" — esta mensagem\n\n'
-            '_Para sair: "stop"_'
+            '*Alfred* — o que eu posso fazer por você:\n\n*Despesas*\n• "gastei €45 no Jumbo"\n• "Uber 12,50"\n• "paguei €180 de aluguel"\n\n*Receitas*\n• "recebi €2.800 de salário"\n\n*Consultas*\n• "resumo" — gastos do mês\n• "saldo" — receitas e despesas\n• "gastos desta semana" — por período\n• "compara este mês com o mês passado"\n• "ajuda" — esta mensagem\n\n_Para sair: "stop"_'
         ),
         "nl": (
             "*Alfred* — wat ik voor je kan doen:\n\n"
@@ -250,21 +231,21 @@ _STRINGS: dict[str, dict[str, str]] = {
         ),
     },
     "no_records_scope": {
-        "pt": "Sem registos em *{category}* em {period_label}.",
+        "pt": "Ainda não há registros em *{category}* em {period_label}.",
         "nl": "Geen registraties in *{category}* in {period_label}.",
         "en": "No records in *{category}* in {period_label}.",
         "fr": "Aucun enregistrement dans *{category}* en {period_label}.",
         "de": "Keine Einträge in *{category}* in {period_label}.",
     },
     "no_records_period": {
-        "pt": "Sem registos em {period_label}.",
+        "pt": "Ainda não há registros em {period_label}.",
         "nl": "Geen registraties in {period_label}.",
         "en": "No records in {period_label}.",
         "fr": "Aucun enregistrement en {period_label}.",
         "de": "Keine Einträge in {period_label}.",
     },
     "no_records_month": {
-        "pt": "Sem registos este mês.",
+        "pt": "Ainda não tenho nada este mês. Manda a primeira despesa quando quiser.",
         "nl": "Geen registraties deze maand.",
         "en": "No records this month.",
         "fr": "Aucun enregistrement ce mois-ci.",
@@ -369,49 +350,57 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "_gleich wie letzter Monat_",
     },
     "expense_recorded": {
-        "pt": "Despesa registada — {amount} em *{name}*",
+        "pt": (
+            "Anotei: {amount} em *{name}*.",
+            "Feito, {amount} em *{name}*.",
+            "Registrado: *{name}*, {amount}.",
+        ),
         "nl": "Uitgave geregistreerd — {amount} bij *{name}*",
         "en": "Expense recorded — {amount} at *{name}*",
         "fr": "Dépense enregistrée — {amount} chez *{name}*",
         "de": "Ausgabe erfasst — {amount} bei *{name}*",
     },
     "income_recorded": {
-        "pt": "Receita registada — {amount} de *{name}*",
+        "pt": (
+            "Boa, entrou {amount} de *{name}*.",
+            "Anotei a receita: {amount} de *{name}*.",
+            "Registrado: {amount} de *{name}*.",
+        ),
         "nl": "Inkomsten geregistreerd — {amount} van *{name}*",
         "en": "Income recorded — {amount} from *{name}*",
         "fr": "Revenu enregistré — {amount} de *{name}*",
         "de": "Einnahme erfasst — {amount} von *{name}*",
     },
     "category_corrected": {
-        "pt": "✓ Percebido! {merchant} → *{category}*. Vou lembrar para a próxima.",
+        "pt": "Combinado, a partir de agora *{merchant}* fica em *{category}*.",
         "nl": "✓ Begrepen! {merchant} → *{category}*. Ik onthoud dit voor de volgende keer.",
         "en": "✓ Got it! {merchant} → *{category}*. I'll remember that.",
         "fr": "✓ Compris ! {merchant} → *{category}*. Je m'en souviendrai.",
         "de": "✓ Verstanden! {merchant} → *{category}*. Das merke ich mir.",
     },
     "category_corrected_no_merchant": {
-        "pt": "Não encontrei nenhuma despesa recente com esse comerciante para corrigir. Podes registar novamente?",
+        "pt": "Não achei nenhuma despesa recente desse lugar para corrigir. Pode registrar de novo?",
         "nl": "Ik vond geen recente uitgave van die merchant om te corrigeren. Kun je het opnieuw invoeren?",
         "en": "I couldn't find a recent expense from that merchant to correct. Can you re-enter it?",
         "fr": "Je n'ai pas trouvé de dépense récente de ce marchand à corriger. Peux-tu la re-saisir ?",
         "de": "Ich fand keine aktuelle Ausgabe von diesem Händler zum Korrigieren. Kannst du sie erneut eingeben?",
     },
     "correction_no_expense": {
-        "pt": "Não encontrei nenhuma despesa recente para corrigir. Tenta registar de novo.",
+        "pt": "Não achei nenhuma despesa recente para corrigir. Pode registrar de novo?",
         "nl": "Ik vond geen recente uitgave om te corrigeren. Probeer het opnieuw in te voeren.",
         "en": "I couldn't find a recent expense to correct. Please re-enter it.",
         "fr": "Je n'ai pas trouvé de dépense récente à corriger. Peux-tu la re-saisir ?",
         "de": "Ich fand keine aktuelle Ausgabe zum Korrigieren. Bitte gib sie erneut ein.",
     },
     "lembrete_set": {
-        "pt": "⏰ Lembrete configurado: *{text}* às {time}. Vou lembrar-te todos os dias.",
+        "pt": "⏰ Combinado! Vou te lembrar de *{text}* todo dia às {time}.",
         "nl": "⏰ Herinnering ingesteld: *{text}* om {time}. Ik herinner je elke dag.",
         "en": "⏰ Reminder set: *{text}* at {time}. I'll remind you every day.",
         "fr": "⏰ Rappel configuré : *{text}* à {time}. Je te rappellerai chaque jour.",
         "de": "⏰ Erinnerung eingestellt: *{text}* um {time} Uhr. Ich erinnere dich täglich.",
     },
     "lembrete_invalid": {
-        "pt": "Formato inválido. Tenta: *configura lembrete: toma medicamento às 08:00*",
+        "pt": "Não consegui pegar o horário. Tente assim: *lembrete: tomar o remédio às 08:00*",
         "nl": "Ongeldig formaat. Probeer: *herinnering: medicatie innemen om 08:00*",
         "en": "Invalid format. Try: *reminder: take medication at 08:00*",
         "fr": "Format invalide. Essaie : *rappel : prendre médicament à 08:00*",
@@ -432,70 +421,73 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "gestern",
     },
     "currency_unsupported": {
-        "pt": 'Por agora só registo em euros — {cur} não foi guardado. Converte para € e envia de novo (ex.: "Jumbo 23,50").',
+        "pt": 'Por enquanto só trabalho em euros, então não guardei os {cur}. Manda de novo convertido em € (ex.: "Jumbo 23,50")?',
         "nl": 'Ik registreer voorlopig alleen euro\'s — {cur} is niet opgeslagen. Reken om naar € en stuur opnieuw (bijv. "Jumbo 23,50").',
         "en": 'I only record euros for now — {cur} was not saved. Convert to € and send it again (e.g. "Jumbo 23.50").',
         "fr": "Je n'enregistre que des euros pour l'instant — {cur} n'a pas été enregistré. Convertis en € et renvoie (ex. « Jumbo 23,50 »).",
         "de": "Ich erfasse vorerst nur Euro — {cur} wurde nicht gespeichert. Rechne in € um und sende es erneut (z. B. „Jumbo 23,50“).",
     },
     "high_value_hint": {
-        "pt": "\nValor alto — tens a certeza do valor?",
+        "pt": "\nÉ um valor alto, confere se está certo?",
         "nl": "\nHoog bedrag — weet je zeker dat het bedrag klopt?",
         "en": "\nHigh amount — are you sure about the value?",
         "fr": "\nMontant élevé — es-tu sûr du montant ?",
         "de": "\nHoher Betrag — bist du sicher beim Betrag?",
     },
     "invalid_amount_check": {
-        "pt": "Valor inválido (zero ou negativo) — não registei nada. Confere e envia de novo.",
+        "pt": "Esse valor não dá para registrar (zero ou negativo). Manda de novo com o valor certo?",
         "nl": "Ongeldig bedrag (nul of negatief) — niets geregistreerd. Controleer en stuur opnieuw.",
         "en": "Invalid amount (zero or negative) — nothing recorded. Check it and send again.",
         "fr": "Montant invalide (zéro ou négatif) — rien enregistré. Vérifie et renvoie.",
         "de": "Ungültiger Betrag (null oder negativ) — nichts erfasst. Prüfe ihn und sende erneut.",
     },
     "multi_recorded_title": {
-        "pt": "Registadas {n} transações:",
+        "pt": "Anotei estes lançamentos ({n}):",
         "nl": "{n} transacties geregistreerd:",
         "en": "Recorded {n} transactions:",
         "fr": "{n} transactions enregistrées :",
         "de": "{n} Buchungen erfasst:",
     },
     "multi_skipped_currency": {
-        "pt": "Não guardei {cur} (só euros): {name}.",
+        "pt": "Não guardei {cur} (só trabalho em euros): {name}.",
         "nl": "Niet opgeslagen ({cur}, alleen euro's): {name}.",
         "en": "Not saved ({cur}, euros only): {name}.",
         "fr": "Non enregistré ({cur}, euros uniquement) : {name}.",
         "de": "Nicht gespeichert ({cur}, nur Euro): {name}.",
     },
     "fallback_no_record": {
-        "pt": "Não registei nada. Envia uma despesa por linha com valor e descrição, por exemplo:\nMercado 20\nFarmácia 10",
+        "pt": "Não consegui anotar nada. Manda uma despesa por linha, com valor e descrição, por exemplo:\nMercado 20\nFarmácia 10",
         "nl": "Ik heb niets geregistreerd. Stuur één uitgave per regel met bedrag en omschrijving, bijvoorbeeld:\nMercado 20\nFarmácia 10",
         "en": "I didn't record anything. Send one expense per line with amount and description, e.g.:\nGroceries 20\nPharmacy 10",
         "fr": "Je n'ai rien enregistré. Envoie une dépense par ligne avec montant et description, par ex. :\nCourses 20\nPharmacie 10",
         "de": "Ich habe nichts erfasst. Sende eine Ausgabe pro Zeile mit Betrag und Beschreibung, z. B.:\nEinkauf 20\nApotheke 10",
     },
     "fallback_unknown": {
-        "pt": "Não percebi bem essa. Podes dizer de outra forma? Por exemplo: “Mercado 20”, “corri 5km” ou “dormi 7h”.",
+        "pt": (
+            "Essa escapou de mim. Pode dizer de outro jeito? Por exemplo: “Mercado 20”, “corri 5km” ou “dormi 7h”.",
+            "Não entendi essa. Tente algo como “Mercado 20”, “corri 5km” ou “dormi 7h”.",
+        ),
         "nl": "Die snap ik niet helemaal. Kun je het anders zeggen? Bijvoorbeeld: “Jumbo 20”, “ik heb 5 km gerend” of “ik sliep 7 uur”.",
         "en": "I didn't quite get that. Could you say it another way? For example: “Groceries 20”, “ran 5km” or “slept 7h”.",
         "fr": "Je n'ai pas bien compris. Peux-tu le dire autrement ? Par exemple : « Courses 20 », « couru 5 km » ou « dormi 7 h ».",
         "de": "Das habe ich nicht ganz verstanden. Kannst du es anders sagen? Zum Beispiel: „Einkauf 20“, „5 km gelaufen“ oder „7 Std. geschlafen“.",
     },
     "bare_yes": {
-        "pt": "Combinado! Mas não tenho nada pendente para confirmar. Se quiseres registar algo, é só dizer, por exemplo: “Mercado 20”.",
+        "pt": "Tudo certo, mas não tenho nada esperando confirmação. Quer registrar alguma coisa? Por exemplo: “Mercado 20”.",
         "nl": "Prima! Maar er staat niets open om te bevestigen. Wil je iets vastleggen, zeg het gerust, bijvoorbeeld: “Jumbo 20”.",
         "en": "Sure! But I don't have anything waiting for confirmation. To log something, just tell me, e.g. “Groceries 20”.",
         "fr": "D'accord ! Mais rien n'attend de confirmation. Pour enregistrer quelque chose, dis-le-moi, par ex. « Courses 20 ».",
         "de": "Alles klar! Es wartet aber nichts auf Bestätigung. Zum Erfassen sag mir einfach z. B. „Einkauf 20“.",
     },
     "expense_corrected": {
-        "pt": "Corrigido — {name}: {old} → {amount}",
+        "pt": "Corrigido: {name}, {old} → {amount}.",
         "nl": "Gecorrigeerd — {name}: {old} → {amount}",
         "en": "Corrected — {name}: {old} → {amount}",
         "fr": "Corrigé — {name} : {old} → {amount}",
         "de": "Korrigiert — {name}: {old} → {amount}",
     },
     "wipe_ask": {
-        "pt": "Vou apagar *todos* os teus dados (despesas, notas, metas, mensagens…). Isto não se desfaz. Confirmas?",
+        "pt": "Isso apaga *tudo* o que guardei sobre você (despesas, notas, metas, mensagens) e não dá para desfazer. Quer mesmo?",
         "nl": "Ik verwijder *al* je gegevens (uitgaven, notities, doelen, berichten…). Dit kan niet ongedaan worden gemaakt. Bevestig je?",
         "en": "I'll delete *all* your data (expenses, notes, goals, messages…). This can't be undone. Confirm?",
         "fr": "Je vais supprimer *toutes* tes données (dépenses, notes, objectifs, messages…). C'est irréversible. Tu confirmes ?",
@@ -516,7 +508,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Abbrechen",
     },
     "wipe_done": {
-        "pt": "Feito. Apaguei todos os teus dados. Se quiseres voltar, é só enviar uma mensagem.",
+        "pt": "Pronto, apaguei tudo. Se quiser voltar, é só mandar uma mensagem.",
         "nl": "Klaar. Ik heb al je gegevens verwijderd. Wil je terugkomen, stuur dan gewoon een bericht.",
         "en": "Done. I deleted all your data. If you want to come back, just send a message.",
         "fr": "C'est fait. J'ai supprimé toutes tes données. Pour revenir, envoie simplement un message.",
@@ -530,14 +522,14 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "OK, ich habe nichts gelöscht.",
     },
     "wipe_expired": {
-        "pt": "Este pedido expirou. Se ainda queres apagar os teus dados, escreve *apagar meus dados* outra vez.",
+        "pt": "Esse pedido expirou. Se ainda quiser apagar seus dados, escreva *apagar meus dados* de novo.",
         "nl": "Dit verzoek is verlopen. Wil je je gegevens nog verwijderen, schrijf dan opnieuw *verwijder mijn gegevens*.",
         "en": "This request expired. If you still want your data deleted, write *delete my data* again.",
         "fr": "Cette demande a expiré. Pour supprimer tes données, écris à nouveau *supprimer mes données*.",
         "de": "Diese Anfrage ist abgelaufen. Willst du deine Daten weiterhin löschen, schreib erneut *meine Daten löschen*.",
     },
     "export_link": {
-        "pt": "Aqui estão os teus dados em JSON (o link expira em {days} dias e é só teu):\n{url}",
+        "pt": "Aqui está a cópia dos seus dados (arquivo JSON). O link vale por {days} dias e é só seu:\n{url}",
         "nl": "Hier zijn je gegevens als JSON (de link verloopt na {days} dagen en is alleen voor jou):\n{url}",
         "en": "Here is your data as JSON (the link expires in {days} days and is only yours):\n{url}",
         "fr": "Voici tes données en JSON (le lien expire dans {days} jours et n'est qu'à toi) :\n{url}",
@@ -565,28 +557,35 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Stimmt",
     },
     "button_ok_reply": {
-        "pt": "Perfeito, fica registado.",
+        "pt": (
+            "Combinado, fica assim.",
+            "Beleza, fica assim.",
+            "Perfeito, deixo assim.",
+        ),
         "nl": "Prima, het staat erin.",
         "en": "Great, it stays recorded.",
         "fr": "Parfait, c'est enregistré.",
         "de": "Alles klar, es bleibt erfasst.",
     },
     "button_edit_hint": {
-        "pt": "Diz-me o valor certo, por ex.: *na verdade foi 25*",
+        "pt": "Qual é o valor certo? Por exemplo: *na verdade foi 25*",
         "nl": "Geef me het juiste bedrag, bijv.: *actually 25*",
         "en": "Tell me the right amount, e.g.: *actually 25*",
         "fr": "Donne-moi le bon montant, par ex. : *actually 25*",
         "de": "Nenne mir den richtigen Betrag, z. B.: *actually 25*",
     },
     "button_gone": {
-        "pt": "Esse registo já não existe.",
+        "pt": "Esse registro já tinha sido apagado.",
         "nl": "Die registratie bestaat niet meer.",
         "en": "That entry no longer exists.",
         "fr": "Cet enregistrement n'existe plus.",
         "de": "Dieser Eintrag existiert nicht mehr.",
     },
     "expense_deleted": {
-        "pt": "Apagada — {amount} em *{name}* ({date}).",
+        "pt": (
+            "Apaguei: {amount} em *{name}* ({date}).",
+            "Pronto, apaguei {amount} em *{name}* ({date}).",
+        ),
         "nl": "Verwijderd — {amount} bij *{name}* ({date}).",
         "en": "Deleted — {amount} at *{name}* ({date}).",
         "fr": "Supprimée — {amount} chez *{name}* ({date}).",
@@ -600,7 +599,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Ich habe keine Ausgabe zum Löschen.",
     },
     "last_expenses_title": {
-        "pt": "Últimas {n} despesas",
+        "pt": "Suas últimas {n} despesas",
         "nl": "Laatste {n} uitgaven",
         "en": "Last {n} expenses",
         "fr": "Dernières {n} dépenses",
@@ -636,14 +635,18 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── M7 — Treino ─────────────────────────────────────────────────────────
     "workout_saved": {
-        "pt": "Treino registado: {activity} — {duration}",
+        "pt": (
+            "Boa! {activity} anotado: {duration}. 💪",
+            "Treino anotado: {activity}, {duration}.",
+            "{activity} registrado, {duration}. Bom trabalho!",
+        ),
         "nl": "Training opgeslagen: {activity} — {duration}",
         "en": "Workout logged: {activity} — {duration}",
         "fr": "Entraînement enregistré : {activity} — {duration}",
         "de": "Training gespeichert: {activity} — {duration}",
     },
     "workout_summary_header": {
-        "pt": "Treinos desta semana ({n} sessoes):",
+        "pt": "Treinos desta semana ({n} sessões):",
         "nl": "Trainingen deze week ({n} sessies):",
         "en": "Workouts this week ({n} sessions):",
         "fr": "Entraînements cette semaine ({n} séances) :",
@@ -657,7 +660,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "• {date}: {activity} {duration}",
     },
     "workout_summary_empty": {
-        "pt": "Nenhum treino registado esta semana.",
+        "pt": "Nenhum treino registrado esta semana.",
         "nl": "Geen trainingen geregistreerd deze week.",
         "en": "No workouts logged this week.",
         "fr": "Aucun entraînement enregistré cette semaine.",
@@ -665,28 +668,40 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── M8 — Saúde ───────────────────────────────────────────────────────────
     "health_saved_medication": {
-        "pt": "Medicacao registada: {value}",
+        "pt": (
+            "Anotei: você tomou {value}.",
+            "Registrado: {value} tomado.",
+        ),
         "nl": "Medicatie gelogd: {value}",
         "en": "Medication logged: {value}",
         "fr": "Médicament enregistré : {value}",
         "de": "Medikament eingetragen: {value}",
     },
     "health_saved_mood": {
-        "pt": "Humor registado: {value}/10",
+        "pt": (
+            "Anotado: {value} de 10 hoje.",
+            "Humor de hoje: {value}/10, anotado.",
+        ),
         "nl": "Stemming gelogd: {value}/10",
         "en": "Mood logged: {value}/10",
         "fr": "Humeur enregistrée : {value}/10",
         "de": "Stimmung eingetragen: {value}/10",
     },
     "health_saved_sleep": {
-        "pt": "Sono registado: {value}h",
+        "pt": (
+            "Anotei: {value}h de sono.",
+            "Sono registrado: {value}h.",
+        ),
         "nl": "Slaap gelogd: {value}h",
         "en": "Sleep logged: {value}h",
         "fr": "Sommeil enregistré : {value}h",
         "de": "Schlaf eingetragen: {value}h",
     },
     "health_saved_water": {
-        "pt": "Agua registada: {value}L",
+        "pt": (
+            "Anotei {value} L de água.",
+            "Água registrada: {value} L.",
+        ),
         "nl": "Water gelogd: {value}L",
         "en": "Water logged: {value}L",
         "fr": "Eau enregistrée : {value}L",
@@ -694,28 +709,31 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── M9 — Metas & Hábitos ─────────────────────────────────────────────────
     "goal_created": {
-        "pt": "Meta criada: *{title}*",
+        "pt": "Meta criada: *{title}*. Eu ajudo você a acompanhar.",
         "nl": "Doel aangemaakt: *{title}*",
         "en": "Goal created: *{title}*",
         "fr": "Objectif créé : *{title}*",
         "de": "Ziel erstellt: *{title}*",
     },
     "habit_logged": {
-        "pt": "Habito registado: {activity}",
+        "pt": (
+            "{activity} anotado. Mais um dia!",
+            "Anotei: {activity}.",
+        ),
         "nl": "Gewoonte gelogd: {activity}",
         "en": "Habit logged: {activity}",
         "fr": "Habitude enregistrée : {activity}",
         "de": "Gewohnheit eingetragen: {activity}",
     },
     "goals_list_header": {
-        "pt": "As tuas metas activas ({n}):",
+        "pt": "Suas metas ativas ({n}):",
         "nl": "Jouw actieve doelen ({n}):",
         "en": "Your active goals ({n}):",
         "fr": "Tes objectifs actifs ({n}) :",
         "de": "Deine aktiven Ziele ({n}):",
     },
     "goals_list_empty": {
-        "pt": "Ainda nao tens metas. Cria uma com: *meta: quero X*",
+        "pt": "Você ainda não tem metas. Crie uma assim: *meta: quero X*",
         "nl": "Nog geen doelen. Maak er een met: *doel: ik wil X*",
         "en": "No goals yet. Create one with: *goal: I want to X*",
         "fr": "Pas encore d'objectifs. Crée-en un avec : *objectif : je veux X*",
@@ -730,42 +748,52 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── M10 — Produtividade ───────────────────────────────────────────────────
     "note_saved": {
-        "pt": "Nota guardada.",
+        "pt": (
+            "Anotado.",
+            "Guardei a nota.",
+            "Nota salva.",
+        ),
         "nl": "Notitie opgeslagen.",
         "en": "Note saved.",
         "fr": "Note enregistrée.",
         "de": "Notiz gespeichert.",
     },
     "task_saved": {
-        "pt": "Tarefa adicionada: *{body}*",
+        "pt": (
+            "Tarefa adicionada: *{body}*",
+            "Anotei a tarefa: *{body}*",
+        ),
         "nl": "Taak toegevoegd: *{body}*",
         "en": "Task added: *{body}*",
         "fr": "Tâche ajoutée : *{body}*",
         "de": "Aufgabe hinzugefügt: *{body}*",
     },
     "task_done": {
-        "pt": "Tarefa concluida.",
+        "pt": (
+            "Tarefa concluída.",
+            "Feito, tarefa concluída.",
+        ),
         "nl": "Taak afgerond.",
         "en": "Task done.",
         "fr": "Tâche terminée.",
         "de": "Aufgabe erledigt.",
     },
     "task_not_found": {
-        "pt": "Nao encontrei essa tarefa em aberto.",
+        "pt": "Não achei essa tarefa em aberto. Diga “minhas tarefas” para ver a lista.",
         "nl": "Ik kon die openstaande taak niet vinden.",
         "en": "I couldn't find that open task.",
         "fr": "Je n'ai pas trouvé cette tâche ouverte.",
         "de": "Ich konnte diese offene Aufgabe nicht finden.",
     },
     "tasks_list_header": {
-        "pt": "As tuas tarefas em aberto ({n}):",
+        "pt": "Suas tarefas em aberto ({n}):",
         "nl": "Jouw openstaande taken ({n}):",
         "en": "Your open tasks ({n}):",
         "fr": "Tes tâches ouvertes ({n}) :",
         "de": "Deine offenen Aufgaben ({n}):",
     },
     "tasks_list_empty": {
-        "pt": "Nao tens tarefas em aberto.",
+        "pt": "Você não tem tarefas em aberto.",
         "nl": "Geen openstaande taken.",
         "en": "No open tasks.",
         "fr": "Pas de tâches ouvertes.",
@@ -787,14 +815,14 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── M5 — Lembretes list/cancel ────────────────────────────────────────────
     "lembretes_list_header": {
-        "pt": "Os teus lembretes activos ({n}):",
+        "pt": "Seus lembretes ativos ({n}):",
         "nl": "Jouw actieve herinneringen ({n}):",
         "en": "Your active reminders ({n}):",
         "fr": "Tes rappels actifs ({n}) :",
         "de": "Deine aktiven Erinnerungen ({n}):",
     },
     "lembretes_list_empty": {
-        "pt": "Nao tens lembretes activos.",
+        "pt": "Você não tem lembretes ativos.",
         "nl": "Geen actieve herinneringen.",
         "en": "No active reminders.",
         "fr": "Pas de rappels actifs.",
@@ -815,7 +843,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Erinnerung abgebrochen: *{text}*",
     },
     "lembrete_cancel_not_found": {
-        "pt": "Nao encontrei esse lembrete activo.",
+        "pt": "Não achei esse lembrete ativo.",
         "nl": "Ik kon die actieve herinnering niet vinden.",
         "en": "I couldn't find that active reminder.",
         "fr": "Je n'ai pas trouve ce rappel actif.",
@@ -830,21 +858,21 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Training geloscht.",
     },
     "workout_delete_not_found": {
-        "pt": "Nao encontrei treino recente para apagar.",
+        "pt": "Não achei nenhum treino recente para apagar.",
         "nl": "Geen recente training gevonden om te verwijderen.",
         "en": "No recent workout found to delete.",
         "fr": "Aucun entrainement recent trouve a supprimer.",
         "de": "Kein aktuelles Training zum Loschen gefunden.",
     },
     "workout_activity_summary": {
-        "pt": "Fizeste *{activity}* {n}x nos ultimos 7 dias.",
+        "pt": "Você fez *{activity}* {n}x nos últimos 7 dias.",
         "nl": "Je deed *{activity}* {n}x in de afgelopen 7 dagen.",
         "en": "You did *{activity}* {n}x in the last 7 days.",
         "fr": "Tu as fait *{activity}* {n}x ces 7 derniers jours.",
         "de": "Du hast *{activity}* {n}x in den letzten 7 Tagen gemacht.",
     },
     "workout_month_header": {
-        "pt": "Treinos de {month} — {n} sessoes, {km}km, {min}min:",
+        "pt": "Treinos de {month}: {n} sessões, {km} km, {min} min:",
         "nl": "Trainingen {month} — {n} sessies, {km}km, {min}min:",
         "en": "Workouts {month} — {n} sessions, {km}km, {min}min:",
         "fr": "Entrainements {month} — {n} seances, {km}km, {min}min :",
@@ -852,56 +880,56 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── M8 — Saude queries ────────────────────────────────────────────────────
     "health_mood_history": {
-        "pt": "Humor esta semana: {entries}",
+        "pt": "Humor nesta semana: {entries}",
         "nl": "Stemming deze week: {entries}",
         "en": "Mood this week: {entries}",
         "fr": "Humeur cette semaine : {entries}",
         "de": "Stimmung diese Woche: {entries}",
     },
     "health_mood_empty": {
-        "pt": "Sem registos de humor esta semana.",
+        "pt": "Ainda não há registros de humor esta semana.",
         "nl": "Geen stemmingsregistraties deze week.",
         "en": "No mood entries this week.",
         "fr": "Pas d'entrees d'humeur cette semaine.",
         "de": "Keine Stimmungseintraege diese Woche.",
     },
     "health_sleep_avg": {
-        "pt": "Dormes em media *{avg}h* (ultimos 7 dias, {n} registos).",
+        "pt": "Você dorme em média *{avg}h* (últimos 7 dias, {n} registros).",
         "nl": "Je slaapt gemiddeld *{avg}u* (laatste 7 dagen, {n} registraties).",
         "en": "You sleep an average of *{avg}h* (last 7 days, {n} entries).",
         "fr": "Tu dors en moyenne *{avg}h* (7 derniers jours, {n} entrees).",
         "de": "Du schlaefst im Schnitt *{avg}h* (letzte 7 Tage, {n} Eintraege).",
     },
     "health_sleep_empty": {
-        "pt": "Sem registos de sono esta semana.",
+        "pt": "Ainda não há registros de sono esta semana.",
         "nl": "Geen slaapregistraties deze week.",
         "en": "No sleep entries this week.",
         "fr": "Pas d'entrees de sommeil cette semaine.",
         "de": "Keine Schlafeintraege diese Woche.",
     },
     "health_medication_adherence": {
-        "pt": "Medicacao: tomaste em {n}/{total} dias esta semana.",
+        "pt": "Medicação: você tomou em {n} de {total} dias esta semana.",
         "nl": "Medicatie: je nam het {n}/{total} dagen deze week.",
         "en": "Medication: you took it {n}/{total} days this week.",
         "fr": "Medicament : tu l'as pris {n}/{total} jours cette semaine.",
         "de": "Medikament: Du hast es {n}/{total} Tage diese Woche genommen.",
     },
     "health_medication_empty": {
-        "pt": "Sem registos de medicacao esta semana.",
+        "pt": "Ainda não há registros de medicação esta semana.",
         "nl": "Geen medicatieregistraties deze week.",
         "en": "No medication entries this week.",
         "fr": "Pas d'entrees de medicament cette semaine.",
         "de": "Keine Medikamenteneintraege diese Woche.",
     },
     "health_water_today": {
-        "pt": "Agua hoje: *{total}L* ({n} registos).",
+        "pt": "Água hoje: *{total} L* ({n} registros).",
         "nl": "Water vandaag: *{total}L* ({n} registraties).",
         "en": "Water today: *{total}L* ({n} entries).",
         "fr": "Eau aujourd'hui : *{total}L* ({n} entrees).",
         "de": "Wasser heute: *{total}L* ({n} Eintraege).",
     },
     "health_water_empty": {
-        "pt": "Sem registos de agua hoje.",
+        "pt": "Ainda não há registros de água hoje.",
         "nl": "Geen waterregistraties vandaag.",
         "en": "No water entries today.",
         "fr": "Pas d'entrees d'eau aujourd'hui.",
@@ -909,49 +937,49 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── M9 — extras ───────────────────────────────────────────────────────────
     "habit_logged_with_goal": {
-        "pt": "Habito registado: *{activity}* (meta: {goal})",
+        "pt": "{activity} anotado. Meta: {goal}.",
         "nl": "Gewoonte gelogd: *{activity}* (doel: {goal})",
         "en": "Habit logged: *{activity}* (goal: {goal})",
         "fr": "Habitude enregistree : *{activity}* (objectif : {goal})",
         "de": "Gewohnheit protokolliert: *{activity}* (Ziel: {goal})",
     },
     "goal_completed": {
-        "pt": "Meta concluida: *{title}* \U0001f389",
+        "pt": "Meta cumprida: *{title}*! 🎉",
         "nl": "Doel bereikt: *{title}* \U0001f389",
         "en": "Goal completed: *{title}* \U0001f389",
         "fr": "Objectif atteint : *{title}* \U0001f389",
         "de": "Ziel erreicht: *{title}* \U0001f389",
     },
     "goal_complete_not_found": {
-        "pt": "Nao encontrei essa meta activa.",
+        "pt": "Não achei essa meta ativa.",
         "nl": "Ik kon dat actieve doel niet vinden.",
         "en": "I couldn't find that active goal.",
         "fr": "Je n'ai pas trouve cet objectif actif.",
         "de": "Ich konnte dieses aktive Ziel nicht finden.",
     },
     "habit_frequency": {
-        "pt": "Registaste *{activity}* {n}x nos ultimos 7 dias.",
+        "pt": "Você registrou *{activity}* {n}x nos últimos 7 dias.",
         "nl": "Je registreerde *{activity}* {n}x in de afgelopen 7 dagen.",
         "en": "You logged *{activity}* {n}x in the last 7 days.",
         "fr": "Tu as enregistre *{activity}* {n}x ces 7 derniers jours.",
         "de": "Du hast *{activity}* {n}x in den letzten 7 Tagen protokolliert.",
     },
     "habit_frequency_empty": {
-        "pt": "Nenhum registo de *{activity}* esta semana.",
+        "pt": "Nenhum registro de *{activity}* esta semana.",
         "nl": "Geen registraties van *{activity}* deze week.",
         "en": "No entries for *{activity}* this week.",
         "fr": "Aucune entree pour *{activity}* cette semaine.",
         "de": "Keine Eintraege fuer *{activity}* diese Woche.",
     },
     "habit_streak": {
-        "pt": "O teu streak de *{activity}* e de *{n} dia(s)* consecutivos! 🔥",
+        "pt": "Já são *{n} dia(s) seguidos* de {activity}. 🔥",
         "nl": "Jouw streak voor *{activity}* is *{n} dag(en)* op rij! 🔥",
         "en": "Your *{activity}* streak is *{n} day(s)* in a row! 🔥",
         "fr": "Ta serie pour *{activity}* est de *{n} jour(s)* consecutifs ! 🔥",
         "de": "Deine Serie fuer *{activity}* betraegt *{n} Tag(e)* in Folge! 🔥",
     },
     "habit_streak_none": {
-        "pt": "Nao encontrei registos recentes de *{activity}*. Comeca hoje! 💪",
+        "pt": "Não achei registros recentes de *{activity}*. Que tal começar hoje? 💪",
         "nl": "Geen recente registraties gevonden voor *{activity}*. Begin vandaag! 💪",
         "en": "No recent entries found for *{activity}*. Start today! 💪",
         "fr": "Aucune entree recente pour *{activity}*. Commence aujourd'hui ! 💪",
@@ -959,14 +987,14 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── M10 — extras ──────────────────────────────────────────────────────────
     "notes_list_header": {
-        "pt": "As tuas ultimas notas ({n}):",
+        "pt": "Suas últimas notas ({n}):",
         "nl": "Jouw laatste notities ({n}):",
         "en": "Your recent notes ({n}):",
         "fr": "Tes dernieres notes ({n}) :",
         "de": "Deine letzten Notizen ({n}):",
     },
     "notes_list_empty": {
-        "pt": "Ainda nao tens notas guardadas.",
+        "pt": "Você ainda não tem notas guardadas.",
         "nl": "Nog geen opgeslagen notities.",
         "en": "No notes saved yet.",
         "fr": "Pas encore de notes enregistrees.",
@@ -987,7 +1015,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Aufgabe geloscht: *{body}*",
     },
     "task_delete_not_found": {
-        "pt": "Nao encontrei essa tarefa.",
+        "pt": "Não achei essa tarefa. Diga “minhas tarefas” para ver a lista.",
         "nl": "Ik kon die taak niet vinden.",
         "en": "I couldn't find that task.",
         "fr": "Je n'ai pas trouve cette tache.",
@@ -1002,21 +1030,21 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # M11 — Dashboard
     "dashboard_link": {
-        "pt": "\U0001f4ca O teu dashboard pessoal:\n{url}",
+        "pt": "Aqui está o seu painel:\n{url}",
         "nl": "\U0001f4ca Jouw persoonlijk dashboard:\n{url}",
         "en": "\U0001f4ca Your personal dashboard:\n{url}",
         "fr": "\U0001f4ca Ton tableau de bord personnel :\n{url}",
         "de": "\U0001f4ca Dein pers\u00f6nliches Dashboard:\n{url}",
     },
     "dashboard_no_base_url": {
-        "pt": "O dashboard ainda não está configurado. Fala com o administrador.",
+        "pt": "O painel ainda não está configurado. Fale com o administrador.",
         "nl": "Het dashboard is nog niet geconfigureerd. Neem contact op met de beheerder.",
         "en": "The dashboard is not configured yet. Contact the administrator.",
         "fr": "Le tableau de bord n'est pas encore configure. Contacte l'administrateur.",
         "de": "Das Dashboard ist noch nicht konfiguriert. Kontaktiere den Administrator.",
     },
     "not_understood": {
-        "pt": "Não percebi. Podes reformular?",
+        "pt": "Não entendi. Pode dizer de outro jeito?",
         "nl": "Ik begreep je niet. Kun je het anders formuleren?",
         "en": "I didn't understand that. Could you rephrase?",
         "fr": "Je n'ai pas compris. Peux-tu reformuler ?",
@@ -1024,49 +1052,49 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # M14 — Viagem
     "trip_started": {
-        "pt": "Viagem para {dest} iniciada! As despesas serao associadas automaticamente.",
+        "pt": "Boa viagem para {dest}! Tudo o que você registrar até dizer “voltei” entra nessa viagem.",
         "nl": "Reis naar {dest} gestart! Uitgaven worden automatisch gekoppeld.",
         "en": "Trip to {dest} started! Expenses will be tagged automatically.",
         "fr": "Voyage a {dest} commence! Les depenses seront associees automatiquement.",
         "de": "Reise nach {dest} gestartet! Ausgaben werden automatisch zugeordnet.",
     },
     "trip_ended": {
-        "pt": "Viagem para {dest} terminada. Total gasto: {total} ({count} despesas).",
+        "pt": "Bem-vindo de volta! A viagem para {dest} custou {total} em {count} despesas.",
         "nl": "Reis naar {dest} beeindigd. Totaal: {total} ({count} uitgaven).",
         "en": "Trip to {dest} ended. Total spent: {total} ({count} expenses).",
         "fr": "Voyage a {dest} termine. Total: {total} ({count} depenses).",
         "de": "Reise nach {dest} beendet. Gesamt: {total} ({count} Ausgaben).",
     },
     "trip_already_active": {
-        "pt": "Tens uma viagem activa para {dest}. Diz 'voltei' para terminar primeiro.",
+        "pt": "Você já tem uma viagem ativa para {dest}. Diga “voltei” para encerrar antes.",
         "nl": "Je hebt een actieve reis naar {dest}. Zeg 'terug' om die eerst te beeindigen.",
         "en": "You have an active trip to {dest}. Say 'back home' to end it first.",
         "fr": "Tu as un voyage actif vers {dest}. Dis 'de retour' pour le terminer d'abord.",
         "de": "Du hast eine aktive Reise nach {dest}. Sage 'zuhause' um sie zuerst zu beenden.",
     },
     "trip_none_active": {
-        "pt": "Nao tens nenhuma viagem activa.",
+        "pt": "Você não tem nenhuma viagem ativa.",
         "nl": "Je hebt geen actieve reis.",
         "en": "You have no active trip.",
         "fr": "Tu n'as pas de voyage actif.",
         "de": "Du hast keine aktive Reise.",
     },
     "trip_no_expenses": {
-        "pt": "Nenhuma despesa registada nesta viagem ainda.",
+        "pt": "Ainda não há despesas nesta viagem.",
         "nl": "Nog geen uitgaven geregistreerd voor deze reis.",
         "en": "No expenses recorded for this trip yet.",
         "fr": "Aucune depense enregistree pour ce voyage.",
         "de": "Keine Ausgaben fuer diese Reise erfasst.",
     },
     "trip_list_empty": {
-        "pt": "Ainda nao tens viagens registadas.",
+        "pt": "Você ainda não tem viagens registradas.",
         "nl": "Je hebt nog geen reizen geregistreerd.",
         "en": "You have no trips recorded yet.",
         "fr": "Tu n'as pas encore de voyages enregistres.",
         "de": "Du hast noch keine Reisen erfasst.",
     },
     "trip_started_budget": {
-        "pt": "Viagem para {dest} iniciada! Orçamento: {budget}. As despesas serão associadas automaticamente.",
+        "pt": "Boa viagem para {dest}! Orçamento: {budget}. Tudo o que você registrar até dizer “voltei” entra nessa viagem.",
         "nl": "Reis naar {dest} gestart! Budget: {budget}. Uitgaven worden automatisch gekoppeld.",
         "en": "Trip to {dest} started! Budget: {budget}. Expenses will be tagged automatically.",
         "fr": "Voyage à {dest} commencé ! Budget : {budget}. Les dépenses seront associées automatiquement.",
@@ -1108,7 +1136,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": "Budget: {budget}",
     },
     "trip_ongoing": {
-        "pt": "em curso",
+        "pt": "em andamento",
         "nl": "lopend",
         "en": "ongoing",
         "fr": "en cours",
@@ -1129,7 +1157,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "de": " [Reise {dest}: {total} gesamt]",
     },
     "category_hint_overig": {
-        "pt": "\nSem certeza da categoria de {merchant}. Podes corrigir com '{merchant} é [categoria]'.",
+        "pt": "\nNão tenho certeza da categoria de *{merchant}*. Se quiser mudar: “{merchant} é lazer”.",
         "nl": "\nIk weet de categorie voor {merchant} niet. Verbeter met '{merchant} is [categorie]'.",
         "en": "\nNot sure about {merchant}'s category. You can fix it: '{merchant} is [category]'.",
         "fr": "\nJe ne suis pas sûr de la catégorie de {merchant}. Corrige avec '{merchant} est [catégorie]'.",
@@ -1149,6 +1177,10 @@ def _t(key: str, lang: str, **kwargs: object) -> str:
     """Translate a string key to the given language, with optional format args."""
     lang = lang if lang in _SUPPORTED_LANGS else "en"
     tmpl = _STRINGS[key].get(lang) or _STRINGS[key]["en"]
+    if isinstance(
+        tmpl, tuple
+    ):  # several equivalent phrasings: pick one so replies feel less canned
+        tmpl = random.choice(tmpl)
     return tmpl.format(**kwargs) if kwargs else tmpl
 
 

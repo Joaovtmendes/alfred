@@ -34,7 +34,7 @@ def test_trip_start_date_from_range() -> None:
 @pytest.mark.parametrize("word", ["sim", "yes", "ja", "Ok!"])
 async def test_bare_yes_is_neutral(lab: Lab, word: str) -> None:
     reply = await lab.say(word)
-    assert "nada pendente" in reply or "niets" in reply or "anything waiting" in reply
+    assert "nada esperando" in reply or "niets" in reply or "anything waiting" in reply
     assert "despesa por linha" not in reply
 
 

@@ -62,7 +62,9 @@ async def test_llm_false_record_claim_is_replaced(lab: Lab) -> None:
     lab.llm_reply.return_value = "Pizza — €12,00 registada. Renda — €99.999,00 registada."
     reply = await lab.say("vou ao cinema e depois janto fora")
     assert "registada" not in reply.lower().replace("não registei", "")
-    assert "Não percebi" in reply  # no number → neutral, not the expense hint
+    assert (
+        "Mercado 20" in reply and "Anotei" not in reply
+    )  # no number → neutral, not the expense hint
     assert await _count(lab) == 0
 
 
@@ -73,7 +75,7 @@ async def test_multi_expense_message_records_every_item(lab: Lab) -> None:
         _item(10, "Farmácia", category="gezondheid"),
     ]
     reply = await lab.say("Fui no mercado e gastei 20,00 e 10 de farmácia")
-    assert "2 transações" in reply
+    assert "(2)" in reply
     assert "Mercado" in reply and "Farmácia" in reply
     assert await _count(lab) == 2
     lab.llm_reply.assert_not_awaited()
@@ -84,14 +86,14 @@ async def test_multi_skips_foreign_currency_but_records_euro_items(lab: Lab) -> 
     lab.multi.return_value = [_item(20, "Mercado"), _item(50, "Hotel", currency="USD")]
     reply = await lab.say("Mercado 20 e hotel 50 dollars")
     assert await _count(lab) == 1
-    assert "USD" in reply and "só euros" in reply
+    assert "USD" in reply and "euros" in reply
 
 
 @pytestmark_db
 async def test_single_foreign_currency_is_not_stored(lab: Lab) -> None:
     lab.expense.return_value = _item(50, "Amazon", currency="USD")
     reply = await lab.say("Amazon 50 dollars")
-    assert "só registo em euros" in reply
+    assert "só trabalho em euros" in reply
     assert await _count(lab) == 0
 
 
@@ -99,10 +101,10 @@ async def test_single_foreign_currency_is_not_stored(lab: Lab) -> None:
 async def test_high_value_gets_a_hint_and_small_does_not(lab: Lab) -> None:
     lab.expense.return_value = _item(1200, "Computador", category="overig")
     big = await lab.say("computador 1200")
-    assert "Valor alto" in big
-    assert "tens a certeza do valor" in big
+    assert "valor alto" in big
+    assert "confere se está certo" in big
     lab.expense.return_value = _item(23, "Jumbo")
-    assert "Valor alto" not in await lab.say("jumbo 23")
+    assert "valor alto" not in await lab.say("jumbo 23")
 
 
 @pytestmark_db
@@ -180,7 +182,7 @@ async def test_llm_invented_confirmation_is_replaced_with_real_question(lab: Lab
     )
     reply = await lab.say("Café 0 e reembolso -15")
     assert "aguarda confirmação" not in reply
-    assert "Valor inválido" in reply
+    assert "zero ou negativo" in reply
     assert await _count(lab) == 0
 
 
@@ -199,7 +201,7 @@ async def test_zero_and_negative_amounts_get_deterministic_reply_without_llm(lab
     lab.multi.return_value = []
     lab.expense.return_value = None
     reply = await lab.say("Café 0 e reembolso -15")
-    assert "Valor inválido" in reply
+    assert "zero ou negativo" in reply
     assert await _count(lab) == 0
     lab.llm_reply.assert_not_awaited()
 
@@ -235,19 +237,19 @@ async def test_high_value_offers_its_right_and_undo(lab):
 async def test_undo_button_deletes_only_that_expense(lab):
     _, exp = await _one_expense(lab)
     reply = await lab.tap(f"undo:{exp.id}")
-    assert "Apagada" in reply
+    assert "Apaguei" in reply or "apaguei" in reply
     assert await lab.scalar(select(Expense).where(Expense.id == exp.id)) is None
 
 
 async def test_undo_button_twice_says_gone(lab):
     _, exp = await _one_expense(lab)
     await lab.tap(f"undo:{exp.id}")
-    assert "já não existe" in await lab.tap(f"undo:{exp.id}")
+    assert "já tinha sido apagado" in await lab.tap(f"undo:{exp.id}")
 
 
 async def test_ok_and_edit_buttons_keep_the_expense(lab):
     _, exp = await _one_expense(lab, amount=2500)
-    assert "fica registado" in await lab.tap(f"ok:{exp.id}")
+    assert "fica assim" in await lab.tap(f"ok:{exp.id}")
     assert "valor certo" in await lab.tap(f"edit:{exp.id}")
     assert await lab.scalar(select(Expense).where(Expense.id == exp.id)) is not None
 
@@ -256,4 +258,4 @@ async def test_button_with_unknown_expense_id_deletes_nothing(lab):
     import uuid as _uuid
 
     reply = await lab.tap(f"undo:{_uuid.uuid4()}")
-    assert "já não existe" in reply
+    assert "já tinha sido apagado" in reply
