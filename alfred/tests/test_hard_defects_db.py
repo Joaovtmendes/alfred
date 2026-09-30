@@ -143,3 +143,47 @@ async def test_month_total_ignores_income_and_other_categories(lab: Lab) -> None
     lab.expense.return_value = _exp(12, "Uber", category="vervoer")
     other = await lab.say("Uber 12")
     assert "este mês" not in other and "no mês" not in other
+
+
+def test_number_formatting_is_localised() -> None:
+    from alfred.conversation import _clean_activity, _num, _num_str, _workout_dur
+
+    assert _num(6.5, "pt") == "6,5" and _num(2.0, "pt") == "2" and _num(6.5, "en") == "6.5"
+    assert _num_str("1.5", "pt") == "1,5" and _num_str("omeprazol", "pt") == "omeprazol"
+    assert _workout_dur(None, 8.0, "pt") == "8 km" and _workout_dur(30, None, "pt") == "30 min"
+    assert _clean_activity("meditei?") == "meditei"
+    assert _clean_activity("musculação este mês?") == "musculação"
+    assert _clean_activity("yoga esta semana") == "yoga"
+
+
+@db
+async def test_weight_and_pressure_are_not_recorded_or_confirmed(lab: Lab) -> None:
+    lab.llm_reply.return_value = "Registrado: peso 75 kg, pressão 12/8."
+    reply = await lab.say("peso 75kg pressão 12/8")
+    assert "Ainda não acompanho peso" in reply
+    lab.llm_reply.assert_not_awaited()
+    assert (
+        await lab.scalar(
+            select(func.count()).select_from(HealthLog).where(HealthLog.member_id == lab.member_id)
+        )
+        == 0
+    )
+
+
+@db
+async def test_trip_ended_early_never_ends_before_it_started(lab: Lab) -> None:
+    await lab.say("viagem a Portugal de 1 a 7 de outubro")
+    trip = await lab.scalar(select(Trip).where(Trip.member_id == lab.member_id))
+    assert trip is not None
+    reply = await lab.say("voltei")
+    assert "1 despesa" not in reply  # no expenses: summary path, no plural bug
+    trip = await lab.scalar(select(Trip).where(Trip.member_id == lab.member_id))
+    assert trip.ended_at is not None and trip.started_at <= trip.ended_at
+
+
+def test_singular_strings_exist_for_every_language() -> None:
+    from alfred.conversation import _STRINGS
+
+    for key in ("trip_ended_one", "trip_summary_total_one", "habit_streak_one"):
+        assert set(_STRINGS[key]) == {"pt", "nl", "en", "fr", "de"}
+    assert "1 despesa." in _STRINGS["trip_ended_one"]["pt"]
