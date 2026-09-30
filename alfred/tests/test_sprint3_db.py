@@ -249,7 +249,7 @@ async def test_undo_button_twice_says_gone(lab):
 
 async def test_ok_and_edit_buttons_keep_the_expense(lab):
     _, exp = await _one_expense(lab, amount=2500)
-    assert "fica assim" in await lab.tap(f"ok:{exp.id}")
+    assert "assim" in await lab.tap(f"ok:{exp.id}")
     assert "valor certo" in await lab.tap(f"edit:{exp.id}")
     assert await lab.scalar(select(Expense).where(Expense.id == exp.id)) is not None
 

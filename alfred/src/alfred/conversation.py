@@ -15,7 +15,7 @@ import random
 import re
 import unicodedata
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 import structlog
 from sqlalchemy import select
@@ -426,6 +426,16 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": 'I only record euros for now — {cur} was not saved. Convert to € and send it again (e.g. "Jumbo 23.50").',
         "fr": "Je n'enregistre que des euros pour l'instant — {cur} n'a pas été enregistré. Convertis en € et renvoie (ex. « Jumbo 23,50 »).",
         "de": "Ich erfasse vorerst nur Euro — {cur} wurde nicht gespeichert. Rechne in € um und sende es erneut (z. B. „Jumbo 23,50“).",
+    },
+    "month_category_context": {
+        "pt": (
+            " Já são {total} em {category} este mês.",
+            " Com essa, {category} chega a {total} no mês.",
+        ),
+        "nl": " Dat is {total} aan {category} deze maand.",
+        "en": " That makes {total} on {category} this month.",
+        "fr": " Cela fait {total} en {category} ce mois-ci.",
+        "de": " Damit sind es {total} für {category} in diesem Monat.",
     },
     "high_value_hint": {
         "pt": "\nÉ um valor alto, confere se está certo?",
@@ -1182,6 +1192,43 @@ def _t(key: str, lang: str, **kwargs: object) -> str:
     ):  # several equivalent phrasings: pick one so replies feel less canned
         tmpl = random.choice(tmpl)
     return tmpl.format(**kwargs) if kwargs else tmpl
+
+
+async def _month_category_context(
+    session: AsyncSession, member: Member, when: datetime, category: str | None, lang: str
+) -> str:
+    """One-line month-to-date total for the category of a just-recorded expense.
+
+    Empty when there is nothing useful to say: unknown category ("overig") or the expense is
+    the only one of its category this month. Expects the new row to be flushed already.
+    """
+    from sqlalchemy import func as sa_func
+
+    if not category or category == "overig":
+        return ""
+    local = to_local(when)
+    start = datetime.combine(month_start(local.date()), time.min, tzinfo=local.tzinfo)
+    end = datetime.combine(
+        month_start(month_start(local.date()) + timedelta(days=32)), time.min, tzinfo=local.tzinfo
+    )
+    res = await session.execute(
+        select(sa_func.coalesce(sa_func.sum(Expense.amount), 0), sa_func.count(Expense.id)).where(
+            Expense.member_id == member.id,
+            Expense.transaction_type == "expense",
+            Expense.category == category,
+            Expense.expense_date >= start,
+            Expense.expense_date < end,
+        )
+    )
+    total, count = res.one()
+    if int(count) < 2:
+        return ""
+    return _t(
+        "month_category_context",
+        lang,
+        total=_fmt_eur(float(total)),
+        category=category_label(category, lang).lower(),
+    )
 
 
 def _detect_language(text: str) -> str:
@@ -4098,6 +4145,11 @@ async def handle_inbound(
             reply = _t(key, lang, amount=amt_fmt, name=name)
             if days_ago > 0:
                 reply += _t("days_ago_suffix", lang, n=days_ago)
+            if txn_type == "expense":
+                await session.flush()  # make the new row visible to the month total below
+                reply += await _month_category_context(
+                    session, member, expense_date, expense_data.get("category"), lang
+                )
             # BUG-07 fix: show cumulative trip total when expense tagged to trip
             if active_trip and txn_type == "expense":
                 from sqlalchemy import func as sa_func

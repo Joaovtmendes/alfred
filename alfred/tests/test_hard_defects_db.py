@@ -109,3 +109,37 @@ async def test_swimming_reaches_the_workout_extractor(lab: Lab) -> None:
     }
     await lab.say("nadei 30 minutos")
     lab.workout.assert_awaited_once()
+
+
+def _exp(amount: float, name: str, category: str = "supermarkt", kind: str = "expense") -> dict:
+    return {
+        "amount": amount,
+        "currency": "EUR",
+        "merchant": name,
+        "category": category,
+        "description": name,
+        "type": kind,
+        "days_ago": 0,
+    }
+
+
+@db
+async def test_confirmation_shows_month_total_from_second_expense_of_a_category(lab: Lab) -> None:
+    lab.expense.return_value = _exp(40, "Jumbo")
+    first = await lab.say("Jumbo 40")
+    assert "este mês" not in first and "no mês" not in first  # nothing to add yet
+    lab.expense.return_value = _exp(25, "Albert Heijn")
+    second = await lab.say("Albert Heijn 25")
+    assert "€65,00" in second and "supermercado" in second.lower()
+
+
+@db
+async def test_month_total_ignores_income_and_other_categories(lab: Lab) -> None:
+    lab.expense.return_value = _exp(40, "Jumbo")
+    await lab.say("Jumbo 40")
+    lab.expense.return_value = _exp(2800, "Salário", category="inkomen", kind="income")
+    income = await lab.say("recebi 2800 de salário")
+    assert "este mês" not in income and "no mês" not in income
+    lab.expense.return_value = _exp(12, "Uber", category="vervoer")
+    other = await lab.say("Uber 12")
+    assert "este mês" not in other and "no mês" not in other
