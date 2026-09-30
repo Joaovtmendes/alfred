@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from alfred.dashboard import router as dashboard_router
 from alfred.legal import router as legal_router
 from alfred.settings import settings
+from alfred.web_security import SecurityHeadersMiddleware
 from alfred.webhook import recovery_loop
 from alfred.webhook import router as webhook_router
 
@@ -44,6 +45,9 @@ app = FastAPI(
     openapi_url="/openapi.json" if settings.environment != "production" else None,
     redoc_url=None,
 )
+
+# No CORSMiddleware on purpose: the dashboard only calls its own origin.
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(webhook_router)
 app.include_router(dashboard_router)

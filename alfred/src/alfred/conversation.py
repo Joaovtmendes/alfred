@@ -20,6 +20,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred.audit import audit
 from alfred.clock import (
     day_start,
     month_name,
@@ -2674,6 +2675,7 @@ async def _handle_button_reply(
             date=to_local(expense.expense_date).strftime("%d/%m"),
         )
         await session.delete(expense)
+        audit(session, "expense_undone", member.id)
         logger.info("conversation.expense_undone", member_id=str(member.id))
     elif action == "edit":
         reply = _t("button_edit_hint", lang)
@@ -2723,6 +2725,7 @@ async def handle_inbound(
             reply = _t("consent_accepted", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
+            audit(session, "consent_accepted", member.id)
             logger.info("conversation.consent_accepted", member_id=str(member.id))
         elif body in _CONSENT_NO:
             member.consent_state = "rejected"
@@ -3067,11 +3070,19 @@ async def handle_inbound(
         if _is_command(body, _DASHBOARD_WORDS):
             import uuid as _uuid
 
+            from alfred.dashboard import token_expired
             from alfred.settings import settings as _settings
 
-            # Generate token if member doesn't have one
-            if member.dashboard_token is None:
+            # Missing or expired (TTL) → issue a fresh one; the old link stops working.
+            if member.dashboard_token is None or token_expired(member):
+                rotated = member.dashboard_token is not None
                 member.dashboard_token = _uuid.uuid4()
+                member.dashboard_token_created_at = datetime.now(UTC)
+                audit(
+                    session,
+                    "dashboard_link_rotated" if rotated else "dashboard_link_issued",
+                    member.id,
+                )
                 await session.flush()
             import os as _os
 
@@ -3699,6 +3710,7 @@ async def handle_inbound(
                     date=to_local(last.expense_date).strftime("%d/%m"),
                 )
                 await session.delete(last)
+                audit(session, "expense_deleted", member.id)
                 logger.info("conversation.expense_deleted", member_id=str(member.id))
             await send_text(to, reply)
             await _save_outbound(member, reply, session)

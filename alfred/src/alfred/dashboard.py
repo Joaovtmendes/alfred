@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from calendar import monthrange
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -21,6 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.clock import day_start, month_name, to_local, today_local
 from alfred.db import get_session
 from alfred.models import Expense, Goal, HabitLog, HealthLog, Member, Note, Task
+from alfred.settings import settings
+from alfred.web_security import limit_dashboard
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["dashboard"])
@@ -36,9 +38,18 @@ async def _get_member(token_str: str, session: AsyncSession) -> Member:
         raise HTTPException(status_code=404, detail="Dashboard not found") from None
     result = await session.execute(select(Member).where(Member.dashboard_token == token))
     member = result.scalar_one_or_none()
-    if member is None:
+    if member is None or token_expired(member):
         raise HTTPException(status_code=404, detail="Dashboard not found") from None
     return member
+
+
+def token_expired(member: Member, now: datetime | None = None) -> bool:
+    """A dashboard link is valid for ``dashboard_token_ttl_days`` from when it was issued."""
+    issued = member.dashboard_token_created_at
+    if issued is None:  # legacy row: the migration backfills, but never trust NULL forever
+        return False
+    now = now or datetime.now(UTC)
+    return now - issued > timedelta(days=settings.dashboard_token_ttl_days)
 
 
 def _parse_month(raw: str | None, today: date) -> tuple[int, int]:
@@ -57,7 +68,7 @@ def _parse_month(raw: str | None, today: date) -> tuple[int, int]:
 # ── JSON API ──────────────────────────────────────────────────────────────────
 
 
-@router.get("/api/d/{token}", include_in_schema=False)
+@router.get("/api/d/{token}", include_in_schema=False, dependencies=[Depends(limit_dashboard)])
 async def dashboard_api(
     token: str,
     month: str | None = Query(None, description="YYYY-MM"),
@@ -249,7 +260,7 @@ async def dashboard_api(
 # ── HTML page ─────────────────────────────────────────────────────────────────
 
 
-@router.get("/d/{token}", include_in_schema=False)
+@router.get("/d/{token}", include_in_schema=False, dependencies=[Depends(limit_dashboard)])
 async def dashboard_page(
     token: str,
     session: AsyncSession = Depends(get_session),
@@ -264,7 +275,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Alfred Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 :root{
   --bg:#0f1117;--surface:#1a1d27;--surface2:#232635;
