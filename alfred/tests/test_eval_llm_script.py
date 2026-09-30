@@ -25,4 +25,13 @@ def test_check_accepts_and_rejects() -> None:
 
 def test_cases_are_well_formed_and_cover_every_language() -> None:
     assert {c[0] for c in ev.CASES} == {"pt", "nl", "en", "fr", "de"}
-    assert len(ev.CASES) >= 20
+    assert len(ev.CASES) >= 90
+
+
+def test_cases_have_no_duplicates_and_balance_per_language() -> None:
+    keys = [(c[0], c[1].lower()) for c in ev.CASES]
+    assert len(keys) == len(set(keys))
+    for lang in ("pt", "nl", "en", "fr", "de"):
+        assert sum(1 for c in ev.CASES if c[0] == lang) >= 12, lang
+    negatives = sum(1 for c in ev.CASES if c[2] is None)
+    assert 15 <= negatives <= len(ev.CASES) // 2  # enough "not a transaction" cases, not most
