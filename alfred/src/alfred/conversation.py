@@ -294,11 +294,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "_Bilanz: {sign}{amount}_",
     },
     "transactions_count": {
-        "pt": "_{n} transação(ões)_",
-        "nl": "_{n} transactie(s)_",
-        "en": "_{n} transaction(s)_",
-        "fr": "_{n} transaction(s)_",
-        "de": "_{n} Transaktion(en)_",
+        "pt": "_{n} transações_",
+        "nl": "_{n} transacties_",
+        "en": "_{n} transactions_",
+        "fr": "_{n} transactions_",
+        "de": "_{n} Transaktionen_",
     },
     "saldo_title": {
         "pt": "*Saldo — {month}*",
@@ -990,10 +990,10 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     "habit_streak": {
         "pt": "Já são *{n} dias seguidos* de {activity}. 🔥",
-        "nl": "Jouw streak voor *{activity}* is *{n} dag(en)* op rij! 🔥",
-        "en": "Your *{activity}* streak is *{n} day(s)* in a row! 🔥",
-        "fr": "Ta serie pour *{activity}* est de *{n} jour(s)* consecutifs ! 🔥",
-        "de": "Deine Serie fuer *{activity}* betraegt *{n} Tag(e)* in Folge! 🔥",
+        "nl": "Jouw streak voor *{activity}*: *{n} dagen* op rij! 🔥",
+        "en": "Your *{activity}* streak: *{n} days* in a row! 🔥",
+        "fr": "Ta série pour *{activity}* : *{n} jours* consécutifs ! 🔥",
+        "de": "Deine Serie für *{activity}*: *{n} Tage* in Folge! 🔥",
     },
     "habit_streak_none": {
         "pt": "Não achei registros recentes de *{activity}*. Que tal começar hoje? 💪",
@@ -1190,9 +1190,12 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
 }
 
 
-def _derive_singular(base: str, key: str, pt: str) -> None:
-    """A copy of ``base`` for the singular case; only Portuguese needs different wording."""
-    _STRINGS[key] = {**_STRINGS[base], "pt": pt}
+def _derive_singular(base: str, key: str, pt: str, **other: str) -> None:
+    """A copy of ``base`` for the singular case (n == 1).
+
+    Portuguese is always given; other languages only when their plural wording does not
+    work for one (e.g. "1 days")."""
+    _STRINGS[key] = {**_STRINGS[base], "pt": pt, **other}
 
 
 _derive_singular(
@@ -1205,6 +1208,21 @@ _derive_singular(
     "habit_streak",
     "habit_streak_one",
     "Você está com *1 dia* de {activity}. Continue assim! 🔥",
+    nl="Jouw streak voor *{activity}*: *1 dag*! Hou vol! 🔥",
+    en="Your *{activity}* streak: *1 day*! Keep it going! 🔥",
+    fr="Ta série pour *{activity}* : *1 jour* ! Continue ! 🔥",
+    de="Deine Serie für *{activity}*: *1 Tag*! Weiter so! 🔥",
+)
+
+
+_derive_singular(
+    "transactions_count",
+    "transactions_count_one",
+    "_1 transação_",
+    nl="_1 transactie_",
+    en="_1 transaction_",
+    fr="_1 transaction_",
+    de="_1 Transaktion_",
 )
 
 
@@ -2106,6 +2124,24 @@ def _is_bare_command(body: str, keywords: set[str]) -> bool:
     category query, not the plain "gastos" summary.
     """
     plain = strip_accents(body).strip(" .!?")
+    for poss in (
+        "my ",
+        "the ",
+        "mijn ",
+        "het ",
+        "mon ",
+        "ma ",
+        "le ",
+        "mein ",
+        "meine ",
+        "das ",
+        "o meu ",
+        "meu ",
+        "a minha ",
+    ):
+        if plain.startswith(poss) and plain != poss.strip():
+            plain = plain[len(poss) :]
+            break
     for polite in (" por favor", " please", " alsjeblieft", " s'il vous plait", " bitte"):
         plain = plain.removesuffix(polite)
     return plain in {strip_accents(k) for k in keywords}
@@ -2595,7 +2631,13 @@ async def _build_summary(
             name = e.merchant or e.description or category
             lines.append(f"• {date_str} {name}: {_fmt_eur(e.amount)}")
         lines.append(f"\n{_t('category_total', lang, amount=_fmt_eur(total_out))}")
-        lines.append(_t("transactions_count", lang, n=len(outflows)))
+        lines.append(
+            _t(
+                "transactions_count_one" if len(outflows) == 1 else "transactions_count",
+                lang,
+                n=len(outflows),
+            )
+        )
     else:
         # Full summary: group by category
         by_cat: dict[str, float] = {}
@@ -2617,7 +2659,13 @@ async def _build_summary(
             lines.append(_t("income_line", lang, amount=_fmt_eur(total_in)))
             lines.append(_t("balance_line", lang, sign=sign, amount=_fmt_eur(abs(balance))))
 
-        lines.append(_t("transactions_count", lang, n=len(outflows)))
+        lines.append(
+            _t(
+                "transactions_count_one" if len(outflows) == 1 else "transactions_count",
+                lang,
+                n=len(outflows),
+            )
+        )
 
     return "\n".join(lines)
 
