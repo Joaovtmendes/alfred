@@ -20,7 +20,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.audit import audit
 from alfred.clock import day_start, month_name, to_local, today_local
+from alfred.dashboard_i18n import normalize_lang, payload, ui
 from alfred.db import get_session
+from alfred.labels import category_label
 from alfred.models import Expense, Goal, HabitLog, HealthLog, Member, Note, Task
 from alfred.settings import settings
 from alfred.web_security import limit_dashboard
@@ -87,6 +89,7 @@ async def dashboard_api(
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     member = await _get_member(token, session)
+    lang = normalize_lang(member.language)
 
     today = today_local()
     sel_year, sel_month = _parse_month(month, today)
@@ -118,7 +121,7 @@ async def dashboard_api(
     cat_totals: dict[str, float] = defaultdict(float)
     for e in month_txs:
         if e.transaction_type == "expense":
-            cat_totals[e.category or "Outros"] += e.amount
+            cat_totals[e.category or "overig"] += e.amount
 
     # Monthly history — last 12 months
     history: list[dict] = []
@@ -144,7 +147,7 @@ async def dashboard_api(
         history.append(
             {
                 "month": f"{y:04d}-{m:02d}",
-                "label": f"{month_name(ms, member.language or 'pt')[:3]} {ms.year % 100:02d}",
+                "label": f"{month_name(ms, lang)[:3]} {ms.year % 100:02d}",
                 "total_expense": round(
                     sum(e.amount for e in h if e.transaction_type == "expense"), 2
                 ),
@@ -158,7 +161,7 @@ async def dashboard_api(
         {
             "date": to_local(e.expense_date).strftime("%d/%m") if e.expense_date else "",
             "merchant": e.merchant or "-",
-            "category": e.category or "Outros",
+            "category": category_label(e.category, lang),
             "amount": round(e.amount, 2),
             "type": e.transaction_type,
         }
@@ -249,13 +252,13 @@ async def dashboard_api(
 
     return JSONResponse(
         {
-            "member_name": member.preferred_name or member.display_name or "Utilizador",
+            "member_name": member.preferred_name or member.display_name or ui(lang)["user"],
             "month": f"{sel_year:04d}-{sel_month:02d}",
             "total_expense": round(total_expense, 2),
             "total_income": round(total_income, 2),
             "balance": round(balance, 2),
             "expenses_by_category": [
-                {"category": k, "total": round(v, 2)}
+                {"category": category_label(k, lang), "total": round(v, 2)}
                 for k, v in sorted(cat_totals.items(), key=lambda x: -x[1])
             ],
             "monthly_history": history,
@@ -295,16 +298,23 @@ async def dashboard_page(
     token: str,
     session: AsyncSession = Depends(get_session),
 ) -> HTMLResponse:
-    await _get_member(token, session)
-    return HTMLResponse(_HTML_TEMPLATE.replace("__TOKEN__", token))
+    member = await _get_member(token, session)
+    lang = normalize_lang(member.language)
+    page = (
+        _HTML_TEMPLATE.replace("__TOKEN__", token)
+        .replace("__LANG__", lang)
+        .replace("__I18N__", payload(lang))
+        .replace("__TITLE__", ui(lang)["title"])
+    )
+    return HTMLResponse(page)
 
 
 _HTML_TEMPLATE = r"""<!DOCTYPE html>
-<html lang="pt">
+<html lang="__LANG__">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
-<title>Alfred Dashboard</title>
+<title>__TITLE__</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 :root{
@@ -425,55 +435,55 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
 </style>
 </head>
 <body>
-<div id="loading">A carregar…</div>
+<div id="loading"></div>
 <header>
   <h1>Alfred <span id="header-name"></span></h1>
   <div class="month-nav">
-    <button id="prev-btn" aria-label="Mês anterior">&#8592;</button>
+    <button id="prev-btn" data-aria="prev_month">&#8592;</button>
     <span id="month-label">—</span>
-    <button id="next-btn" aria-label="Próximo mês">&#8594;</button>
+    <button id="next-btn" data-aria="next_month">&#8594;</button>
   </div>
 </header>
 <main>
   <div class="grid row-3" style="margin-bottom:var(--gap)">
     <div class="card">
-      <div class="card-title">Gastos</div>
+      <div class="card-title" data-i18n="spent"></div>
       <div class="stat-val red" id="v-expense">—</div>
       <div class="stat-sub" id="v-expense-sub"></div>
     </div>
     <div class="card">
-      <div class="card-title">Receita</div>
+      <div class="card-title" data-i18n="income"></div>
       <div class="stat-val green" id="v-income">—</div>
     </div>
     <div class="card">
-      <div class="card-title">Saldo</div>
+      <div class="card-title" data-i18n="balance"></div>
       <div class="stat-val neutral" id="v-balance">—</div>
     </div>
   </div>
 
   <div class="grid row-2" style="margin-bottom:var(--gap)">
     <div class="card">
-      <div class="card-title">Gastos por categoria</div>
+      <div class="card-title" data-i18n="by_category"></div>
       <div class="chart-wrap"><canvas id="chart-donut"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">Histórico mensal</div>
+      <div class="card-title" data-i18n="monthly_history"></div>
       <div class="chart-wrap"><canvas id="chart-bar"></canvas></div>
     </div>
   </div>
 
   <div class="grid row-2" style="margin-bottom:var(--gap)">
     <div class="card">
-      <div class="card-title">Transações recentes</div>
+      <div class="card-title" data-i18n="recent_tx"></div>
       <div class="tx-list" id="tx-list"></div>
     </div>
     <div class="grid row-1" style="gap:var(--gap)">
       <div class="card">
-        <div class="card-title">Metas</div>
+        <div class="card-title" data-i18n="goals"></div>
         <div id="goals-list"></div>
       </div>
       <div class="card">
-        <div class="card-title">Saúde este mês</div>
+        <div class="card-title" data-i18n="health_month"></div>
         <div class="health-chips" id="health-chips"></div>
       </div>
     </div>
@@ -481,18 +491,18 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
 
   <div class="grid row-2" style="margin-bottom:var(--gap)">
     <div class="card">
-      <div class="card-title">Hábitos</div>
+      <div class="card-title" data-i18n="habits"></div>
       <div id="habits-list"></div>
     </div>
     <div class="card">
-      <div class="card-title">Tarefas pendentes</div>
+      <div class="card-title" data-i18n="pending_tasks"></div>
       <div id="tasks-list"></div>
     </div>
   </div>
 
   <div class="grid row-1">
     <div class="card">
-      <div class="card-title">Notas recentes</div>
+      <div class="card-title" data-i18n="recent_notes"></div>
       <div id="notes-list"></div>
     </div>
   </div>
@@ -505,15 +515,20 @@ let donutChart = null;
 let barChart = null;
 let lastData = null;
 
-const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-                     "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const I18N = __I18N__;
+const T = I18N.t;
+const MONTH_NAMES = I18N.months;
+const EUR = new Intl.NumberFormat(I18N.locale, {style:"currency", currency:"EUR"});
+document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = T[el.dataset.i18n]; });
+document.querySelectorAll("[data-aria]").forEach(el => { el.setAttribute("aria-label", T[el.dataset.aria]); });
+document.getElementById("loading").textContent = T.loading;
 const CAT_COLORS = [
   "#6c63ff","#48e5c2","#f4647a","#f9c74f","#4cc9f0",
   "#7b2d8b","#ff9f43","#00b4d8","#06d6a0","#ef476f",
 ];
 
 function fmtEur(v){
-  return "€ " + v.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+  return EUR.format(v);
 }
 function fmtMonth(ym){
   const [y,m] = ym.split("-");
@@ -532,7 +547,7 @@ async function load(month){
   const url = `/api/d/${TOKEN}${month ? "?month="+month : ""}`;
   const res = await fetch(url);
   if(!res.ok){
-    document.getElementById("loading").textContent = "Dashboard não encontrado.";
+    document.getElementById("loading").textContent = T.not_found;
     return;
   }
   const d = await res.json();
@@ -548,7 +563,7 @@ function render(d){
 
   document.getElementById("v-expense").textContent = fmtEur(d.total_expense);
   document.getElementById("v-expense-sub").textContent =
-    d.expenses_by_category.length > 0 ? `${d.expenses_by_category.length} categorias` : "";
+    d.expenses_by_category.length > 0 ? `${d.expenses_by_category.length} ${d.expenses_by_category.length === 1 ? T.category_one : T.categories}` : "";
   document.getElementById("v-income").textContent = fmtEur(d.total_income);
   const balEl = document.getElementById("v-balance");
   balEl.textContent = fmtEur(d.balance);
@@ -560,7 +575,7 @@ function render(d){
   // Transactions
   const txList = document.getElementById("tx-list");
   if(d.recent_transactions.length === 0){
-    txList.innerHTML = '<div class="empty">Ainda não há transações este mês.</div>';
+    txList.innerHTML = '<div class="empty">' + esc(T.empty_tx) + '</div>';
   } else {
     txList.innerHTML = d.recent_transactions.map(t => `
       <div class="tx-row">
@@ -576,7 +591,7 @@ function render(d){
   // Goals
   const goalsList = document.getElementById("goals-list");
   if(d.goals.length === 0){
-    goalsList.innerHTML = '<div class="empty">Você ainda não tem metas ativas.</div>';
+    goalsList.innerHTML = '<div class="empty">' + esc(T.empty_goals) + '</div>';
   } else {
     goalsList.innerHTML = d.goals.map(g => `
       <div class="goal-item">
@@ -588,12 +603,12 @@ function render(d){
   // Habits
   const habitsList = document.getElementById("habits-list");
   if(d.habits.length === 0){
-    habitsList.innerHTML = '<div class="empty">Ainda não há hábitos registrados nos últimos 30 dias.</div>';
+    habitsList.innerHTML = '<div class="empty">' + esc(T.empty_habits) + '</div>';
   } else {
     habitsList.innerHTML = d.habits.map(h => `
       <div class="habit-row">
         <div class="habit-name">${esc(h.activity)}</div>
-        <div class="habit-streak">${h.streak}d 🔥</div>
+        <div class="habit-streak">${h.streak}${esc(T.day_short)} 🔥</div>
         <div class="habit-dots">${h.last7.map(on=>`<div class="dot${on?" on":""}"></div>`).join("")}</div>
       </div>`).join("");
   }
@@ -601,7 +616,7 @@ function render(d){
   // Tasks
   const tasksList = document.getElementById("tasks-list");
   if(d.tasks.length === 0){
-    tasksList.innerHTML = '<div class="empty">Você não tem tarefas pendentes.</div>';
+    tasksList.innerHTML = '<div class="empty">' + esc(T.empty_tasks) + '</div>';
   } else {
     tasksList.innerHTML = d.tasks.map(t => `
       <div class="task-item">
@@ -613,7 +628,7 @@ function render(d){
   // Notes
   const notesList = document.getElementById("notes-list");
   if(d.notes.length === 0){
-    notesList.innerHTML = '<div class="empty">Você ainda não tem notas.</div>';
+    notesList.innerHTML = '<div class="empty">' + esc(T.empty_notes) + '</div>';
   } else {
     notesList.innerHTML = d.notes.map(n => `
       <div class="note-item">
@@ -625,11 +640,11 @@ function render(d){
   // Health
   const chips = document.getElementById("health-chips");
   if(d.health.length === 0){
-    chips.innerHTML = '<div class="empty">Ainda não há registros de saúde este mês.</div>';
+    chips.innerHTML = '<div class="empty">' + esc(T.empty_health) + '</div>';
   } else {
-    const labels = {medication:"💊 Medicação",mood:"😊 Humor",sleep:"😴 Sono",water:"💧 Água"};
+    const labels = {medication:"💊 "+T.medication,mood:"😊 "+T.mood,sleep:"😴 "+T.sleep,water:"💧 "+T.water};
     chips.innerHTML = d.health.map(h => `
-      <div class="chip">${esc(labels[h.type]||h.type)}: <span>${Number(h.count)}x</span></div>`).join("");
+      <div class="chip">${esc(labels[h.type]||h.type)}: <span>${Number(h.count)}${esc(T.times)}</span></div>`).join("");
   }
 }
 
@@ -683,13 +698,13 @@ function renderBar(history){
       labels: data.map(h => h.label),
       datasets: [
         {
-          label: "Gastos",
+          label: T.spent,
           data: data.map(h => h.total_expense),
           backgroundColor: "rgba(244,100,122,0.7)",
           borderRadius: 4,
         },
         {
-          label: "Receita",
+          label: T.income,
           data: data.map(h => h.total_income),
           backgroundColor: "rgba(72,229,194,0.7)",
           borderRadius: 4,
