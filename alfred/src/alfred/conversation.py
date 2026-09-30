@@ -231,14 +231,14 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         ),
     },
     "no_records_scope": {
-        "pt": "Ainda não há registros em *{category}* em {period_label}.",
+        "pt": "Ainda não há registros de *{category}* ({period_label}).",
         "nl": "Geen registraties in *{category}* in {period_label}.",
         "en": "No records in *{category}* in {period_label}.",
         "fr": "Aucun enregistrement dans *{category}* en {period_label}.",
         "de": "Keine Einträge in *{category}* in {period_label}.",
     },
     "no_records_period": {
-        "pt": "Ainda não há registros em {period_label}.",
+        "pt": "Ainda não há registros ({period_label}).",
         "nl": "Geen registraties in {period_label}.",
         "en": "No records in {period_label}.",
         "fr": "Aucun enregistrement en {period_label}.",
@@ -436,6 +436,13 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": " That makes {total} on {category} this month.",
         "fr": " Cela fait {total} en {category} ce mois-ci.",
         "de": " Damit sind es {total} für {category} in diesem Monat.",
+    },
+    "health_unsupported": {
+        "pt": "Ainda não acompanho peso nem pressão, só medicação, humor, sono e água. Se quiser, guardo como nota: “nota: peso 75 kg”.",
+        "nl": "Gewicht en bloeddruk volg ik nog niet, alleen medicatie, stemming, slaap en water. Wil je het als notitie bewaren: “notitie: gewicht 75 kg”?",
+        "en": "I don't track weight or blood pressure yet, only medication, mood, sleep and water. I can save it as a note: “note: weight 75 kg”.",
+        "fr": "Je ne suis pas encore le poids ni la tension, seulement médicaments, humeur, sommeil et eau. Je peux l'enregistrer en note : « note : poids 75 kg ».",
+        "de": "Gewicht und Blutdruck verfolge ich noch nicht, nur Medikamente, Stimmung, Schlaf und Wasser. Ich kann es als Notiz speichern: „Notiz: Gewicht 75 kg“.",
     },
     "high_value_hint": {
         "pt": "\nÉ um valor alto, confere se está certo?",
@@ -727,8 +734,8 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     "habit_logged": {
         "pt": (
-            "{activity} anotado. Mais um dia!",
             "Anotei: {activity}.",
+            "{activity}: anotado. Mais um dia!",
         ),
         "nl": "Gewoonte gelogd: {activity}",
         "en": "Habit logged: {activity}",
@@ -947,7 +954,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     # ── M9 — extras ───────────────────────────────────────────────────────────
     "habit_logged_with_goal": {
-        "pt": "{activity} anotado. Meta: {goal}.",
+        "pt": "Anotei: {activity}. Meta: {goal}.",
         "nl": "Gewoonte gelogd: *{activity}* (doel: {goal})",
         "en": "Habit logged: *{activity}* (goal: {goal})",
         "fr": "Habitude enregistree : *{activity}* (objectif : {goal})",
@@ -982,7 +989,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Keine Eintraege fuer *{activity}* diese Woche.",
     },
     "habit_streak": {
-        "pt": "Já são *{n} dia(s) seguidos* de {activity}. 🔥",
+        "pt": "Já são *{n} dias seguidos* de {activity}. 🔥",
         "nl": "Jouw streak voor *{activity}* is *{n} dag(en)* op rij! 🔥",
         "en": "Your *{activity}* streak is *{n} day(s)* in a row! 🔥",
         "fr": "Ta serie pour *{activity}* est de *{n} jour(s)* consecutifs ! 🔥",
@@ -1181,6 +1188,24 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": " [Reise: {dest}]",
     },
 }
+
+
+def _derive_singular(base: str, key: str, pt: str) -> None:
+    """A copy of ``base`` for the singular case; only Portuguese needs different wording."""
+    _STRINGS[key] = {**_STRINGS[base], "pt": pt}
+
+
+_derive_singular(
+    "trip_ended",
+    "trip_ended_one",
+    "Bem-vindo de volta! A viagem para {dest} custou {total} em 1 despesa.",
+)
+_derive_singular("trip_summary_total", "trip_summary_total_one", "Total: {total}  (1 despesa)")
+_derive_singular(
+    "habit_streak",
+    "habit_streak_one",
+    "Você está com *1 dia* de {activity}. Continue assim! 🔥",
+)
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -1974,6 +1999,12 @@ _GOAL_COMPLETE_RE = re.compile(
     r"(?:concluida|concluido|feita|feito|done|klaar|erledigt|fait|accomplie?)",
     re.IGNORECASE,
 )
+# Health metrics the app does not store (weight, blood pressure, glucose): never file them as medication.
+_UNSUPPORTED_HEALTH_RE = re.compile(
+    r"\b(?:peso|pressão|pressao|glicose|glicemia|weight|blood\s+pressure|glucose|gewicht|bloeddruk|"
+    r"poids|tension|blutdruck)\b|\b\d+(?:[.,]\d+)?\s*kg\b",
+    re.IGNORECASE,
+)
 _HABIT_FREQ_RE = re.compile(
     r"(?:quantas\s+vezes|how\s+many\s+times|hoe\s+vaak|combien\s+de\s+fois|wie\s+oft)\s+"
     r"(?:(?:eu\s+)?fiz|did\s+i\s+do|deed\s+ik|ai-je\s+fait|habe\s+ich\s+gemacht|"
@@ -2145,6 +2176,8 @@ async def _handle_trip(
             return _t("trip_none_active", lang)
 
         active.ended_at = today_local()
+        if active.started_at > active.ended_at:  # trip announced for a future date, ended early
+            active.started_at = active.ended_at
         active.active = False
 
         row = (
@@ -2160,7 +2193,13 @@ async def _handle_trip(
         ).one()
         total = row.total or Decimal("0")
         count = row.cnt or 0
-        return _t("trip_ended", lang, dest=active.destination, total=_fmt_eur(total), count=count)
+        return _t(
+            "trip_ended_one" if count == 1 else "trip_ended",
+            lang,
+            dest=active.destination,
+            total=_fmt_eur(total),
+            count=count,
+        )
 
     # ── trip summary ──────────────────────────────────────────────────────
     if TRIP_QUERY_RE.match(body.strip()):
@@ -2212,7 +2251,14 @@ async def _handle_trip(
                 f"  {to_local(r.expense_date).strftime('%d/%m')}  {r.merchant or r.category}"
                 f" ({r.category})  {_fmt_eur(r.amount)}"
             )
-        lines.append(_t("trip_summary_total", lang, total=_fmt_eur(total), n=len(rows)))
+        lines.append(
+            _t(
+                "trip_summary_total_one" if len(rows) == 1 else "trip_summary_total",
+                lang,
+                total=_fmt_eur(total),
+                n=len(rows),
+            )
+        )
         if trip.budget:
             lines.append(
                 _t("trip_summary_budget", lang, budget=_fmt_eur(trip.budget))
@@ -2315,7 +2361,8 @@ async def _save_outbound(
 
 
 _RECORDED_CLAIM_RE = re.compile(
-    r"registad[oa]s?|registei|guardad[oa]s?|recorded|saved|logged|"
+    r"registad[oa]s?|registrad[oa]s?|registei|registrei|anotei|anotad[oa]s?|guardad[oa]s?|"
+    r"recorded|saved|logged|"
     r"geregistreerd|opgeslagen|enregistr[ée]e?s?|erfasst|gespeichert",
     re.IGNORECASE,
 )
@@ -2352,6 +2399,44 @@ def _claims_recorded(reply: str) -> bool:
 def _looks_multi(body: str) -> bool:
     """A message carrying two or more amounts may be several transactions."""
     return len(_NUMBER_RE.findall(body)) >= 2
+
+
+def _num(x: float | int, lang: str) -> str:
+    """Localised plain number: 6.5 -> "6,5" (pt/nl/fr/de), 2.0 -> "2"."""
+    f = float(x)
+    text = str(int(f)) if f == int(f) else f"{f:.2f}".rstrip("0").rstrip(".")
+    return text if lang == "en" else text.replace(".", ",")
+
+
+def _num_str(value: str, lang: str) -> str:
+    """Localise a stored numeric string ("6.5"); anything else is returned untouched."""
+    v = (value or "").strip()
+    return _num(float(v.replace(",", ".")), lang) if re.fullmatch(r"\d+(?:[.,]\d+)?", v) else v
+
+
+def _workout_dur(minutes: int | None, km: float | None, lang: str) -> str:
+    if minutes:
+        return f"{minutes} min"
+    if km:
+        return f"{_num(km, lang)} km"
+    return ""
+
+
+_ACTIVITY_TAIL_RE = re.compile(
+    r"\s*[?!.]*\s*(?:(?:nos|nas)\s+[uú]ltim[oa]s\s+\d+\s+\w+|(?:este|esse|neste)\s+m[eê]s|"
+    r"(?:esta|essa|nesta)\s+semana|hoje|this\s+(?:week|month)|deze\s+(?:week|maand))?\s*[?!.]*\s*$",
+    re.IGNORECASE,
+)
+
+
+def _clean_activity(text: str) -> str:
+    """Strip question marks and trailing time words captured together with an activity name."""
+    prev = None
+    out = (text or "").strip()
+    while out != prev:
+        prev = out
+        out = _ACTIVITY_TAIL_RE.sub("", out).strip()
+    return out
 
 
 def _fmt_eur(amount: float) -> str:
@@ -3413,7 +3498,7 @@ async def handle_inbound(
         # 4e-7c. M9 — habit frequency: "quantas vezes meditei esta semana"
         m_hfreq = _HABIT_FREQ_RE.search(body_plain)
         if m_hfreq:
-            freq_raw = (_grp(body, m_hfreq) or body).strip()
+            freq_raw = _clean_activity((_grp(body, m_hfreq) or body).strip())
             # extract the activity from the whole body
             from datetime import timedelta as _td
 
@@ -3449,7 +3534,7 @@ async def handle_inbound(
         m_hstreak = _HABIT_STREAK_RE.search(body_plain)
         if m_hstreak:
             streak_raw = _grp(body, m_hstreak).strip()
-            streak_kw = streak_raw.lower() if streak_raw else ""
+            streak_kw = _clean_activity(streak_raw).lower() if streak_raw else ""
             from datetime import timedelta as _td
 
             from sqlalchemy import select as _sel
@@ -3498,7 +3583,12 @@ async def handle_inbound(
                 if streak_count == 0:
                     reply = _t("habit_streak_none", lang, activity=activity_label)
                 else:
-                    reply = _t("habit_streak", lang, activity=activity_label, n=streak_count)
+                    reply = _t(
+                        "habit_streak_one" if streak_count == 1 else "habit_streak",
+                        lang,
+                        activity=activity_label,
+                        n=streak_count,
+                    )
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -3590,6 +3680,11 @@ async def handle_inbound(
                 return
 
         # 4e-9. M8 — health log: medicação, humor, sono, água
+        if _is_health and _UNSUPPORTED_HEALTH_RE.search(body_plain):
+            reply = _t("health_unsupported", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
         if _is_health:
             today = today_local()
             health_data = await extract_health_log(body, lang=member.language or "en")
@@ -3610,7 +3705,7 @@ async def handle_inbound(
                 )
                 session.add(hlog)
                 lt = health_data["log_type"]
-                val = health_data["value"]
+                val = _num_str(str(health_data["value"]), lang)
                 if lt == "medication":
                     reply = _t("health_saved_medication", lang, value=val)
                 elif lt == "mood":
@@ -3671,7 +3766,7 @@ async def handle_inbound(
                     avg = round(total_h / len(sleep_rows), 1)
                 except (ValueError, ZeroDivisionError):
                     avg = 0.0
-                reply = _t("health_sleep_avg", lang, avg=avg, n=len(sleep_rows))
+                reply = _t("health_sleep_avg", lang, avg=_num(avg, lang), n=len(sleep_rows))
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -3728,7 +3823,7 @@ async def handle_inbound(
                     total_l = round(sum(float(r.value.replace(",", ".")) for r in water_rows), 1)
                 except ValueError:
                     total_l = 0.0
-                reply = _t("health_water_today", lang, total=total_l, n=len(water_rows))
+                reply = _t("health_water_today", lang, total=_num(total_l, lang), n=len(water_rows))
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -3753,14 +3848,8 @@ async def handle_inbound(
                     workout_date=wo_date,
                 )
                 session.add(ws)
-                dur_str = (
-                    f"{workout_data['duration_minutes']}min"
-                    if workout_data.get("duration_minutes")
-                    else (
-                        f"{workout_data['distance_km']}km"
-                        if workout_data.get("distance_km")
-                        else ""
-                    )
+                dur_str = _workout_dur(
+                    workout_data.get("duration_minutes"), workout_data.get("distance_km"), lang
                 )
                 reply = _t(
                     "workout_saved", lang, activity=workout_data["activity_type"], duration=dur_str
@@ -3805,16 +3894,12 @@ async def handle_inbound(
             else:
                 lines = [_t("workout_summary_header", lang, n=len(sessions_list))]
                 for ws in sessions_list:
-                    dur = (
-                        f"{ws.duration_minutes}min"
-                        if ws.duration_minutes
-                        else (f"{ws.distance_km}km" if ws.distance_km else "")
-                    )
+                    dur = _workout_dur(ws.duration_minutes, ws.distance_km, lang)
                     lines.append(
                         _t(
                             "workout_summary_row",
                             lang,
-                            date=str(ws.workout_date),
+                            date=ws.workout_date.strftime("%d/%m"),
                             activity=ws.activity_type,
                             duration=dur,
                         )
@@ -3872,21 +3957,22 @@ async def handle_inbound(
             total_km = round(sum(s.distance_km or 0 for s in wm_sessions), 1)
             total_min = sum(s.duration_minutes or 0 for s in wm_sessions)
             reply = _t(
-                "workout_month_header", lang, month=month_label, n=n_wm, km=total_km, min=total_min
+                "workout_month_header",
+                lang,
+                month=month_label,
+                n=n_wm,
+                km=_num(total_km, lang),
+                min=total_min,
             )
             if wm_sessions:
                 lines = [reply]
                 for ws_m in wm_sessions[:5]:
-                    dur_m = (
-                        f"{ws_m.duration_minutes}min"
-                        if ws_m.duration_minutes
-                        else (f"{ws_m.distance_km}km" if ws_m.distance_km else "")
-                    )
+                    dur_m = _workout_dur(ws_m.duration_minutes, ws_m.distance_km, lang)
                     lines.append(
                         _t(
                             "workout_summary_row",
                             lang,
-                            date=str(ws_m.workout_date),
+                            date=ws_m.workout_date.strftime("%d/%m"),
                             activity=ws_m.activity_type,
                             duration=dur_m,
                         )
@@ -4251,6 +4337,12 @@ async def handle_inbound(
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             logger.info("conversation.invalid_amount", member_id=str(member.id))
+            return
+        if _UNSUPPORTED_HEALTH_RE.search(body_plain):
+            # Weight / blood pressure are not tracked: say so instead of letting the model "record" them.
+            reply = _t("health_unsupported", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
             return
         history = await _load_history(member, session, exclude_id=message.id)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
