@@ -560,7 +560,7 @@ function render(d){
   // Transactions
   const txList = document.getElementById("tx-list");
   if(d.recent_transactions.length === 0){
-    txList.innerHTML = '<div class="empty">Sem transações este mês.</div>';
+    txList.innerHTML = '<div class="empty">Ainda não há transações este mês.</div>';
   } else {
     txList.innerHTML = d.recent_transactions.map(t => `
       <div class="tx-row">
@@ -576,7 +576,7 @@ function render(d){
   // Goals
   const goalsList = document.getElementById("goals-list");
   if(d.goals.length === 0){
-    goalsList.innerHTML = '<div class="empty">Sem metas activas.</div>';
+    goalsList.innerHTML = '<div class="empty">Você ainda não tem metas ativas.</div>';
   } else {
     goalsList.innerHTML = d.goals.map(g => `
       <div class="goal-item">
@@ -588,7 +588,7 @@ function render(d){
   // Habits
   const habitsList = document.getElementById("habits-list");
   if(d.habits.length === 0){
-    habitsList.innerHTML = '<div class="empty">Sem hábitos registados nos últimos 30 dias.</div>';
+    habitsList.innerHTML = '<div class="empty">Ainda não há hábitos registrados nos últimos 30 dias.</div>';
   } else {
     habitsList.innerHTML = d.habits.map(h => `
       <div class="habit-row">
@@ -601,7 +601,7 @@ function render(d){
   // Tasks
   const tasksList = document.getElementById("tasks-list");
   if(d.tasks.length === 0){
-    tasksList.innerHTML = '<div class="empty">Nenhuma tarefa pendente.</div>';
+    tasksList.innerHTML = '<div class="empty">Você não tem tarefas pendentes.</div>';
   } else {
     tasksList.innerHTML = d.tasks.map(t => `
       <div class="task-item">
@@ -613,7 +613,7 @@ function render(d){
   // Notes
   const notesList = document.getElementById("notes-list");
   if(d.notes.length === 0){
-    notesList.innerHTML = '<div class="empty">Sem notas.</div>';
+    notesList.innerHTML = '<div class="empty">Você ainda não tem notas.</div>';
   } else {
     notesList.innerHTML = d.notes.map(n => `
       <div class="note-item">
@@ -625,7 +625,7 @@ function render(d){
   // Health
   const chips = document.getElementById("health-chips");
   if(d.health.length === 0){
-    chips.innerHTML = '<div class="empty">Sem registos de saúde este mês.</div>';
+    chips.innerHTML = '<div class="empty">Ainda não há registros de saúde este mês.</div>';
   } else {
     const labels = {medication:"💊 Medicação",mood:"😊 Humor",sleep:"😴 Sono",water:"💧 Água"};
     chips.innerHTML = d.health.map(h => `

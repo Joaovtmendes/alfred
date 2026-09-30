@@ -58,7 +58,7 @@ async def _add_expense(lab) -> None:
 async def test_wipe_asks_first_and_deletes_nothing(lab) -> None:
     await _add_expense(lab)
     reply = await lab.say("apagar meus dados")
-    assert "todos" in reply and "Confirmas" in reply
+    assert "tudo" in reply and "Quer mesmo" in reply
     ids = [b[0] for b in lab.buttons[-1]]
     assert ids[0].startswith("wipe:") and ids[1] == "keep:0"
     assert await lab.scalar(select(func.count()).select_from(Expense)) >= 1
@@ -81,7 +81,7 @@ async def test_confirmed_wipe_removes_every_trace(lab) -> None:
     await _add_expense(lab)
     await lab.say("meu dashboard")  # creates an audit row
     reply = await lab.tap(f"wipe:{int(time.time())}")
-    assert "Apaguei todos os teus dados" in reply
+    assert "apaguei tudo" in reply
 
     assert await lab.scalar(select(Member).where(Member.id == lab.member_id)) is None
     assert await lab.scalar(select(Household).where(Household.id == lab.household_id)) is None
