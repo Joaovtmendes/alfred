@@ -174,6 +174,37 @@ _TRIP_FILLER = frozenset(
 )
 
 
+_TRIP_START_DATE_RE = re.compile(
+    rf"(\d{{1,2}})\s*(?:(?:a|ate|to|tot|au|bis|-)\s*\d{{1,2}}\s*)?(?:de\s+|of\s+)?({_MONTH_ALT})\b"
+    r"(?:\s*(?:de\s+|of\s+)?(\d{4}))?",
+    re.IGNORECASE,
+)
+
+
+def parse_trip_start_date(text: str, today):
+    """Start date from "de 1 a 7 de outubro" / "1-7 oct 2027", or None.
+
+    Without a year the next occurrence is meant (a trip is never planned in the past).
+    """
+    from datetime import date
+
+    m = _TRIP_START_DATE_RE.search(strip_accents(text.lower()))
+    if not m:
+        return None
+    month = MONTH_WORDS.get(m.group(2))
+    if not month:
+        return None
+    try:
+        if m.group(3):
+            return date(int(m.group(3)), month, int(m.group(1)))
+        d = date(today.year, month, int(m.group(1)))
+        if (today - d).days > 30:
+            d = date(today.year + 1, month, int(m.group(1)))
+        return d
+    except ValueError:
+        return None
+
+
 def _only_trip_details(rest: str) -> bool:
     """True if what follows the destination is just a budget / dates / filler words.
 

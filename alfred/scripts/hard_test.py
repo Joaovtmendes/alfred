@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Alfred Hard Test — cobertura completa A–K
+Alfred Hard Test — cobertura completa A–L
 Simula mensagens WhatsApp reais via POST ao webhook com assinatura HMAC válida.
 As respostas chegam ao teu WhatsApp em tempo real.
 
@@ -113,6 +113,42 @@ def send(label: str, text: str, run_id: str, delay: float = DEFAULT_DELAY) -> in
 
     time.sleep(delay)
     return getattr(resp, "status_code", 0) if "resp" in dir() else 0
+
+
+def _tap_payload(button_id: str, msg_id: str) -> dict:
+    """Same envelope as a text message, but the message is a reply-button tap."""
+    payload = _payload("", msg_id)
+    msg = payload["entry"][0]["changes"][0]["value"]["messages"][0]
+    del msg["text"]
+    msg["type"] = "interactive"
+    msg["interactive"] = {
+        "type": "button_reply",
+        "button_reply": {"id": button_id, "title": "teste"},
+    }
+    return payload
+
+
+def send_tap(label: str, button_id: str, run_id: str, delay: float = DEFAULT_DELAY) -> int:
+    """Simulate tapping a reply button (Meta sends ``interactive.button_reply``)."""
+    global _seq_counter
+    _seq_counter += 1
+    msg_id = f"wamid.ht.{run_id}.{_seq_counter:04d}"
+    body = json.dumps(_tap_payload(button_id, msg_id)).encode()
+    code = 0
+    try:
+        resp = httpx.post(
+            WEBHOOK_URL,
+            content=body,
+            headers={"Content-Type": "application/json", "X-Hub-Signature-256": _sign(body)},
+            timeout=15,
+        )
+        code = resp.status_code
+        status = "✅" if code == 200 else f"❌ {code}"
+        print(f"  [{_seq_counter:03d}] {status}  [{label}]  TAP {button_id!r}")
+    except Exception as exc:
+        print(f"  [{_seq_counter:03d}] ❌ ERRO  [{label}]  TAP {button_id!r}  → {exc}")
+    time.sleep(delay)
+    return code
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -436,6 +472,44 @@ def bloco_k(run_id, delay):
     time.sleep(delay)
 
 
+def bloco_l(run_id, delay):
+    """Sprint 4d/4b/5 — botões, valores inválidos, links (dashboard/exportação).
+
+    Só o que é seguro: nunca envia "apagar meus dados" nem toca num botão que apague de
+    verdade (os botões reais têm o id do gasto, que só o WhatsApp conhece). Os toques aqui
+    usam ids falsos/antigos para provar que o webhook os trata sem efeito colateral.
+    """
+    print("\n══ Bloco L — Botões, valores inválidos, links ══")
+    import uuid as _uuid
+
+    send("L01 gasto normal → resposta com [Editar][Desfazer]", "Padaria 6,40", run_id, delay)
+    send(
+        "L02 valor alto → 'tens a certeza do valor?' + [Está certo][Desfazer]",
+        "Televisão 1500",
+        run_id,
+        delay,
+    )
+    send("L03 apaga (limpa a televisão)", "apaga", run_id, delay)
+    send("L04 apaga (limpa a padaria)", "apaga", run_id, delay)
+    send("L05 zero + negativo → 'Valor inválido'", "Café 0 e reembolso -15", run_id, delay)
+    send("L06 link do dashboard", "meu dashboard", run_id, delay)
+    send("L07 exportar dados → link JSON", "exportar meus dados", run_id, delay)
+    send_tap(
+        "L08 toque Desfazer com id inexistente → 'já não existe'",
+        f"undo:{_uuid.uuid4()}",
+        run_id,
+        delay,
+    )
+    send_tap("L09 toque Cancelar → 'não apaguei nada'", "keep:0", run_id, delay)
+    send_tap(
+        "L10 toque Apagar tudo expirado → 'expirou' (não apaga)",
+        f"wipe:{int(time.time()) - 7200}",
+        run_id,
+        delay,
+    )
+    send_tap("L11 toque com id lixo → silêncio (sem resposta)", "lixo", run_id, delay)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
@@ -452,6 +526,7 @@ BLOCOS = {
     "I": bloco_i,
     "J": bloco_j,
     "K": bloco_k,
+    "L": bloco_l,
 }
 
 if __name__ == "__main__":

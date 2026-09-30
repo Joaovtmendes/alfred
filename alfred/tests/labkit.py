@@ -28,6 +28,9 @@ class Lab:
         self.llm_reply = AsyncMock(return_value="[llm]")
         self.classify = AsyncMock(return_value=None)
         self.multi = AsyncMock(return_value=[])
+        self.habit = AsyncMock(return_value=None)
+        self.health = AsyncMock(return_value=None)
+        self.workout = AsyncMock(return_value=None)
 
     async def say(self, body: str) -> str:
         """Send one message; returns the reply text."""
@@ -62,9 +65,9 @@ class Lab:
             patch("alfred.conversation.send_buttons", fake_buttons),
             patch("alfred.conversation.extract_expense", self.expense),
             patch("alfred.conversation.extract_expenses_multi", self.multi),
-            patch("alfred.conversation.extract_habit", AsyncMock(return_value=None)),
-            patch("alfred.conversation.extract_health_log", AsyncMock(return_value=None)),
-            patch("alfred.conversation.extract_workout", AsyncMock(return_value=None)),
+            patch("alfred.conversation.extract_habit", self.habit),
+            patch("alfred.conversation.extract_health_log", self.health),
+            patch("alfred.conversation.extract_workout", self.workout),
             patch("alfred.conversation.classify_query", self.classify),
             patch("alfred.conversation.generate_reply", self.llm_reply),
         ):
@@ -111,3 +114,4 @@ async def lab():
         await s.execute(delete(Member).where(Member.id == lab.member_id))
         await s.execute(delete(Household).where(Household.id == lab.household_id))
         await s.commit()
+    await engine.dispose()  # leave no pooled connection bound to this test's loop

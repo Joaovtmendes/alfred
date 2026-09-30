@@ -62,7 +62,7 @@ async def test_llm_false_record_claim_is_replaced(lab: Lab) -> None:
     lab.llm_reply.return_value = "Pizza — €12,00 registada. Renda — €99.999,00 registada."
     reply = await lab.say("vou ao cinema e depois janto fora")
     assert "registada" not in reply.lower().replace("não registei", "")
-    assert "Não registei nada" in reply
+    assert "Não percebi" in reply  # no number → neutral, not the expense hint
     assert await _count(lab) == 0
 
 
