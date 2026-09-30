@@ -5,6 +5,7 @@ Texts live in POLICY below (en / nl / pt); ``?lang=`` picks one, default en.
 Update ``POLICY_VERSION`` and the "last updated" date whenever the text changes.
 """
 
+# ruff: noqa: E501
 from __future__ import annotations
 
 from html import escape
@@ -16,8 +17,8 @@ from alfred.settings import settings
 
 router = APIRouter(tags=["legal"])
 
-POLICY_VERSION = "1.0"
-POLICY_DATE = "2026-09-28"
+POLICY_VERSION = "1.1"
+POLICY_DATE = "2026-09-30"
 CONTROLLER = "JVM Solutions, Biesbosch 179, 1181 JB Amstelveen, Nederland"
 # Public contact for data requests — set PRIVACY_CONTACT_EMAIL in the environment.
 CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
@@ -94,6 +95,24 @@ POLICY: dict[str, dict] = {
                     "Autoriteit Persoonsgegevens (autoriteitpersoonsgegevens.nl).",
                 ],
             ),
+            (
+                "Your dashboard link",
+                [
+                    "The link Alfred sends you to see your dashboard contains a personal access code. Anyone with the link can see your dashboard, so do not share it. Links expire after 90 days; ask for 'my dashboard' to get a new one.",
+                ],
+            ),
+            (
+                "Exercising your rights in the chat",
+                [
+                    "Send 'export my data' to receive a copy, 'delete my data' to erase everything (you will be asked to confirm), or STOP to stop processing.",
+                ],
+            ),
+            (
+                "Error monitoring",
+                [
+                    "When enabled, an error-monitoring provider (Sentry) receives technical error reports to keep the service reliable. We configure it to avoid sending message contents.",
+                ],
+            ),
         ],
     },
     "nl": {
@@ -167,6 +186,24 @@ POLICY: dict[str, dict] = {
                     "(autoriteitpersoonsgegevens.nl).",
                 ],
             ),
+            (
+                "Je dashboardlink",
+                [
+                    "De link die Alfred je stuurt voor je dashboard bevat een persoonlijke toegangscode. Iedereen met de link kan je dashboard zien, deel hem dus niet. Links verlopen na 90 dagen; vraag 'mijn dashboard' voor een nieuwe.",
+                ],
+            ),
+            (
+                "Je rechten uitoefenen in de chat",
+                [
+                    "Stuur 'exporteer mijn gegevens' voor een kopie, 'verwijder mijn gegevens' om alles te wissen (je moet dit bevestigen) of STOP om de verwerking te stoppen.",
+                ],
+            ),
+            (
+                "Foutmonitoring",
+                [
+                    "Indien ingeschakeld ontvangt een foutmonitoringdienst (Sentry) technische foutmeldingen om de dienst betrouwbaar te houden. We stellen die zo in dat berichtinhoud niet wordt meegestuurd.",
+                ],
+            ),
         ],
     },
     "pt": {
@@ -178,27 +215,27 @@ POLICY: dict[str, dict] = {
                 [
                     f"O Alfred é um assistente pessoal no WhatsApp, operado por {CONTROLLER} "
                     "(responsável pelo tratamento).",
-                    f"Dúvidas ou pedidos sobre os teus dados: {CONTACT}.",
+                    f"Dúvidas ou pedidos sobre os seus dados: {CONTACT}.",
                 ],
             ),
             (
-                "Que dados tratamos",
+                "Quais dados tratamos",
                 [
-                    "O teu número de WhatsApp e nome de perfil; as mensagens que envias ao "
+                    "Seu número de WhatsApp e nome de perfil; as mensagens que você envia ao "
                     "Alfred e as respostas do Alfred.",
-                    "O que pedes ao Alfred para registar: despesas e receitas, lembretes, "
+                    "O que você pede ao Alfred para registrar: despesas e receitas, lembretes, "
                     "treinos, metas e hábitos, notas e tarefas, viagens.",
-                    "Se escolheres registá-los: dados de saúde (medicação, humor, sono, "
-                    "água). São dados de categoria especial; só os tratamos com o teu "
-                    "consentimento explícito, que podes retirar a qualquer momento.",
+                    "Se você escolher registrá-los: dados de saúde (medicação, humor, sono, "
+                    "água). São dados de categoria especial; só os tratamos com o seu "
+                    "consentimento explícito, que você pode retirar a qualquer momento.",
                 ],
             ),
             (
-                "Porquê e com que base legal",
+                "Por quê e com que base legal",
                 [
-                    "Para prestar o serviço que pedes (RGPD art. 6.º, n.º 1, al. b)); dados "
+                    "Para prestar o serviço que você pede (RGPD art. 6.º, n.º 1, al. b)); dados "
                     "de saúde só com consentimento explícito (art. 9.º, n.º 2, al. a)).",
-                    "Não vendemos os teus dados, não os usamos para publicidade nem para "
+                    "Não vendemos os seus dados, não os usamos para publicidade nem para "
                     "treinar modelos de IA.",
                 ],
             ),
@@ -206,17 +243,17 @@ POLICY: dict[str, dict] = {
                 "Inteligência artificial",
                 [
                     "O Alfred é um sistema de IA, não uma pessoa (Regulamento Europeu da IA, "
-                    "art. 50.º). As tuas mensagens são processadas por um modelo de IA da "
+                    "art. 50.º). Suas mensagens são processadas por um modelo de IA da "
                     "Anthropic para as compreender e responder. A Anthropic não usa estes "
                     "dados para treinar os seus modelos.",
                 ],
             ),
             (
-                "Quem mais trata os teus dados",
+                "Quem mais trata os seus dados",
                 [
                     "Meta Platforms (WhatsApp Business API) — entrega de mensagens.",
                     "Anthropic PBC — processamento de texto por IA.",
-                    "Railway Corp. — alojamento da aplicação e da base de dados.",
+                    "Railway Corp. — hospedagem da aplicação e da base de dados.",
                     "Alguns destes fornecedores tratam dados fora da UE; essas transferências "
                     "estão cobertas pelo EU–US Data Privacy Framework e/ou por cláusulas "
                     "contratuais-tipo.",
@@ -225,18 +262,36 @@ POLICY: dict[str, dict] = {
             (
                 "Durante quanto tempo",
                 [
-                    "Enquanto usares o Alfred. Depois de pedires a eliminação da conta, os "
-                    "teus dados são apagados em 30 dias, salvo obrigação legal de os manter.",
+                    "Enquanto você usar o Alfred. Depois de pedir a exclusão da conta, os "
+                    "seus dados são apagados em 30 dias, salvo obrigação legal de os manter.",
                 ],
             ),
             (
-                "Os teus direitos",
+                "Seus direitos",
                 [
-                    "Podes pedir acesso, retificação, eliminação, limitação ou uma cópia dos "
-                    "teus dados (portabilidade), e opor-te ao tratamento. Envia STOP no "
-                    f"WhatsApp para parar todo o tratamento, ou escreve para {CONTACT}.",
-                    "Podes apresentar queixa à autoridade neerlandesa, a Autoriteit "
+                    "Você pode pedir acesso, correção, exclusão, limitação ou uma cópia dos "
+                    "seus dados (portabilidade) e se opor ao tratamento. Envie STOP no "
+                    f"WhatsApp para parar todo o tratamento, ou escreva para {CONTACT}.",
+                    "Você pode reclamar à autoridade neerlandesa, a Autoriteit "
                     "Persoonsgegevens (autoriteitpersoonsgegevens.nl).",
+                ],
+            ),
+            (
+                "Seu link do painel",
+                [
+                    "O link que o Alfred envia para você ver o painel contém um código pessoal de acesso. Quem tiver o link vê o seu painel, então não compartilhe. Os links expiram em 90 dias; peça 'meu dashboard' para receber um novo.",
+                ],
+            ),
+            (
+                "Exercendo seus direitos no chat",
+                [
+                    "Envie 'exportar meus dados' para receber uma cópia, 'apagar meus dados' para excluir tudo (você precisará confirmar) ou STOP para parar o tratamento.",
+                ],
+            ),
+            (
+                "Monitoramento de erros",
+                [
+                    "Quando ativado, um provedor de monitoramento de erros (Sentry) recebe relatórios técnicos de falhas para manter o serviço confiável. Configuramos para não enviar o conteúdo das mensagens.",
                 ],
             ),
         ],

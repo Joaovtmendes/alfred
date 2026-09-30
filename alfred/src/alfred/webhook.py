@@ -28,7 +28,7 @@ from dataclasses import dataclass
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response, status
-from sqlalchemy import select, true
+from sqlalchemy import select, true, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -297,9 +297,19 @@ async def dispatch_inbound(item: Inbound) -> bool:
 
 
 async def _handle_one(member, stored, session, log) -> bool:
-    """Run the handler for one claimed message; commit either way. True when it finished."""
+    """Run the handler for one claimed message; commit either way. True when it finished.
+
+    If a previous run already answered the user and then failed (``reply_sent``), this run
+    redoes the work with sending suppressed so the reply is not delivered twice.
+    """
+    from alfred import delivery, llm_usage
     from alfred.conversation import handle_inbound
 
+    member_id = member.id  # read now: the handler may erase the member
+    message_id = stored.id
+    retry_quietly = bool(stored.reply_sent)
+    usage = llm_usage.begin()  # token accounting for every LLM call this message triggers
+    sends = delivery.begin(suppress=retry_quietly)
     try:
         # SAVEPOINT: if the handler fails half-way, its partial writes are rolled back
         # but the inbound message stays stored.
@@ -312,9 +322,21 @@ async def _handle_one(member, stored, session, log) -> bool:
             error=str(exc),
             exc_info=True,
         )
+        if sends.sent and not retry_quietly:
+            # the user already got a reply: remember it so the retry stays silent
+            await session.execute(
+                update(Message).where(Message.id == message_id).values(reply_sent=True)
+            )
+            log.warning("webhook.failed_after_reply", message_id=str(message_id))
+        await llm_usage.flush(session, member_id, usage)  # tokens were spent even if it failed
         await session.commit()  # keep whatever the savepoint left (the message)
         return False
+    finally:
+        delivery.end()
+    if retry_quietly:
+        log.info("webhook.retry_reply_suppressed", message_id=str(message_id))
     stored.processed = True
+    await llm_usage.flush(session, member_id, usage)
     await session.commit()
     return True
 

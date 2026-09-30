@@ -113,6 +113,9 @@ class Message(Base):
     body: Mapped[str | None] = mapped_column(Text)
     wa_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # A handler run failed AFTER the reply went out: the retry redoes the work but must not
+    # send it again (see alfred.delivery).
+    reply_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     raw: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -424,6 +427,31 @@ class AuditLog(Base):
     )
     event: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
     detail: Mapped[dict | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+# ── V1-21 — LLM usage (tokens per call, for the cost-per-user metric) ────────
+
+
+class LlmUsage(Base):
+    """Tokens of one LLM call, attributed to the member whose message caused it.
+
+    No message text is stored. Erased with the member like every other per-member table.
+    """
+
+    __tablename__ = "llm_usage"
+    __table_args__ = (Index("ix_llm_usage_member_created", "member_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id", ondelete="CASCADE"), nullable=False
+    )
+    purpose: Mapped[str] = mapped_column(String(40), nullable=False)
+    model: Mapped[str] = mapped_column(String(80), nullable=False)
+    input_tokens: Mapped[int] = mapped_column(nullable=False, default=0)
+    output_tokens: Mapped[int] = mapped_column(nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
