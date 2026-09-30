@@ -14,8 +14,30 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.db import get_session
-from alfred.models import Expense, Member, Message
+from alfred.models import Expense, LlmUsage, Member, Message
 from alfred.settings import settings
+
+
+def retention(first_last: list[tuple[datetime, datetime]], now: datetime, days: int) -> dict:
+    """Day-N retention: of members whose first message is at least N days old, the share who
+    wrote again on or after day N. ``first_last`` = (first, last) inbound message per member."""
+    eligible = [(first, last) for first, last in first_last if first <= now - timedelta(days=days)]
+    kept = sum(1 for first, last in eligible if last >= first + timedelta(days=days))
+    return {
+        "eligible": len(eligible),
+        "retained": kept,
+        "rate": round(kept / len(eligible), 3) if eligible else None,
+    }
+
+
+def llm_cost_eur(input_tokens: int, output_tokens: int) -> float:
+    """Estimated cost (EUR) from token counts and the configured list prices."""
+    usd = (
+        input_tokens * settings.llm_input_usd_per_mtok
+        + output_tokens * settings.llm_output_usd_per_mtok
+    ) / 1_000_000
+    return round(usd * settings.usd_to_eur, 4)
+
 
 router = APIRouter(prefix="/internal", tags=["internal"], include_in_schema=False)
 
@@ -37,8 +59,48 @@ async def metrics(session: AsyncSession = Depends(get_session)) -> dict:
     async def count(stmt) -> int:
         return int(await session.scalar(stmt) or 0)
 
+    d30 = now - timedelta(days=30)
+    span = (
+        await session.execute(
+            select(
+                func.min(Message.created_at).label("first"),
+                func.max(Message.created_at).label("last"),
+            )
+            .where(Message.direction == "inbound", Message.author_id.is_not(None))
+            .group_by(Message.author_id)
+        )
+    ).all()
+    first_last = [(r.first, r.last) for r in span]
+
+    usage = (
+        await session.execute(
+            select(
+                func.count(),
+                func.coalesce(func.sum(LlmUsage.input_tokens), 0),
+                func.coalesce(func.sum(LlmUsage.output_tokens), 0),
+                func.count(func.distinct(LlmUsage.member_id)),
+            ).where(LlmUsage.created_at >= d30)
+        )
+    ).one()
+    calls_30d, tok_in, tok_out, members_30d = (int(x) for x in usage)
+    cost_30d = llm_cost_eur(tok_in, tok_out)
+
     return {
         "generated_at": now.isoformat(),
+        "retention": {
+            "d7": retention(first_last, now, 7),
+            "d30": retention(first_last, now, 30),
+        },
+        "llm_30d": {
+            "calls": calls_30d,
+            "input_tokens": tok_in,
+            "output_tokens": tok_out,
+            "estimated_cost_eur": cost_30d,
+            "members_with_calls": members_30d,
+            "estimated_cost_eur_per_member": round(cost_30d / members_30d, 4)
+            if members_30d
+            else None,
+        },
         "members": {
             state: await count(
                 select(func.count()).select_from(Member).where(Member.consent_state == state)

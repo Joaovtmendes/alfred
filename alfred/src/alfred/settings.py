@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr = SecretStr("")
     llm_model: str = "claude-haiku-4-5-20251001"
     llm_timeout_seconds: float = 20.0  # per request; the SDK default is 600 s
+    # Price estimate for the cost metric only (USD per million tokens, Haiku 4.5 list price);
+    # override in the environment if the model or the price changes.
+    llm_input_usd_per_mtok: float = 1.0
+    llm_output_usd_per_mtok: float = 5.0
+    usd_to_eur: float = 0.92
     aws_region: str = "eu-central-1"  # Bedrock only — Frankfurt, data residency
 
     # Time — every "today"/"this week" and reminder time is in this zone

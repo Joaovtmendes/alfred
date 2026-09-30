@@ -8,6 +8,7 @@ from typing import Any
 
 import structlog
 
+from alfred import llm_usage
 from alfred.models import Member, Message
 from alfred.settings import settings
 from alfred.validation import (
@@ -153,6 +154,7 @@ async def _reply_anthropic(
             system=system_prompt,
             messages=messages,
         )
+        llm_usage.record("reply", model, response)
 
         reply = response.content[0].text
         logger.info(
@@ -301,6 +303,7 @@ EXAMPLES:
             system=system,
             messages=[{"role": "user", "content": text}],
         )
+        llm_usage.record("classify", model, response)
 
         raw = response.content[0].text
         data = parse_llm_json(raw)
@@ -432,6 +435,7 @@ User: "resumo"
             system=system,
             messages=[{"role": "user", "content": text}],
         )
+        llm_usage.record("expense", model, response)
 
         raw = response.content[0].text
         data = parse_llm_json(raw)
@@ -486,6 +490,7 @@ async def extract_expenses_multi(text: str, lang: str = "en") -> list[dict]:
             ),
             messages=[{"role": "user", "content": text}],
         )
+        llm_usage.record("multi", _anthropic_model_id(settings.llm_model), response)
         data = parse_llm_json(response.content[0].text)
         if not isinstance(data, dict) or not isinstance(data.get("items"), list):
             return []
@@ -531,6 +536,7 @@ async def extract_workout(text: str, lang: str = "en") -> dict | None:
             system=workout_system,
             messages=[{"role": "user", "content": text}],
         )
+        llm_usage.record("workout", model, response)
         raw = response.content[0].text
         data = parse_llm_json(raw)
         if data is None:
@@ -587,6 +593,7 @@ async def extract_health_log(text: str, lang: str = "en") -> dict | None:
             system=health_system,
             messages=[{"role": "user", "content": text}],
         )
+        llm_usage.record("health", model, response)
         raw = response.content[0].text
         data = parse_llm_json(raw)
         if data is None:
@@ -637,6 +644,7 @@ async def extract_habit(text: str, lang: str = "en") -> dict | None:
             system=habit_system,
             messages=[{"role": "user", "content": text}],
         )
+        llm_usage.record("habit", model, response)
         raw = response.content[0].text
         data = parse_llm_json(raw)
         if data is None:

@@ -298,8 +298,11 @@ async def dispatch_inbound(item: Inbound) -> bool:
 
 async def _handle_one(member, stored, session, log) -> bool:
     """Run the handler for one claimed message; commit either way. True when it finished."""
+    from alfred import llm_usage
     from alfred.conversation import handle_inbound
 
+    member_id = member.id  # read now: the handler may erase the member
+    usage = llm_usage.begin()  # token accounting for every LLM call this message triggers
     try:
         # SAVEPOINT: if the handler fails half-way, its partial writes are rolled back
         # but the inbound message stays stored.
@@ -312,9 +315,11 @@ async def _handle_one(member, stored, session, log) -> bool:
             error=str(exc),
             exc_info=True,
         )
+        await llm_usage.flush(session, member_id, usage)  # tokens were spent even if it failed
         await session.commit()  # keep whatever the savepoint left (the message)
         return False
     stored.processed = True
+    await llm_usage.flush(session, member_id, usage)
     await session.commit()
     return True
 
