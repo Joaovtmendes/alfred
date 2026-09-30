@@ -562,6 +562,11 @@ Examples:
 - "humor 7/10" → {is_health:true, log_type:"mood", value:"7", unit:"/10"}
 - "dormi 6h" → {is_health:true, log_type:"sleep", value:"6", unit:"hours"}
 - "bebi 2L de água" → {is_health:true, log_type:"water", value:"2", unit:"L"}
+- "sinto-me um 6 em 10" → {is_health:true, log_type:"mood", value:"6", unit:"/10"}
+- "ontem dormi 6h30" → {is_health:true, log_type:"sleep", value:"6.5", unit:"hours", days_ago:1}
+- "mais 500ml de água" → {is_health:true, log_type:"water", value:"0.5", unit:"L"}
+Convert ml to litres and minutes to decimal hours. Weight, blood pressure and anything else
+are NOT supported: return {"is_health": false}.
 """
 
 

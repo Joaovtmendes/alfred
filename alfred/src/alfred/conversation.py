@@ -70,6 +70,7 @@ from alfred.parsing import (
     parse_category_correction,
     parse_last_n,
     parse_period,
+    parse_trip_start_date,
     strip_accents,
 )
 from alfred.settings import settings
@@ -471,6 +472,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "I didn't record anything. Send one expense per line with amount and description, e.g.:\nGroceries 20\nPharmacy 10",
         "fr": "Je n'ai rien enregistré. Envoie une dépense par ligne avec montant et description, par ex. :\nCourses 20\nPharmacie 10",
         "de": "Ich habe nichts erfasst. Sende eine Ausgabe pro Zeile mit Betrag und Beschreibung, z. B.:\nEinkauf 20\nApotheke 10",
+    },
+    "fallback_unknown": {
+        "pt": "Não percebi bem essa. Podes dizer de outra forma? Por exemplo: “Mercado 20”, “corri 5km” ou “dormi 7h”.",
+        "nl": "Die snap ik niet helemaal. Kun je het anders zeggen? Bijvoorbeeld: “Jumbo 20”, “ik heb 5 km gerend” of “ik sliep 7 uur”.",
+        "en": "I didn't quite get that. Could you say it another way? For example: “Groceries 20”, “ran 5km” or “slept 7h”.",
+        "fr": "Je n'ai pas bien compris. Peux-tu le dire autrement ? Par exemple : « Courses 20 », « couru 5 km » ou « dormi 7 h ».",
+        "de": "Das habe ich nicht ganz verstanden. Kannst du es anders sagen? Zum Beispiel: „Einkauf 20“, „5 km gelaufen“ oder „7 Std. geschlafen“.",
+    },
+    "bare_yes": {
+        "pt": "Combinado! Mas não tenho nada pendente para confirmar. Se quiseres registar algo, é só dizer, por exemplo: “Mercado 20”.",
+        "nl": "Prima! Maar er staat niets open om te bevestigen. Wil je iets vastleggen, zeg het gerust, bijvoorbeeld: “Jumbo 20”.",
+        "en": "Sure! But I don't have anything waiting for confirmation. To log something, just tell me, e.g. “Groceries 20”.",
+        "fr": "D'accord ! Mais rien n'attend de confirmation. Pour enregistrer quelque chose, dis-le-moi, par ex. « Courses 20 ».",
+        "de": "Alles klar! Es wartet aber nichts auf Bestätigung. Zum Erfassen sag mir einfach z. B. „Einkauf 20“.",
     },
     "expense_corrected": {
         "pt": "Corrigido — {name}: {old} → {amount}",
@@ -1542,6 +1557,14 @@ _WORKOUT_WORDS = {
     "cyclisme",
     "gelaufen",
     "geschwommen",
+    "nadei",
+    "pedalei",
+    "cycled",
+    "biked",
+    "zwemde",
+    "gezwommen",
+    "gefietst",
+    "joguei",
 }
 
 # ── M8 — Saúde keywords ──────────────────────────────────────────────────────
@@ -1566,6 +1589,44 @@ _HEALTH_WORDS = {
     "dronk",
     "bu",  # water
 }
+
+# Health logs are also written mid-sentence ("ontem dormi 6h30", "sinto-me um 6 em 10").
+_HEALTH_HINT_RE = re.compile(
+    r"\b(?:sinto[- ]me|estou\s+(?:a\s+)?sentir|feeling|i\s+feel|ik\s+voel\s+me|"
+    r"dormi|slept|sliep|geschlafen|bebi|drank|dronk|tomei|took)\b|"
+    r"\b(?:mais|another|nog)\s+\d+\s*(?:ml|cl|l)\b",
+    re.IGNORECASE,
+)
+_BARE_YES_RE = re.compile(
+    r"^(?:sim|s|yes|yep|yeah|ja|jep|oui|si|claro|ok|okay|okey)[\s.!]*$", re.IGNORECASE
+)
+
+
+def _fallback_key(body: str) -> str:
+    """Expense hint only when the message looks like an expense (has a number)."""
+    return "fallback_no_record" if _NUMBER_RE.search(body) else "fallback_unknown"
+
+
+def _norm_words(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", strip_accents(text).lower())
+
+
+def _fuzzy_contains(needle: str, haystack: str) -> bool:
+    """Accent-insensitive; each word of ``needle`` matches by its 4-letter stem.
+
+    "corrida" finds "correr" (corr), "aniversário" finds "aniversario".
+    """
+    hay = _norm_words(haystack)
+    words = _norm_words(needle)
+    if not words:
+        return False
+    if " ".join(words) in " ".join(hay):
+        return True
+    key = [w for w in words if len(w) > 2]
+    return bool(key) and all(
+        any(h.startswith(w[:4] if len(w) >= 5 else w) for h in hay) for w in key
+    )
+
 
 _SLEEP_RE = re.compile(
     r"(?:dormi|slept|sliep|geschlafen|dormido)\s+(\d+(?:[.,]\d+)?)\s*"
@@ -1987,7 +2048,7 @@ async def _handle_trip(
             id=uuid.uuid4(),
             member_id=member.id,
             destination=dest,
-            started_at=today_local(),
+            started_at=parse_trip_start_date(body, today_local()) or today_local(),
             active=True,
             budget=budget,
         )
@@ -2607,7 +2668,12 @@ async def _handle_category_correction(
     logger.info(
         "conversation.category_override_saved", member_id=str(member.id), category=canonical
     )
-    return _t("category_corrected", lang, merchant=raw_merchant.title(), category=canonical)
+    return _t(
+        "category_corrected",
+        lang,
+        merchant=raw_merchant.title(),
+        category=category_label(canonical, lang),
+    )
 
 
 async def handle_flow_onboarding(
@@ -2840,6 +2906,13 @@ async def handle_inbound(
     if member.consent_state == "accepted":
         # 4-0. Reply-button taps (Undo / Edit / It's right on a confirmation)
         if await _handle_button_reply(member, message, session, lang):
+            return
+
+        # 4-0a. A bare "yes": there is no pending question, so say so instead of guessing.
+        if _BARE_YES_RE.match(body_plain.strip()):
+            reply = _t("bare_yes", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
             return
 
         # 4-0b. GDPR: "apagar meus dados" (two steps, buttons) / "exportar meus dados"
@@ -3136,17 +3209,17 @@ async def handle_inbound(
         # 4e-5b. M10 — delete task: "apaga tarefa X"
         m_tdel = _TASK_DELETE_RE.match(body_plain)
         if m_tdel:
-            del_kw = like_escape(_grp(body, m_tdel).strip().lower())
+            del_kw = _grp(body, m_tdel).strip()
             from sqlalchemy import select as _sel
 
             res_del = await session.execute(
                 _sel(Task)
                 .where(Task.member_id == member.id)
-                .where(Task.body.ilike(f"%{del_kw}%", escape="\\"))
                 .order_by(Task.done_at.is_(None).desc(), Task.created_at.desc())
-                .limit(1)
             )
-            del_task = res_del.scalar_one_or_none()
+            del_task = next(
+                (t for t in res_del.scalars().all() if _fuzzy_contains(del_kw, t.body)), None
+            )
             if del_task:
                 del_body = del_task.body
                 await session.delete(del_task)
@@ -3238,18 +3311,16 @@ async def handle_inbound(
         # 4e-7b. M9 — complete goal: "meta de correr concluida"
         m_gcomplete = _GOAL_COMPLETE_RE.search(body_plain)
         if m_gcomplete:
-            kw = like_escape(_grp(body, m_gcomplete).strip().lower())
+            kw = _grp(body, m_gcomplete).strip()
             from sqlalchemy import select as _sel
 
             res_gc = await session.execute(
                 _sel(Goal)
                 .where(Goal.member_id == member.id)
                 .where(Goal.active.is_(True))
-                .where(Goal.title.ilike(f"%{kw}%", escape="\\"))
                 .order_by(Goal.created_at.desc())
-                .limit(1)
             )
-            gc = res_gc.scalar_one_or_none()
+            gc = next((g for g in res_gc.scalars().all() if _fuzzy_contains(kw, g.title)), None)
             if gc:
                 gc.active = False
                 session.add(gc)
@@ -3354,7 +3425,7 @@ async def handle_inbound(
             return
 
         # 4e-8. M9 — log de hábito: "meditei hoje" (regex fast-path)
-        m_habit = _HABIT_LOG_RE.search(body)
+        m_habit = None if body.rstrip().endswith("?") else _HABIT_LOG_RE.search(body)
         if m_habit:
             habit_activity = m_habit.group("activity").strip()
             # Try to link to a matching active goal
@@ -3394,7 +3465,10 @@ async def handle_inbound(
             for w in ("€", "$", "£", "gastei", "comprei", "paguei", "spent", "paid", "bought")
         )
         _not_workout = not _is_command(body, _WORKOUT_WORDS)
-        _not_health = not _is_command(body, _HEALTH_WORDS)
+        _is_health = _is_command(body, _HEALTH_WORDS) or bool(
+            _HEALTH_HINT_RE.search(body_plain) and not body.rstrip().endswith("?")
+        )
+        _not_health = not _is_health
         if len(body) < 80 and _not_expense and _not_workout and _not_health:
             habit_data = await extract_habit(body, lang=member.language or "en")
             if habit_data:
@@ -3437,7 +3511,7 @@ async def handle_inbound(
                 return
 
         # 4e-9. M8 — health log: medicação, humor, sono, água
-        if _is_command(body, _HEALTH_WORDS):
+        if _is_health:
             today = today_local()
             health_data = await extract_health_log(body, lang=member.language or "en")
             if health_data:
@@ -3931,7 +4005,7 @@ async def handle_inbound(
                     )
                     sign = "+" if item["type"] == "income" else ""
                     lines.append(f"• {item_name}: {sign}{_fmt_eur(item['amount'])}")
-                    if item["amount"] >= settings.high_value_threshold:
+                    if item["amount"] >= settings.high_value_threshold and item["type"] != "income":
                         any_high = True
                 if lines:
                     reply = "\n".join([_t("multi_recorded_title", lang, n=len(lines)), *lines])
@@ -4024,7 +4098,9 @@ async def handle_inbound(
             ):
                 reply += _t("category_hint_overig", lang, merchant=expense_data["merchant"])
 
-            high_value = expense_data["amount"] >= settings.high_value_threshold
+            high_value = (
+                expense_data["amount"] >= settings.high_value_threshold and txn_type != "income"
+            )
             if high_value:
                 reply += _t("high_value_hint", lang)
             # Reply buttons carry the expense id: no pending state needed to undo/edit.
@@ -4097,14 +4173,14 @@ async def handle_inbound(
         if _claims_recorded(reply):
             # Nothing was written on this path: never let the model confirm a phantom record.
             alert("conversation.llm_false_record_claim", member_id=str(member.id))
-            reply = _t("fallback_no_record", lang)
+            reply = _t(_fallback_key(body), lang)
         elif _FAKE_CONFIRM_RE.search(reply):
             # There is no pending-confirmation state: replace the invented flow with a real ask.
             alert("conversation.llm_fake_confirmation", member_id=str(member.id))
             reply = _t(
                 "invalid_amount_check"
                 if _has_zero_or_negative_amount(body)
-                else "fallback_no_record",
+                else _fallback_key(body),
                 lang,
             )
         await send_text(to, reply)
