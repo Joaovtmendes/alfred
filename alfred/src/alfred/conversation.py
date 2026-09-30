@@ -72,7 +72,7 @@ from alfred.parsing import (
 )
 from alfred.settings import settings
 from alfred.validation import MAX_AMOUNT
-from alfred.whatsapp import send_text
+from alfred.whatsapp import send_buttons, send_text
 
 logger = structlog.get_logger()
 
@@ -476,6 +476,48 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Corrected — {name}: {old} → {amount}",
         "fr": "Corrigé — {name} : {old} → {amount}",
         "de": "Korrigiert — {name}: {old} → {amount}",
+    },
+    "btn_undo": {
+        "pt": "Desfazer",
+        "nl": "Ongedaan maken",
+        "en": "Undo",
+        "fr": "Annuler",
+        "de": "Rückgängig",
+    },
+    "btn_edit": {
+        "pt": "Editar",
+        "nl": "Aanpassen",
+        "en": "Edit",
+        "fr": "Modifier",
+        "de": "Ändern",
+    },
+    "btn_ok": {
+        "pt": "Está certo",
+        "nl": "Klopt",
+        "en": "It's right",
+        "fr": "C'est bon",
+        "de": "Stimmt",
+    },
+    "button_ok_reply": {
+        "pt": "Perfeito, fica registado.",
+        "nl": "Prima, het staat erin.",
+        "en": "Great, it stays recorded.",
+        "fr": "Parfait, c'est enregistré.",
+        "de": "Alles klar, es bleibt erfasst.",
+    },
+    "button_edit_hint": {
+        "pt": "Diz-me o valor certo, por ex.: *na verdade foi 25*",
+        "nl": "Geef me het juiste bedrag, bijv.: *actually 25*",
+        "en": "Tell me the right amount, e.g.: *actually 25*",
+        "fr": "Donne-moi le bon montant, par ex. : *actually 25*",
+        "de": "Nenne mir den richtigen Betrag, z. B.: *actually 25*",
+    },
+    "button_gone": {
+        "pt": "Esse registo já não existe.",
+        "nl": "Die registratie bestaat niet meer.",
+        "en": "That entry no longer exists.",
+        "fr": "Cet enregistrement n'existe plus.",
+        "de": "Dieser Eintrag existiert nicht mehr.",
     },
     "expense_deleted": {
         "pt": "Apagada — {amount} em *{name}* ({date}).",
@@ -2591,6 +2633,57 @@ async def handle_flow_onboarding(
     return True
 
 
+async def _handle_button_reply(
+    member: Member,
+    message: Message,
+    session: AsyncSession,
+    lang: str,
+) -> bool:
+    """Handle a tap on a reply button of a confirmation (``undo:``/``edit:``/``ok:<expense id>``).
+
+    Returns True when the message was a button tap (handled, or deliberately ignored).
+    The expense id only ever selects a row of THIS member, so a forged id does nothing.
+    """
+    interactive = (message.raw or {}).get("interactive") or {}
+    if interactive.get("type") != "button_reply":
+        return False
+    button_id = str((interactive.get("button_reply") or {}).get("id") or "")
+    action, _, raw_id = button_id.partition(":")
+    to = member.wa_phone
+    try:
+        expense_id = uuid.UUID(raw_id)
+    except ValueError:
+        logger.info("conversation.button_unknown", member_id=str(member.id))
+        return True
+    if action not in ("undo", "edit", "ok"):
+        logger.info("conversation.button_unknown", member_id=str(member.id))
+        return True
+
+    expense = await session.scalar(
+        select(Expense).where(Expense.id == expense_id, Expense.member_id == member.id)
+    )
+    if expense is None:
+        reply = _t("button_gone", lang)
+    elif action == "undo":
+        name = expense.merchant or expense.description or category_label(expense.category, lang)
+        reply = _t(
+            "expense_deleted",
+            lang,
+            amount=_fmt_eur(expense.amount),
+            name=name,
+            date=to_local(expense.expense_date).strftime("%d/%m"),
+        )
+        await session.delete(expense)
+        logger.info("conversation.expense_undone", member_id=str(member.id))
+    elif action == "edit":
+        reply = _t("button_edit_hint", lang)
+    else:
+        reply = _t("button_ok_reply", lang)
+    await send_text(to, reply)
+    await _save_outbound(member, reply, session)
+    return True
+
+
 async def handle_inbound(
     member: Member,
     message: Message,
@@ -2654,6 +2747,10 @@ async def handle_inbound(
 
     # ── 4. Accepted — handle commands and LLM ────────────────────────────────
     if member.consent_state == "accepted":
+        # 4-0. Reply-button taps (Undo / Edit / It's right on a confirmation)
+        if await _handle_button_reply(member, message, session, lang):
+            return
+
         # M12 — load member's merchant→category overrides once per message
         member_overrides = await _load_merchant_overrides(member, session)
 
@@ -3811,9 +3908,19 @@ async def handle_inbound(
             ):
                 reply += _t("category_hint_overig", lang, merchant=expense_data["merchant"])
 
-            if expense_data["amount"] >= settings.high_value_threshold:
+            high_value = expense_data["amount"] >= settings.high_value_threshold
+            if high_value:
                 reply += _t("high_value_hint", lang)
-            await send_text(to, reply)
+            # Reply buttons carry the expense id: no pending state needed to undo/edit.
+            first = ("ok" if high_value else "edit", "btn_ok" if high_value else "btn_edit")
+            await send_buttons(
+                to,
+                reply,
+                [
+                    (f"{first[0]}:{expense.id}", _t(first[1], lang)),
+                    (f"undo:{expense.id}", _t("btn_undo", lang)),
+                ],
+            )
             await _save_outbound(member, reply, session)
             logger.info(
                 "conversation.expense_recorded",

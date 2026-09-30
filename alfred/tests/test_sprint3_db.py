@@ -202,3 +202,58 @@ async def test_zero_and_negative_amounts_get_deterministic_reply_without_llm(lab
     assert "Valor inválido" in reply
     assert await _count(lab) == 0
     lab.llm_reply.assert_not_awaited()
+
+
+# ── Reply buttons (Sprint 5): Undo / Edit / It's right, no pending state ────────
+
+
+async def _one_expense(lab, amount=12.5, name="Jumbo"):
+    lab.expense.return_value = {
+        "amount": amount,
+        "currency": "EUR",
+        "merchant": name,
+        "category": "supermercado",
+        "description": name,
+        "type": "expense",
+        "days_ago": 0,
+    }
+    reply = await lab.say(f"{name} {amount}")
+    exp = await lab.scalar(select(Expense).where(Expense.member_id == lab.member_id))
+    return reply, exp
+
+
+async def test_recorded_expense_offers_edit_and_undo_buttons(lab):
+    _, exp = await _one_expense(lab)
+    assert lab.buttons[-1] == [(f"edit:{exp.id}", "Editar"), (f"undo:{exp.id}", "Desfazer")]
+
+
+async def test_high_value_offers_its_right_and_undo(lab):
+    _, exp = await _one_expense(lab, amount=2500)
+    assert lab.buttons[-1] == [(f"ok:{exp.id}", "Está certo"), (f"undo:{exp.id}", "Desfazer")]
+
+
+async def test_undo_button_deletes_only_that_expense(lab):
+    _, exp = await _one_expense(lab)
+    reply = await lab.tap(f"undo:{exp.id}")
+    assert "Apagada" in reply
+    assert await lab.scalar(select(Expense).where(Expense.id == exp.id)) is None
+
+
+async def test_undo_button_twice_says_gone(lab):
+    _, exp = await _one_expense(lab)
+    await lab.tap(f"undo:{exp.id}")
+    assert "já não existe" in await lab.tap(f"undo:{exp.id}")
+
+
+async def test_ok_and_edit_buttons_keep_the_expense(lab):
+    _, exp = await _one_expense(lab, amount=2500)
+    assert "fica registado" in await lab.tap(f"ok:{exp.id}")
+    assert "valor certo" in await lab.tap(f"edit:{exp.id}")
+    assert await lab.scalar(select(Expense).where(Expense.id == exp.id)) is not None
+
+
+async def test_button_with_unknown_expense_id_deletes_nothing(lab):
+    import uuid as _uuid
+
+    reply = await lab.tap(f"undo:{_uuid.uuid4()}")
+    assert "já não existe" in reply

@@ -118,3 +118,59 @@ async def send_template(
         wa_message_id=data.get("messages", [{}])[0].get("id"),
     )
     return data
+
+
+async def send_buttons(to: str, body: str, buttons: list[tuple[str, str]]) -> dict:
+    """Send a message with up to 3 quick-reply buttons.
+
+    Args:
+        to: Recipient phone in E.164 without '+'.
+        body: Message text (max 1024 chars for interactive messages).
+        buttons: ``(id, title)`` pairs. Meta limits: 3 buttons, id <= 256 chars,
+            title <= 20 chars. The id comes back in ``interactive.button_reply.id``.
+
+    Falls back to a plain text message when Meta rejects the interactive payload, so a
+    button problem never loses the confirmation itself.
+    """
+    url = f"{_GRAPH_URL}/{settings.whatsapp_phone_number_id}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": body[:1024]},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": bid[:256], "title": title[:20]}}
+                    for bid, title in buttons[:3]
+                ]
+            },
+        },
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.whatsapp_token.get_secret_value()}",
+        "Content-Type": "application/json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+            if not resp.is_success:
+                logger.error(
+                    "whatsapp.buttons_send_failed",
+                    status=resp.status_code,
+                    body=resp.text,
+                    to=to,
+                )
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPError:
+        return await send_text(to, body)
+
+    logger.info(
+        "whatsapp.buttons_sent",
+        to=to,
+        wa_message_id=data.get("messages", [{}])[0].get("id"),
+    )
+    return data
