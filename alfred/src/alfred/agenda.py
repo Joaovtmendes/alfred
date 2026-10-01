@@ -214,9 +214,16 @@ def to_datetime(day: date, hhmm: tuple[int, int]) -> datetime:
 _LEAD_VERBS = re.compile(
     r"^(?:marca|marcar|marque|agenda|agendar|agende|adiciona|adicionar|add|schedule|book|plan|plant|zet|voeg\s+toe|ajoute|plane|nova|novo|tenho|tem)\s+"
 )
+# "remind me to X" / "herinner me eraan X" / "rappelle-moi d'X" / "erinnere mich daran, X": the command
+# is not part of the title of what is being remembered.
+_REMIND_LEAD = re.compile(
+    r"^(?:me\s+lembra(?:r)?|lembre-me|lembra-me|remind\s+me|herinner\s+me|"
+    r"rappelle[-\s]moi|rappeler|erinnere\s+mich)\s*(?:(?:eraan|daran|to|de|que|zu)(?![\w])|d')?[\s,]*"
+)
 _EDGE_WORDS = {
     "na", "no", "em", "de", "do", "da", "a", "as", "para", "pra", "um", "uma", "dia", "com", "e",
     "at", "on", "for", "the", "an", "om", "op", "voor", "een", "le", "la", "au", "pour", "am", "fur", "für",
+    "to", "den", "dem", "zu",
 }  # fmt: skip
 # Past-tense / logging verbs: "corri às 7h", "gastei 12 hoje às 3" are records, not appointments.
 _PAST_VERBS = re.compile(
@@ -235,7 +242,7 @@ def clean_title(body: str, spans: list[tuple[int, int]]) -> str:
     out.append(body[pos:])
     text = re.sub(r"[,;]+", " ", " ".join(out))
     text = re.sub(r"\s+", " ", text).strip(" .-–—:")
-    text = _LEAD_VERBS.sub("", text)
+    text = _REMIND_LEAD.sub("", _LEAD_VERBS.sub("", text))
     words = text.split()
     while words and strip_accents(words[0]) in _EDGE_WORDS:
         words.pop(0)

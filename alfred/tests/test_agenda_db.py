@@ -43,6 +43,22 @@ def _p(text: str, now: datetime = THU):
 # ── pure rules ────────────────────────────────────────────────────────────────
 
 
+@pytest.mark.parametrize(
+    ("text", "title"),
+    [
+        ("herinner me morgen om 9u de tandarts te bellen", "Tandarts te bellen"),
+        ("rappelle-moi demain à 9h d'appeler le dentiste", "Appeler le dentiste"),
+        ("erinnere mich morgen um 9 uhr den zahnarzt anzurufen", "Zahnarzt anzurufen"),
+        ("remind me tomorrow at 9 to call the dentist", "Call the dentist"),
+        ("me lembra amanhã às 9h de ligar pro dentista", "Ligar pro dentista"),
+    ],
+)
+def test_reminder_phrasing_is_not_part_of_the_title(text: str, title: str) -> None:
+    got = _p(text)
+    assert not isinstance(got, str) and got is not None
+    assert got.title == title
+
+
 def test_the_documented_phrases() -> None:
     a = _p("dentista quinta às 14h")
     assert (a.title, a.starts_at) == (
