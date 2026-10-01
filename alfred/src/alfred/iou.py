@@ -463,7 +463,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Fertiger Text zum Kopieren für {person}:\n\n{text}",
     ),
     "iou_reminder_text": _all(
-        "Oi {person}! Só lembrando dos {amount} que ficaram combinados. Se for mais fácil, manda um Tikkie.",
+        "Oi {person}! Só lembrando dos {amount} que ficaram combinados. Se for mais fácil, envie um Tikkie.",
         "Hoi {person}! Even een herinnering aan de {amount} die we hadden afgesproken. Als het makkelijker is, stuur ik een Tikkie.",
         "Hi {person}! Just a reminder about the {amount} we agreed on. If it's easier, I can send a Tikkie.",
         "Salut {person} ! Petit rappel pour les {amount} dont on avait parlé. Si c'est plus simple, je t'envoie un Tikkie.",

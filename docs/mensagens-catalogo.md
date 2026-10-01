@@ -281,7 +281,7 @@
 
 ## `batch_ask`
 
-- **pt** — Confirma para eu gravar? Ainda não gravei nada.
+- **pt** — Pode confirmar para eu gravar? Ainda não gravei nada.
 - **nl** — Bevestig je ze? Pas daarna komen ze in je overzicht.
 - **en** — Confirm and I'll add them. Nothing has been added yet.
 - **fr** — Tu confirmes ? Rien n'est encore ajouté.
@@ -297,11 +297,11 @@
 
 ## `batch_btn_cancel`
 
-- **pt** — Cancelar
-- **nl** — Annuleren
-- **en** — Cancel
+- **pt** — Desfazer
+- **nl** — Ongedaan maken
+- **en** — Undo
 - **fr** — Annuler
-- **de** — Abbrechen
+- **de** — Rückgängig
 
 ## `batch_btn_edit`
 
@@ -345,7 +345,7 @@
 
 ## `batch_expired`
 
-- **pt** — Essa lista expirou (passaram 15 minutos) e eu descartei. Manda de novo que eu monto outra.
+- **pt** — Essa lista expirou (passaram 15 minutos) e eu descartei. Envie novamente e eu monto outra.
 - **nl** — Die lijst is verlopen (15 minuten) en weggegooid. Stuur ze opnieuw, dan maak ik een nieuwe.
 - **en** — That list expired (15 minutes) and I dropped it. Send it again and I'll build a new one.
 - **fr** — Cette liste a expiré (15 minutes) et je l'ai écartée. Renvoie-la et j'en refais une.
@@ -353,7 +353,7 @@
 
 ## `batch_gone`
 
-- **pt** — Não há nada pendente para confirmar. Manda os lançamentos de novo se precisar.
+- **pt** — Não há nada pendente para confirmar. Envie os lançamentos novamente, se precisar.
 - **nl** — Er staat niets meer klaar om te bevestigen. Stuur de transacties opnieuw als dat nodig is.
 - **en** — There is nothing waiting for confirmation. Send the entries again if you need to.
 - **fr** — Rien n'attend de confirmation. Renvoie les opérations si besoin.
@@ -553,7 +553,7 @@
 ## `button_ok_reply`
 
 - **pt** — Combinado, fica assim.
-- **pt** — Beleza, fica assim.
+- **pt** — Certo, fica assim.
 - **pt** — Perfeito, deixo assim.
 - **nl** — Top, het blijft zo.
 - **nl** — Prima, zo laat ik het.
@@ -696,7 +696,7 @@
 
 ## `currency_unsupported`
 
-- **pt** — Por enquanto só trabalho em euros, então não guardei os {cur}. Manda de novo convertido em € (ex.: "Jumbo 23,50")?
+- **pt** — Por enquanto só trabalho em euros, então não guardei os {cur}. Envie novamente convertido em € (ex.: "Jumbo 23,50")?
 - **nl** — Ik registreer voorlopig alleen euro's — {cur} is niet opgeslagen. Reken om naar € en stuur opnieuw (bijv. "Jumbo 23,50").
 - **en** — I only record euros for now — {cur} was not saved. Convert to € and send it again (e.g. "Jumbo 23.50").
 - **fr** — Je n'enregistre que des euros pour l'instant — {cur} n'a pas été enregistré. Convertis en € et renvoie (ex. « Jumbo 23,50 »).
@@ -821,7 +821,7 @@
 
 ## `fallback_no_record`
 
-- **pt** — Não consegui anotar nada. Manda uma despesa por linha, com valor e descrição, por exemplo:
+- **pt** — Não consegui anotar nada. Envie uma despesa por linha, com valor e descrição, por exemplo:
   > Mercado 20
   > Farmácia 10
 - **nl** — Ik heb niets geregistreerd. Stuur één uitgave per regel met bedrag en omschrijving, bijvoorbeeld:
@@ -1244,7 +1244,7 @@
 
 ## `income_recorded`
 
-- **pt** — Boa, entrou {amount} de *{name}*.
+- **pt** — Ótimo, entrou {amount} de *{name}*.
 - **pt** — Anotei a receita: {amount} de *{name}*.
 - **pt** — Registrado: {amount} de *{name}*.
 - **nl** — Mooi, er is {amount} binnengekomen van *{name}*.
@@ -1262,7 +1262,7 @@
 
 ## `invalid_amount_check`
 
-- **pt** — Esse valor não dá para registrar (zero ou negativo). Manda de novo com o valor certo?
+- **pt** — Esse valor não dá para registrar (zero ou negativo). Pode enviar novamente com o valor correto?
 - **nl** — Ongeldig bedrag (nul of negatief) — niets geregistreerd. Controleer en stuur opnieuw.
 - **en** — Invalid amount (zero or negative) — nothing recorded. Check it and send again.
 - **fr** — Montant invalide (zéro ou négatif) — rien enregistré. Vérifie et renvoie.
@@ -1384,7 +1384,7 @@
 
 ## `iou_reminder_text`
 
-- **pt** — Oi {person}! Só lembrando dos {amount} que ficaram combinados. Se for mais fácil, manda um Tikkie.
+- **pt** — Oi {person}! Só lembrando dos {amount} que ficaram combinados. Se for mais fácil, envie um Tikkie.
 - **nl** — Hoi {person}! Even een herinnering aan de {amount} die we hadden afgesproken. Als het makkelijker is, stuur ik een Tikkie.
 - **en** — Hi {person}! Just a reminder about the {amount} we agreed on. If it's easier, I can send a Tikkie.
 - **fr** — Salut {person} ! Petit rappel pour les {amount} dont on avait parlé. Si c'est plus simple, je t'envoie un Tikkie.
@@ -1749,7 +1749,7 @@
 
 ## `no_records_month`
 
-- **pt** — Ainda não tenho nada este mês. Manda a primeira despesa quando quiser.
+- **pt** — Ainda não tenho nada este mês. Envie a primeira despesa quando quiser.
 - **nl** — Geen registraties deze maand.
 - **en** — No records this month.
 - **fr** — Aucun enregistrement ce mois-ci.
@@ -2680,7 +2680,7 @@
 
 ## `workout_saved`
 
-- **pt** — Boa! Treino anotado: {activity}, {duration}. 💪
+- **pt** — Muito bem! Treino anotado: {activity}, {duration}. 💪
 - **pt** — Treino anotado: {activity}, {duration}.
 - **pt** — Registrado: {activity}, {duration}. Bom trabalho!
 - **nl** — Mooi! Training genoteerd: {activity}, {duration}. 💪

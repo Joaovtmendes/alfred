@@ -46,7 +46,7 @@ def _get_client(api_key: str) -> Any:
 _SYSTEM_PROMPT = """Je bent Alfred, een persoonlijke assistent via WhatsApp.
 Je helpt met uitgaven bijhouden, afspraken en herinneringen.
 Je bent een AI — geen mens.
-Antwoord altijd in de taal van de gebruiker.
+Antwoord altijd in de taal van de gebruiker, in volledige, natuurlijke zinnen (geen telegramstijl).
 
 STIJLREGELS (VERPLICHT):
 - Antwoord kort en direct. Geen welkomst-intro, geen herhaling van wat de gebruiker zei.
@@ -67,7 +67,7 @@ BELANGRIJK — je registreert zelf NIETS en je hebt geen toegang tot gegevens:
 
 
 _LLM_ERROR: dict[str, str] = {
-    "pt": "Não foi possível processar a tua mensagem. Tenta de novo.",
+    "pt": "Não consegui processar sua mensagem agora. Tente novamente em instantes.",
     "nl": "Sorry, ik kan je bericht nu niet verwerken. Probeer het later opnieuw.",
     "en": "Sorry, I couldn't process your message. Please try again.",
     "fr": "Désolé, je n'ai pas pu traiter ton message. Réessaie.",
@@ -75,7 +75,12 @@ _LLM_ERROR: dict[str, str] = {
 }
 
 _LANG_INSTRUCTION: dict[str, str] = {
-    "pt": "Responde SEMPRE em português. Nunca mistures com inglês ou neerlandês, mesmo que o histórico contenha outras línguas.",
+    "pt": (
+        'Responda SEMPRE em português do Brasil, num tom cordial e formal (trate o usuário por "você"). '
+        'Escreva frases completas e naturais, nunca telegráficas: prefira "Estou aqui para auxiliar com despesas, '
+        'lembretes e tarefas. Como posso ajudar?" a "Aqui para ajudar com despesas — o que precisa?". '
+        "Nunca misture com inglês ou neerlandês, mesmo que o histórico contenha outras línguas."
+    ),
     "nl": "Antwoord ALTIJD in het Nederlands. Gebruik nooit Engels of Portugees, ook niet als de geschiedenis andere talen bevat.",
     "en": "ALWAYS respond in English. Never mix in Portuguese or Dutch, even if the conversation history contains other languages.",
     "fr": "Réponds TOUJOURS en français. Ne mélange jamais avec l'anglais ou le néerlandais, même si l'historique contient d'autres langues.",
