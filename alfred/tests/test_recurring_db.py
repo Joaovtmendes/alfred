@@ -273,7 +273,8 @@ async def _inbound(lab: Lab, hours_ago: float) -> None:
             author_id=lab.member_id,
             direction="inbound",
             body="oi",
-            created_at=now_local() - timedelta(hours=hours_ago),
+            created_at=TEN
+            - timedelta(hours=hours_ago),  # relative to the pinned clock, not the wall clock
         )
     )
 
