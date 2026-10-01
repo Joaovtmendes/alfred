@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.clock import local_tz, today_local
 from alfred.labels import category_label
 from alfred.llm import extract_analysis_spec
-from alfred.models import Expense, LlmUsage, Member, SavedView
+from alfred.models import SETTLED, Expense, LlmUsage, Member, SavedView
 from alfred.validation import sanitize_analysis_spec
 
 DAILY_LIMIT = 10
@@ -153,7 +153,10 @@ def _statement(spec: Spec, member_id, win: Window, grouped: bool, limit: bool):
         key = None
     cols = [key.label("k"), value.label("v")] if key is not None else [value.label("v")]
     stmt = select(*cols).where(
-        Expense.member_id == member_id, Expense.expense_date >= start, Expense.expense_date < end
+        Expense.member_id == member_id,
+        Expense.expense_date >= start,
+        Expense.expense_date < end,
+        Expense.status.in_(SETTLED),
     )
     if spec.metric == "income":
         stmt = stmt.where(Expense.transaction_type == "income")

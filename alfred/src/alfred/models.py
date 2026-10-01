@@ -126,6 +126,16 @@ class Message(Base):
     author: Mapped[Member | None] = relationship(back_populates="messages")
 
 
+SETTLED = ("paid", "received")
+PENDING = ("to_pay", "to_receive")
+
+
+def _default_status(context) -> str:
+    """Settled by default: an income is "received", an expense is "paid"."""
+    params = context.get_current_parameters()
+    return "received" if params.get("transaction_type") == "income" else "paid"
+
+
 class Expense(Base):
     """A financial transaction recorded by a member via natural language."""
 
@@ -165,10 +175,10 @@ class Expense(Base):
     trip_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("trip.id"), nullable=True, default=None, index=True
     )
-    # V2-02 — paid | to_pay | received | to_receive. Every existing row is "paid" (or income
-    # already received); totals keep counting everything until V2-16 filters by state.
+    # V2-16 — paid | to_pay | received | to_receive. Totals, balance and reports count only the
+    # settled states (``SETTLED``); the pending ones are shown apart as "forecast".
     status: Mapped[str] = mapped_column(
-        String(12), nullable=False, default="paid", server_default="paid"
+        String(12), nullable=False, default=_default_status, server_default="paid"
     )
 
     member: Mapped[Member] = relationship(back_populates="expenses")

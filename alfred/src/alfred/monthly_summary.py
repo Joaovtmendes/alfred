@@ -27,6 +27,7 @@ from alfred.budgets import _month_window, month_spent, percent
 from alfred.clock import local_tz, month_name, month_start, prev_month_start, to_local, today_local
 from alfred.labels import category_label
 from alfred.models import (
+    SETTLED,
     Budget,
     Expense,
     HabitLog,
@@ -60,6 +61,7 @@ async def _totals(
             select(Expense.transaction_type, Expense.category, func.sum(Expense.amount))
             .where(
                 Expense.member_id == member_id,
+                Expense.status.in_(SETTLED),
                 Expense.expense_date >= start,
                 Expense.expense_date < end,
             )
@@ -115,6 +117,18 @@ async def build_summary(
         change = int(((expense - prev_exp) * 100 / prev_exp).to_integral_value(ROUND_HALF_UP))
         parts.append(
             _t("msum_vs_prev", lang, prev=month_name(prev_first, lang), change=f"{change:+d}")
+        )
+    from alfred.ledger_status import pending_summary
+
+    pend = await pending_summary(session, member.id)
+    if pend.overdue_count:
+        parts.append(
+            _t(
+                "pending_overdue",
+                lang,
+                n=pend.overdue_count,
+                total=_fmt_eur(float(pend.overdue_total)),
+            )
         )
     budgets = (
         (await session.execute(select(Budget).where(Budget.member_id == member.id))).scalars().all()

@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.audit import audit
 from alfred.clock import month_start, to_local, today_local
 from alfred.labels import _LABELS, category_label
-from alfred.models import Budget, Expense, Member
+from alfred.models import SETTLED, Budget, Expense, Member
 from alfred.parsing import strip_accents, to_amount
 from alfred.validation import MAX_AMOUNT
 
@@ -141,6 +141,7 @@ async def month_spent(
             Expense.member_id == member_id,
             Expense.transaction_type == "expense",
             Expense.category == category,
+            Expense.status.in_(SETTLED),
             Expense.expense_date >= start,
             Expense.expense_date < end,
         )
