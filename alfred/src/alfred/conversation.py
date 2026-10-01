@@ -77,6 +77,8 @@ from alfred.parsing import (
     parse_trip_start_date,
     strip_accents,
 )
+from alfred.recurring import STRINGS as _RECURRING_STRINGS
+from alfred.recurring import handle_recurring_command
 from alfred.settings import settings
 from alfred.validation import MAX_AMOUNT
 from alfred.whatsapp import send_buttons, send_text
@@ -1429,6 +1431,7 @@ _derive_singular(
 )
 
 _STRINGS.update(_BUDGET_STRINGS)  # V2-01 texts live next to their logic in budgets.py
+_STRINGS.update(_RECURRING_STRINGS)  # V2-02, same idea
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -3505,6 +3508,15 @@ async def handle_inbound(
         if budget_reply is not None:
             await send_text(to, budget_reply)
             await _save_outbound(member, budget_reply, session)
+            return
+
+        # 4e-0g. V2-02 — contas fixas: "aluguel 1200 todo dia 1" / "paguei o aluguel" / "minhas contas fixas"
+        recurring_reply = await handle_recurring_command(
+            body_plain=body_plain, body=body, member=member, lang=lang, session=session
+        )
+        if recurring_reply is not None:
+            await send_text(to, recurring_reply)
+            await _save_outbound(member, recurring_reply, session)
             return
 
         # 4e-1. M12 — category correction: "Jumbo é supermarkt"

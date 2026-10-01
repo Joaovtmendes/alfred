@@ -97,6 +97,48 @@ def is_weekly_summary_due(now_local: datetime, interval_minutes: int = INTERVAL_
     return start <= now_local < start + timedelta(minutes=interval_minutes)
 
 
+async def send_payment_reminders(now_local: datetime) -> tuple[int, int]:
+    """V2-02 — "aluguel vence em 3 dias". Returns (sent, errors).
+
+    Inside the 24 h window after the member last wrote, a plain message goes out; outside it
+    only the approved template can, and that stays off until
+    ``PAYMENT_REMINDER_TEMPLATE_ENABLED`` is set. Idempotent per due date (``last_reminded_for``);
+    one failed bill never stops the others.
+    """
+    from alfred.db import AsyncSessionLocal
+    from alfred.recurring import mark_reminded, pending_reminders
+    from alfred.settings import settings
+    from alfred.whatsapp import send_template, send_text
+
+    async with AsyncSessionLocal() as session:
+        reminders = await pending_reminders(session, now_local)
+
+    sent = errors = 0
+    for r in reminders:
+        try:
+            if r.in_window:
+                await send_text(r.wa_phone, r.text)
+            elif settings.payment_reminder_template_enabled:
+                await send_template(
+                    to=r.wa_phone,
+                    template_name="alfred_payment_reminder",
+                    lang_code=LANG_CODE_MAP.get(r.lang, "en"),
+                    components=[{"type": "body", "parameters": [{"type": "text", "text": r.text}]}],
+                )
+            else:
+                logger.info("cron.payment_reminder_skipped_no_window", item_id=str(r.item_id))
+                continue
+        except Exception as exc:
+            logger.error("cron.payment_reminder_failed", item_id=str(r.item_id), error=str(exc))
+            errors += 1
+            continue
+        sent += 1
+        async with AsyncSessionLocal() as session:
+            await mark_reminded(session, r.item_id, r.due)
+            await session.commit()
+    return sent, errors
+
+
 async def run_cron() -> int:
     """Send due notifications. Returns the number of failed sends."""
     from sqlalchemy import select, update
@@ -188,6 +230,10 @@ async def run_cron() -> int:
         except Exception as exc:
             logger.error("cron.weekly_summary_failed", member_id=str(m.id), error=str(exc))
             errors += 1
+
+    r_sent, r_errors = await send_payment_reminders(now_local)
+    sent += r_sent
+    errors += r_errors
 
     logger.info("cron.done", sent=sent, errors=errors)
     return errors

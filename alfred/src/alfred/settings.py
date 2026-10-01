@@ -58,5 +58,9 @@ class Settings(BaseSettings):
     # "apaga" / "errei foram X"). Nothing is blocked: a hint costs no state and no round trip.
     high_value_threshold: float = 1000.0
 
+    # V2-02: bill reminders outside the 24 h window need the approved template
+    # ``alfred_payment_reminder``. Off until Meta approves it (the code is ready and tested).
+    payment_reminder_template_enabled: bool = False
+
 
 settings = Settings()
