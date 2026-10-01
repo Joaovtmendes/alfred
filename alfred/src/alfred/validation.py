@@ -175,3 +175,70 @@ def parse_llm_json(raw: str) -> dict | None:
     except ValueError:
         return None
     return obj if isinstance(obj, dict) else None
+
+
+# ── V2-14: analysis spec ──────────────────────────────────────────────────────
+ANALYSIS_METRICS = frozenset({"spent", "income", "net", "count", "average"})
+ANALYSIS_GROUPS = frozenset({"none", "category", "month", "merchant"})
+ANALYSIS_PERIODS = frozenset(
+    {
+        "this_month",
+        "last_month",
+        "last_3_months",
+        "last_6_months",
+        "this_year",
+        "last_year",
+        "last_7_days",
+        "last_30_days",
+    }
+)
+ANALYSIS_COMPARES = frozenset({"none", "previous_period", "same_period_last_year"})
+MAX_MERCHANT_FILTER = 40
+MAX_TOP_N = 10
+
+
+def sanitize_analysis_spec(data: Any) -> dict | None:
+    """A clean analysis spec, or None when the model's JSON is unusable.
+
+    Unknown enum values reject the whole spec (the caller says honestly what it *can* do)
+    instead of being coerced into something the member did not ask for. The merchant filter
+    is a plain string that is only ever used as a bound ``ILIKE`` parameter.
+    """
+    if not isinstance(data, dict):
+        return None
+    out: dict[str, Any] = {}
+    for key, allowed, default in (
+        ("metric", ANALYSIS_METRICS, "spent"),
+        ("group_by", ANALYSIS_GROUPS, "none"),
+        ("period", ANALYSIS_PERIODS, "this_month"),
+        ("compare_to", ANALYSIS_COMPARES, "none"),
+    ):
+        raw = data.get(key)
+        value = default if raw in (None, "") else str(raw).strip().lower()
+        if value not in allowed:
+            return None
+        out[key] = value
+    filters = data.get("filters")
+    if filters is not None and not isinstance(filters, dict):
+        return None
+    filters = filters or {}
+    category = filters.get("category", data.get("category"))
+    if category not in (None, ""):
+        category = str(category).strip().lower()
+        if category not in CATEGORIES:
+            return None
+    else:
+        category = None
+    merchant = filters.get("merchant", data.get("merchant"))
+    merchant = _text(merchant, MAX_MERCHANT_FILTER) if merchant not in (None, "") else None
+    out["category"] = category
+    out["merchant"] = merchant
+    raw_top = data.get("top_n")
+    try:
+        top_n = int(raw_top) if raw_top not in (None, "") else 5
+    except (TypeError, ValueError):
+        return None
+    out["top_n"] = max(1, min(MAX_TOP_N, top_n))
+    if out["group_by"] == "month":
+        out["compare_to"] = "none"  # a monthly series already shows the change over time
+    return out

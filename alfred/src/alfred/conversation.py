@@ -24,6 +24,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.agenda import STRINGS as _AGENDA_STRINGS
 from alfred.agenda import handle_agenda_command
 from alfred.agenda import handle_button as handle_agenda_button
+from alfred.analysis import STRINGS as _ANALYSIS_STRINGS
+from alfred.analysis import handle_analysis_question, handle_view_command
 from alfred.audit import audit
 from alfred.budgets import STRINGS as _BUDGET_STRINGS
 from alfred.budgets import alert_after_expense, alerts_for_categories, handle_budget_command
@@ -1442,6 +1444,7 @@ _STRINGS.update(_RECURRING_STRINGS)  # V2-02, same idea
 _STRINGS.update(_MSUM_STRINGS)  # V2-04
 _STRINGS.update(_AGENDA_STRINGS)  # V2-06
 _STRINGS.update(_SCORE_STRINGS)  # V2-09
+_STRINGS.update(_ANALYSIS_STRINGS)  # V2-14
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -3563,6 +3566,13 @@ async def handle_inbound(
             await _save_outbound(member, score_reply, session)
             return
 
+        # 4e-0k. V2-14 — saved views: "salva essa visão como X" / "minhas visões" / "roda X"
+        view_reply = await handle_view_command(body_plain, member, lang, session)
+        if view_reply is not None:
+            await send_text(to, view_reply)
+            await _save_outbound(member, view_reply, session)
+            return
+
         # 4e-1. M12 — category correction: "Jumbo é supermarkt"
         corr_reply = await _handle_category_correction(
             body, member, lang, session, member_overrides
@@ -4664,7 +4674,16 @@ async def handle_inbound(
                 )
                 return
 
-                # 4g. General LLM reply with conversation history
+        # 4f-2. V2-14 — free-form analysis ("gastos por categoria este ano vs ano passado")
+        analysis_reply = await handle_analysis_question(
+            message.body or "", body_plain, member, lang, session
+        )
+        if analysis_reply is not None:
+            await send_text(to, analysis_reply)
+            await _save_outbound(member, analysis_reply, session)
+            return
+
+            # 4g. General LLM reply with conversation history
         if _has_zero_or_negative_amount(body):
             # Zero/negative amounts are never stored: answer deterministically, skip the LLM.
             reply = _t("invalid_amount_check", lang)

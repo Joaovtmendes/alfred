@@ -564,3 +564,24 @@ class Appointment(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class SavedView(Base):
+    """A saved analysis (V2-14): a validated spec, never SQL or free text from the model.
+
+    ``name`` NULL marks the member's *latest unnamed analysis* (a draft kept so "save this
+    view as ..." has something to save); at most one draft per member is kept.
+    """
+
+    __tablename__ = "saved_view"
+    __table_args__ = (Index("ix_saved_view_member", "member_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str | None] = mapped_column(String(40))
+    spec: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
