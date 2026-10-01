@@ -84,6 +84,8 @@ from alfred.parsing import (
 )
 from alfred.recurring import STRINGS as _RECURRING_STRINGS
 from alfred.recurring import handle_recurring_command
+from alfred.score import STRINGS as _SCORE_STRINGS
+from alfred.score import handle_score_command
 from alfred.settings import settings
 from alfred.validation import MAX_AMOUNT
 from alfred.whatsapp import send_buttons, send_text
@@ -1439,6 +1441,7 @@ _STRINGS.update(_BUDGET_STRINGS)  # V2-01 texts live next to their logic in budg
 _STRINGS.update(_RECURRING_STRINGS)  # V2-02, same idea
 _STRINGS.update(_MSUM_STRINGS)  # V2-04
 _STRINGS.update(_AGENDA_STRINGS)  # V2-06
+_STRINGS.update(_SCORE_STRINGS)  # V2-09
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -3551,6 +3554,13 @@ async def handle_inbound(
             else:
                 await send_text(to, agenda_reply.text)
             await _save_outbound(member, agenda_reply.text, session)
+            return
+
+        # 4e-0j. V2-09 — nota de saúde: "minha nota de saúde" / "health score"
+        score_reply = await handle_score_command(body_plain, member, lang, session)
+        if score_reply is not None:
+            await send_text(to, score_reply)
+            await _save_outbound(member, score_reply, session)
             return
 
         # 4e-1. M12 — category correction: "Jumbo é supermarkt"
