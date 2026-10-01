@@ -21,10 +21,10 @@
         { "type": "HEADER", "format": "TEXT", "text": "Hora do treino!" },
         {
           "type": "BODY",
-          "text": "💪 Hora de: {{1}}\n\nVai a isso! Responde ao Alfred quando terminares.",
+          "text": "💪 Hora de: {{1}}\n\nVamos lá! Responda ao Alfred quando terminar.",
           "example": { "body_text": [["corrida de 30 minutos"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — o teu assistente pessoal" }
+        { "type": "FOOTER", "text": "Alfred — o seu assistente pessoal" }
       ]
     },
     "nl": {

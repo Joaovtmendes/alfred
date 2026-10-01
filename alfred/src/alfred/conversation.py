@@ -48,6 +48,8 @@ from alfred.iou import STRINGS as _IOU_STRINGS
 from alfred.iou import handle_iou_command
 from alfred.labels import activity_label as activity_name
 from alfred.labels import category_label
+from alfred.lang_cmd import STRINGS as _LANG_STRINGS
+from alfred.lang_cmd import parse_language_command
 from alfred.ledger_status import STRINGS as _LEDGER_STRINGS
 from alfred.ledger_status import handle_ledger_command
 from alfred.llm import (
@@ -1461,6 +1463,19 @@ _STRINGS.update(_IOU_STRINGS)  # V2-15
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
 _STRINGS.update(_BATCH_STRINGS)  # V2-17
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
+_STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
+
+# The help text only knew the first version: add the V2 commands before the "to stop" footer.
+_HELP_MORE = {
+    "pt": '*E também*\n• "a pagar luz 120 dia 20" — contas a pagar e a receber\n• "orçamento mercado 300" — teto mensal por categoria\n• "dentista amanhã às 14h" — agenda com aviso\n• "lembrete: tomar o remédio às 08:00"\n• "tarefa: comprar pão"\n• "meu dashboard" — painel com gráficos\n• "idioma inglês" — mudar de idioma',
+    "nl": '*Ook handig*\n• "te betalen huur 900 dag 1" — openstaande rekeningen\n• "budget supermarkt 300" — maandlimiet per categorie\n• "tandarts morgen om 14u" — agenda met herinnering\n• "herinnering: medicijnen om 08:00"\n• "taak: brood kopen"\n• "mijn dashboard" — overzicht met grafieken\n• "taal Engels" — andere taal',
+    "en": '*Also*\n• "to pay rent 900 day 1" — bills to pay and to receive\n• "budget groceries 300" — monthly cap per category\n• "dentist tomorrow at 2pm" — calendar with a reminder\n• "reminder: take medication at 08:00"\n• "task: buy bread"\n• "my dashboard" — charts\n• "language Dutch" — change language',
+    "fr": '*Aussi*\n• "à payer loyer 900 jour 1" — factures à payer et à recevoir\n• "budget courses 300" — plafond mensuel par catégorie\n• "dentiste demain à 14h" — agenda avec rappel\n• "rappel : médicament à 08:00"\n• "tâche : acheter du pain"\n• "mon tableau de bord" — graphiques\n• "langue anglais" — changer de langue',
+    "de": '*Außerdem*\n• "zu zahlen Miete 900 Tag 1" — offene Rechnungen\n• "Budget Supermarkt 300" — Monatslimit pro Kategorie\n• "Zahnarzt morgen um 14 Uhr" — Kalender mit Erinnerung\n• "Erinnerung: Medikament um 08:00"\n• "Aufgabe: Brot kaufen"\n• "mein Dashboard" — Diagramme\n• "Sprache Englisch" — Sprache ändern',
+}
+for _lg, _more in _HELP_MORE.items():
+    _head, _sep, _tail = str(_STRINGS["help"][_lg]).rpartition("\n\n_")
+    _STRINGS["help"][_lg] = f"{_head}\n\n{_more}{_sep}{_tail}"
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -1471,7 +1486,23 @@ def _t(key: str, lang: str, **kwargs: object) -> str:
         tmpl, tuple
     ):  # several equivalent phrasings: pick one so replies feel less canned
         tmpl = random.choice(tmpl)
-    return tmpl.format(**kwargs) if kwargs else tmpl
+    text = tmpl.format(**kwargs) if kwargs else tmpl
+    return _pt_singular(text) if lang == "pt" else text
+
+
+_PT_ONE = re.compile(r"(?<![\d.,])\b1 (dias|pontos|lançamentos|vezes|itens)\b")
+_PT_SINGULAR = {
+    "dias": "dia",
+    "pontos": "ponto",
+    "lançamentos": "lançamento",
+    "vezes": "vez",
+    "itens": "item",
+}
+
+
+def _pt_singular(text: str) -> str:
+    """ "1 dias" → "1 dia": a count of one must not read as a plural (hard test, block M)."""
+    return _PT_ONE.sub(lambda m: f"1 {_PT_SINGULAR[m.group(1)]}", text)
 
 
 async def _month_category_context(
@@ -1739,6 +1770,38 @@ _LEMBRETE_RE = re.compile(
     r"[:\s]+(.+?)\s+(?:às|at|om|à|um|a)\s+(\d{1,2}:\d{2})\b",
     re.IGNORECASE,
 )
+
+
+_LEMBRETE_NATURAL_RE = re.compile(
+    r"^\s*(?:me\s+lembra(?:r)?(?:\s+de)?|lembre-me(?:\s+de)?|lembra-me(?:\s+de)?|"
+    r"remind\s+me(?:\s+to)?|herinner\s+me(?:\s+eraan)?(?:\s+om)?|"
+    r"rappelle[-\s]moi(?:\s+de)?|erinnere\s+mich(?:\s+daran)?,?)\s+"
+    r"(.+?)\s+(?:às|as|at|om|à|um)\s+(\d{1,2})(?:\s*[:h]\s*(\d{2})?|\s*(?:uur|uhr|heures?))?"
+    r"(?:\s+(?:todo\s+dia|every\s+day|elke\s+dag|tous\s+les\s+jours|jeden\s+tag))?\s*[.!]?\s*$",
+    re.IGNORECASE,
+)
+
+
+class _LembreteMatch:
+    """Quacks like ``re.Match`` for the reminder handler: group(1) = text, group(2) = HH:MM."""
+
+    def __init__(self, text: str, hhmm: str) -> None:
+        self._groups = (None, text, hhmm)
+
+    def group(self, i: int) -> str:
+        return self._groups[i]
+
+
+def _match_lembrete(body: str):
+    """ "lembrete: X às 08:00" (canonical) or a natural "me lembra de X às 8h"."""
+    m = _LEMBRETE_RE.search(body)
+    if m:
+        return m
+    n = _LEMBRETE_NATURAL_RE.match(body)
+    if not n:
+        return None
+    hh, mm = int(n.group(2)), int(n.group(3) or 0)
+    return _LembreteMatch(n.group(1).strip(), f"{hh:02d}:{mm:02d}")
 
 
 _VALID_CATEGORIES = frozenset(
@@ -2047,7 +2110,7 @@ _NOTE_RE = re.compile(
     re.IGNORECASE,
 )
 _TASK_RE = re.compile(
-    r"^(?:tarefa|task|taak|aufgabe|tâche|tarefa:)\s*[:]\s*(.+)",
+    r"^(?:tarefa|task|taak|aufgabe|tâche)(?:\s*:\s*|\s+)(.+)",
     re.IGNORECASE,
 )
 _DONE_RE = re.compile(
@@ -2727,7 +2790,8 @@ def _clean_activity(text: str) -> str:
 
 def _fmt_eur(amount: float) -> str:
     """Format a float as PT-style euro: €1.234,56"""
-    return f"€{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    sign = "-" if amount < 0 else ""  # "-€133,60", never "€-133,60"
+    return f"{sign}€{abs(amount):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def _looks_like_gibberish(text: str) -> bool:
@@ -3420,6 +3484,16 @@ async def handle_inbound(
             await _save_outbound(member, batch_out.text, session)
             return
 
+        # 4-0ab. "idioma inglês" / "change to English": switch the language of the replies
+        new_lang = parse_language_command(body)
+        if new_lang is not None:
+            member.language = new_lang
+            session.add(member)
+            reply = _t("lang_changed", new_lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
         # 4-0a. A bare "yes": there is no pending question, so say so instead of guessing.
         if _BARE_YES_RE.match(body_plain.strip()):
             reply = _t("bare_yes", lang)
@@ -3486,7 +3560,7 @@ async def handle_inbound(
             return
 
         # 4e-0. "configura lembrete" — proactive reminder setup (M5)
-        m_lembrete = _LEMBRETE_RE.search(body)
+        m_lembrete = _match_lembrete(body)
         if m_lembrete or _is_command(body, _LEMBRETE_WORDS):
             if m_lembrete:
                 reminder_text = m_lembrete.group(1).strip()
@@ -4065,7 +4139,13 @@ async def handle_inbound(
             _HEALTH_HINT_RE.search(body_plain) and not body.rstrip().endswith("?")
         )
         _not_health = not _is_health
-        if len(body) < 80 and _not_expense and _not_workout and _not_health:
+        if (
+            len(body) < 80
+            and _not_expense
+            and _not_workout
+            and _not_health
+            and not _has_zero_or_negative_amount(body)  # "café 0" is an invalid amount, not a habit
+        ):
             habit_data = await extract_habit(body, lang=member.language or "en")
             if habit_data:
                 h_activity = habit_data["activity"]

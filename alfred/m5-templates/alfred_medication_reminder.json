@@ -24,10 +24,10 @@
         { "type": "HEADER", "format": "TEXT", "text": "Lembrete Alfred" },
         {
           "type": "BODY",
-          "text": "⏰ Lembrete: {{1}}\n\nAbre o Alfred e responde quando estiver feito.",
+          "text": "⏰ Lembrete: {{1}}\n\nAbra o Alfred e responda quando estiver feito.",
           "example": { "body_text": [["toma o teu medicamento"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — o teu assistente pessoal" }
+        { "type": "FOOTER", "text": "Alfred — o seu assistente pessoal" }
       ]
     },
     "nl": {
