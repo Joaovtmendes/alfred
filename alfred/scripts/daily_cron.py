@@ -97,6 +97,11 @@ def is_weekly_summary_due(now_local: datetime, interval_minutes: int = INTERVAL_
     return start <= now_local < start + timedelta(minutes=interval_minutes)
 
 
+def _one_line(text: str) -> str:
+    """Template parameters cannot hold line breaks, tabs or runs of spaces (Meta rejects them)."""
+    return " ".join(str(text).split())
+
+
 async def _log_out(
     wa_phone: str, resp: dict | None, body: str, kind: str, template_name: str | None = None
 ) -> None:
@@ -166,7 +171,12 @@ async def send_payment_reminders(now_local: datetime) -> tuple[int, int]:
                     to=r.wa_phone,
                     template_name="alfred_payment_reminder",
                     lang_code=LANG_CODE_MAP.get(r.lang, "en"),
-                    components=[{"type": "body", "parameters": [{"type": "text", "text": r.text}]}],
+                    components=[
+                        {
+                            "type": "body",
+                            "parameters": [{"type": "text", "text": _one_line(r.text)}],
+                        }
+                    ],
                 )
             else:
                 logger.info("cron.payment_reminder_skipped_no_window", item_id=str(r.item_id))
@@ -210,7 +220,10 @@ async def send_monthly_summaries(now_local: datetime) -> tuple[int, int]:
                     template_name="alfred_monthly_summary",
                     lang_code=LANG_CODE_MAP.get(d.lang, "en"),
                     components=[
-                        {"type": "body", "parameters": [{"type": "text", "text": d.one_line}]}
+                        {
+                            "type": "body",
+                            "parameters": [{"type": "text", "text": _one_line(d.one_line)}],
+                        }
                     ],
                 )
             else:
@@ -255,7 +268,12 @@ async def send_appointment_reminders(now_local: datetime) -> tuple[int, int]:
                     to=r.wa_phone,
                     template_name="alfred_appointment_reminder",
                     lang_code=LANG_CODE_MAP.get(r.lang, "en"),
-                    components=[{"type": "body", "parameters": [{"type": "text", "text": r.text}]}],
+                    components=[
+                        {
+                            "type": "body",
+                            "parameters": [{"type": "text", "text": _one_line(r.text)}],
+                        }
+                    ],
                 )
             else:
                 logger.info(

@@ -1,0 +1,140 @@
+{
+  "_comment": "V2-06 — appointment reminder sent before it starts, outside the 24 h window (flag APPOINTMENT_REMINDER_TEMPLATE_ENABLED).",
+  "_note": "Submit once per language. The only variable ({{1}}) is a single line of text built by the app (no line breaks).",
+  "_submit_for": [
+    "en",
+    "pt_BR",
+    "nl",
+    "fr",
+    "de"
+  ],
+  "name": "alfred_appointment_reminder",
+  "category": "UTILITY",
+  "translations": {
+    "en": {
+      "language": "en",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Appointment reminder"
+        },
+        {
+          "type": "BODY",
+          "text": "Hi! A reminder from Alfred: {{1}} Reply *my agenda* to see what is next.",
+          "example": {
+            "body_text": [
+              [
+                "Dentist today at 14:00."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — your AI assistant"
+        }
+      ]
+    },
+    "pt_BR": {
+      "language": "pt_BR",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Lembrete de compromisso"
+        },
+        {
+          "type": "BODY",
+          "text": "Oi! Um lembrete do Alfred: {{1}} Responda *minha agenda* para ver os próximos compromissos.",
+          "example": {
+            "body_text": [
+              [
+                "Dentista hoje às 14:00."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — seu assistente pessoal"
+        }
+      ]
+    },
+    "nl": {
+      "language": "nl",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Afspraakherinnering"
+        },
+        {
+          "type": "BODY",
+          "text": "Hoi! Een herinnering van Alfred: {{1}} Antwoord *mijn agenda* om te zien wat er nog komt.",
+          "example": {
+            "body_text": [
+              [
+                "Tandarts vandaag om 14:00."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — jouw persoonlijke assistent"
+        }
+      ]
+    },
+    "fr": {
+      "language": "fr",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Rappel de rendez-vous"
+        },
+        {
+          "type": "BODY",
+          "text": "Salut ! Un rappel d'Alfred : {{1}} Réponds *mon agenda* pour voir la suite.",
+          "example": {
+            "body_text": [
+              [
+                "Dentiste aujourd'hui à 14h00."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — ton assistant personnel"
+        }
+      ]
+    },
+    "de": {
+      "language": "de",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Terminerinnerung"
+        },
+        {
+          "type": "BODY",
+          "text": "Hallo! Eine Erinnerung von Alfred: {{1}} Antworte *meine Termine*, um die nächsten zu sehen.",
+          "example": {
+            "body_text": [
+              [
+                "Zahnarzt heute um 14:00 Uhr."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — dein persönlicher Assistent"
+        }
+      ]
+    }
+  }
+}
