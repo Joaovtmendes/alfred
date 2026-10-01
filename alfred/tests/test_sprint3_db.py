@@ -74,9 +74,11 @@ async def test_multi_expense_message_records_every_item(lab: Lab) -> None:
         _item(20, "Mercado"),
         _item(10, "Farmácia", category="gezondheid"),
     ]
-    reply = await lab.say("Fui no mercado e gastei 20,00 e 10 de farmácia")
+    draft = await lab.say("Fui no mercado e gastei 20,00 e 10 de farmácia")
+    assert "Mercado" in draft and "Farmácia" in draft
+    assert await _count(lab) == 0  # V2-17: nothing is written before the confirmation
+    reply = await lab.say("sim")
     assert "(2)" in reply
-    assert "Mercado" in reply and "Farmácia" in reply
     assert await _count(lab) == 2
     lab.llm_reply.assert_not_awaited()
 
@@ -85,7 +87,7 @@ async def test_multi_expense_message_records_every_item(lab: Lab) -> None:
 async def test_multi_skips_foreign_currency_but_records_euro_items(lab: Lab) -> None:
     lab.multi.return_value = [_item(20, "Mercado"), _item(50, "Hotel", currency="USD")]
     reply = await lab.say("Mercado 20 e hotel 50 dollars")
-    assert await _count(lab) == 1
+    assert await _count(lab) == 1  # one valid entry left: recorded directly, no draft needed
     assert "USD" in reply and "euros" in reply
 
 

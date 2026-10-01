@@ -253,7 +253,8 @@ async def test_multi_expense_message_also_alerts(lab: Lab) -> None:
         {**_exp(90, "Mercado"), "days_ago": 0},
         {**_exp(10, "Farmácia", category="gezondheid"), "days_ago": 0},
     ]
-    reply = await lab.say("mercado 90 e farmácia 10")
+    await lab.say("mercado 90 e farmácia 10")
+    reply = await lab.say("sim")
     assert "(2)" in reply and "90%" in reply
 
 
