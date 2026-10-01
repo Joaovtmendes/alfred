@@ -1701,6 +1701,27 @@ _HELP_WORDS = {
     "commandes",
     "hilfe",
     "befehle",
+    # natural questions about what the assistant can do (a habit was logged for "what can you do?")
+    "o que voce faz",
+    "o que voce sabe fazer",
+    "o que voce pode fazer",
+    "como funciona",
+    "como usar",
+    "what can you do",
+    "what do you do",
+    "how does this work",
+    "how do i use this",
+    "wat kun je",
+    "wat doe je",
+    "hoe werkt dit",
+    "que peux tu faire",
+    "que peux-tu faire",
+    "que sais tu faire",
+    "que sais-tu faire",
+    "comment ca marche",
+    "was kannst du",
+    "was machst du",
+    "wie funktioniert das",
 }
 # Words that re-open the consent flow after "stop" (the user must accept again).
 _RESUME_WORDS = {
@@ -4147,6 +4168,7 @@ async def handle_inbound(
             and _not_workout
             and _not_health
             and not _has_zero_or_negative_amount(body)  # "café 0" is an invalid amount, not a habit
+            and not body.rstrip().endswith("?")  # a question is not a log
         ):
             habit_data = await extract_habit(body, lang=member.language or "en")
             if habit_data:

@@ -246,3 +246,32 @@ async def test_category_context_uses_the_category_name(lab: Lab) -> None:  # noq
     lab.expense.return_value = _exp(6.4, "Padaria")
     reply = await lab.say("Padaria 6,40")
     assert "Supermercado" in reply and "supermercado" not in reply
+
+
+@db
+@pytest.mark.parametrize(
+    ("lang", "text"),
+    [
+        ("pt", "o que você faz?"),
+        ("pt", "como funciona?"),
+        ("en", "what can you do?"),
+        ("en", "how does this work?"),
+        ("nl", "wat kun je?"),
+        ("fr", "que peux-tu faire ?"),
+        ("de", "was kannst du?"),
+    ],
+)
+async def test_what_can_you_do_shows_the_help(lab: Lab, lang: str, text: str) -> None:  # noqa: F811
+    async with AsyncSessionLocal() as s:
+        await s.execute(update(Member).where(Member.id == lab.member_id).values(language=lang))
+        await s.commit()
+    lab.habit = AsyncMock(return_value={"activity": "reading", "days_ago": 0})
+    assert await lab.say(text) == _t("help", lang)
+    assert lab.habit.await_count == 0
+
+
+@db
+async def test_a_question_is_never_logged_as_a_habit(lab: Lab) -> None:  # noqa: F811
+    lab.habit = AsyncMock(return_value={"activity": "leitura", "days_ago": 0})
+    await lab.say("será que eu devia ler mais?")
+    assert lab.habit.await_count == 0
