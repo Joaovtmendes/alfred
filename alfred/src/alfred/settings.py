@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     # V2-02: bill reminders outside the 24 h window need the approved template
     # ``alfred_payment_reminder``. Off until Meta approves it (the code is ready and tested).
     payment_reminder_template_enabled: bool = False
+    # V2-04: same for the monthly summary (template ``alfred_monthly_summary``).
+    monthly_summary_template_enabled: bool = False
 
 
 settings = Settings()

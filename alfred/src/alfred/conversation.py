@@ -59,6 +59,8 @@ from alfred.models import (
     Trip,
     WorkoutSession,
 )
+from alfred.monthly_summary import STRINGS as _MSUM_STRINGS
+from alfred.monthly_summary import handle_monthly_summary_command
 from alfred.observability import alert
 from alfred.parsing import (
     CORRECTION_PRONOUNS,
@@ -1432,6 +1434,7 @@ _derive_singular(
 
 _STRINGS.update(_BUDGET_STRINGS)  # V2-01 texts live next to their logic in budgets.py
 _STRINGS.update(_RECURRING_STRINGS)  # V2-02, same idea
+_STRINGS.update(_MSUM_STRINGS)  # V2-04
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -3450,6 +3453,7 @@ async def handle_inbound(
                 _sel(_SJ)
                 .where(_SJ.member_id == member.id)
                 .where(_SJ.active.is_(True))
+                .where(_SJ.job_type != "monthly_summary")  # V2-04 bookkeeping row, not a reminder
                 .order_by(_SJ.time_of_day.asc())
             )
             jobs = res.scalars().all()
@@ -3483,7 +3487,10 @@ async def handle_inbound(
             from alfred.models import ScheduledJob as _SJ
 
             res = await session.execute(
-                _sel(_SJ).where(_SJ.member_id == member.id).where(_SJ.active.is_(True))
+                _sel(_SJ)
+                .where(_SJ.member_id == member.id)
+                .where(_SJ.active.is_(True))
+                .where(_SJ.job_type != "monthly_summary")
             )
             jobs = res.scalars().all()
             matched = None
@@ -3508,6 +3515,13 @@ async def handle_inbound(
         if budget_reply is not None:
             await send_text(to, budget_reply)
             await _save_outbound(member, budget_reply, session)
+            return
+
+        # 4e-0h. V2-04 — resumo mensal: "resumo mensal" / "sem resumo mensal" / "ativar resumo mensal"
+        msum_reply = await handle_monthly_summary_command(body_plain, member, lang, session)
+        if msum_reply is not None:
+            await send_text(to, msum_reply)
+            await _save_outbound(member, msum_reply, session)
             return
 
         # 4e-0g. V2-02 — contas fixas: "aluguel 1200 todo dia 1" / "paguei o aluguel" / "minhas contas fixas"

@@ -139,6 +139,48 @@ async def send_payment_reminders(now_local: datetime) -> tuple[int, int]:
     return sent, errors
 
 
+async def send_monthly_summaries(now_local: datetime) -> tuple[int, int]:
+    """V2-04 — last month's summary on day 1 (retried until day 3). Returns (sent, errors).
+
+    Same delivery rule as the bill reminders: plain text inside the 24 h window, otherwise the
+    approved template ``alfred_monthly_summary`` once ``MONTHLY_SUMMARY_TEMPLATE_ENABLED`` is on.
+    """
+    from alfred.db import AsyncSessionLocal
+    from alfred.monthly_summary import mark_sent, pending_summaries
+    from alfred.settings import settings
+    from alfred.whatsapp import send_template, send_text
+
+    async with AsyncSessionLocal() as session:
+        due = await pending_summaries(session, now_local)
+
+    sent = errors = 0
+    for d in due:
+        try:
+            if d.in_window:
+                await send_text(d.wa_phone, d.text)
+            elif settings.monthly_summary_template_enabled:
+                await send_template(
+                    to=d.wa_phone,
+                    template_name="alfred_monthly_summary",
+                    lang_code=LANG_CODE_MAP.get(d.lang, "en"),
+                    components=[
+                        {"type": "body", "parameters": [{"type": "text", "text": d.one_line}]}
+                    ],
+                )
+            else:
+                logger.info("cron.monthly_summary_waiting_for_window", member_id=str(d.member_id))
+                continue
+        except Exception as exc:
+            logger.error("cron.monthly_summary_failed", member_id=str(d.member_id), error=str(exc))
+            errors += 1
+            continue
+        sent += 1
+        async with AsyncSessionLocal() as session:
+            await mark_sent(session, d.member_id, datetime.now(UTC))
+            await session.commit()
+    return sent, errors
+
+
 async def run_cron() -> int:
     """Send due notifications. Returns the number of failed sends."""
     from sqlalchemy import select, update
@@ -231,9 +273,10 @@ async def run_cron() -> int:
             logger.error("cron.weekly_summary_failed", member_id=str(m.id), error=str(exc))
             errors += 1
 
-    r_sent, r_errors = await send_payment_reminders(now_local)
-    sent += r_sent
-    errors += r_errors
+    for extra in (send_payment_reminders, send_monthly_summaries):
+        x_sent, x_errors = await extra(now_local)
+        sent += x_sent
+        errors += x_errors
 
     logger.info("cron.done", sent=sent, errors=errors)
     return errors
