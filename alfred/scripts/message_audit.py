@@ -60,6 +60,13 @@ PT_PT = (
     "escreve",
     "manda-me",
     "diz",
+    "manda",
+    "tenta",
+    "usa",
+    "fala",
+    "olha",
+    "cola",
+    "avisa",
 )
 # Per language: (regex of the wrong register, label)
 REGISTER = {
@@ -241,9 +248,15 @@ def catalogue_markdown(strings: dict) -> str:
 
 def run() -> tuple[list[Finding], dict]:
     os.environ.setdefault("WHATSAPP_APP_SECRET", "x")
+    from alfred import llm
     from alfred.conversation import _STRINGS
 
-    findings = audit_catalogue(_STRINGS) + audit_templates(ROOT / "m5-templates")
+    extra = {
+        "llm_error": llm._LLM_ERROR,
+    }
+    findings = (
+        audit_catalogue(_STRINGS) + audit_catalogue(extra) + audit_templates(ROOT / "m5-templates")
+    )
     return findings, _STRINGS
 
 

@@ -1,7 +1,7 @@
 # ruff: noqa: E501
 """V2-17 — confirm a message with 2+ entries before anything is written.
 
-"café 3,50 e padaria 8" becomes a draft with [Confirmar] [Ajustar] [Cancelar]. Until the
+"café 3,50 e padaria 8" becomes a draft with [Confirmar] [Ajustar] [Desfazer]. Until the
 member confirms, nothing is in the ledger, so no text of the draft may say it was saved
 (see ``conversation._claims_recorded``). A single expense still goes straight in with [Desfazer].
 
@@ -348,7 +348,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "Ich sehe {n} Buchungen:",
     ),
     "batch_ask": _all(
-        "Confirma para eu gravar? Ainda não gravei nada.",
+        "Pode confirmar para eu gravar? Ainda não gravei nada.",
         "Bevestig je ze? Pas daarna komen ze in je overzicht.",
         "Confirm and I'll add them. Nothing has been added yet.",
         "Tu confirmes ? Rien n'est encore ajouté.",
@@ -356,7 +356,7 @@ STRINGS: dict[str, dict[str, str]] = {
     ),
     "batch_btn_ok": _all("Confirmar", "Bevestigen", "Confirm", "Confirmer", "Bestätigen"),
     "batch_btn_edit": _all("Ajustar", "Aanpassen", "Adjust", "Ajuster", "Anpassen"),
-    "batch_btn_cancel": _all("Cancelar", "Annuleren", "Cancel", "Annuler", "Abbrechen"),
+    "batch_btn_cancel": _all("Desfazer", "Ongedaan maken", "Undo", "Annuler", "Rückgängig"),
     "batch_edit_hint": _all(
         'Diga o que mudar: "tira o segundo" ou "o primeiro foi 4". Depois confirme.',
         'Zeg wat er moet veranderen: "haal de tweede weg" of "de eerste was 4". Bevestig daarna.',
@@ -365,14 +365,14 @@ STRINGS: dict[str, dict[str, str]] = {
         'Sag, was sich ändern soll: "entferne den zweiten" oder "der erste war 4". Dann bestätige.',
     ),
     "batch_gone": _all(
-        "Não há nada pendente para confirmar. Manda os lançamentos de novo se precisar.",
+        "Não há nada pendente para confirmar. Envie os lançamentos novamente, se precisar.",
         "Er staat niets meer klaar om te bevestigen. Stuur de transacties opnieuw als dat nodig is.",
         "There is nothing waiting for confirmation. Send the entries again if you need to.",
         "Rien n'attend de confirmation. Renvoie les opérations si besoin.",
         "Es wartet nichts auf Bestätigung. Sende die Buchungen bei Bedarf erneut.",
     ),
     "batch_expired": _all(
-        "Essa lista expirou (passaram 15 minutos) e eu descartei. Manda de novo que eu monto outra.",
+        "Essa lista expirou (passaram 15 minutos) e eu descartei. Envie novamente e eu monto outra.",
         "Die lijst is verlopen (15 minuten) en weggegooid. Stuur ze opnieuw, dan maak ik een nieuwe.",
         "That list expired (15 minutes) and I dropped it. Send it again and I'll build a new one.",
         "Cette liste a expiré (15 minutes) et je l'ai écartée. Renvoie-la et j'en refais une.",

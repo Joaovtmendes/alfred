@@ -172,3 +172,106 @@ async def test_every_example_in_the_help_text_works(lab: Lab, lang: str) -> None
     ]
     assert counts == [1, 1, 1, 1, 1], (lang, counts)
     assert lab.llm_reply.await_count == 0
+
+
+# ── tone decisions of 01/10: formal pt-BR, straight quotes, "Supermercado", Undo on drafts ──
+
+
+def test_one_quote_style_outside_french() -> None:
+    from alfred.conversation import _STRINGS
+
+    for key, langs in _STRINGS.items():
+        for lg in ("pt", "nl", "en", "de"):
+            variants = langs[lg] if isinstance(langs[lg], tuple) else (langs[lg],)
+            for tmpl in variants:
+                try:
+                    out = tmpl.format_map(_Any())
+                except (KeyError, ValueError, IndexError):
+                    continue
+                assert "\u201c" not in _t_render(key, lg), key
+                assert "\u201d" not in _t_render(key, lg), key
+                del out
+
+
+class _Any(dict):
+    def __missing__(self, key: str) -> str:
+        return "x"
+
+
+def _t_render(key: str, lang: str) -> str:
+    from alfred import conversation
+
+    tmpl = conversation._STRINGS[key][lang]
+    tmpl = tmpl[0] if isinstance(tmpl, tuple) else tmpl
+    # same path as _t, with every placeholder filled
+    import string
+
+    fields = {f for _, f, _, _ in string.Formatter().parse(tmpl) if f}
+    return conversation._t(key, lang, **dict.fromkeys(fields, "x"))
+
+
+def test_portuguese_llm_prompts_are_brazilian_and_formal() -> None:
+    from alfred import llm
+
+    assert "Brasil" in llm._LANG_INSTRUCTION["pt"]
+    assert (
+        "Responda" in llm._LANG_INSTRUCTION["pt"] and "Responde " not in llm._LANG_INSTRUCTION["pt"]
+    )
+    assert "tua" not in llm._LLM_ERROR["pt"] and "Tente" in llm._LLM_ERROR["pt"]
+
+
+def test_draft_buttons_say_undo_not_cancel() -> None:
+    from alfred.batch import STRINGS
+
+    assert STRINGS["batch_btn_cancel"]["pt"] == "Desfazer"
+    assert all(len(v) <= 20 for v in STRINGS["batch_btn_cancel"].values())  # Meta button limit
+
+
+def _exp(amount: float, name: str) -> dict:
+    return {
+        "amount": amount,
+        "currency": "EUR",
+        "merchant": name,
+        "category": "supermarkt",
+        "description": name,
+        "type": "expense",
+        "days_ago": 0,
+    }
+
+
+@db
+async def test_category_context_uses_the_category_name(lab: Lab) -> None:  # noqa: F811
+    lab.expense.return_value = _exp(45, "mercado")
+    await lab.say("gastei 45 no mercado")
+    lab.expense.return_value = _exp(6.4, "Padaria")
+    reply = await lab.say("Padaria 6,40")
+    assert "Supermercado" in reply and "supermercado" not in reply
+
+
+@db
+@pytest.mark.parametrize(
+    ("lang", "text"),
+    [
+        ("pt", "o que você faz?"),
+        ("pt", "como funciona?"),
+        ("en", "what can you do?"),
+        ("en", "how does this work?"),
+        ("nl", "wat kun je?"),
+        ("fr", "que peux-tu faire ?"),
+        ("de", "was kannst du?"),
+    ],
+)
+async def test_what_can_you_do_shows_the_help(lab: Lab, lang: str, text: str) -> None:  # noqa: F811
+    async with AsyncSessionLocal() as s:
+        await s.execute(update(Member).where(Member.id == lab.member_id).values(language=lang))
+        await s.commit()
+    lab.habit = AsyncMock(return_value={"activity": "reading", "days_ago": 0})
+    assert await lab.say(text) == _t("help", lang)
+    assert lab.habit.await_count == 0
+
+
+@db
+async def test_a_question_is_never_logged_as_a_habit(lab: Lab) -> None:  # noqa: F811
+    lab.habit = AsyncMock(return_value={"activity": "leitura", "days_ago": 0})
+    await lab.say("será que eu devia ler mais?")
+    assert lab.habit.await_count == 0
