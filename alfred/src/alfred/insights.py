@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.analysis import Spec, run
 from alfred.clock import local_tz, today_local
 from alfred.labels import category_label
-from alfred.models import Expense, Member
+from alfred.models import SETTLED, Expense, Member
 
 
 def _dec(value) -> Decimal:
@@ -77,6 +77,7 @@ async def blue_days(session: AsyncSession, member_id, today: date) -> BlueDays |
             select(day_col, net)
             .where(
                 Expense.member_id == member_id,
+                Expense.status.in_(SETTLED),
                 Expense.expense_date >= start,
                 Expense.expense_date < end,
             )

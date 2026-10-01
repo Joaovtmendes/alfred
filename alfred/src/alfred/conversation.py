@@ -46,6 +46,8 @@ from alfred.iou import STRINGS as _IOU_STRINGS
 from alfred.iou import handle_iou_command
 from alfred.labels import activity_label as activity_name
 from alfred.labels import category_label
+from alfred.ledger_status import STRINGS as _LEDGER_STRINGS
+from alfred.ledger_status import handle_ledger_command
 from alfred.llm import (
     classify_query,
     extract_expense,
@@ -56,6 +58,7 @@ from alfred.llm import (
     generate_reply,
 )
 from alfred.models import (
+    SETTLED,
     Expense,
     Goal,
     HabitLog,
@@ -1451,6 +1454,7 @@ _STRINGS.update(_SCORE_STRINGS)  # V2-09
 _STRINGS.update(_ANALYSIS_STRINGS)  # V2-14
 _STRINGS.update(_INSIGHT_STRINGS)  # V2-15
 _STRINGS.update(_IOU_STRINGS)  # V2-15
+_STRINGS.update(_LEDGER_STRINGS)  # V2-16
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -1486,6 +1490,7 @@ async def _month_category_context(
             Expense.member_id == member.id,
             Expense.transaction_type == "expense",
             Expense.category == category,
+            Expense.status.in_(SETTLED),
             Expense.expense_date >= start,
             Expense.expense_date < end,
         )
@@ -2451,6 +2456,7 @@ async def _handle_trip(
                 ).where(
                     Expense.trip_id == active.id,
                     Expense.transaction_type == "expense",
+                    Expense.status.in_(SETTLED),
                 )
             )
         ).one()
@@ -2556,6 +2562,7 @@ async def _handle_trip(
                     select(sqlfunc.sum(Expense.amount)).where(
                         Expense.trip_id == t.id,
                         Expense.transaction_type == "expense",
+                        Expense.status.in_(SETTLED),
                     )
                 )
             ).scalar()
@@ -2817,6 +2824,7 @@ async def _build_summary(
 
     filters = [
         Expense.member_id == member.id,
+        Expense.status.in_(SETTLED),
         Expense.expense_date >= start,
     ]
     if end_excl:
@@ -2902,7 +2910,11 @@ async def _build_recent(member: Member, session: AsyncSession, n: int) -> str:
     lang = member.language or "en"
     res = await session.execute(
         select(Expense)
-        .where(Expense.member_id == member.id, Expense.transaction_type == "expense")
+        .where(
+            Expense.member_id == member.id,
+            Expense.transaction_type == "expense",
+            Expense.status.in_(SETTLED),
+        )
         .order_by(Expense.expense_date.desc(), Expense.created_at.desc())
         .limit(n)
     )
@@ -2926,6 +2938,7 @@ async def _build_saldo(member: Member, session: AsyncSession) -> str:
     result = await session.execute(
         select(Expense).where(
             Expense.member_id == member.id,
+            Expense.status.in_(SETTLED),
             Expense.expense_date >= start,
         )
     )
@@ -2946,6 +2959,19 @@ async def _build_saldo(member: Member, session: AsyncSession) -> str:
         _t("saldo_expenses", lang, amount=_fmt_eur(total_out)),
         _t("saldo_balance", lang, sign=sign, amount=_fmt_eur(abs(balance))),
     ]
+    from alfred.ledger_status import pending_summary
+
+    pend = await pending_summary(session, member.id)
+    if pend.to_pay or pend.to_receive:
+        lines.append(
+            "\n"
+            + _t(
+                "pending_forecast",
+                lang,
+                pay=_fmt_eur(pend.to_pay),
+                recv=_fmt_eur(pend.to_receive),
+            )
+        )
     return "\n".join(lines)
 
 
@@ -2964,6 +2990,7 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
                 Expense.expense_date >= start,
                 Expense.expense_date < end,
                 Expense.transaction_type != "income",
+                Expense.status.in_(SETTLED),
             )
         )
         rows = r.scalars().all()
@@ -3558,6 +3585,13 @@ async def handle_inbound(
         if iou_reply is not None:
             await send_text(to, iou_reply)
             await _save_outbound(member, iou_reply, session)
+            return
+
+        # 4e-0n. V2-16 — "luz 80 a pagar dia 5" / "paguei a luz" / "o que tenho a pagar"
+        ledger_reply = await handle_ledger_command(body, body_plain, member, lang, session)
+        if ledger_reply is not None:
+            await send_text(to, ledger_reply)
+            await _save_outbound(member, ledger_reply, session)
             return
 
         # 4e-0g. V2-02 — contas fixas: "aluguel 1200 todo dia 1" / "paguei o aluguel" / "minhas contas fixas"
@@ -4609,6 +4643,7 @@ async def handle_inbound(
                     select(sa_func.coalesce(sa_func.sum(Expense.amount), 0)).where(
                         Expense.trip_id == active_trip.id,
                         Expense.transaction_type == "expense",
+                        Expense.status.in_(SETTLED),
                     )
                 )
                 # The SUM already includes this expense (flushed above): do NOT add it again.

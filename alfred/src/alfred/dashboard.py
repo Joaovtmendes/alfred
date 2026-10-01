@@ -23,7 +23,7 @@ from alfred.clock import day_start, month_name, to_local, today_local
 from alfred.dashboard_i18n import normalize_lang, payload, ui
 from alfred.db import get_session
 from alfred.labels import category_label
-from alfred.models import Expense, Goal, HabitLog, HealthLog, Member, Note, Task
+from alfred.models import SETTLED, Expense, Goal, HabitLog, HealthLog, Member, Note, Task
 from alfred.settings import settings
 from alfred.web_security import limit_dashboard
 
@@ -106,6 +106,7 @@ async def dashboard_api(
         .where(
             and_(
                 Expense.member_id == member.id,
+                Expense.status.in_(SETTLED),
                 Expense.expense_date >= month_lo,
                 Expense.expense_date < month_hi,
             )
@@ -138,6 +139,7 @@ async def dashboard_api(
             select(Expense).where(
                 and_(
                     Expense.member_id == member.id,
+                    Expense.status.in_(SETTLED),
                     Expense.expense_date >= day_start(ms),
                     Expense.expense_date < day_start(me + timedelta(days=1)),
                 )
