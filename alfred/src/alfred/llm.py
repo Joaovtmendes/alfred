@@ -658,3 +658,58 @@ async def extract_habit(text: str, lang: str = "en") -> dict | None:
     except Exception as exc:
         logger.warning("llm.extract_habit_failed", error=str(exc))
         return None
+
+
+# ── V2-14 — analysis spec ────────────────────────────────────────────────────
+
+_ANALYSIS_SYSTEM = """You turn a question about the user's own spending into a JSON spec.
+The user writes in Portuguese, Dutch, English, French or German. You never write SQL and never answer
+the question: you only fill the spec. Return JSON only, no markdown fences.
+
+If the question fits, return {"supported": true, "spec": {...}}, otherwise {"supported": false}.
+
+spec fields (use ONLY these values):
+- metric: "spent" | "income" | "net" (income minus spending) | "count" | "average" (per transaction)
+- group_by: "none" | "category" | "month" | "merchant"
+- period: "this_month" | "last_month" | "last_3_months" | "last_6_months" | "this_year" | "last_year" | "last_7_days" | "last_30_days"
+  (last_N_months means the N full months before the current one)
+- compare_to: "none" | "previous_period" | "same_period_last_year"
+- filters: {"category": one of supermarkt, restaurant, transport, gezondheid, entertainment, wonen, kleding, abonnement, inkomen, overig — or omit,
+            "merchant": a shop/company name the user wrote — or omit}
+- top_n: integer 1-10 (default 5, only for group_by category/merchant)
+
+Examples:
+"quanto gastei com restaurante nos últimos 3 meses comparado ao trimestre anterior?" →
+{"supported":true,"spec":{"metric":"spent","group_by":"none","period":"last_3_months","compare_to":"previous_period","filters":{"category":"restaurant"}}}
+"spending per category this year vs last year" →
+{"supported":true,"spec":{"metric":"spent","group_by":"category","period":"this_year","compare_to":"same_period_last_year"}}
+"mijn grootste uitgaven bij Jumbo dit jaar" →
+{"supported":true,"spec":{"metric":"spent","group_by":"none","period":"this_year","compare_to":"none","filters":{"merchant":"Jumbo"}}}
+"how much will I spend next year?" → {"supported":false}
+"gastei 45 no mercado" → {"supported":false}
+"""
+
+
+async def extract_analysis_spec(text: str, lang: str = "en") -> dict | None:
+    """The model's raw analysis spec ({"supported": bool, "spec": {...}}), or None on failure.
+
+    The result is untrusted: the caller must run it through ``sanitize_analysis_spec``.
+    """
+    try:
+        api_key = settings.llm_api_key.get_secret_value()
+        if not api_key or settings.llm_provider.lower() not in ("anthropic", "bedrock"):
+            return None
+        model = _anthropic_model_id(settings.llm_model)
+        client = _get_client(api_key)
+        response = await client.messages.create(
+            model=model,
+            max_tokens=300,
+            system=_ANALYSIS_SYSTEM,
+            messages=[{"role": "user", "content": text[:500]}],
+        )
+        llm_usage.record("analysis", model, response)
+        data = parse_llm_json(response.content[0].text)
+        return data if isinstance(data, dict) else None
+    except Exception as exc:
+        logger.warning("llm.extract_analysis_spec_failed", error=str(exc))
+        return None
