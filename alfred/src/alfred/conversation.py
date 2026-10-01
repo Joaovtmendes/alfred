@@ -162,7 +162,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "fr": (
             "Tout est prêt. Tu peux commencer maintenant.\n\n"
             '• "dépensé €45 au Jumbo" — enregistrer une dépense\n'
-            '• "reçu €2 800 de salaire" — enregistrer un revenu\n'
+            '• "reçu €2.800 de salaire" — enregistrer un revenu\n'
             '• "résumé" — voir les dépenses du mois\n'
             '• "aide" — voir toutes les commandes'
         ),
@@ -225,20 +225,20 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             '_To stop: "stop"_'
         ),
         "fr": (
-            "*Alfred* — ce que je peux faire pour toi:\n\n"
+            "*Alfred* — ce que je peux faire pour toi :\n\n"
             "*Enregistrer des dépenses*\n"
             '• "dépensé €45 au Jumbo"\n'
             '• "Uber 12,50"\n'
             '• "payé €180 de loyer"\n\n'
             "*Enregistrer des revenus*\n"
-            '• "reçu €2 800 de salaire"\n\n'
-            "*Consultes*\n"
+            '• "reçu €2.800 de salaire"\n\n'
+            "*Consulter*\n"
             '• "résumé" — dépenses du mois\n'
             '• "solde" — balance revenus/dépenses\n'
             '• "dépenses cette semaine" — par période\n'
             '• "compare ce mois avec le mois dernier"\n'
             '• "aide" — ce message\n\n'
-            '_Pour arrêter: "stop"_'
+            '_Pour arrêter : "stop"_'
         ),
         "de": (
             "*Alfred* — was ich für dich tun kann:\n\n"
@@ -249,10 +249,10 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "*Einnahmen erfassen*\n"
             '• "€2.800 Gehalt erhalten"\n\n'
             "*Abfragen*\n"
-            '• "übersicht" — Monatsausgaben\n'
-            '• "bilanz" — Einnahmen/Ausgaben-Balance\n'
-            '• "ausgaben diese woche" — nach Zeitraum\n'
-            '• "vergleiche diesen monat mit letztem monat"\n'
+            '• "Übersicht" — Monatsausgaben\n'
+            '• "Bilanz" — Einnahmen/Ausgaben-Balance\n'
+            '• "Ausgaben diese Woche" — nach Zeitraum\n'
+            '• "vergleiche diesen Monat mit letztem Monat"\n'
             '• "hilfe" — diese Nachricht\n\n'
             '_Zum Beenden: "stop"_'
         ),
