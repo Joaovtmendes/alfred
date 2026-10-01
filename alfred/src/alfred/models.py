@@ -165,6 +165,11 @@ class Expense(Base):
     trip_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("trip.id"), nullable=True, default=None, index=True
     )
+    # V2-02 — paid | to_pay | received | to_receive. Every existing row is "paid" (or income
+    # already received); totals keep counting everything until V2-16 filters by state.
+    status: Mapped[str] = mapped_column(
+        String(12), nullable=False, default="paid", server_default="paid"
+    )
 
     member: Mapped[Member] = relationship(back_populates="expenses")
     household: Mapped[Household] = relationship(back_populates="expenses")
@@ -487,4 +492,47 @@ class Budget(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+# ── V2-02 — Contas fixas ────────────────────────────────────────────────────
+
+
+class RecurringItem(Base):
+    """A fixed bill, subscription or instalment plan (V2-02).
+
+    ``next_due_date`` moves forward each time the member says they paid it;
+    ``last_reminded_for`` holds the due date a reminder was already sent for (idempotent cron).
+    ``contract_end_date`` / ``provider`` are reserved for V2-27 (home contracts).
+    """
+
+    __tablename__ = "recurring_item"
+    __table_args__ = (Index("ix_recurring_member_active", "member_id", "active"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id"), nullable=False
+    )
+    household_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("household.id"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
+    category: Mapped[str | None] = mapped_column(String(50))
+    # fixed | subscription | installment
+    kind: Mapped[str] = mapped_column(String(14), nullable=False, default="fixed")
+    # monthly | yearly | weekly
+    frequency: Mapped[str] = mapped_column(String(10), nullable=False, default="monthly")
+    due_day: Mapped[int | None] = mapped_column(Integer)
+    next_due_date: Mapped[date] = mapped_column(Date, nullable=False)
+    installments_total: Mapped[int | None] = mapped_column(Integer)
+    installments_paid: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    end_date: Mapped[date | None] = mapped_column(Date)
+    remind_days_before: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_reminded_for: Mapped[date | None] = mapped_column(Date)
+    contract_end_date: Mapped[date | None] = mapped_column(Date)  # V2-27
+    provider: Mapped[str | None] = mapped_column(String(120))  # V2-27
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
