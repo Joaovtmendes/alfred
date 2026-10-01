@@ -21,10 +21,10 @@
         { "type": "HEADER", "format": "TEXT", "text": "Check-in de objetivo" },
         {
           "type": "BODY",
-          "text": "🎯 Check-in diário: {{1}}\n\nComo está a correr? Responde ao Alfred para registar o teu progresso.",
+          "text": "🎯 Check-in diário: {{1}}\n\nComo está indo? Responda ao Alfred para registrar o seu progresso.",
           "example": { "body_text": [["poupar €10 hoje"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — o teu assistente pessoal" }
+        { "type": "FOOTER", "text": "Alfred — o seu assistente pessoal" }
       ]
     },
     "nl": {

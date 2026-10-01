@@ -1471,7 +1471,23 @@ def _t(key: str, lang: str, **kwargs: object) -> str:
         tmpl, tuple
     ):  # several equivalent phrasings: pick one so replies feel less canned
         tmpl = random.choice(tmpl)
-    return tmpl.format(**kwargs) if kwargs else tmpl
+    text = tmpl.format(**kwargs) if kwargs else tmpl
+    return _pt_singular(text) if lang == "pt" else text
+
+
+_PT_ONE = re.compile(r"(?<![\d.,])\b1 (dias|pontos|lançamentos|vezes|itens)\b")
+_PT_SINGULAR = {
+    "dias": "dia",
+    "pontos": "ponto",
+    "lançamentos": "lançamento",
+    "vezes": "vez",
+    "itens": "item",
+}
+
+
+def _pt_singular(text: str) -> str:
+    """ "1 dias" → "1 dia": a count of one must not read as a plural (hard test, block M)."""
+    return _PT_ONE.sub(lambda m: f"1 {_PT_SINGULAR[m.group(1)]}", text)
 
 
 async def _month_category_context(

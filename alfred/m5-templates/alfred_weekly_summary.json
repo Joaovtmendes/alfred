@@ -21,12 +21,12 @@
     "pt_BR": {
       "language": "pt_BR",
       "components": [
-        { "type": "HEADER", "format": "TEXT", "text": "O teu resumo semanal" },
+        { "type": "HEADER", "format": "TEXT", "text": "O seu resumo semanal" },
         {
           "type": "BODY",
-          "text": "Olá! Aqui está o teu resumo de despesas da semana passada. Responde *resumo* para ver os detalhes, ou continua a conversar para registar novas despesas."
+          "text": "Olá! Aqui está o seu resumo de despesas da semana passada. Responda *resumo* para ver os detalhes, ou continue conversando para registrar novas despesas."
         },
-        { "type": "FOOTER", "text": "Alfred — o teu assistente pessoal" }
+        { "type": "FOOTER", "text": "Alfred — o seu assistente pessoal" }
       ]
     },
     "nl": {

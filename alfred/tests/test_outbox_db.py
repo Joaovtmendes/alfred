@@ -234,7 +234,11 @@ async def test_save_outbound_keeps_the_meta_id_of_the_send(lab: Lab) -> None:
 @db
 async def test_save_outbound_without_a_send_gets_a_local_id_and_no_status(lab: Lab) -> None:
     await lab.say("oi")
-    rows = await lab.rows(select(Message.wa_message_id, Message.delivery_status, Message.kind))
+    rows = await lab.rows(
+        select(Message.wa_message_id, Message.delivery_status, Message.kind).where(
+            Message.household_id == lab.household_id
+        )
+    )
     outs = [r for r in rows if r.wa_message_id.startswith("out-")]
     assert outs and all(r.delivery_status is None and r.kind == "reply" for r in outs)
 
