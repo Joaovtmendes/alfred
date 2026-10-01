@@ -15,6 +15,11 @@ logger = structlog.get_logger()
 _GRAPH_URL = f"https://graph.facebook.com/{settings.graph_api_version}"
 
 
+def _wamid(data: dict) -> str | None:
+    msgs = data.get("messages") or [{}]
+    return msgs[0].get("id") if isinstance(msgs[0], dict) else None
+
+
 async def send_text(to: str, body: str) -> dict:
     """Send a plain-text WhatsApp message.
 
@@ -61,7 +66,7 @@ async def send_text(to: str, body: str) -> dict:
         to=to,
         wa_message_id=data.get("messages", [{}])[0].get("id"),
     )
-    delivery.note_sent()
+    delivery.note_sent(_wamid(data))
     return data
 
 
@@ -125,7 +130,7 @@ async def send_template(
         lang=lang_code,
         wa_message_id=data.get("messages", [{}])[0].get("id"),
     )
-    delivery.note_sent()
+    delivery.note_sent(_wamid(data))
     return data
 
 
@@ -185,5 +190,5 @@ async def send_buttons(to: str, body: str, buttons: list[tuple[str, str]]) -> di
         to=to,
         wa_message_id=data.get("messages", [{}])[0].get("id"),
     )
-    delivery.note_sent()
+    delivery.note_sent(_wamid(data))
     return data

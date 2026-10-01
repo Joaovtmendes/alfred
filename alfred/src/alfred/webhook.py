@@ -35,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.db import AsyncSessionLocal, get_session
 from alfred.models import Household, Member, Message
 from alfred.observability import alert
+from alfred.outbox import apply_status
 from alfred.security import verify_whatsapp_signature
 from alfred.settings import settings
 
@@ -140,6 +141,9 @@ async def receive_message(
         for change in entry.get("changes", []):
             value = change.get("value", {})
             pending.extend(await _ingest_value(value, session, log))
+            for st in value.get("statuses") or []:  # V2-18: delivery receipts
+                if isinstance(st, dict) and await apply_status(session, st):
+                    log.info("webhook.status_applied", status=st.get("status"))
 
     # Commit BEFORE answering: once Meta sees the 200 it never resends, so the
     # message must already be durable.

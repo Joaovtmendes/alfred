@@ -118,6 +118,13 @@ class Message(Base):
     # send it again (see alfred.delivery).
     reply_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     raw: Mapped[dict | None] = mapped_column(JSONB)
+    # V2-18 — what the bot sent and what Meta says happened to it (outbound rows only).
+    # kind: reply | reminder | summary | alert | template; delivery_status: sent | delivered |
+    # read | failed (from the Meta status webhook).
+    kind: Mapped[str | None] = mapped_column(String(12))
+    template_name: Mapped[str | None] = mapped_column(String(64))
+    delivery_status: Mapped[str | None] = mapped_column(String(10))
+    delivery_error: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
