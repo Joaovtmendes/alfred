@@ -97,6 +97,47 @@ def is_weekly_summary_due(now_local: datetime, interval_minutes: int = INTERVAL_
     return start <= now_local < start + timedelta(minutes=interval_minutes)
 
 
+async def _log_out(
+    wa_phone: str, resp: dict | None, body: str, kind: str, template_name: str | None = None
+) -> None:
+    """V2-18 — keep a row for a proactive send so its delivery status can be shown later.
+
+    Never raises: losing the log line must not look like a failed send.
+    """
+    try:
+        from alfred.db import AsyncSessionLocal
+        from alfred.outbox import record_outbound
+        from alfred.whatsapp import _wamid
+
+        async with AsyncSessionLocal() as session:
+            await record_outbound(
+                session,
+                wa_phone,
+                body,
+                kind=kind,
+                wa_message_id=_wamid(resp or {}),
+                template_name=template_name,
+            )
+            await session.commit()
+    except Exception as exc:
+        logger.error("cron.outbound_log_failed", error=str(exc))
+
+
+async def _purge_outbound() -> None:
+    """V2-18 — outbound history older than the retention period (90 days) is deleted."""
+    try:
+        from alfred.db import AsyncSessionLocal
+        from alfred.outbox import purge_old
+
+        async with AsyncSessionLocal() as session:
+            n = await purge_old(session)
+            await session.commit()
+        if n:
+            logger.info("cron.outbound_purged", rows=n)
+    except Exception as exc:
+        logger.error("cron.outbound_purge_failed", error=str(exc))
+
+
 async def send_payment_reminders(now_local: datetime) -> tuple[int, int]:
     """V2-02 — "aluguel vence em 3 dias". Returns (sent, errors).
 
@@ -116,10 +157,12 @@ async def send_payment_reminders(now_local: datetime) -> tuple[int, int]:
     sent = errors = 0
     for r in reminders:
         try:
+            tname = None
             if r.in_window:
-                await send_text(r.wa_phone, r.text)
+                resp = await send_text(r.wa_phone, r.text)
             elif settings.payment_reminder_template_enabled:
-                await send_template(
+                tname = "alfred_payment_reminder"
+                resp = await send_template(
                     to=r.wa_phone,
                     template_name="alfred_payment_reminder",
                     lang_code=LANG_CODE_MAP.get(r.lang, "en"),
@@ -133,6 +176,7 @@ async def send_payment_reminders(now_local: datetime) -> tuple[int, int]:
             errors += 1
             continue
         sent += 1
+        await _log_out(r.wa_phone, resp, r.text, "reminder", tname)
         async with AsyncSessionLocal() as session:
             await mark_reminded(session, r.item_id, r.due)
             await session.commit()
@@ -156,10 +200,12 @@ async def send_monthly_summaries(now_local: datetime) -> tuple[int, int]:
     sent = errors = 0
     for d in due:
         try:
+            tname = None
             if d.in_window:
-                await send_text(d.wa_phone, d.text)
+                resp = await send_text(d.wa_phone, d.text)
             elif settings.monthly_summary_template_enabled:
-                await send_template(
+                tname = "alfred_monthly_summary"
+                resp = await send_template(
                     to=d.wa_phone,
                     template_name="alfred_monthly_summary",
                     lang_code=LANG_CODE_MAP.get(d.lang, "en"),
@@ -175,6 +221,7 @@ async def send_monthly_summaries(now_local: datetime) -> tuple[int, int]:
             errors += 1
             continue
         sent += 1
+        await _log_out(d.wa_phone, resp, d.text, "summary", tname)
         async with AsyncSessionLocal() as session:
             await mark_sent(session, d.member_id, datetime.now(UTC))
             await session.commit()
@@ -199,10 +246,12 @@ async def send_appointment_reminders(now_local: datetime) -> tuple[int, int]:
     sent = errors = 0
     for r in due:
         try:
+            tname = None
             if r.in_window:
-                await send_text(r.wa_phone, r.text)
+                resp = await send_text(r.wa_phone, r.text)
             elif settings.appointment_reminder_template_enabled:
-                await send_template(
+                tname = "alfred_appointment_reminder"
+                resp = await send_template(
                     to=r.wa_phone,
                     template_name="alfred_appointment_reminder",
                     lang_code=LANG_CODE_MAP.get(r.lang, "en"),
@@ -220,6 +269,7 @@ async def send_appointment_reminders(now_local: datetime) -> tuple[int, int]:
             errors += 1
             continue
         sent += 1
+        await _log_out(r.wa_phone, resp, r.text, "reminder", tname)
         async with AsyncSessionLocal() as session:
             await mark_reminded(session, r.appointment_id, datetime.now(UTC))
             await session.commit()
@@ -285,7 +335,7 @@ async def run_cron() -> int:
             [{"type": "body", "parameters": [{"type": "text", "text": text}]}] if text else None
         )
         try:
-            await send_template(
+            resp = await send_template(
                 to=r.wa_phone,
                 template_name=template_name,
                 lang_code=LANG_CODE_MAP.get(r.language or "en", "en"),
@@ -296,6 +346,7 @@ async def run_cron() -> int:
             errors += 1
             continue
         sent += 1
+        await _log_out(r.wa_phone, resp, text or f"[{template_name}]", "template", template_name)
         async with AsyncSessionLocal() as session:
             await session.execute(
                 update(ScheduledJob)
@@ -308,12 +359,15 @@ async def run_cron() -> int:
         if m.id in own_weekly:
             continue  # they get it through their own job — avoid a double send
         try:
-            await send_template(
+            resp = await send_template(
                 to=m.wa_phone,
                 template_name="alfred_weekly_summary",
                 lang_code=LANG_CODE_MAP.get(m.language or "en", "en"),
             )
             sent += 1
+            await _log_out(
+                m.wa_phone, resp, "[alfred_weekly_summary]", "summary", "alfred_weekly_summary"
+            )
         except Exception as exc:
             logger.error("cron.weekly_summary_failed", member_id=str(m.id), error=str(exc))
             errors += 1
@@ -323,6 +377,7 @@ async def run_cron() -> int:
         sent += x_sent
         errors += x_errors
 
+    await _purge_outbound()
     logger.info("cron.done", sent=sent, errors=errors)
     return errors
 

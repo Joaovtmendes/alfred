@@ -14,13 +14,14 @@ everything here is a no-op.
 from __future__ import annotations
 
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class _State:
     suppress: bool = False
     sent: int = 0
+    wamids: list[str] = field(default_factory=list)
 
 
 _state: ContextVar[_State | None] = ContextVar("delivery_state", default=None)
@@ -42,7 +43,15 @@ def suppressed() -> bool:
     return bool(state and state.suppress)
 
 
-def note_sent() -> None:
+def note_sent(wa_message_id: str | None = None) -> None:
     state = _state.get()
     if state is not None:
         state.sent += 1
+        if wa_message_id:
+            state.wamids.append(wa_message_id)
+
+
+def take_wamid() -> str | None:
+    """The Meta id of the oldest send not yet claimed by a stored outbound row (V2-18)."""
+    state = _state.get()
+    return state.wamids.pop(0) if state and state.wamids else None

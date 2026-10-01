@@ -76,6 +76,8 @@ from alfred.models import (
 from alfred.monthly_summary import STRINGS as _MSUM_STRINGS
 from alfred.monthly_summary import handle_monthly_summary_command
 from alfred.observability import alert
+from alfred.outbox import STRINGS as _OUTBOX_STRINGS
+from alfred.outbox import handle_outbox_command
 from alfred.parsing import (
     CORRECTION_PRONOUNS,
     DELETE_LAST_EXPENSE_RE,
@@ -1458,6 +1460,7 @@ _STRINGS.update(_INSIGHT_STRINGS)  # V2-15
 _STRINGS.update(_IOU_STRINGS)  # V2-15
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
 _STRINGS.update(_BATCH_STRINGS)  # V2-17
+_STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -2618,11 +2621,21 @@ async def _save_outbound(
     member: Member,
     body: str,
     session: AsyncSession,
+    kind: str = "reply",
 ) -> None:
-    """Persist an outbound message so it appears in future history."""
+    """Persist an outbound message so it appears in future history.
+
+    When the send happened in this handler run, the row carries Meta's message id so the
+    status webhook (sent/delivered/read/failed) can find it later (V2-18).
+    """
+    from alfred import delivery
+
+    wamid = delivery.take_wamid()
     outbound = Message(
         id=uuid.uuid4(),
-        wa_message_id=f"out-{uuid.uuid4()}",
+        wa_message_id=wamid or f"out-{uuid.uuid4()}",
+        kind=kind,
+        delivery_status="sent" if wamid else None,
         household_id=member.household_id,
         author_id=member.id,
         direction="outbound",
@@ -3219,10 +3232,15 @@ async def handle_flow_onboarding(
     await send_text(member.wa_phone, reply)
 
     # Persist outbound message
+    from alfred import delivery as _delivery
+
+    _wamid = _delivery.take_wamid()
     session.add(
         Message(
             id=uuid.uuid4(),
-            wa_message_id=f"out-{uuid.uuid4()}",
+            wa_message_id=_wamid or f"out-{uuid.uuid4()}",
+            kind="reply",
+            delivery_status="sent" if _wamid else None,
             household_id=member.household_id,
             author_id=member.id,
             direction="outbound",
@@ -3607,6 +3625,13 @@ async def handle_inbound(
         if iou_reply is not None:
             await send_text(to, iou_reply)
             await _save_outbound(member, iou_reply, session)
+            return
+
+        # 4e-0o. V2-18 — "o que você me enviou hoje" / "lembretes que mandou"
+        outbox_reply = await handle_outbox_command(body_plain, member, lang, session)
+        if outbox_reply is not None:
+            await send_text(to, outbox_reply)
+            await _save_outbound(member, outbox_reply, session)
             return
 
         # 4e-0n. V2-16 — "luz 80 a pagar dia 5" / "paguei a luz" / "o que tenho a pagar"
