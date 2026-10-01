@@ -40,6 +40,10 @@ from alfred.clock import (
     week_start,
     weekday_abbr,
 )
+from alfred.insights import STRINGS as _INSIGHT_STRINGS
+from alfred.insights import handle_insight_command
+from alfred.iou import STRINGS as _IOU_STRINGS
+from alfred.iou import handle_iou_command
 from alfred.labels import activity_label as activity_name
 from alfred.labels import category_label
 from alfred.llm import (
@@ -1445,6 +1449,8 @@ _STRINGS.update(_MSUM_STRINGS)  # V2-04
 _STRINGS.update(_AGENDA_STRINGS)  # V2-06
 _STRINGS.update(_SCORE_STRINGS)  # V2-09
 _STRINGS.update(_ANALYSIS_STRINGS)  # V2-14
+_STRINGS.update(_INSIGHT_STRINGS)  # V2-15
+_STRINGS.update(_IOU_STRINGS)  # V2-15
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -3538,6 +3544,20 @@ async def handle_inbound(
         if msum_reply is not None:
             await send_text(to, msum_reply)
             await _save_outbound(member, msum_reply, session)
+            return
+
+        # 4e-0l. V2-15 — "dias no azul" / "mês contra mês por categoria" (before the generic comparison)
+        insight_reply = await handle_insight_command(body_plain, member, lang, session)
+        if insight_reply is not None:
+            await send_text(to, insight_reply)
+            await _save_outbound(member, insight_reply, session)
+            return
+
+        # 4e-0m. V2-15 — "Pedro me deve 25" / "quem me deve" / "Pedro pagou" (before "paguei X" of V2-02)
+        iou_reply = await handle_iou_command(body, body_plain, member, lang, session)
+        if iou_reply is not None:
+            await send_text(to, iou_reply)
+            await _save_outbound(member, iou_reply, session)
             return
 
         # 4e-0g. V2-02 — contas fixas: "aluguel 1200 todo dia 1" / "paguei o aluguel" / "minhas contas fixas"

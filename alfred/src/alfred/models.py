@@ -585,3 +585,31 @@ class SavedView(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class Iou(Base):
+    """Money a person owes the member, or the member owes a person (V2-15).
+
+    ``settled_amount`` grows with partial payments; ``settled_at`` is set when nothing is
+    left. Rows are kept after settling (history), erased/exported with the member.
+    """
+
+    __tablename__ = "iou"
+    __table_args__ = (Index("ix_iou_member_open", "member_id", "settled_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id", ondelete="CASCADE"), nullable=False
+    )
+    person: Mapped[str] = mapped_column(String(60), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
+    settled_amount: Mapped[float] = mapped_column(
+        Numeric(12, 2, asdecimal=False), nullable=False, default=0, server_default="0"
+    )
+    # owed_to_me | i_owe
+    direction: Mapped[str] = mapped_column(String(12), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(120))
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
