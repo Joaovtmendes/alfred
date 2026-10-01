@@ -161,7 +161,8 @@ _STATUS_KEY = {
 
 def _preview(body: str | None) -> str:
     # drop WhatsApp formatting marks: cutting at PREVIEW could leave a lone "*" that bolds the rest
-    text = " ".join((body or "").replace("*", "").replace("_", " ").split())
+    first = next((ln for ln in (body or "").splitlines() if ln.strip()), "")  # first line only
+    text = " ".join(first.replace("*", "").replace("_", " ").split())
     return text if len(text) <= PREVIEW else text[: PREVIEW - 1].rstrip() + "…"
 
 

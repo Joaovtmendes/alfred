@@ -68,9 +68,11 @@ _REMIND_RE = re.compile(
     + _UNITS
     + r")\s+(?:antes|before|ervoor|eerder|van\s+tevoren|vorher|avant|zuvor)\b"
 )
-_T_COLON = re.compile(r"(?:\b(?:as|a|at|om|um|a\s+las)\s+)?\b([01]?\d|2[0-3])[:h]([0-5]\d)\b")
+_T_COLON = re.compile(
+    r"(?:\b(?:as|a|at|om|um|a\s+las)\s+)?\b([01]?\d|2[0-3])[:hu]([0-5]\d)\b"
+)  # "14:30", "14h30", Dutch "14u30"
 _T_HOUR = re.compile(
-    r"(?:\b(?:as|a|at|om|um)\s+)?\b([01]?\d|2[0-3])\s*(?:h|hs|hrs|uur|uhr|heures?)\b(?!\s*[:\d])"
+    r"(?:\b(?:as|a|at|om|um)\s+)?\b([01]?\d|2[0-3])(?:\s*(?:h|hs|hrs|uur|uhr|heures?)|u)\b(?!\s*[:\d])"
 )
 _T_AMPM = re.compile(r"\b(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b")
 _T_LEAD = re.compile(

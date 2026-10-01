@@ -1102,6 +1102,15 @@
   > • "compara este mês com o mês passado"
   > • "ajuda" — esta mensagem
   > 
+  > *E também*
+  > • "a pagar luz 120 dia 20" — contas a pagar e a receber
+  > • "orçamento mercado 300" — teto mensal por categoria
+  > • "dentista amanhã às 14h" — agenda com aviso
+  > • "lembrete: tomar o remédio às 08:00"
+  > • "tarefa: comprar pão"
+  > • "meu dashboard" — painel com gráficos
+  > • "idioma inglês" — mudar de idioma
+  > 
   > _Para sair: "stop"_
 - **nl** — *Alfred* — wat ik voor je kan doen:
   > 
@@ -1119,6 +1128,15 @@
   > • "uitgaven deze week" — per periode
   > • "vergelijk deze maand met vorige maand"
   > • "hulp" — dit bericht
+  > 
+  > *Ook handig*
+  > • "te betalen huur 900 dag 1" — openstaande rekeningen
+  > • "budget supermarkt 300" — maandlimiet per categorie
+  > • "tandarts morgen om 14u" — agenda met herinnering
+  > • "herinnering: medicijnen om 08:00"
+  > • "taak: brood kopen"
+  > • "mijn dashboard" — overzicht met grafieken
+  > • "taal Engels" — andere taal
   > 
   > _Om te stoppen: "stoppen"_
 - **en** — *Alfred* — what I can do for you:
@@ -1138,6 +1156,15 @@
   > • "compare this month with last month"
   > • "help" — this message
   > 
+  > *Also*
+  > • "to pay rent 900 day 1" — bills to pay and to receive
+  > • "budget groceries 300" — monthly cap per category
+  > • "dentist tomorrow at 2pm" — calendar with a reminder
+  > • "reminder: take medication at 08:00"
+  > • "task: buy bread"
+  > • "my dashboard" — charts
+  > • "language Dutch" — change language
+  > 
   > _To stop: "stop"_
 - **fr** — *Alfred* — ce que je peux faire pour toi:
   > 
@@ -1156,6 +1183,15 @@
   > • "compare ce mois avec le mois dernier"
   > • "aide" — ce message
   > 
+  > *Aussi*
+  > • "à payer loyer 900 jour 1" — factures à payer et à recevoir
+  > • "budget courses 300" — plafond mensuel par catégorie
+  > • "dentiste demain à 14h" — agenda avec rappel
+  > • "rappel : médicament à 08:00"
+  > • "tâche : acheter du pain"
+  > • "mon tableau de bord" — graphiques
+  > • "langue anglais" — changer de langue
+  > 
   > _Pour arrêter: "stop"_
 - **de** — *Alfred* — was ich für dich tun kann:
   > 
@@ -1173,6 +1209,15 @@
   > • "ausgaben diese woche" — nach Zeitraum
   > • "vergleiche diesen monat mit letztem monat"
   > • "hilfe" — diese Nachricht
+  > 
+  > *Außerdem*
+  > • "zu zahlen Miete 900 Tag 1" — offene Rechnungen
+  > • "Budget Supermarkt 300" — Monatslimit pro Kategorie
+  > • "Zahnarzt morgen um 14 Uhr" — Kalender mit Erinnerung
+  > • "Erinnerung: Medikament um 08:00"
+  > • "Aufgabe: Brot kaufen"
+  > • "mein Dashboard" — Diagramme
+  > • "Sprache Englisch" — Sprache ändern
   > 
   > _Zum Beenden: "stop"_
 
@@ -1360,6 +1405,14 @@
 - **en** — Noted {paid} from {person}. Still open: {left}.
 - **fr** — {paid} de {person} noté. Encore ouvert : {left}.
 - **de** — {paid} von {person} notiert. Noch offen: {left}.
+
+## `lang_changed`
+
+- **pt** — Pronto, agora falo português com você.
+- **nl** — Klaar, ik praat nu Nederlands met je.
+- **en** — Done, I'll speak English with you from now on.
+- **fr** — C'est fait, je te parle en français maintenant.
+- **de** — Erledigt, ich spreche jetzt Deutsch mit dir.
 
 ## `last_expenses_title`
 
