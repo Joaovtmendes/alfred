@@ -1,0 +1,140 @@
+{
+  "_comment": "V2-02 — bill due reminder, sent by the cron outside the 24 h window (flag PAYMENT_REMINDER_TEMPLATE_ENABLED).",
+  "_note": "Submit once per language. The only variable ({{1}}) is a single line of text built by the app (no line breaks).",
+  "_submit_for": [
+    "en",
+    "pt_BR",
+    "nl",
+    "fr",
+    "de"
+  ],
+  "name": "alfred_payment_reminder",
+  "category": "UTILITY",
+  "translations": {
+    "en": {
+      "language": "en",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Bill reminder"
+        },
+        {
+          "type": "BODY",
+          "text": "Hi! A reminder from Alfred: {{1}} Reply *paid* with the name once you have paid it, or *my bills* to see them all.",
+          "example": {
+            "body_text": [
+              [
+                "Rent €1,200.00 is due in 3 days."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — your AI assistant"
+        }
+      ]
+    },
+    "pt_BR": {
+      "language": "pt_BR",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Lembrete de conta"
+        },
+        {
+          "type": "BODY",
+          "text": "Oi! Um lembrete do Alfred: {{1}} Quando pagar, responda *paguei* com o nome da conta, ou *minhas contas fixas* para ver todas.",
+          "example": {
+            "body_text": [
+              [
+                "Aluguel €1.200,00 vence em 3 dias."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — seu assistente pessoal"
+        }
+      ]
+    },
+    "nl": {
+      "language": "nl",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Herinnering vaste last"
+        },
+        {
+          "type": "BODY",
+          "text": "Hoi! Een herinnering van Alfred: {{1}} Antwoord *betaald* met de naam zodra je het hebt betaald, of *mijn vaste lasten* om ze allemaal te zien.",
+          "example": {
+            "body_text": [
+              [
+                "Huur €1.200,00 vervalt over 3 dagen."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — jouw persoonlijke assistent"
+        }
+      ]
+    },
+    "fr": {
+      "language": "fr",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Rappel de facture"
+        },
+        {
+          "type": "BODY",
+          "text": "Salut ! Un rappel d'Alfred : {{1}} Réponds *payé* avec le nom une fois réglé, ou *mes factures fixes* pour tout voir.",
+          "example": {
+            "body_text": [
+              [
+                "Loyer 1 200,00 € à payer dans 3 jours."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — ton assistant personnel"
+        }
+      ]
+    },
+    "de": {
+      "language": "de",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Zahlungserinnerung"
+        },
+        {
+          "type": "BODY",
+          "text": "Hallo! Eine Erinnerung von Alfred: {{1}} Antworte mit *bezahlt* und dem Namen, sobald du gezahlt hast, oder mit *meine Fixkosten* für alle.",
+          "example": {
+            "body_text": [
+              [
+                "Miete 1.200,00 € ist in 3 Tagen fällig."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — dein persönlicher Assistent"
+        }
+      ]
+    }
+  }
+}

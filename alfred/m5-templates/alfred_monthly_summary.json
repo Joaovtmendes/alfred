@@ -1,0 +1,140 @@
+{
+  "_comment": "V2-04 — last month's summary on day 1, sent outside the 24 h window (flag MONTHLY_SUMMARY_TEMPLATE_ENABLED).",
+  "_note": "Submit once per language. The only variable ({{1}}) is a single line of text built by the app (no line breaks).",
+  "_submit_for": [
+    "en",
+    "pt_BR",
+    "nl",
+    "fr",
+    "de"
+  ],
+  "name": "alfred_monthly_summary",
+  "category": "UTILITY",
+  "translations": {
+    "en": {
+      "language": "en",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Your monthly summary"
+        },
+        {
+          "type": "BODY",
+          "text": "Hi! Alfred's summary of last month: {{1}} Reply *summary* for the full picture.",
+          "example": {
+            "body_text": [
+              [
+                "September: income €2,400.00, spent €1,830.00, balance €570.00."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — your AI assistant"
+        }
+      ]
+    },
+    "pt_BR": {
+      "language": "pt_BR",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Seu resumo do mês"
+        },
+        {
+          "type": "BODY",
+          "text": "Oi! O resumo do Alfred do mês passado: {{1}} Responda *resumo* para ver o quadro completo.",
+          "example": {
+            "body_text": [
+              [
+                "Setembro: receitas €2.400,00, gastos €1.830,00, saldo €570,00."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — seu assistente pessoal"
+        }
+      ]
+    },
+    "nl": {
+      "language": "nl",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Jouw maandoverzicht"
+        },
+        {
+          "type": "BODY",
+          "text": "Hoi! Alfreds overzicht van vorige maand: {{1}} Antwoord *overzicht* voor het volledige beeld.",
+          "example": {
+            "body_text": [
+              [
+                "September: inkomen €2.400,00, uitgegeven €1.830,00, saldo €570,00."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — jouw persoonlijke assistent"
+        }
+      ]
+    },
+    "fr": {
+      "language": "fr",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Ton bilan du mois"
+        },
+        {
+          "type": "BODY",
+          "text": "Salut ! Le résumé d'Alfred du mois dernier : {{1}} Réponds *résumé* pour tout voir.",
+          "example": {
+            "body_text": [
+              [
+                "Septembre : revenus 2 400,00 €, dépenses 1 830,00 €, solde 570,00 €."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — ton assistant personnel"
+        }
+      ]
+    },
+    "de": {
+      "language": "de",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Deine Monatsübersicht"
+        },
+        {
+          "type": "BODY",
+          "text": "Hallo! Alfreds Zusammenfassung des letzten Monats: {{1}} Antworte *Übersicht* für alle Details.",
+          "example": {
+            "body_text": [
+              [
+                "September: Einnahmen 2.400,00 €, Ausgaben 1.830,00 €, Saldo 570,00 €."
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Alfred — dein persönlicher Assistent"
+        }
+      ]
+    }
+  }
+}
