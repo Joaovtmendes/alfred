@@ -272,7 +272,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Keine Einträge in {period_label}.",
     },
     "no_records_month": {
-        "pt": "Ainda não tenho nada este mês. Manda a primeira despesa quando quiser.",
+        "pt": "Ainda não tenho nada este mês. Envie a primeira despesa quando quiser.",
         "nl": "Geen registraties deze maand.",
         "en": "No records this month.",
         "fr": "Aucun enregistrement ce mois-ci.",
@@ -405,7 +405,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     "income_recorded": {
         "pt": (
-            "Boa, entrou {amount} de *{name}*.",
+            "Ótimo, entrou {amount} de *{name}*.",
             "Anotei a receita: {amount} de *{name}*.",
             "Registrado: {amount} de *{name}*.",
         ),
@@ -480,7 +480,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "gestern",
     },
     "currency_unsupported": {
-        "pt": 'Por enquanto só trabalho em euros, então não guardei os {cur}. Manda de novo convertido em € (ex.: "Jumbo 23,50")?',
+        "pt": 'Por enquanto só trabalho em euros, então não guardei os {cur}. Envie novamente convertido em € (ex.: "Jumbo 23,50")?',
         "nl": 'Ik registreer voorlopig alleen euro\'s — {cur} is niet opgeslagen. Reken om naar € en stuur opnieuw (bijv. "Jumbo 23,50").',
         "en": 'I only record euros for now — {cur} was not saved. Convert to € and send it again (e.g. "Jumbo 23.50").',
         "fr": "Je n'enregistre que des euros pour l'instant — {cur} n'a pas été enregistré. Convertis en € et renvoie (ex. « Jumbo 23,50 »).",
@@ -523,7 +523,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "\nHoher Betrag — bist du sicher beim Betrag?",
     },
     "invalid_amount_check": {
-        "pt": "Esse valor não dá para registrar (zero ou negativo). Manda de novo com o valor certo?",
+        "pt": "Esse valor não dá para registrar (zero ou negativo). Pode enviar novamente com o valor correto?",
         "nl": "Ongeldig bedrag (nul of negatief) — niets geregistreerd. Controleer en stuur opnieuw.",
         "en": "Invalid amount (zero or negative) — nothing recorded. Check it and send again.",
         "fr": "Montant invalide (zéro ou négatif) — rien enregistré. Vérifie et renvoie.",
@@ -544,7 +544,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Nicht gespeichert ({cur}, nur Euro): {name}.",
     },
     "fallback_no_record": {
-        "pt": "Não consegui anotar nada. Manda uma despesa por linha, com valor e descrição, por exemplo:\nMercado 20\nFarmácia 10",
+        "pt": "Não consegui anotar nada. Envie uma despesa por linha, com valor e descrição, por exemplo:\nMercado 20\nFarmácia 10",
         "nl": "Ik heb niets geregistreerd. Stuur één uitgave per regel met bedrag en omschrijving, bijvoorbeeld:\nMercado 20\nFarmácia 10",
         "en": "I didn't record anything. Send one expense per line with amount and description, e.g.:\nGroceries 20\nPharmacy 10",
         "fr": "Je n'ai rien enregistré. Envoie une dépense par ligne avec montant et description, par ex. :\nCourses 20\nPharmacie 10",
@@ -659,7 +659,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     "button_ok_reply": {
         "pt": (
             "Combinado, fica assim.",
-            "Beleza, fica assim.",
+            "Certo, fica assim.",
             "Perfeito, deixo assim.",
         ),
         "nl": (
@@ -764,7 +764,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     # ── M7 — Treino ─────────────────────────────────────────────────────────
     "workout_saved": {
         "pt": (
-            "Boa! Treino anotado: {activity}, {duration}. 💪",
+            "Muito bem! Treino anotado: {activity}, {duration}. 💪",
             "Treino anotado: {activity}, {duration}.",
             "Registrado: {activity}, {duration}. Bom trabalho!",
         ),
@@ -1487,6 +1487,8 @@ def _t(key: str, lang: str, **kwargs: object) -> str:
     ):  # several equivalent phrasings: pick one so replies feel less canned
         tmpl = random.choice(tmpl)
     text = tmpl.format(**kwargs) if kwargs else tmpl
+    if lang != "fr":  # one quote style across the app ("..."); French keeps « »
+        text = text.replace("\u201c", '"').replace("\u201d", '"')
     return _pt_singular(text) if lang == "pt" else text
 
 
@@ -1539,7 +1541,7 @@ async def _month_category_context(
         "month_category_context",
         lang,
         total=_fmt_eur(float(total)),
-        category=category_label(category, lang).lower(),
+        category=category_label(category, lang),
     )
 
 
