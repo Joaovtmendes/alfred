@@ -623,3 +623,26 @@ class Iou(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class PendingBatch(Base):
+    """A draft of 2+ entries waiting for the member's confirmation (V2-17).
+
+    One live draft per member (a newer one replaces the older). The row is deleted when
+    confirmed or cancelled, so a second tap on the same button finds nothing.
+    """
+
+    __tablename__ = "pending_batch"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("member.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    items: Mapped[list] = mapped_column(JSONB, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

@@ -27,8 +27,10 @@ from alfred.agenda import handle_button as handle_agenda_button
 from alfred.analysis import STRINGS as _ANALYSIS_STRINGS
 from alfred.analysis import handle_analysis_question, handle_view_command
 from alfred.audit import audit
+from alfred.batch import STRINGS as _BATCH_STRINGS
+from alfred.batch import clean_items, create_draft, handle_batch_button, handle_batch_text
 from alfred.budgets import STRINGS as _BUDGET_STRINGS
-from alfred.budgets import alert_after_expense, alerts_for_categories, handle_budget_command
+from alfred.budgets import alert_after_expense, handle_budget_command
 from alfred.clock import (
     day_start,
     month_name,
@@ -1455,6 +1457,7 @@ _STRINGS.update(_ANALYSIS_STRINGS)  # V2-14
 _STRINGS.update(_INSIGHT_STRINGS)  # V2-15
 _STRINGS.update(_IOU_STRINGS)  # V2-15
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
+_STRINGS.update(_BATCH_STRINGS)  # V2-17
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -3277,6 +3280,15 @@ async def _handle_button_reply(
         await _save_outbound(member, reply, session)
         return True
 
+    if action in ("batch_ok", "batch_edit", "batch_cancel"):  # V2-17 draft of 2+ entries
+        out = await handle_batch_button(action, raw_id, member, lang, session)
+        if out.buttons:
+            await send_buttons(to, out.text, out.buttons)
+        else:
+            await send_text(to, out.text)
+        await _save_outbound(member, out.text, session)
+        return True
+
     try:
         expense_id = uuid.UUID(raw_id)
     except ValueError:
@@ -3378,6 +3390,16 @@ async def handle_inbound(
     if member.consent_state == "accepted":
         # 4-0. Reply-button taps (Undo / Edit / It's right on a confirmation)
         if await _handle_button_reply(member, message, session, lang):
+            return
+
+        # 4-0aa. V2-17 — answers to a draft of 2+ entries ("sim" / "cancela" / "tira o segundo")
+        batch_out = await handle_batch_text(body, body_plain, member, lang, session)
+        if batch_out is not None:
+            if batch_out.buttons:
+                await send_buttons(to, batch_out.text, batch_out.buttons)
+            else:
+                await send_text(to, batch_out.text)
+            await _save_outbound(member, batch_out.text, session)
             return
 
         # 4-0a. A bare "yes": there is no pending question, so say so instead of guessing.
@@ -4523,64 +4545,41 @@ async def handle_inbound(
         if _looks_multi(body):
             items = await extract_expenses_multi(message.body or "", lang=member.language or "en")
             if len(items) >= 2:
-                active_trip = await session.scalar(
-                    select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
-                )
-                any_high = False
-                lines: list[str] = []
                 skipped: list[str] = []
+                usable: list[dict] = []
                 for item in items:
-                    item_name = item["merchant"] or item["description"] or item["category"]
                     if item["currency"] != "EUR":
                         skipped.append(
                             _t(
                                 "multi_skipped_currency",
                                 lang,
                                 cur=item["currency"],
-                                name=item_name,
+                                name=item["merchant"] or item["description"] or item["category"],
                             )
                         )
-                        continue
-                    session.add(
-                        Expense(
-                            id=uuid.uuid4(),
-                            member_id=member.id,
-                            household_id=member.household_id,
-                            transaction_type=item["type"],
-                            amount=item["amount"],
-                            currency="EUR",
-                            merchant=item["merchant"],
-                            category=item["category"],
-                            description=item["description"],
-                            expense_date=now_local() - timedelta(days=item["days_ago"]),
-                            trip_id=active_trip.id if active_trip else None,
-                        )
-                    )
-                    sign = "+" if item["type"] == "income" else ""
-                    lines.append(f"• {item_name}: {sign}{_fmt_eur(item['amount'])}")
-                    if item["amount"] >= settings.high_value_threshold and item["type"] != "income":
-                        any_high = True
-                if lines:
-                    reply = "\n".join([_t("multi_recorded_title", lang, n=len(lines)), *lines])
-                    await session.flush()
-                    reply += await alerts_for_categories(
-                        session,
-                        member,
-                        [i["category"] for i in items if i["type"] == "expense"],
-                        lang,
-                    )
-                    if any_high:
-                        reply += _t("high_value_hint", lang)
+                    else:
+                        usable.append(item)
+                # V2-17: two or more entries are shown as a draft; nothing is written yet.
+                draft = await create_draft(session, member, usable, lang)
+                if draft is not None:
+                    text = draft.text + ("\n" + "\n".join(skipped) if skipped else "")
+                    await send_buttons(to, text, draft.buttons)
+                    reply = text
+                elif clean_items(usable):  # one valid entry left after the checks: record it
+                    from alfred.batch import record_items
+
+                    reply = await record_items(session, member, clean_items(usable), lang)
                     if skipped:
                         reply += "\n" + "\n".join(skipped)
+                    await send_text(to, reply)
                 else:
                     reply = "\n".join(skipped)
-                await send_text(to, reply)
+                    await send_text(to, reply)
                 await _save_outbound(member, reply, session)
                 logger.info(
-                    "conversation.multi_expense_recorded",
+                    "conversation.multi_expense_drafted",
                     member_id=str(member.id),
-                    recorded=len(lines),
+                    drafted=len(usable),
                     skipped=len(skipped),
                 )
                 return
