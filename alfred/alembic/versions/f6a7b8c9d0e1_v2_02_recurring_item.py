@@ -54,9 +54,7 @@ def upgrade() -> None:
             "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
     )
-    op.create_index(
-        "ix_recurring_member_active", "recurring_item", ["member_id", "active"]
-    )
+    op.create_index("ix_recurring_member_active", "recurring_item", ["member_id", "active"])
 
 
 def downgrade() -> None:
