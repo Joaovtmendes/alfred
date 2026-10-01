@@ -536,3 +536,31 @@ class RecurringItem(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+# ── V2-06 — Agenda ──────────────────────────────────────────────────────────
+
+
+class Appointment(Base):
+    """A one-off appointment with a reminder (V2-06). Recurring things are ScheduledJob."""
+
+    __tablename__ = "appointment"
+    __table_args__ = (Index("ix_appointment_member_starts", "member_id", "starts_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id"), nullable=False
+    )
+    household_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("household.id"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    remind_before_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
+    reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notes: Mapped[str | None] = mapped_column(Text)
+    # active | done | cancelled
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default="active")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

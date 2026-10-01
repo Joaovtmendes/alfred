@@ -21,6 +21,9 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred.agenda import STRINGS as _AGENDA_STRINGS
+from alfred.agenda import handle_agenda_command
+from alfred.agenda import handle_button as handle_agenda_button
 from alfred.audit import audit
 from alfred.budgets import STRINGS as _BUDGET_STRINGS
 from alfred.budgets import alert_after_expense, alerts_for_categories, handle_budget_command
@@ -1435,6 +1438,7 @@ _derive_singular(
 _STRINGS.update(_BUDGET_STRINGS)  # V2-01 texts live next to their logic in budgets.py
 _STRINGS.update(_RECURRING_STRINGS)  # V2-02, same idea
 _STRINGS.update(_MSUM_STRINGS)  # V2-04
+_STRINGS.update(_AGENDA_STRINGS)  # V2-06
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -3228,6 +3232,12 @@ async def _handle_button_reply(
         await send_text(to, _t("wipe_done", lang))  # nothing to save: the member is gone
         return True
 
+    if action in ("appt_ok", "appt_undo"):  # V2-06 agenda confirmation buttons
+        reply = await handle_agenda_button(action, raw_id, member, lang, session)
+        await send_text(to, reply)
+        await _save_outbound(member, reply, session)
+        return True
+
     try:
         expense_id = uuid.UUID(raw_id)
     except ValueError:
@@ -3531,6 +3541,16 @@ async def handle_inbound(
         if recurring_reply is not None:
             await send_text(to, recurring_reply)
             await _save_outbound(member, recurring_reply, session)
+            return
+
+        # 4e-0i. V2-06 — agenda: "dentista quinta às 14h" / "minha agenda" / "cancela o dentista"
+        agenda_reply = await handle_agenda_command(body, body_plain, member, lang, session)
+        if agenda_reply is not None:
+            if agenda_reply.buttons:
+                await send_buttons(to, agenda_reply.text, agenda_reply.buttons)
+            else:
+                await send_text(to, agenda_reply.text)
+            await _save_outbound(member, agenda_reply.text, session)
             return
 
         # 4e-1. M12 — category correction: "Jumbo é supermarkt"

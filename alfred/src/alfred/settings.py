@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     payment_reminder_template_enabled: bool = False
     # V2-04: same for the monthly summary (template ``alfred_monthly_summary``).
     monthly_summary_template_enabled: bool = False
+    # V2-06: appointment reminders outside the 24 h window (template alfred_appointment_reminder).
+    appointment_reminder_template_enabled: bool = False
 
 
 settings = Settings()
