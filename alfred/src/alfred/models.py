@@ -23,6 +23,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
@@ -454,4 +455,36 @@ class LlmUsage(Base):
     output_tokens: Mapped[int] = mapped_column(nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+# ── V2-01 — Orçamentos por categoria ────────────────────────────────────────
+
+
+class Budget(Base):
+    """Monthly spending cap for one category of one member (V2-01).
+
+    ``last_alert_month`` / ``last_alert_level`` (0 | 80 | 100) make each alert fire once per
+    level per month: a new month starts again from level 0 without any cleanup job.
+    """
+
+    __tablename__ = "budget"
+    __table_args__ = (UniqueConstraint("member_id", "category", name="uq_budget_member_category"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
+    )
+    household_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("household.id"), nullable=False
+    )
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
+    monthly_limit: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
+    last_alert_month: Mapped[date | None] = mapped_column(Date, nullable=True)
+    last_alert_level: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

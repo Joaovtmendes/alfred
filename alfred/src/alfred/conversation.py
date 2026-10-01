@@ -22,6 +22,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.audit import audit
+from alfred.budgets import STRINGS as _BUDGET_STRINGS
+from alfred.budgets import alert_after_expense, alerts_for_categories, handle_budget_command
 from alfred.clock import (
     day_start,
     month_name,
@@ -1425,6 +1427,8 @@ _derive_singular(
     fr="_1 transaction_",
     de="_1 Transaktion_",
 )
+
+_STRINGS.update(_BUDGET_STRINGS)  # V2-01 texts live next to their logic in budgets.py
 
 
 def _t(key: str, lang: str, **kwargs: object) -> str:
@@ -3496,6 +3500,13 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        # 4e-0f. V2-01 — budgets: "orçamento mercado 400" / "meus orçamentos" / "tira o orçamento de lazer"
+        budget_reply = await handle_budget_command(body_plain, member, lang, session)
+        if budget_reply is not None:
+            await send_text(to, budget_reply)
+            await _save_outbound(member, budget_reply, session)
+            return
+
         # 4e-1. M12 — category correction: "Jumbo é supermarkt"
         corr_reply = await _handle_category_correction(
             body, member, lang, session, member_overrides
@@ -4431,6 +4442,13 @@ async def handle_inbound(
                         any_high = True
                 if lines:
                     reply = "\n".join([_t("multi_recorded_title", lang, n=len(lines)), *lines])
+                    await session.flush()
+                    reply += await alerts_for_categories(
+                        session,
+                        member,
+                        [i["category"] for i in items if i["type"] == "expense"],
+                        lang,
+                    )
                     if any_high:
                         reply += _t("high_value_hint", lang)
                     if skipped:
@@ -4492,6 +4510,9 @@ async def handle_inbound(
                 await session.flush()  # make the new row visible to the month total below
                 reply += await _month_category_context(
                     session, member, expense_date, expense_data.get("category"), lang
+                )
+                reply += await alert_after_expense(
+                    session, member, expense_data.get("category"), expense_date, lang
                 )
             # BUG-07 fix: show cumulative trip total when expense tagged to trip
             if active_trip and txn_type == "expense":
