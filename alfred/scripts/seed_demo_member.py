@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Demo member for the v2 panel: the numbers of the approved mockups, idempotent.
 
-Creates (or reuses) the member ``31000000000`` with ``dashboard_v2 = true`` and accepted consent,
-then rebuilds ONLY that member's expenses, budgets and fixed bills, so running it twice never
-duplicates anything. Other members are never read or written. Prints the panel link.
+Creates (or reuses) the member ``31000000000`` with ``dashboard_v2 = true`` and consent
+``pending`` (no cron message is ever sent to it), then rebuilds ONLY that member's expenses,
+budgets and fixed bills, so running it twice never duplicates anything. Other members are never
+read or written. Prints the panel link.
 
 October 2026: income 3.840,00, paid spending 1.997,70, balance 1.842,30; the restaurant budget
 (100) is over by 23; two bills are still to pay and do not count towards the balance.
@@ -65,7 +66,10 @@ async def run() -> str:
             member = Member(household_id=hh.id, wa_phone=DEMO_PHONE, display_name="Joao")
             s.add(member)
         member.language = "pt"
-        member.consent_state = "accepted"
+        # Not "accepted": the cron reminders and the weekly/monthly summaries only select accepted
+        # members, and the demo has a fake number and a bill due on the 18th. The panel link does
+        # not look at consent.
+        member.consent_state = "pending"
         member.dashboard_v2 = True
         await s.flush()
         for model in (Expense, Budget, RecurringItem):

@@ -46,7 +46,10 @@ async def test_seed_is_idempotent_and_matches_the_mockup(client) -> None:
     await engine.dispose()
     async with AsyncSessionLocal() as s:
         m = (await s.execute(select(Member).where(Member.wa_phone == seed.DEMO_PHONE))).scalar_one()
-        assert m.dashboard_v2 is True and m.consent_state == "accepted"
+        assert m.dashboard_v2 is True
+        # every proactive sender (cron reminders, weekly/monthly summaries) selects consent
+        # "accepted" only: the demo member must never be messaged at its fake number
+        assert m.consent_state == "pending"
         n = (
             await s.execute(
                 select(func.count()).select_from(Expense).where(Expense.member_id == m.id)

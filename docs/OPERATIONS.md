@@ -119,10 +119,11 @@ UPDATE member SET dashboard_v2 = false WHERE wa_phone = '31600000000';
 
 Antes de ligar: conferir `DASHBOARD_TOKEN_TTL_DAYS` e `WHATSAPP_DISPLAY_NUMBER` (tabela acima).
 
-Efeito do deploy nos links já emitidos: a validade passa de 90 para 7 dias contada de
-`dashboard_token_created_at`, então todo link com mais de 7 dias (inclusive os que estão no histórico
-do WhatsApp) deixa de abrir no mesmo instante e mostra a página "Este link expirou"; quem escrever
-"meu dashboard" recebe um novo. Links com menos de 7 dias continuam válidos e são reemitidos no
+Efeito do deploy nos links já emitidos: a validade passa de 90 para 7 dias, contada de
+`dashboard_token_created_at` (a migração `b1c2d3e4f5a6` pôs 2026-09-30 nos links que já existiam).
+Todo link com mais de 7 dias, inclusive os do histórico do WhatsApp que prometiam 90, deixa de abrir
+no mesmo instante e mostra a página "Este link expirou"; quem escrever "meu dashboard" recebe um
+novo. Links com menos de 7 dias continuam válidos e são reemitidos no
 próximo pedido se tiverem menos de metade da validade. A migração `c4d5e6f7a8b9` só acrescenta
 colunas (`dashboard_v2` com default false, `export_token`, `export_token_expires_at`): o código
 anterior roda com o esquema novo, então o rollback de código não exige `alembic downgrade`
