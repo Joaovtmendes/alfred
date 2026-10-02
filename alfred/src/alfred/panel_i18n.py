@@ -43,11 +43,11 @@ SHELL = {
         "de": "Im WhatsApp chatten",
     },
     "link_valid": {
-        "pt": "link válido por 7 dias",
-        "nl": "link 7 dagen geldig",
-        "en": "link valid for 7 days",
-        "fr": "lien valable 7 jours",
-        "de": "Link 7 Tage gültig",
+        "pt": "link válido por até 7 dias",
+        "nl": "link maximaal 7 dagen geldig",
+        "en": "link valid for up to 7 days",
+        "fr": "lien valable jusqu'à 7 jours",
+        "de": "Link bis zu 7 Tage gültig",
     },
     "ask_in_chat": {
         "pt": "Peça no chat",
@@ -99,7 +99,7 @@ SHELL = {
         "de": "Zu viele Anfragen in kurzer Zeit. Warte eine Minute und versuche es erneut.",
     },
     "privacy_footer": {
-        "pt": "Privacidade: escreva “exportar meus dados” ou “apagar meus dados” no chat.",
+        "pt": 'Privacidade: escreva "exportar meus dados" ou "apagar meus dados" no chat.',
         "nl": "Privacy: schrijf “exporteer mijn gegevens” of “verwijder mijn gegevens” in de chat.",
         "en": "Privacy: write “export my data” or “delete my data” in the chat.",
         "fr": "Confidentialité : écris « exporter mes données » ou « supprimer mes données » dans le chat.",

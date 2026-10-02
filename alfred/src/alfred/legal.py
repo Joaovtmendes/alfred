@@ -17,8 +17,8 @@ from alfred.settings import settings
 
 router = APIRouter(tags=["legal"])
 
-POLICY_VERSION = "1.1"
-POLICY_DATE = "2026-09-30"
+POLICY_VERSION = "1.2"
+POLICY_DATE = "2026-10-02"
 CONTROLLER = "JVM Solutions, Biesbosch 179, 1181 JB Amstelveen, Nederland"
 # Public contact for data requests — set PRIVACY_CONTACT_EMAIL in the environment.
 CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
@@ -98,13 +98,13 @@ POLICY: dict[str, dict] = {
             (
                 "Your dashboard link",
                 [
-                    "The link Alfred sends you to see your dashboard contains a personal access code. Anyone with the link can see your dashboard, so do not share it. Links expire after 90 days; ask for 'my dashboard' to get a new one.",
+                    "The link Alfred sends you to see your dashboard contains a personal access code. Anyone with the link can see your dashboard, so do not share it. Links expire after 7 days; ask for 'my dashboard' to get a new one.",
                 ],
             ),
             (
                 "Exercising your rights in the chat",
                 [
-                    "Send 'export my data' to receive a copy, 'delete my data' to erase everything (you will be asked to confirm), or STOP to stop processing.",
+                    "Send 'export my data' to receive a download link (valid for 15 minutes, works once), 'delete my data' to erase everything (you will be asked to confirm), or STOP to stop processing.",
                 ],
             ),
             (
@@ -189,13 +189,13 @@ POLICY: dict[str, dict] = {
             (
                 "Je dashboardlink",
                 [
-                    "De link die Alfred je stuurt voor je dashboard bevat een persoonlijke toegangscode. Iedereen met de link kan je dashboard zien, deel hem dus niet. Links verlopen na 90 dagen; vraag 'mijn dashboard' voor een nieuwe.",
+                    "De link die Alfred je stuurt voor je dashboard bevat een persoonlijke toegangscode. Iedereen met de link kan je dashboard zien, deel hem dus niet. Links verlopen na 7 dagen; vraag 'mijn dashboard' voor een nieuwe.",
                 ],
             ),
             (
                 "Je rechten uitoefenen in de chat",
                 [
-                    "Stuur 'exporteer mijn gegevens' voor een kopie, 'verwijder mijn gegevens' om alles te wissen (je moet dit bevestigen) of STOP om de verwerking te stoppen.",
+                    "Stuur 'exporteer mijn gegevens' voor een downloadlink (15 minuten geldig, werkt één keer), 'verwijder mijn gegevens' om alles te wissen (je moet dit bevestigen) of STOP om de verwerking te stoppen.",
                 ],
             ),
             (
@@ -279,13 +279,13 @@ POLICY: dict[str, dict] = {
             (
                 "Seu link do painel",
                 [
-                    "O link que o Alfred envia para você ver o painel contém um código pessoal de acesso. Quem tiver o link vê o seu painel, então não compartilhe. Os links expiram em 90 dias; peça 'meu dashboard' para receber um novo.",
+                    "O link que o Alfred envia para você ver o painel contém um código pessoal de acesso. Quem tiver o link vê o seu painel, então não compartilhe. Os links expiram em 7 dias; peça 'meu dashboard' para receber um novo.",
                 ],
             ),
             (
                 "Exercendo seus direitos no chat",
                 [
-                    "Envie 'exportar meus dados' para receber uma cópia, 'apagar meus dados' para excluir tudo (você precisará confirmar) ou STOP para parar o tratamento.",
+                    "Envie 'exportar meus dados' para receber um link de download (vale por 15 minutos e funciona uma vez), 'apagar meus dados' para excluir tudo (você precisará confirmar) ou STOP para parar o tratamento.",
                 ],
             ),
             (

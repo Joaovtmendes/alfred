@@ -1281,11 +1281,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "\U0001f4ca Dein pers\u00f6nliches Dashboard:\n{url}",
     },
     "dashboard_cta": {
-        "pt": "Aqui está o seu painel. O link vale por 7 dias.",
-        "nl": "Hier is je dashboard. De link is 7 dagen geldig.",
-        "en": "Here is your dashboard. The link is valid for 7 days.",
-        "fr": "Voici ton tableau de bord. Le lien est valable 7 jours.",
-        "de": "Hier ist dein Dashboard. Der Link ist 7 Tage gültig.",
+        "pt": "Aqui está o seu painel. O link vale por até 7 dias.",
+        "nl": "Hier is je dashboard. De link is maximaal 7 dagen geldig.",
+        "en": "Here is your dashboard. The link is valid for up to 7 days.",
+        "fr": "Voici ton tableau de bord. Le lien est valable jusqu'à 7 jours.",
+        "de": "Hier ist dein Dashboard. Der Link ist bis zu 7 Tage gültig.",
     },
     "btn_open_panel": {
         "pt": "Abrir meu painel",
