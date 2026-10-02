@@ -42,7 +42,14 @@ def needs_renewal(member: Member, now: datetime | None = None) -> bool:
 async def ensure_panel_token(
     session: AsyncSession, member: Member, now: datetime | None = None
 ) -> bool:
-    """Give ``member`` a usable panel token. Returns True when a new token was written."""
+    """Give ``member`` a usable panel token. Returns True when a new token was written.
+
+    The member row is locked first (``FOR UPDATE``) and the two token columns re-read: of two
+    simultaneous requests the second waits, sees the first one's token and keeps it, instead of
+    rotating again and killing the link the member received first.
+    """
+    await session.execute(select(Member.id).where(Member.id == member.id).with_for_update())
+    await session.refresh(member, ["dashboard_token", "dashboard_token_created_at"])
     if member.dashboard_token is not None and not needs_renewal(member, now):
         return False
     rotated = member.dashboard_token is not None

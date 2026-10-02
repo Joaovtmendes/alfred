@@ -74,3 +74,35 @@ async def test_rotated_token_stops_working(lab, client) -> None:
     assert (await client.get(f"/d/{new}")).status_code == 200
     assert uuid.UUID(old) != uuid.UUID(new)
     await engine.dispose()
+
+
+@db
+async def test_two_concurrent_requests_hand_out_the_same_renewed_link(lab) -> None:
+    """Two "meu painel" at once: the second must see the first one's new token, not rotate again
+    (otherwise the link the member received first is already dead)."""
+    import asyncio
+
+    async with AsyncSessionLocal() as s:
+        m = await s.get(Member, lab.member_id)
+        await panel_tokens.ensure_panel_token(s, m)
+        m.dashboard_token_created_at = datetime.now(UTC) - timedelta(days=5)  # < half left
+        await s.commit()
+
+    first, second = AsyncSessionLocal(), AsyncSessionLocal()
+    try:
+        m1, m2 = await first.get(Member, lab.member_id), await second.get(Member, lab.member_id)
+        assert await panel_tokens.ensure_panel_token(first, m1) is True  # rotates, uncommitted
+
+        async def other() -> bool:
+            return await panel_tokens.ensure_panel_token(second, m2)
+
+        task = asyncio.create_task(other())
+        await asyncio.sleep(0.3)  # let it reach the row lock
+        await first.commit()
+        assert await asyncio.wait_for(task, 5) is False  # saw the fresh token: no second rotation
+        assert m2.dashboard_token == m1.dashboard_token
+        await second.commit()
+    finally:
+        await first.close()
+        await second.close()
+    await engine.dispose()
