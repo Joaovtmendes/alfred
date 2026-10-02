@@ -13,20 +13,21 @@
 [data-theme="light"]{
   --bg:#F3F5F8;--surface:#FFFFFF;--surface2:#EDF0F5;--ink:#101828;--muted:#556070;--line:#E1E5EB;
   --accent:#1D4ED8;--on-accent:#FFFFFF;--accent-soft:#E6EDFF;--accent-text:#1D4ED8;
-  --warm:#D6304A;--warm-soft:#FFE3E8;--good:#0F9D58;color-scheme:light;
+  --warm:#D6304A;--warm-soft:#FFE3E8;--good:#0A7A42;color-scheme:light;
 }
 @media (prefers-color-scheme:light){
-  :root:not([data-theme-locked]){--bg:#F3F5F8;--surface:#FFFFFF;--surface2:#EDF0F5;--ink:#101828;--muted:#556070;--line:#E1E5EB;--accent:#1D4ED8;--on-accent:#FFFFFF;--accent-soft:#E6EDFF;--accent-text:#1D4ED8;--warm:#D6304A;--warm-soft:#FFE3E8;--good:#0F9D58;color-scheme:light}
+  :root:not([data-theme-locked]){--bg:#F3F5F8;--surface:#FFFFFF;--surface2:#EDF0F5;--ink:#101828;--muted:#556070;--line:#E1E5EB;--accent:#1D4ED8;--on-accent:#FFFFFF;--accent-soft:#E6EDFF;--accent-text:#1D4ED8;--warm:#D6304A;--warm-soft:#FFE3E8;--good:#0A7A42;color-scheme:light}
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Hanken Grotesk",system-ui,sans-serif;overflow-wrap:anywhere}
+body{margin:0;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:15px/1.5 "Hanken Grotesk",system-ui,sans-serif;overflow-wrap:anywhere}
 .num,.hero{font-family:"Bricolage Grotesque","Hanken Grotesk",system-ui,sans-serif;font-variant-numeric:tabular-nums}
-.page{max-width:1200px;margin:0 auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:16px}
+.page{flex:1;width:100%;max-width:1200px;margin:0 auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:16px}
 header.top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px}
 .brand{display:flex;align-items:center;gap:10px;font-family:"Bricolage Grotesque","Hanken Grotesk",system-ui,sans-serif;font-weight:700;font-size:20px}
 .logo{width:32px;height:32px;border-radius:9px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:700}
 .muted{font-size:12px;color:var(--muted)}
+header.top .muted{margin-left:auto}
 [role="tablist"]{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line)}
 [role="tablist"]::-webkit-scrollbar{display:none}
 [role="tab"]{flex:none;padding:12px 14px;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;color:var(--muted);font:inherit;font-size:15px;cursor:pointer}
@@ -50,7 +51,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;flex-wr
 .legend li>b.warm{background:var(--warm)}
 .legend li>b.hatch{background:repeating-linear-gradient(135deg,var(--warm) 0 3px,var(--warm-soft) 3px 6px)}
 .legend li>span{flex:1;min-width:0}
-.legend li>.num{color:var(--ink);font-weight:500;white-space:nowrap}
+.legend li>.num{flex:none;color:var(--ink);font-weight:500;white-space:nowrap;text-align:right}
 .total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .total .num{font-weight:700;font-size:24px;color:var(--ink);white-space:nowrap}
 .phrase{font-size:14px;padding-top:14px;border-top:1px solid var(--line)}
@@ -59,7 +60,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;flex-wr
 footer.foot{font-size:12px;color:var(--muted)}
 .cta{position:sticky;bottom:0;padding:12px 16px calc(16px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
 .cta a{display:flex;justify-content:center;align-items:center;height:48px;border-radius:24px;background:var(--accent);color:var(--on-accent);font-weight:600;text-decoration:none}
-.cta-top{display:none;height:44px;padding:0 18px;border-radius:22px;background:var(--accent);color:var(--on-accent);font-weight:600;font-size:14px;text-decoration:none;align-items:center}
+.cta-top{display:none;flex:none;height:44px;padding:0 18px;border-radius:22px;background:var(--accent);color:var(--on-accent);font-weight:600;font-size:14px;text-decoration:none;align-items:center}
 details.table{font-size:13px;color:var(--muted)}
 details.table summary{cursor:pointer}
 details.table table{width:100%;border-collapse:collapse;margin-top:8px}

@@ -25,3 +25,11 @@ Separar os escopos limita o dano de um link vazado (o painel não baixa tudo). A
 - Novo estado: tabela/coluna para o token de exportação e a lógica de renovação deslizante.
 - O comando de exportação passa a emitir um link próprio; links antigos de exportação deixam de valer.
 - Reversível: o painel v2 entra atrás de uma flag por membro.
+
+## Atualização 02/10/2026 (plano da fundação)
+
+Três decisões do plano `claude/alfred-dashboard-v2-plano-fundacao.md` são difíceis de desfazer e ficam registadas aqui; as demais (D3 nome `panel_phrases.py`, D4 corte das 12 regras, D5 nomes das abas, D7 TTL de 7 dias) vivem só no plano.
+
+- **D1: a v2 não usa Chart.js.** Barras em CSS e SVG inline desenhados por `panel.js`. A CSP da v2 fica sem host externo (só `'self'` e o nonce) e nenhum IP vai a terceiros. Substitui o ponto 2 acima para a v2; a v1 mantém Chart.js com SRI até ser aposentada. Para voltar atrás: Chart.js com SRI e `https://cdnjs.cloudflare.com` na CSP da v2.
+- **D2: fontes servidas pelo serviço** (Hanken Grotesk e Bricolage Grotesque, OFL, em `panel/fonts/` com as licenças). Carregar do Google Fonts enviaria o IP do utilizador a um terceiro (risco AVG).
+- **D6: exportação com página de confirmação (GET) e descarga por POST.** Prévias de link e robôs fazem GET; assim não gastam o link de uso único.
