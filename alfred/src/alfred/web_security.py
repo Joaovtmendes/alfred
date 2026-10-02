@@ -22,14 +22,16 @@ from starlette.responses import Response
 from alfred.settings import settings
 
 
-def _dashboard_csp(nonce: str) -> str:
+def _dashboard_csp(nonce: str, *, v2: bool = False) -> str:
     """CSP of the token pages: scripts and styles only with this response's nonce.
 
-    Chart.js (v1 page only) stays on cdnjs, pinned by SRI, until the v1 page is retired.
+    Chart.js (v1 page only) stays on cdnjs, pinned by SRI, until the v1 page is retired. The
+    v2 page draws its own charts, so its policy names no external host at all.
     """
+    script_src = f"'nonce-{nonce}'" if v2 else f"'nonce-{nonce}' https://cdnjs.cloudflare.com"
     return (
         "default-src 'none'; "
-        f"script-src 'nonce-{nonce}' https://cdnjs.cloudflare.com; "
+        f"script-src {script_src}; "
         f"style-src 'self' 'nonce-{nonce}'; "
         "font-src 'self'; "
         "img-src 'self' data:; "
@@ -55,7 +57,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         is_html = response.headers.get("content-type", "").startswith("text/html")
         if path.startswith("/d/"):
-            h["Content-Security-Policy"] = _dashboard_csp(nonce)
+            h["Content-Security-Policy"] = _dashboard_csp(
+                nonce, v2=getattr(request.state, "panel_v2", False)
+            )
         elif is_html and not path.startswith(("/docs", "/redoc")):
             h.setdefault(
                 "Content-Security-Policy",

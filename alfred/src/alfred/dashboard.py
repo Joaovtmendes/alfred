@@ -14,10 +14,11 @@ from datetime import date, timedelta
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred import panel
 from alfred.audit import audit
 from alfred.clock import day_start, month_name, to_local, today_local
 from alfred.dashboard_i18n import normalize_lang, payload, ui
@@ -301,6 +302,18 @@ async def dashboard_export(
 # ── HTML page ─────────────────────────────────────────────────────────────────
 
 
+@router.get("/panel-assets/{name}", include_in_schema=False)
+async def panel_asset(name: str) -> Response:
+    """CSS, JS and fonts of the v2 panel: public (no secret in them), fixed whitelist."""
+    found = panel.asset(name)
+    if found is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    body, ctype = found
+    return Response(
+        body, media_type=ctype, headers={"Cache-Control": "public, max-age=31536000, immutable"}
+    )
+
+
 @router.get("/d/{token}", include_in_schema=False, dependencies=[Depends(limit_dashboard)])
 async def dashboard_page(
     request: Request,
@@ -309,6 +322,9 @@ async def dashboard_page(
 ) -> HTMLResponse:
     member = await _get_member(token, session)
     lang = normalize_lang(member.language)
+    if member.dashboard_v2:
+        request.state.panel_v2 = True  # the middleware drops the Chart.js host from the CSP
+        return HTMLResponse(panel.render_v2(request.state.csp_nonce, lang, token))
     page = (
         _HTML_TEMPLATE.replace("__NONCE__", request.state.csp_nonce)
         .replace("__TOKEN__", token)

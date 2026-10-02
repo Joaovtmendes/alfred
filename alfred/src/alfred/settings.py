@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     whatsapp_verify_token: str = "dev_verify_token"
     whatsapp_app_secret: SecretStr = SecretStr("")
     whatsapp_phone_number_id: str = ""
+    whatsapp_display_number: str = ""  # digits only, e.g. 31612345678; builds the wa.me chat link
     whatsapp_waba_id: str = ""  # only for scripts (template submission)
     graph_api_version: str = "v25.0"  # supported until 2028-07-29
 
