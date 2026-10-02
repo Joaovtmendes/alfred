@@ -7,6 +7,7 @@ import re
 import uuid
 
 import pytest
+from sqlalchemy import text
 
 from alfred import panel_tokens
 from alfred.db import AsyncSessionLocal, engine
@@ -125,3 +126,88 @@ async def test_security_headers_on_every_token_surface(lab, client) -> None:
     r = await client.get(f"/d/{uuid.uuid4()}")  # even the 404 carries a nonce CSP, no inline
     assert "unsafe-inline" not in r.headers["content-security-policy"]
     await engine.dispose()
+
+
+@db
+async def test_export_over_http_is_spent_by_exactly_one_of_many_racers(lab, client) -> None:
+    import asyncio
+
+    async with AsyncSessionLocal() as s:
+        m = await s.get(Member, lab.member_id)
+        export = str(await panel_tokens.issue_export_token(s, m))
+        await s.commit()
+    await engine.dispose()
+    codes = await asyncio.gather(*(client.post(f"/api/d/{export}/export") for _ in range(8)))
+    assert sorted(r.status_code for r in codes) == [200] + [404] * 7
+    # replay, and the GET confirmation page of a spent link
+    assert (await client.post(f"/api/d/{export}/export")).status_code == 404
+    assert (await client.get(f"/api/d/{export}/export")).status_code == 404
+    await engine.dispose()
+
+
+@db
+async def test_token_variants_of_the_same_uuid_do_not_cross_scopes(lab, client) -> None:
+    token = await _token(lab)
+    other = str(uuid.uuid4())
+    for variant in (token.upper(), token.replace("-", ""), "{" + token + "}"):
+        assert (await client.get(f"/api/d/{variant}/export")).status_code == 404
+        await engine.dispose()
+    assert (await client.get(f"/api/d/{other}/summary")).status_code == 404
+    await engine.dispose()
+
+
+@db
+async def test_housemate_data_never_appears_in_my_summary(lab, client) -> None:
+    from datetime import UTC, datetime
+
+    from alfred.models import Expense
+
+    async with AsyncSessionLocal() as s:
+        mate = Member(
+            household_id=lab.household_id,
+            wa_phone="3161" + uuid.uuid4().hex[:7],
+            display_name="Mate",
+            consent_state="accepted",
+        )
+        s.add(mate)
+        await s.flush()
+        s.add(
+            Expense(
+                member_id=mate.id,
+                household_id=lab.household_id,
+                transaction_type="expense",
+                amount=777,
+                merchant="secret",
+                category="overig",
+                status="paid",
+                expense_date=datetime.now(UTC),
+                trip_id=None,
+            )
+        )
+        await s.commit()
+        mate_id = mate.id
+    await engine.dispose()
+    token = await _token(lab)
+    body = (await client.get(f"/api/d/{token}/summary")).json()
+    assert body["cards"][0]["values"]["expense"] == 0
+    assert (await client.get(f"/api/d/{mate_id}/summary")).status_code == 404  # id is not a token
+    await engine.dispose()
+    async with AsyncSessionLocal() as s:
+        await s.execute(text("DELETE FROM expense WHERE member_id = :m"), {"m": mate_id})
+        await s.execute(text("DELETE FROM member WHERE id = :m"), {"m": mate_id})
+        await s.commit()
+    await engine.dispose()
+
+
+def test_sentry_scrub_removes_dashboard_and_export_tokens_from_the_url() -> None:
+    from alfred.observability import _scrub
+
+    token = str(uuid.uuid4())
+    event = {
+        "request": {"url": f"https://a.example/api/d/{token}/export", "method": "POST"},
+        "transaction": f"/d/{token}",
+        "breadcrumbs": {"values": [{"message": f"POST /d/{token} 200", "category": "httplib"}]},
+        "exception": {"values": [{"value": f"boom at /api/d/{token}/summary"}]},
+    }
+    out = str(_scrub(event, {}))
+    assert token not in out

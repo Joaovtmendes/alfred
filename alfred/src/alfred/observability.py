@@ -6,12 +6,29 @@ Nothing a user wrote is ever sent: no request bodies, no local variables, no use
 
 from __future__ import annotations
 
+import re
+
 import structlog
 
 from alfred.settings import settings
 
 logger = structlog.get_logger(__name__)
 _enabled = False
+
+
+# Dashboard and export links carry a secret in the path (/d/<token>, /api/d/<token>/...).
+_TOKEN_IN_PATH = re.compile(r"(/d/)[0-9a-fA-F-]{32,36}")
+
+
+def _redact_tokens(value: object) -> object:
+    """Replace link tokens in every string of ``value`` (urls, messages, exception texts)."""
+    if isinstance(value, str):
+        return _TOKEN_IN_PATH.sub(r"\1[token]", value)
+    if isinstance(value, dict):
+        return {k: _redact_tokens(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_redact_tokens(v) for v in value]
+    return value
 
 
 def _scrub(event: dict, hint: dict) -> dict | None:
@@ -23,7 +40,7 @@ def _scrub(event: dict, hint: dict) -> dict | None:
     event.pop("user", None)
     for crumb in (event.get("breadcrumbs") or {}).get("values", []) or []:
         crumb.pop("data", None)
-    return event
+    return _redact_tokens(event)  # type: ignore[return-value]
 
 
 def init_sentry(service: str = "web") -> bool:
