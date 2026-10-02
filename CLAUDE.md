@@ -37,7 +37,7 @@ alfred/                    ← raiz do serviço (Railway "Root Directory")
   scripts/seed_demo_member.py   membro de demonstração do painel v2 (idempotente, só o 31000000000)
   scripts/contrast_check.py     contraste WCAG AA dos tokens de cor do painel (-v lista os pares)
   scripts/panel_shots.py        capturas claro/escuro x desktop/celular + CSP/overflow no Chromium
-  alembic/versions/        migrações (cadeia linear, head = a1d5c7e9b3f2)
+  alembic/versions/        migrações (cadeia linear, head = c4d5e6f7a8b9)
   m5-templates/ m6-flow/   JSON para submeter no WhatsApp Manager
   tests/                   pytest (unit + integração com Postgres real)
 docs/                      ARCHITECTURE.md, OPERATIONS.md

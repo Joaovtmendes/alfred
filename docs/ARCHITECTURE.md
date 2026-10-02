@@ -134,6 +134,12 @@ GET  /panel-assets/{nome}       → panel.css, panel.js e fontes (lista fixa, im
 
 "Apagar meus dados" invalida os dois na mesma transação.
 
+A renovação trava a linha do membro (`SELECT ... FOR UPDATE`): dois "meu dashboard" simultâneos
+devolvem o mesmo link novo em vez de reemitir duas vezes. Link expirado ou desconhecido em
+`/d/{token}` mostra uma página 404 em HTML, na língua do membro, que diz como pedir outro; as rotas
+`/api/d/...` continuam a responder JSON 404. A mensagem "vale por até 7 dias" é de propósito: um
+link reaproveitado tem entre 3,5 e 7 dias de validade restante.
+
 **CSP por nonce.** `SecurityHeadersMiddleware` gera um nonce por pedido (`request.state.csp_nonce`);
 `script-src` e `style-src` só aceitam esse nonce (nunca `unsafe-inline`). A v1 mantém
 `https://cdnjs.cloudflare.com` para o Chart.js (com SRI); a v2 marca `request.state.panel_v2` e a

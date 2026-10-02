@@ -224,3 +224,43 @@ async def test_summary_stays_under_300ms_with_20k_rows(lab, client) -> None:
         assert r.status_code == 200
     assert _balance(r.json())["empty"] is False
     assert statistics.median(times) < 0.3, times
+
+
+@db
+async def test_v2_balance_equals_v1_at_every_month_edge_and_dst_change(lab, client) -> None:
+    """Same member, same month: the v1 totals and the v2 balance card must be the same numbers,
+    including entries in the last/first local second of a month, a year, and a DST switch."""
+    instants = [
+        datetime(2026, 2, 28, 22, 59, 59, tzinfo=UTC),  # 23:59:59 CET, still February
+        datetime(2026, 2, 28, 23, 0, 0, tzinfo=UTC),  # 00:00 CET, March
+        datetime(2026, 3, 29, 0, 30, tzinfo=UTC),  # 01:30 CET, hour before the spring jump
+        datetime(2026, 3, 31, 21, 59, 59, tzinfo=UTC),  # 23:59:59 CEST, March
+        datetime(2026, 3, 31, 22, 0, 0, tzinfo=UTC),  # 00:00 CEST, April
+        datetime(2026, 10, 24, 22, 0, 0, tzinfo=UTC),  # 00:00 CEST on the 25-hour day
+        datetime(2026, 10, 25, 22, 59, 59, tzinfo=UTC),  # 23:59:59 CET, still the 25th
+        datetime(2026, 10, 25, 23, 0, 0, tzinfo=UTC),  # 00:00 CET on the 26th
+        datetime(2026, 12, 31, 22, 59, 59, tzinfo=UTC),  # last second of 2026
+        datetime(2026, 12, 31, 23, 0, 0, tzinfo=UTC),  # first second of 2027
+    ]
+    for i, at in enumerate(instants):
+        await lab.add(
+            Expense(
+                member_id=lab.member_id,
+                household_id=lab.household_id,
+                transaction_type="income" if i % 3 == 0 else "expense",
+                amount=10.0 + i + 0.07,
+                merchant="edge",
+                category="overig",
+                status="received" if i % 3 == 0 else "paid",
+                expense_date=at,
+            )
+        )
+    token = await _token(lab.member_id)
+    for month in ("2026-02", "2026-03", "2026-04", "2026-10", "2026-12", "2027-01"):
+        v1 = (await client.get(f"/api/d/{token}?month={month}")).json()
+        card = _balance((await client.get(f"/api/d/{token}/summary?month={month}")).json())
+        assert card["values"] == {
+            "income": v1["total_income"],
+            "expense": v1["total_expense"],
+            "balance": v1["balance"],
+        }, month
