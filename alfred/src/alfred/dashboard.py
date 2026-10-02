@@ -24,8 +24,8 @@ from alfred.dashboard_i18n import normalize_lang, payload, ui
 from alfred.db import get_session
 from alfred.labels import category_label
 from alfred.models import SETTLED, Expense, Goal, HabitLog, HealthLog, Member, Note, Task
+from alfred.panel_tokens import consume_export_token, peek_export_token, token_expired
 from alfred.panel_tokens import ensure_panel_token as ensure_dashboard_token  # noqa: F401
-from alfred.panel_tokens import token_expired
 from alfred.web_security import limit_dashboard
 
 logger = structlog.get_logger(__name__)
@@ -258,14 +258,39 @@ async def dashboard_api(
 @router.get(
     "/api/d/{token}/export", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
 )
+async def dashboard_export_page(
+    token: str, session: AsyncSession = Depends(get_session)
+) -> HTMLResponse:
+    """Confirmation page. Link previews and bots only GET, so they cannot spend the link."""
+    member = await peek_export_token(session, token)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Link not found")
+    lang = normalize_lang(member.language)
+    t = ui(lang)
+    body = (
+        f'<!doctype html><html lang="{lang}"><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"<title>{t['export_title']}</title>"
+        "<body>"
+        f"<h1>{t['export_title']}</h1><p>{t['export_text']}</p>"
+        '<form method="post"><button type="submit">'
+        f"{t['export_button']}</button></form></body></html>"
+    )
+    return HTMLResponse(body)
+
+
+@router.post(
+    "/api/d/{token}/export", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
+)
 async def dashboard_export(
-    token: str,
-    session: AsyncSession = Depends(get_session),
+    token: str, session: AsyncSession = Depends(get_session)
 ) -> JSONResponse:
-    """GDPR access/portability: everything stored about the member, as a JSON download."""
+    """GDPR access/portability: everything stored about the member, once, as a JSON download."""
     from alfred.privacy import export_member_data
 
-    member = await _get_member(token, session)
+    member = await consume_export_token(session, token)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Link not found")
     audit(session, "data_exported", member.id)
     return JSONResponse(
         await export_member_data(session, member),

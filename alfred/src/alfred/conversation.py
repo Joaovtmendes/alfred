@@ -629,11 +629,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Diese Anfrage ist abgelaufen. Willst du deine Daten weiterhin löschen, schreib erneut *meine Daten löschen*.",
     },
     "export_link": {
-        "pt": "Aqui está a cópia dos seus dados (arquivo JSON). O link vale por {days} dias e é só seu:\n{url}",
-        "nl": "Hier zijn je gegevens als JSON (de link verloopt na {days} dagen en is alleen voor jou):\n{url}",
-        "en": "Here is your data as JSON (the link expires in {days} days and is only yours):\n{url}",
-        "fr": "Voici tes données en JSON (le lien expire dans {days} jours et n'est qu'à toi) :\n{url}",
-        "de": "Hier sind deine Daten als JSON (der Link läuft nach {days} Tagen ab und gehört nur dir):\n{url}",
+        "pt": "Aqui está o link para baixar a cópia dos seus dados (arquivo JSON). Ele vale por {minutes} minutos e funciona uma única vez:\n{url}",
+        "nl": "Hier is de link om je gegevens als JSON te downloaden. Hij is {minutes} minuten geldig en werkt maar één keer:\n{url}",
+        "en": "Here is the link to download your data as JSON. It is valid for {minutes} minutes and works only once:\n{url}",
+        "fr": "Voici le lien pour télécharger tes données en JSON. Il est valable {minutes} minutes et ne fonctionne qu'une fois :\n{url}",
+        "de": "Hier ist der Link zum Herunterladen deiner Daten als JSON. Er gilt {minutes} Minuten und funktioniert nur einmal:\n{url}",
     },
     "btn_undo": {
         "pt": "Desfazer",
@@ -3535,16 +3535,16 @@ async def handle_inbound(
             await _save_outbound(member, _t("wipe_ask", lang), session)
             return
         if _EXPORT_RE.match(body_plain.strip()):
-            from alfred.dashboard import ensure_dashboard_token
+            from alfred.panel_tokens import issue_export_token
 
             base_url = (settings.base_url or "").rstrip("/")
             if not base_url:
                 reply = _t("dashboard_no_base_url", lang)
             else:
-                await ensure_dashboard_token(session, member)
+                token = await issue_export_token(session, member)
                 audit(session, "data_export_link", member.id)
-                url = f"{base_url}/api/d/{member.dashboard_token}/export"
-                reply = _t("export_link", lang, url=url, days=settings.dashboard_token_ttl_days)
+                url = f"{base_url}/api/d/{token}/export"
+                reply = _t("export_link", lang, url=url, minutes=settings.export_token_ttl_minutes)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return

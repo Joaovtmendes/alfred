@@ -19,6 +19,9 @@ LOCALES = {"pt": "pt-BR", "nl": "nl-NL", "en": "en-GB", "fr": "fr-FR", "de": "de
 
 _UI: dict[str, dict[str, str]] = {
     "title": {"pt": "Painel do Alfred", "nl": "Alfred-dashboard", "en": "Alfred dashboard", "fr": "Tableau de bord Alfred", "de": "Alfred-Dashboard"},
+    "export_title": {"pt": "Exportar meus dados", "nl": "Mijn gegevens exporteren", "en": "Export my data", "fr": "Exporter mes données", "de": "Meine Daten exportieren"},
+    "export_text": {"pt": "O arquivo (JSON) tem tudo o que o Alfred guarda sobre você. Este link vale uma vez só.", "nl": "Het bestand (JSON) bevat alles wat Alfred over je bewaart. Deze link werkt maar één keer.", "en": "The file (JSON) holds everything Alfred stores about you. This link works only once.", "fr": "Le fichier (JSON) contient tout ce qu'Alfred conserve sur toi. Ce lien ne fonctionne qu'une fois.", "de": "Die Datei (JSON) enthält alles, was Alfred über dich speichert. Dieser Link funktioniert nur einmal."},
+    "export_button": {"pt": "Baixar meus dados", "nl": "Mijn gegevens downloaden", "en": "Download my data", "fr": "Télécharger mes données", "de": "Meine Daten herunterladen"},
     "loading": {"pt": "Carregando…", "nl": "Laden…", "en": "Loading…", "fr": "Chargement…", "de": "Wird geladen…"},
     "not_found": {"pt": "Painel não encontrado.", "nl": "Dashboard niet gevonden.", "en": "Dashboard not found.", "fr": "Tableau de bord introuvable.", "de": "Dashboard nicht gefunden."},
     "prev_month": {"pt": "Mês anterior", "nl": "Vorige maand", "en": "Previous month", "fr": "Mois précédent", "de": "Voriger Monat"},
