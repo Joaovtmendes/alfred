@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import secrets
 import time
 from collections import defaultdict, deque
 
@@ -20,21 +21,31 @@ from starlette.responses import Response
 
 from alfred.settings import settings
 
-# Chart.js is the only third-party script; SRI pins its exact bytes (see dashboard.py).
-_DASHBOARD_CSP = (
-    "default-src 'none'; "
-    "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
-    "style-src 'self' 'unsafe-inline'; "
-    "img-src 'self' data:; "
-    "connect-src 'self'; "
-    "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-)
+
+def _dashboard_csp(nonce: str) -> str:
+    """CSP of the token pages: scripts and styles only with this response's nonce.
+
+    Chart.js (v1 page only) stays on cdnjs, pinned by SRI, until the v1 page is retired.
+    """
+    return (
+        "default-src 'none'; "
+        f"script-src 'nonce-{nonce}' https://cdnjs.cloudflare.com; "
+        f"style-src 'self' 'nonce-{nonce}'; "
+        "font-src 'self'; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    )
+
+
 _DEFAULT_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
 _TOKEN_PREFIXES = ("/d/", "/api/d/")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        nonce = secrets.token_urlsafe(16)
+        request.state.csp_nonce = nonce
         response = await call_next(request)
         path = request.url.path
         h = response.headers
@@ -44,7 +55,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         is_html = response.headers.get("content-type", "").startswith("text/html")
         if path.startswith("/d/"):
-            h.setdefault("Content-Security-Policy", _DASHBOARD_CSP)
+            h["Content-Security-Policy"] = _dashboard_csp(nonce)
         elif is_html and not path.startswith(("/docs", "/redoc")):
             h.setdefault(
                 "Content-Security-Policy",

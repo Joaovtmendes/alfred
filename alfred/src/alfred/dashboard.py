@@ -13,7 +13,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -303,13 +303,15 @@ async def dashboard_export(
 
 @router.get("/d/{token}", include_in_schema=False, dependencies=[Depends(limit_dashboard)])
 async def dashboard_page(
+    request: Request,
     token: str,
     session: AsyncSession = Depends(get_session),
 ) -> HTMLResponse:
     member = await _get_member(token, session)
     lang = normalize_lang(member.language)
     page = (
-        _HTML_TEMPLATE.replace("__TOKEN__", token)
+        _HTML_TEMPLATE.replace("__NONCE__", request.state.csp_nonce)
+        .replace("__TOKEN__", token)
         .replace("__LANG__", lang)
         .replace("__I18N__", payload(lang))
         .replace("__TITLE__", ui(lang)["title"])
@@ -324,7 +326,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>__TITLE__</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<style>
+<style nonce="__NONCE__">
 :root{
   --bg:#0f1117;--surface:#1a1d27;--surface2:#232635;
   --accent:#6c63ff;--accent2:#48e5c2;
@@ -440,6 +442,8 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
   display:flex;align-items:center;justify-content:center;
   font-size:1.1rem;color:var(--muted);z-index:100;
 }
+.mb{margin-bottom:var(--gap)}
+.tight{gap:var(--gap)}
 </style>
 </head>
 <body>
@@ -453,7 +457,7 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
   </div>
 </header>
 <main>
-  <div class="grid row-3" style="margin-bottom:var(--gap)">
+  <div class="grid row-3 mb">
     <div class="card">
       <div class="card-title" data-i18n="spent"></div>
       <div class="stat-val red" id="v-expense">—</div>
@@ -469,7 +473,7 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
     </div>
   </div>
 
-  <div class="grid row-2" style="margin-bottom:var(--gap)">
+  <div class="grid row-2 mb">
     <div class="card">
       <div class="card-title" data-i18n="by_category"></div>
       <div class="chart-wrap"><canvas id="chart-donut"></canvas></div>
@@ -480,12 +484,12 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
     </div>
   </div>
 
-  <div class="grid row-2" style="margin-bottom:var(--gap)">
+  <div class="grid row-2 mb">
     <div class="card">
       <div class="card-title" data-i18n="recent_tx"></div>
       <div class="tx-list" id="tx-list"></div>
     </div>
-    <div class="grid row-1" style="gap:var(--gap)">
+    <div class="grid row-1 tight">
       <div class="card">
         <div class="card-title" data-i18n="goals"></div>
         <div id="goals-list"></div>
@@ -497,7 +501,7 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
     </div>
   </div>
 
-  <div class="grid row-2" style="margin-bottom:var(--gap)">
+  <div class="grid row-2 mb">
     <div class="card">
       <div class="card-title" data-i18n="habits"></div>
       <div id="habits-list"></div>
@@ -516,7 +520,7 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
   </div>
 </main>
 
-<script>
+<script nonce="__NONCE__">
 const TOKEN = "__TOKEN__";
 let currentMonth = "";
 let donutChart = null;
