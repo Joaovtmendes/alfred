@@ -11,6 +11,7 @@ import uuid
 from calendar import monthrange
 from collections import defaultdict
 from datetime import date, timedelta
+from html import escape
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -36,16 +37,37 @@ router = APIRouter(tags=["dashboard"])
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _get_member(token_str: str, session: AsyncSession) -> Member:
+async def _find_member(token_str: str, session: AsyncSession) -> Member | None:
+    """The member holding this token, expired or not (None for unknown or malformed tokens)."""
     try:
         token = uuid.UUID(token_str)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Dashboard not found") from None
+        return None
     result = await session.execute(select(Member).where(Member.dashboard_token == token))
-    member = result.scalar_one_or_none()
+    return result.scalar_one_or_none()
+
+
+async def _get_member(token_str: str, session: AsyncSession) -> Member:
+    member = await _find_member(token_str, session)
     if member is None or token_expired(member):
         raise HTTPException(status_code=404, detail="Dashboard not found") from None
     return member
+
+
+def _link_gone(lang: str | None) -> HTMLResponse:
+    """What a person sees when tapping an old or wrong link: how to get a new one, not JSON."""
+    lang = normalize_lang(lang)
+    t = ui(lang)
+    body = (
+        f'<!doctype html><html lang="{lang}"><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="color-scheme" content="light dark">'
+        f"<title>{escape(t['link_expired_title'])}</title>"
+        "<body><main>"
+        f"<h1>{escape(t['link_expired_title'])}</h1><p>{escape(t['link_expired_text'])}</p>"
+        "</main></body></html>"
+    )
+    return HTMLResponse(body, status_code=404)
 
 
 def _parse_month(raw: str | None, today: date) -> tuple[int, int]:
@@ -320,7 +342,9 @@ async def dashboard_page(
     token: str,
     session: AsyncSession = Depends(get_session),
 ) -> HTMLResponse:
-    member = await _get_member(token, session)
+    member = await _find_member(token, session)
+    if member is None or token_expired(member):
+        return _link_gone(member.language if member else None)
     lang = normalize_lang(member.language)
     if member.dashboard_v2:
         request.state.panel_v2 = True  # the middleware drops the Chart.js host from the CSP
