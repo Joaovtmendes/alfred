@@ -77,6 +77,13 @@ SHELL = {
         "fr": "Pas encore de données ici. Enregistre-les dans le chat.",
         "de": "Hier gibt es noch keine Daten. Erfasse sie im Chat.",
     },
+    "soon": {
+        "pt": "Em breve: esta aba está a caminho.",
+        "nl": "Binnenkort: dit tabblad komt eraan.",
+        "en": "Coming soon: this tab is on its way.",
+        "fr": "Bientôt : cet onglet arrive.",
+        "de": "Bald: dieser Tab ist unterwegs.",
+    },
     "error": {
         "pt": "Não foi possível carregar esta aba. Tente de novo em instantes.",
         "nl": "Dit tabblad kon niet worden geladen. Probeer het zo opnieuw.",

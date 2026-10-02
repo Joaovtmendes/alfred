@@ -116,8 +116,10 @@
       if (card.empty) { c.append(el("div", "empty", T.empty)); return c; }
       const v = card.values;
       heroMoney(c, v.balance);
-      barRow(c, { label: T.income, value: money(v.income), pct: 100 });
-      barRow(c, { label: T.expense, value: money(v.expense), pct: v.income ? (v.expense / v.income) * 100 : 0, tone: "warm" });
+      const top = Math.max(v.income, v.expense, 0); // one scale for both bars
+      const pct = (x) => (top ? (x / top) * 100 : 0);
+      barRow(c, { label: T.income, value: money(v.income), pct: pct(v.income) });
+      barRow(c, { label: T.expense, value: money(v.expense), pct: pct(v.expense), tone: "warm" });
       tableView(c, [[T.income, money(v.income)], [T.expense, money(v.expense)], [T.tab_balance, money(v.balance)]]);
       phraseBlock(c, card.phrase);
       return c;
@@ -153,7 +155,7 @@
         const draw = renderers[card.id];
         if (draw) grid.append(draw(card));
       }
-      panel.replaceChildren(grid.children.length ? grid : el("div", "empty", T.empty));
+      panel.replaceChildren(grid.children.length ? grid : el("div", "empty", T.soon));
     } catch (_) {
       if (mine === latest) panel.replaceChildren(el("div", "empty", message || T.error));
     }
