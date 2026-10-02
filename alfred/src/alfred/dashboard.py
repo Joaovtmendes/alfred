@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from calendar import monthrange
 from collections import defaultdict
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -24,7 +24,8 @@ from alfred.dashboard_i18n import normalize_lang, payload, ui
 from alfred.db import get_session
 from alfred.labels import category_label
 from alfred.models import SETTLED, Expense, Goal, HabitLog, HealthLog, Member, Note, Task
-from alfred.settings import settings
+from alfred.panel_tokens import ensure_panel_token as ensure_dashboard_token  # noqa: F401
+from alfred.panel_tokens import token_expired
 from alfred.web_security import limit_dashboard
 
 logger = structlog.get_logger(__name__)
@@ -44,26 +45,6 @@ async def _get_member(token_str: str, session: AsyncSession) -> Member:
     if member is None or token_expired(member):
         raise HTTPException(status_code=404, detail="Dashboard not found") from None
     return member
-
-
-async def ensure_dashboard_token(session: AsyncSession, member: Member) -> None:
-    """Give ``member`` a valid dashboard token: issue if missing, rotate if expired."""
-    if member.dashboard_token is not None and not token_expired(member):
-        return
-    rotated = member.dashboard_token is not None
-    member.dashboard_token = uuid.uuid4()
-    member.dashboard_token_created_at = datetime.now(UTC)
-    audit(session, "dashboard_link_rotated" if rotated else "dashboard_link_issued", member.id)
-    await session.flush()
-
-
-def token_expired(member: Member, now: datetime | None = None) -> bool:
-    """A dashboard link is valid for ``dashboard_token_ttl_days`` from when it was issued."""
-    issued = member.dashboard_token_created_at
-    if issued is None:  # legacy row: the migration backfills, but never trust NULL forever
-        return False
-    now = now or datetime.now(UTC)
-    return now - issued > timedelta(days=settings.dashboard_token_ttl_days)
 
 
 def _parse_month(raw: str | None, today: date) -> tuple[int, int]:
