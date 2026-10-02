@@ -10,21 +10,24 @@ from __future__ import annotations
 import uuid
 from calendar import monthrange
 from collections import defaultdict
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
+from html import escape
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred import panel
 from alfred.audit import audit
 from alfred.clock import day_start, month_name, to_local, today_local
 from alfred.dashboard_i18n import normalize_lang, payload, ui
 from alfred.db import get_session
 from alfred.labels import category_label
 from alfred.models import SETTLED, Expense, Goal, HabitLog, HealthLog, Member, Note, Task
-from alfred.settings import settings
+from alfred.panel_tokens import consume_export_token, peek_export_token, token_expired
+from alfred.panel_tokens import ensure_panel_token as ensure_dashboard_token  # noqa: F401
 from alfred.web_security import limit_dashboard
 
 logger = structlog.get_logger(__name__)
@@ -34,36 +37,37 @@ router = APIRouter(tags=["dashboard"])
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _get_member(token_str: str, session: AsyncSession) -> Member:
+async def _find_member(token_str: str, session: AsyncSession) -> Member | None:
+    """The member holding this token, expired or not (None for unknown or malformed tokens)."""
     try:
         token = uuid.UUID(token_str)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Dashboard not found") from None
+        return None
     result = await session.execute(select(Member).where(Member.dashboard_token == token))
-    member = result.scalar_one_or_none()
+    return result.scalar_one_or_none()
+
+
+async def _get_member(token_str: str, session: AsyncSession) -> Member:
+    member = await _find_member(token_str, session)
     if member is None or token_expired(member):
         raise HTTPException(status_code=404, detail="Dashboard not found") from None
     return member
 
 
-async def ensure_dashboard_token(session: AsyncSession, member: Member) -> None:
-    """Give ``member`` a valid dashboard token: issue if missing, rotate if expired."""
-    if member.dashboard_token is not None and not token_expired(member):
-        return
-    rotated = member.dashboard_token is not None
-    member.dashboard_token = uuid.uuid4()
-    member.dashboard_token_created_at = datetime.now(UTC)
-    audit(session, "dashboard_link_rotated" if rotated else "dashboard_link_issued", member.id)
-    await session.flush()
-
-
-def token_expired(member: Member, now: datetime | None = None) -> bool:
-    """A dashboard link is valid for ``dashboard_token_ttl_days`` from when it was issued."""
-    issued = member.dashboard_token_created_at
-    if issued is None:  # legacy row: the migration backfills, but never trust NULL forever
-        return False
-    now = now or datetime.now(UTC)
-    return now - issued > timedelta(days=settings.dashboard_token_ttl_days)
+def _link_gone(lang: str | None) -> HTMLResponse:
+    """What a person sees when tapping an old or wrong link: how to get a new one, not JSON."""
+    lang = normalize_lang(lang)
+    t = ui(lang)
+    body = (
+        f'<!doctype html><html lang="{lang}"><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="color-scheme" content="light dark">'
+        f"<title>{escape(t['link_expired_title'])}</title>"
+        "<body><main>"
+        f"<h1>{escape(t['link_expired_title'])}</h1><p>{escape(t['link_expired_text'])}</p>"
+        "</main></body></html>"
+    )
+    return HTMLResponse(body, status_code=404)
 
 
 def _parse_month(raw: str | None, today: date) -> tuple[int, int]:
@@ -277,14 +281,39 @@ async def dashboard_api(
 @router.get(
     "/api/d/{token}/export", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
 )
+async def dashboard_export_page(
+    token: str, session: AsyncSession = Depends(get_session)
+) -> HTMLResponse:
+    """Confirmation page. Link previews and bots only GET, so they cannot spend the link."""
+    member = await peek_export_token(session, token)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Link not found")
+    lang = normalize_lang(member.language)
+    t = ui(lang)
+    body = (
+        f'<!doctype html><html lang="{lang}"><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"<title>{t['export_title']}</title>"
+        "<body>"
+        f"<h1>{t['export_title']}</h1><p>{t['export_text']}</p>"
+        '<form method="post"><button type="submit">'
+        f"{t['export_button']}</button></form></body></html>"
+    )
+    return HTMLResponse(body)
+
+
+@router.post(
+    "/api/d/{token}/export", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
+)
 async def dashboard_export(
-    token: str,
-    session: AsyncSession = Depends(get_session),
+    token: str, session: AsyncSession = Depends(get_session)
 ) -> JSONResponse:
-    """GDPR access/portability: everything stored about the member, as a JSON download."""
+    """GDPR access/portability: everything stored about the member, once, as a JSON download."""
     from alfred.privacy import export_member_data
 
-    member = await _get_member(token, session)
+    member = await consume_export_token(session, token)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Link not found")
     audit(session, "data_exported", member.id)
     return JSONResponse(
         await export_member_data(session, member),
@@ -295,15 +324,34 @@ async def dashboard_export(
 # ── HTML page ─────────────────────────────────────────────────────────────────
 
 
+@router.get("/panel-assets/{name}", include_in_schema=False)
+async def panel_asset(name: str) -> Response:
+    """CSS, JS and fonts of the v2 panel: public (no secret in them), fixed whitelist."""
+    found = panel.asset(name)
+    if found is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    body, ctype = found
+    return Response(
+        body, media_type=ctype, headers={"Cache-Control": "public, max-age=31536000, immutable"}
+    )
+
+
 @router.get("/d/{token}", include_in_schema=False, dependencies=[Depends(limit_dashboard)])
 async def dashboard_page(
+    request: Request,
     token: str,
     session: AsyncSession = Depends(get_session),
 ) -> HTMLResponse:
-    member = await _get_member(token, session)
+    member = await _find_member(token, session)
+    if member is None or token_expired(member):
+        return _link_gone(member.language if member else None)
     lang = normalize_lang(member.language)
+    if member.dashboard_v2:
+        request.state.panel_v2 = True  # the middleware drops the Chart.js host from the CSP
+        return HTMLResponse(panel.render_v2(request.state.csp_nonce, lang, token))
     page = (
-        _HTML_TEMPLATE.replace("__TOKEN__", token)
+        _HTML_TEMPLATE.replace("__NONCE__", request.state.csp_nonce)
+        .replace("__TOKEN__", token)
         .replace("__LANG__", lang)
         .replace("__I18N__", payload(lang))
         .replace("__TITLE__", ui(lang)["title"])
@@ -318,7 +366,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>__TITLE__</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<style>
+<style nonce="__NONCE__">
 :root{
   --bg:#0f1117;--surface:#1a1d27;--surface2:#232635;
   --accent:#6c63ff;--accent2:#48e5c2;
@@ -434,6 +482,8 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
   display:flex;align-items:center;justify-content:center;
   font-size:1.1rem;color:var(--muted);z-index:100;
 }
+.mb{margin-bottom:var(--gap)}
+.tight{gap:var(--gap)}
 </style>
 </head>
 <body>
@@ -447,7 +497,7 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
   </div>
 </header>
 <main>
-  <div class="grid row-3" style="margin-bottom:var(--gap)">
+  <div class="grid row-3 mb">
     <div class="card">
       <div class="card-title" data-i18n="spent"></div>
       <div class="stat-val red" id="v-expense">—</div>
@@ -463,7 +513,7 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
     </div>
   </div>
 
-  <div class="grid row-2" style="margin-bottom:var(--gap)">
+  <div class="grid row-2 mb">
     <div class="card">
       <div class="card-title" data-i18n="by_category"></div>
       <div class="chart-wrap"><canvas id="chart-donut"></canvas></div>
@@ -474,12 +524,12 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
     </div>
   </div>
 
-  <div class="grid row-2" style="margin-bottom:var(--gap)">
+  <div class="grid row-2 mb">
     <div class="card">
       <div class="card-title" data-i18n="recent_tx"></div>
       <div class="tx-list" id="tx-list"></div>
     </div>
-    <div class="grid row-1" style="gap:var(--gap)">
+    <div class="grid row-1 tight">
       <div class="card">
         <div class="card-title" data-i18n="goals"></div>
         <div id="goals-list"></div>
@@ -491,7 +541,7 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
     </div>
   </div>
 
-  <div class="grid row-2" style="margin-bottom:var(--gap)">
+  <div class="grid row-2 mb">
     <div class="card">
       <div class="card-title" data-i18n="habits"></div>
       <div id="habits-list"></div>
@@ -510,7 +560,7 @@ main{max-width:1100px;margin:0 auto;padding:16px var(--gap)}
   </div>
 </main>
 
-<script>
+<script nonce="__NONCE__">
 const TOKEN = "__TOKEN__";
 let currentMonth = "";
 let donutChart = null;

@@ -19,7 +19,7 @@ from alfred.models import Household, Member
 # member_id / author_id point at the person; audit_log is anonymised by FK (SET NULL).
 _PERSON_COLUMNS = ("member_id", "author_id")
 _SKIP_ERASE = {"member", "household", "audit_log"}
-_SECRET_COLUMNS = {"dashboard_token"}
+_SECRET_COLUMNS = {"dashboard_token", "export_token"}
 
 
 def _person_column(table: Table):

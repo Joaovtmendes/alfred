@@ -103,7 +103,7 @@ from alfred.score import STRINGS as _SCORE_STRINGS
 from alfred.score import handle_score_command
 from alfred.settings import settings
 from alfred.validation import MAX_AMOUNT
-from alfred.whatsapp import send_buttons, send_text
+from alfred.whatsapp import send_buttons, send_cta_url, send_text
 
 logger = structlog.get_logger()
 
@@ -629,11 +629,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Diese Anfrage ist abgelaufen. Willst du deine Daten weiterhin löschen, schreib erneut *meine Daten löschen*.",
     },
     "export_link": {
-        "pt": "Aqui está a cópia dos seus dados (arquivo JSON). O link vale por {days} dias e é só seu:\n{url}",
-        "nl": "Hier zijn je gegevens als JSON (de link verloopt na {days} dagen en is alleen voor jou):\n{url}",
-        "en": "Here is your data as JSON (the link expires in {days} days and is only yours):\n{url}",
-        "fr": "Voici tes données en JSON (le lien expire dans {days} jours et n'est qu'à toi) :\n{url}",
-        "de": "Hier sind deine Daten als JSON (der Link läuft nach {days} Tagen ab und gehört nur dir):\n{url}",
+        "pt": "Aqui está o link para baixar a cópia dos seus dados (arquivo JSON). Ele vale por {minutes} minutos e funciona uma única vez:\n{url}",
+        "nl": "Hier is de link om je gegevens als JSON te downloaden. Hij is {minutes} minuten geldig en werkt maar één keer:\n{url}",
+        "en": "Here is the link to download your data as JSON. It is valid for {minutes} minutes and works only once:\n{url}",
+        "fr": "Voici le lien pour télécharger tes données en JSON. Il est valable {minutes} minutes et ne fonctionne qu'une fois :\n{url}",
+        "de": "Hier ist der Link zum Herunterladen deiner Daten als JSON. Er gilt {minutes} Minuten und funktioniert nur einmal:\n{url}",
     },
     "btn_undo": {
         "pt": "Desfazer",
@@ -1279,6 +1279,20 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": "\U0001f4ca Your personal dashboard:\n{url}",
         "fr": "\U0001f4ca Ton tableau de bord personnel :\n{url}",
         "de": "\U0001f4ca Dein pers\u00f6nliches Dashboard:\n{url}",
+    },
+    "dashboard_cta": {
+        "pt": "Aqui está o seu painel. O link vale por até 7 dias.",
+        "nl": "Hier is je dashboard. De link is maximaal 7 dagen geldig.",
+        "en": "Here is your dashboard. The link is valid for up to 7 days.",
+        "fr": "Voici ton tableau de bord. Le lien est valable jusqu'à 7 jours.",
+        "de": "Hier ist dein Dashboard. Der Link ist bis zu 7 Tage gültig.",
+    },
+    "btn_open_panel": {
+        "pt": "Abrir meu painel",
+        "nl": "Open mijn dashboard",
+        "en": "Open my dashboard",
+        "fr": "Ouvrir mon tableau",
+        "de": "Dashboard öffnen",
     },
     "dashboard_no_base_url": {
         "pt": "O painel ainda não está configurado. Fale com o administrador.",
@@ -3535,16 +3549,16 @@ async def handle_inbound(
             await _save_outbound(member, _t("wipe_ask", lang), session)
             return
         if _EXPORT_RE.match(body_plain.strip()):
-            from alfred.dashboard import ensure_dashboard_token
+            from alfred.panel_tokens import issue_export_token
 
             base_url = (settings.base_url or "").rstrip("/")
             if not base_url:
                 reply = _t("dashboard_no_base_url", lang)
             else:
-                await ensure_dashboard_token(session, member)
+                token = await issue_export_token(session, member)
                 audit(session, "data_export_link", member.id)
-                url = f"{base_url}/api/d/{member.dashboard_token}/export"
-                reply = _t("export_link", lang, url=url, days=settings.dashboard_token_ttl_days)
+                url = f"{base_url}/api/d/{token}/export"
+                reply = _t("export_link", lang, url=url, minutes=settings.export_token_ttl_minutes)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -3956,10 +3970,13 @@ async def handle_inbound(
             ).rstrip("/")
             if not base_url:
                 reply = _t("dashboard_no_base_url", lang)
+                await send_text(to, reply)
             else:
                 url = f"{base_url}/d/{member.dashboard_token}"
-                reply = _t("dashboard_link", lang, url=url)
-            await send_text(to, reply)
+                # Button first; send_cta_url itself falls back to ONE text with the link.
+                reply = _t("dashboard_cta", lang)
+                await send_cta_url(to, reply, _t("btn_open_panel", lang), url)
+                reply = _t("dashboard_link", lang, url=url)  # what the history keeps
             await _save_outbound(member, reply, session)
             return
 

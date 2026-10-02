@@ -110,6 +110,55 @@ Migrações em `alfred/alembic/versions/` numa cadeia linear; o head actual é `
 (V2-18). Cada item V2 tem uma migração própria (`e5f6a7b8c9d0` orçamentos … `f2a3b4c5d6e7`
 extrato de mensagens).
 
+## Painel v2
+
+O painel v1 (`/d/{token}`, Chart.js) continua o padrão. Um membro com `member.dashboard_v2 = true`
+recebe a casca v2: HTML/CSS/JS próprios (`src/alfred/panel/`), sem Chart.js (barras em CSS e SVG
+desenhados por `panel.js`) e sem nenhum host externo; as fontes (Hanken Grotesk, Bricolage
+Grotesque, licença OFL) são servidas pelo próprio serviço. Só leitura.
+
+```
+GET  /d/{token}                 → v1 ou v2, conforme a flag do membro
+GET  /api/d/{token}             → JSON da v1 (inalterado)
+GET  /api/d/{token}/summary|money|health|agenda|trips
+                                → JSON de uma aba; só a aba aberta chama a sua rota
+GET  /api/d/{token}/export      → página de confirmação (links de prévia só fazem GET)
+POST /api/d/{token}/export      → descarga, token de exportação de uso único
+GET  /panel-assets/{nome}       → panel.css, panel.js e fontes (lista fixa, imutável, sem token)
+```
+
+| Escopo | Token | Validade | Pode |
+|---|---|---|---|
+| painel | `member.dashboard_token` | 7 dias, renovação deslizante (reemite com menos de metade; o anterior deixa de valer) | ler as abas |
+| exportação | `member.export_token` | 15 min, uso único, só pelo comando "exportar meus dados" | descarregar os dados |
+
+"Apagar meus dados" invalida os dois na mesma transação.
+
+A renovação trava a linha do membro (`SELECT ... FOR UPDATE`): dois "meu dashboard" simultâneos
+devolvem o mesmo link novo em vez de reemitir duas vezes. Link expirado ou desconhecido em
+`/d/{token}` mostra uma página 404 em HTML, na língua do membro, que diz como pedir outro; as rotas
+`/api/d/...` continuam a responder JSON 404. A mensagem "vale por até 7 dias" é de propósito: um
+link reaproveitado tem entre 3,5 e 7 dias de validade restante.
+
+**CSP por nonce.** `SecurityHeadersMiddleware` gera um nonce por pedido (`request.state.csp_nonce`);
+`script-src` e `style-src` só aceitam esse nonce (nunca `unsafe-inline`). A v1 mantém
+`https://cdnjs.cloudflare.com` para o Chart.js (com SRI); a v2 marca `request.state.panel_v2` e a
+CSP dela não nomeia host externo. Todo dado do utilizador entra no DOM por `textContent`
+(`panel.js` não pode conter `innerHTML`; há teste). O JSON de configuração da página escapa `<`, `>`
+e `&`.
+
+**Filtro único.** `panel_filters.parse_filter` lê da URL só valores de lista fechada (mês/intervalo,
+categorias, tipo, estado, viagem); `apply_expense_filter` serve cartões e lista. Texto livre
+(comerciante, pessoa) filtra só no navegador e nunca vai à URL nem ao servidor.
+
+**Frases.** `panel_phrases.py` é um motor de regras (sem LLM): no máximo uma frase por cartão, só
+com facto relevante, e a sugestão é sempre um comando do chat. O catálogo nas 5 línguas passa pelo
+`scripts/message_audit.py`.
+
+**Abas.** Resumo, Dinheiro, Agenda e tarefas, Hábitos, Viagens. A rota `health` (aba Hábitos) é
+própria, carregada só ao abrir a aba, e cada abertura vai para o `AuditLog`. O botão do chat
+("Abrir meu painel") é uma mensagem `cta_url` com plano B em texto (`whatsapp.send_cta_url`).
+
 ## Chamadas ao LLM
 
 `llm.py` tem um único `AsyncAnthropic` por processo (timeout 20 s, 2 retries).

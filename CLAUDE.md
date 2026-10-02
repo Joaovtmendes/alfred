@@ -22,12 +22,22 @@ alfred/                    ← raiz do serviço (Railway "Root Directory")
     clock.py               "hoje/semana/mês" em Europe/Amsterdam + nomes de meses/dias i18n
     llm.py                 cliente AsyncAnthropic partilhado + extractors (JSON)
     models.py              ORM (13 tabelas)
-    dashboard.py           GET /d/{token} (HTML) e /api/d/{token} (JSON)
+    dashboard.py           GET /d/{token} (v1 ou v2 pela flag), /api/d/{token} (JSON v1), exportação
+    web_security.py        cabeçalhos, CSP por nonce (v1 com cdnjs+SRI, v2 sem host externo), limitador
+    panel_tokens.py        token do painel (7 dias, renovação deslizante) e da exportação (uso único)
+    panel_filters.py       PanelFilter: a ÚNICA função de filtro (lista fechada na URL)
+    panel_phrases.py       motor de frases por regras (sem LLM), catálogo auditado nas 5 línguas
+    panel_api.py           /api/d/{token}/summary|money|health|agenda|trips (uma consulta por cartão)
+    panel_i18n.py          textos fixos da casca v2 (abas, botão, estados vazios) nas 5 línguas
+    panel/                 casca v2: shell.html, panel.css, panel.js, fonts/ (OFL, servidas por nós)
     whatsapp.py            send_text / send_template (Graph API)
     settings.py / db.py    config via env vars / engine async
   scripts/daily_cron.py    lembretes + resumo semanal (cron Railway a cada 15 min)
   scripts/hard_test.py     teste de ponta a ponta contra o webhook real
-  alembic/versions/        migrações (cadeia linear, head = a1d5c7e9b3f2)
+  scripts/seed_demo_member.py   membro de demonstração do painel v2 (idempotente, só o 31000000000)
+  scripts/contrast_check.py     contraste WCAG AA dos tokens de cor do painel (-v lista os pares)
+  scripts/panel_shots.py        capturas claro/escuro x desktop/celular + CSP/overflow no Chromium
+  alembic/versions/        migrações (cadeia linear, head = c4d5e6f7a8b9)
   m5-templates/ m6-flow/   JSON para submeter no WhatsApp Manager
   tests/                   pytest (unit + integração com Postgres real)
 docs/                      ARCHITECTURE.md, OPERATIONS.md

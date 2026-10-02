@@ -118,13 +118,17 @@ async def test_export_link_needs_base_url_and_returns_json(lab, client, monkeypa
     token = reply.rsplit("/api/d/", 1)[1].split("/export")[0]
 
     await engine.dispose()
-    r = await client.get(f"/api/d/{token}/export")
+    page = await client.get(f"/api/d/{token}/export")
+    assert page.status_code == 200
+    await engine.dispose()
+    r = await client.post(f"/api/d/{token}/export")
     assert r.status_code == 200
     assert "attachment" in r.headers["content-disposition"]
     body = r.json()
     assert body["member_id"] == str(lab.member_id)
     assert len(body["tables"]["expense"]) == 1
     assert "dashboard_token" not in body["tables"]["member"][0]
+    assert "export_token" not in body["tables"]["member"][0]
     assert r.headers["cache-control"] == "no-store"
 
 

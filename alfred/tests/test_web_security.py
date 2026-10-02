@@ -63,8 +63,8 @@ async def test_dashboard_returns_429_when_hammered(client, monkeypatch) -> None:
 
 
 def test_token_expiry() -> None:
-    fresh = SimpleNamespace(dashboard_token_created_at=datetime.now(UTC) - timedelta(days=10))
-    old = SimpleNamespace(dashboard_token_created_at=datetime.now(UTC) - timedelta(days=91))
+    fresh = SimpleNamespace(dashboard_token_created_at=datetime.now(UTC) - timedelta(days=3))
+    old = SimpleNamespace(dashboard_token_created_at=datetime.now(UTC) - timedelta(days=8))
     legacy = SimpleNamespace(dashboard_token_created_at=None)
     assert not dashboard.token_expired(fresh)
     assert dashboard.token_expired(old)

@@ -36,6 +36,8 @@ A lista completa, com explicação, está em `alfred/.env.example`. As críticas
 | `LLM_API_KEY` | respostas de erro no lugar de LLM |
 | `BASE_URL` | o link do dashboard não é enviado |
 | `TIMEZONE` | default `Europe/Amsterdam` |
+| `DASHBOARD_TOKEN_TTL_DAYS` | default 7; se o Railway ainda tiver 90 herdado, o link vale 90 dias (conferir) |
+| `WHATSAPP_DISPLAY_NUMBER` | só dígitos do número exibido da WABA; sem ele o painel v2 não mostra o botão "Conversar no WhatsApp" |
 
 ## Processamento de mensagens
 
@@ -100,3 +102,42 @@ em 28/09 — não era um firewall do Railway.
 - `GET /webhook/whatsapp` (verificação da Meta) recusa em produção o token vazio ou o placeholder `dev_verify_token` e compara em tempo constante. Definir `WHATSAPP_VERIFY_TOKEN` (valor aleatório) no Railway e o mesmo valor no webhook da Meta.
 - `/openapi.json` e `/docs` estão desligados em produção.
 - Scan estático: Bandit limpo (semgrep depende de semgrep.dev, bloqueado no ambiente do Claude; correr localmente com `semgrep --config p/python --config p/security-audit --metrics=off`).
+
+## Painel v2 (flag por membro)
+
+Ligar só para um número (console SQL do Railway):
+
+```sql
+UPDATE member SET dashboard_v2 = true WHERE wa_phone = '31600000000';
+```
+
+Reverter (o próximo `/d/{token}` já devolve a v1; nada mais muda):
+
+```sql
+UPDATE member SET dashboard_v2 = false WHERE wa_phone = '31600000000';
+```
+
+Antes de ligar: conferir `DASHBOARD_TOKEN_TTL_DAYS` e `WHATSAPP_DISPLAY_NUMBER` (tabela acima).
+
+Efeito do deploy nos links já emitidos: a validade passa de 90 para 7 dias, contada de
+`dashboard_token_created_at` (a migração `b1c2d3e4f5a6` pôs 2026-09-30 nos links que já existiam).
+Todo link com mais de 7 dias, inclusive os do histórico do WhatsApp que prometiam 90, deixa de abrir
+no mesmo instante e mostra a página "Este link expirou"; quem escrever "meu dashboard" recebe um
+novo. Links com menos de 7 dias continuam válidos e são reemitidos no
+próximo pedido se tiverem menos de metade da validade. A migração `c4d5e6f7a8b9` só acrescenta
+colunas (`dashboard_v2` com default false, `export_token`, `export_token_expires_at`): o código
+anterior roda com o esquema novo, então o rollback de código não exige `alembic downgrade`
+(o downgrade apaga os tokens de exportação pendentes e a flag).
+
+Membro de demonstração (números dos mockups de outubro de 2026; só mexe no `31000000000`, pode
+correr várias vezes):
+
+```bash
+cd alfred && python scripts/seed_demo_member.py     # imprime o link do painel
+python scripts/contrast_check.py                    # contraste AA dos dois temas
+python scripts/panel_shots.py --base http://127.0.0.1:8000 --out /tmp/panel-shots --check-v1
+```
+
+`panel_shots.py` abre o Chromium do Playwright e falha se houver violação de CSP, erro de página,
+fonte que não carrega ou rolagem horizontal. Sem acesso ao cdnjs (sandbox), `--chartjs` serve um
+`chart.umd.js` local no lugar do CDN para provar que a v1 corre sob a CSP por nonce.
