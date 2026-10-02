@@ -42,10 +42,18 @@ def _month_bounds(year: int, month: int) -> tuple[date, date]:
 
 
 def _parse_day(raw: str | None) -> date | None:
+    """An ISO day between years 2000 and 2100, else ``None``.
+
+    Without the bounds ``9999-12-31`` overflowed ``+ timedelta(days=1)`` and year 1 broke the
+    timezone conversion in the database driver: both were HTTP 500.
+    """
     try:
-        return date.fromisoformat(raw) if raw else None
+        day = date.fromisoformat(raw) if raw else None
     except ValueError:
         return None
+    if day is None or not 2000 <= day.year <= 2100:
+        return None
+    return day
 
 
 def _parse_period(params: Mapping[str, str], today: date) -> tuple[date, date]:
