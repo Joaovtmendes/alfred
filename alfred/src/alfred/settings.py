@@ -47,7 +47,8 @@ class Settings(BaseSettings):
     # Dashboard / public pages
     privacy_contact_email: str = ""  # shown on /privacy
     base_url: str = ""  # e.g. https://alfred.up.railway.app
-    dashboard_token_ttl_days: int = 90  # older links stop working; "meu dashboard" issues a new one
+    dashboard_token_ttl_days: int = 7  # panel link; sliding renewal (panel_tokens)
+    export_token_ttl_minutes: int = 15  # single-use export link
     dashboard_rate_limit_per_minute: int = 60  # per client IP, token routes only
 
     # Observability / ops
