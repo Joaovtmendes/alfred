@@ -103,7 +103,7 @@ from alfred.score import STRINGS as _SCORE_STRINGS
 from alfred.score import handle_score_command
 from alfred.settings import settings
 from alfred.validation import MAX_AMOUNT
-from alfred.whatsapp import send_buttons, send_text
+from alfred.whatsapp import send_buttons, send_cta_url, send_text
 
 logger = structlog.get_logger()
 
@@ -1279,6 +1279,20 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": "\U0001f4ca Your personal dashboard:\n{url}",
         "fr": "\U0001f4ca Ton tableau de bord personnel :\n{url}",
         "de": "\U0001f4ca Dein pers\u00f6nliches Dashboard:\n{url}",
+    },
+    "dashboard_cta": {
+        "pt": "Aqui está o seu painel. O link vale por 7 dias.",
+        "nl": "Hier is je dashboard. De link is 7 dagen geldig.",
+        "en": "Here is your dashboard. The link is valid for 7 days.",
+        "fr": "Voici ton tableau de bord. Le lien est valable 7 jours.",
+        "de": "Hier ist dein Dashboard. Der Link ist 7 Tage gültig.",
+    },
+    "btn_open_panel": {
+        "pt": "Abrir meu painel",
+        "nl": "Open mijn dashboard",
+        "en": "Open my dashboard",
+        "fr": "Ouvrir mon tableau",
+        "de": "Dashboard öffnen",
     },
     "dashboard_no_base_url": {
         "pt": "O painel ainda não está configurado. Fale com o administrador.",
@@ -3956,10 +3970,13 @@ async def handle_inbound(
             ).rstrip("/")
             if not base_url:
                 reply = _t("dashboard_no_base_url", lang)
+                await send_text(to, reply)
             else:
                 url = f"{base_url}/d/{member.dashboard_token}"
-                reply = _t("dashboard_link", lang, url=url)
-            await send_text(to, reply)
+                # Button first; send_cta_url itself falls back to ONE text with the link.
+                reply = _t("dashboard_cta", lang)
+                await send_cta_url(to, reply, _t("btn_open_panel", lang), url)
+                reply = _t("dashboard_link", lang, url=url)  # what the history keeps
             await _save_outbound(member, reply, session)
             return
 

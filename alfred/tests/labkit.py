@@ -24,6 +24,7 @@ class Lab:
         self.member_id, self.household_id, self.phone = member_id, household_id, phone
         self.sent: list[str] = []
         self.buttons: list[list[tuple[str, str]]] = []  # buttons of each reply (may be empty)
+        self.cta: list[tuple[str, str]] = []  # (url, button text) of each call-to-action reply
         self.expense = AsyncMock(return_value=None)
         self.llm_reply = AsyncMock(return_value="[llm]")
         self.classify = AsyncMock(return_value=None)
@@ -60,8 +61,15 @@ class Lab:
             self.buttons.append(list(buttons))
             return {}
 
+        async def fake_cta(to: str, body: str, display_text: str, url: str) -> dict:
+            self.sent.append(body)
+            self.buttons.append([])
+            self.cta.append((url, display_text))
+            return {}
+
         with (
             patch("alfred.conversation.send_text", fake_send),
+            patch("alfred.conversation.send_cta_url", fake_cta),
             patch("alfred.conversation.send_buttons", fake_buttons),
             patch("alfred.conversation.extract_expense", self.expense),
             patch("alfred.conversation.extract_expenses_multi", self.multi),

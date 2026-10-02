@@ -192,3 +192,48 @@ async def send_buttons(to: str, body: str, buttons: list[tuple[str, str]]) -> di
     )
     delivery.note_sent(_wamid(data))
     return data
+
+
+async def send_cta_url(to: str, body: str, display_text: str, url: str) -> dict:
+    """Send a message with one call-to-action button that opens ``url``.
+
+    Meta limits: ``display_text`` <= 20 characters, body <= 1024. Works only inside the 24-hour
+    window (a reply to the member's own message always is). Falls back to plain text with the
+    link in it when Meta rejects the interactive payload, so a button problem never loses the
+    link. The link is a secret: it is never logged.
+    """
+    if delivery.suppressed():
+        logger.info("whatsapp.send_suppressed", to=to)
+        return {"suppressed": True}
+    endpoint = f"{_GRAPH_URL}/{settings.whatsapp_phone_number_id}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "cta_url",
+            "body": {"text": body[:1024]},
+            "action": {
+                "name": "cta_url",
+                "parameters": {"display_text": display_text[:20], "url": url},
+            },
+        },
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.whatsapp_token.get_secret_value()}",
+        "Content-Type": "application/json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(endpoint, json=payload, headers=headers)
+            if not resp.is_success:
+                logger.error("whatsapp.cta_send_failed", status=resp.status_code, to=to)
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPError:
+        return await send_text(to, f"{body}\n{url}")
+
+    logger.info("whatsapp.cta_sent", to=to, wa_message_id=data.get("messages", [{}])[0].get("id"))
+    delivery.note_sent(_wamid(data))
+    return data
