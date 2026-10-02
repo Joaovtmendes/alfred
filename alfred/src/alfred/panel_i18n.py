@@ -84,6 +84,20 @@ SHELL = {
         "fr": "Impossible de charger cet onglet. Réessaie dans un instant.",
         "de": "Dieser Tab konnte nicht geladen werden. Versuche es gleich noch einmal.",
     },
+    "expired": {
+        "pt": 'Este link expirou. Escreva "meu dashboard" no WhatsApp para receber um novo.',
+        "nl": 'Deze link is verlopen. Schrijf "mijn dashboard" in WhatsApp voor een nieuwe.',
+        "en": 'This link has expired. Write "my dashboard" in WhatsApp to get a new one.',
+        "fr": 'Ce lien a expiré. Écris "mon tableau de bord" sur WhatsApp pour en recevoir un nouveau.',
+        "de": 'Dieser Link ist abgelaufen. Schreibe "mein Dashboard" in WhatsApp, um einen neuen zu bekommen.',
+    },
+    "rate_limited": {
+        "pt": "Muitas consultas em pouco tempo. Aguarde um minuto e tente de novo.",
+        "nl": "Te veel verzoeken in korte tijd. Wacht een minuut en probeer het opnieuw.",
+        "en": "Too many requests in a short time. Wait a minute and try again.",
+        "fr": "Trop de demandes en peu de temps. Attends une minute et réessaie.",
+        "de": "Zu viele Anfragen in kurzer Zeit. Warte eine Minute und versuche es erneut.",
+    },
     "privacy_footer": {
         "pt": "Privacidade: escreva “exportar meus dados” ou “apagar meus dados” no chat.",
         "nl": "Privacy: schrijf “exporteer mijn gegevens” of “verwijder mijn gegevens” in de chat.",

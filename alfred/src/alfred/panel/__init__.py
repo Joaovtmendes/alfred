@@ -54,7 +54,7 @@ def render_v2(nonce: str, lang: str | None, token: str) -> str:
     e = html.escape
     tab_list = panel_i18n.tabs(lang)
     tabs_html = "".join(
-        f'<button role="tab" data-tab="{e(x["id"])}" '
+        f'<button role="tab" id="tab-{e(x["id"])}" aria-controls="panel" data-tab="{e(x["id"])}" '
         f'aria-selected="{"true" if i == 0 else "false"}" '
         f'tabindex="{0 if i == 0 else -1}">{e(x["label"])}</button>'
         for i, x in enumerate(tab_list)

@@ -126,16 +126,27 @@
 
   const loaded = new Map();
   const panel = document.getElementById("panel");
+  let latest = 0; // only the most recent tab selection may draw (a slow answer must not win)
+
+  function failure(status) {
+    if (status === 404) return T.expired; // unknown or expired link: only a new one helps
+    if (status === 429) return T.rate_limited;
+    return T.error;
+  }
 
   async function load(tabId) {
+    const mine = ++latest;
     const tab = cfg.tabs.find((x) => x.id === tabId);
+    panel.setAttribute("aria-labelledby", "tab-" + tabId);
     panel.replaceChildren(el("div", "empty", T.loading));
+    let message = null;
     try {
       if (!loaded.has(tabId)) {
         const r = await fetch(tab.path.replace("{token}", cfg.token) + location.search, { headers: { Accept: "application/json" } });
-        if (!r.ok) throw new Error(String(r.status));
+        if (!r.ok) { message = failure(r.status); throw new Error(String(r.status)); }
         loaded.set(tabId, await r.json());
       }
+      if (mine !== latest) return;
       const body = loaded.get(tabId);
       const grid = el("div", "grid");
       for (const card of body.cards) {
@@ -144,7 +155,7 @@
       }
       panel.replaceChildren(grid.children.length ? grid : el("div", "empty", T.empty));
     } catch (_) {
-      panel.replaceChildren(el("div", "empty", T.error));
+      if (mine === latest) panel.replaceChildren(el("div", "empty", message || T.error));
     }
   }
 
