@@ -249,16 +249,16 @@ def catalogue_markdown(strings: dict) -> str:
 def panel_catalogue_size() -> int:
     """Number of keys in the panel phrase catalogue (phrases plus chat suggestions)."""
     os.environ.setdefault("WHATSAPP_APP_SECRET", "x")
-    from alfred.panel_phrases import CHAT, PHRASES
+    from alfred.panel_phrases import CHAT, LABELS, PHRASES
 
-    return len(PHRASES) + len(CHAT)
+    return len(PHRASES) + len(CHAT) + len(LABELS)
 
 
 def run() -> tuple[list[Finding], dict]:
     os.environ.setdefault("WHATSAPP_APP_SECRET", "x")
     from alfred import llm
     from alfred.conversation import _STRINGS
-    from alfred.panel_phrases import CHAT, PHRASES
+    from alfred.panel_phrases import CHAT, LABELS, PHRASES
 
     extra = {
         "llm_error": llm._LLM_ERROR,
@@ -266,6 +266,7 @@ def run() -> tuple[list[Finding], dict]:
     # separate prefixes: "balance_projection" exists in both PHRASES and CHAT
     panel = {f"panel.phrase.{k}": v for k, v in PHRASES.items()}
     panel |= {f"panel.chat.{k}": v for k, v in CHAT.items()}
+    panel |= {f"panel.label.{k}": v for k, v in LABELS.items()}
     findings = (
         audit_catalogue(_STRINGS)
         + audit_catalogue(extra)
