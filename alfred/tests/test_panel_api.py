@@ -79,7 +79,7 @@ async def test_every_tab_answers_with_the_common_envelope(lab, client, tab) -> N
         "trip": None,
     }
     assert isinstance(body["cards"], list)
-    if tab != "summary":
+    if tab not in ("summary", "money"):
         assert body["cards"] == []  # content arrives with each tab's own PR
 
 

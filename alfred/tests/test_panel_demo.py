@@ -61,7 +61,7 @@ async def test_seed_is_idempotent_and_matches_the_mockup(client) -> None:
                 select(func.count()).select_from(Budget).where(Budget.member_id == m.id)
             )
         ).scalar_one()
-        assert budgets == 1
+        assert budgets == seed.EXPECTED_BUDGETS
     await engine.dispose()
 
 
@@ -84,3 +84,26 @@ async def test_seed_never_touches_other_members() -> None:
         ).scalar_one()
     await engine.dispose()
     assert after == others
+
+
+@db
+async def test_demo_fills_every_card_of_resumo_and_dinheiro(client, monkeypatch) -> None:
+    from datetime import date
+
+    monkeypatch.setattr("alfred.panel_api.today_local", lambda: date(2026, 10, 14))
+    _dashboard_limiter._hits.clear()
+    token = await seed.run()
+    await engine.dispose()
+    for tab, quiet in (("summary", {"blue_days"}), ("money", set())):
+        cards = (await client.get(f"/api/d/{token}/{tab}?month=2026-10")).json()["cards"]
+        await engine.dispose()
+        empty = {c["id"] for c in cards if c["empty"]} - quiet
+        assert not empty, (tab, empty)
+    summary = (await client.get(f"/api/d/{token}/summary")).json()
+    by = {c["id"]: c for c in summary["cards"]}
+    assert (
+        by["budgets"]["items"][0]["category"] == "restaurant"
+        and by["budgets"]["items"][0]["level"] == 100
+    )
+    assert by["owed"]["values"]["total"] == 34.5 and by["upcoming"]["values"]["count_pay"] >= 3
+    await engine.dispose()

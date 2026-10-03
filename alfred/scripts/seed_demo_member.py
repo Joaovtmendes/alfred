@@ -7,7 +7,9 @@ budgets and fixed bills, so running it twice never duplicates anything. Other me
 read or written. Prints the panel link.
 
 October 2026: income 3.840,00, paid spending 1.997,70, balance 1.842,30; the restaurant budget
-(100) is over by 23; two bills are still to pay and do not count towards the balance.
+(100) is over by 23; two bills are still to pay and do not count towards the balance. September
+2026 gives the month-against-month comparison; four fixed items (one in 13 instalments), three
+budgets and one debt ("Marta owes 34,50") fill the other cards.
 
 Usage: ``python scripts/seed_demo_member.py`` (needs DATABASE_URL; BASE_URL for the printed link).
 """
@@ -17,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import pathlib
 import sys
-from datetime import date
+from datetime import UTC, date, datetime
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
@@ -32,6 +34,7 @@ from alfred.models import (  # noqa: E402
     Budget,
     Expense,
     Household,
+    Iou,
     Member,
     Message,
     RecurringItem,
@@ -47,10 +50,25 @@ ROWS = [
     ("expense", 94.40, "Albert Heijn", "supermarkt", "paid", 1),
     ("expense", 123.00, "Restaurante", "restaurant", "paid", 2),
     ("expense", 630.30, "Outros", "overig", "paid", 2),
-    ("expense", 118.00, "Energia", "wonen", "to_pay", 2),
-    ("expense", 138.00, "Seguro", "overig", "to_pay", 2),
+    ("expense", 118.00, "Energia", "wonen", "to_pay", 18),
+    ("expense", 138.00, "Seguro de saúde", "gezondheid", "to_pay", 25),
 ]
-EXPECTED_ROWS = len(ROWS)
+# September 2026, the month the Resumo/Dinheiro cards compare with (same names, other amounts).
+SEPT_ROWS = [
+    ("income", 3840.00, "Salário", "inkomen", "received", 1),
+    ("expense", 1150.00, "Aluguel", "wonen", "paid", 1),
+    ("expense", 88.20, "Albert Heijn", "supermarkt", "paid", 1),
+    ("expense", 75.00, "Restaurante", "restaurant", "paid", 2),
+    ("expense", 612.10, "Outros", "overig", "paid", 2),
+    ("expense", 48.00, "Uber", "transport", "paid", 2),
+    # Later in September: outside the "first three days" comparison, but they give the end-of-month
+    # projection the history it needs (enough variable entries in the last 30 days).
+    ("expense", 36.50, "Albert Heijn", "supermarkt", "paid", 10),
+    ("expense", 24.00, "Uber", "transport", "paid", 14),
+    ("expense", 41.00, "Restaurante", "restaurant", "paid", 20),
+]
+EXPECTED_ROWS = len(ROWS) + len(SEPT_ROWS)
+EXPECTED_BUDGETS = 3
 
 
 async def run() -> str:
@@ -72,40 +90,64 @@ async def run() -> str:
         member.consent_state = "pending"
         member.dashboard_v2 = True
         await s.flush()
-        for model in (Expense, Budget, RecurringItem):
+        for model in (Expense, Budget, RecurringItem, Iou):
             await s.execute(delete(model).where(model.member_id == member.id))
-        for kind, amount, merchant, category, status, day in ROWS:
+        for month, rows in ((10, ROWS), (9, SEPT_ROWS)):
+            for kind, amount, merchant, category, status, day in rows:
+                s.add(
+                    Expense(
+                        member_id=member.id,
+                        household_id=member.household_id,
+                        transaction_type=kind,
+                        amount=amount,
+                        merchant=merchant,
+                        category=category,
+                        status=status,
+                        expense_date=day_start(date(2026, month, day)).replace(hour=12),
+                    )
+                )
+        for category, limit in (
+            ("restaurant", 100.00),
+            ("supermarkt", 400.00),
+            ("transport", 150.00),
+        ):
             s.add(
-                Expense(
+                Budget(
                     member_id=member.id,
                     household_id=member.household_id,
-                    transaction_type=kind,
-                    amount=amount,
-                    merchant=merchant,
                     category=category,
-                    status=status,
-                    expense_date=day_start(date(2026, 10, day)).replace(hour=12),
+                    monthly_limit=limit,
+                )
+            )
+        for name, amount, category, kind, due_day, due, total in (
+            ("Energia", 118.00, "wonen", "fixed", 18, date(2026, 10, 18), None),
+            ("Internet", 42.00, "wonen", "subscription", 20, date(2026, 10, 20), None),
+            ("Seguro de saúde", 138.00, "gezondheid", "fixed", 25, date(2026, 10, 25), None),
+            ("Notebook", 100.00, "overig", "installment", 28, date(2026, 10, 28), 13),
+        ):
+            s.add(
+                RecurringItem(
+                    member_id=member.id,
+                    household_id=member.household_id,
+                    name=name,
+                    amount=amount,
+                    category=category,
+                    kind=kind,
+                    frequency="monthly",
+                    due_day=due_day,
+                    next_due_date=due,
+                    installments_total=total,
+                    installments_paid=0,
                 )
             )
         s.add(
-            Budget(
+            Iou(
                 member_id=member.id,
-                household_id=member.household_id,
-                category="restaurant",
-                monthly_limit=100.00,
-            )
-        )
-        s.add(
-            RecurringItem(
-                member_id=member.id,
-                household_id=member.household_id,
-                name="Energia",
-                amount=118.00,
-                category="wonen",
-                kind="fixed",
-                frequency="monthly",
-                due_day=18,
-                next_due_date=date(2026, 10, 18),
+                person="Marta",
+                amount=34.50,
+                direction="owed_to_me",
+                note="jantar",
+                created_at=datetime(2026, 10, 1, 12, tzinfo=UTC),
             )
         )
         await panel_tokens.ensure_panel_token(s, member)

@@ -155,6 +155,106 @@ categorias, tipo, estado, viagem); `apply_expense_filter` serve cartões e lista
 com facto relevante, e a sugestão é sempre um comando do chat. O catálogo nas 5 línguas passa pelo
 `scripts/message_audit.py`.
 
+### Resumo e Dinheiro (cartões)
+
+`panel_calc.py` guarda os números (funções puras e uma consulta com `GROUP BY` por cartão, sem N+1),
+`panel_phrases.py` as 12 regras de frase e `panel_api.py` monta o JSON. Toda consulta de lançamentos
+passa por `apply_expense_filter`; um cartão que precisa de outro período (mês anterior, últimos 30
+dias, próximos 30 dias) deriva o filtro com `dataclasses.replace` e continua a usá-lo, então o
+membro e os demais filtros valem também ali. Dias são dias locais (`to_char(timezone(...))`,
+`clock.day_start`), por isso 00:30 do dia 1º, virada de ano, 29/02 e mudança de horário caem no dia
+certo (testes em `test_panel_calc.py` e `test_panel_cards.py`).
+
+Envelope comum: `{"tab", "lang", "today", "filter": {start, end (exclusivo), categories, kind,
+states, trip}, "cards": [...]}`. Todo cartão tem `id` estável, `empty`, `phrase` (`null` ou
+`{key, text, chat, severity}`) e, se vazio, `hint` (a frase do chat que ensina). Dinheiro em EUR com
+2 casas, datas ISO. O formato completo de cada cartão está na docstring de `panel_api.py`.
+
+| Aba | Cartões (em ordem) |
+|---|---|
+| `summary` | `balance` (com `compare` e `projection`), `upcoming`, `categories`, `budgets`, `blue_days`, `owed` |
+| `money` | `transactions` (50 por página, `?page=N`), `top_expenses`, `month_vs_month`, `fixed_variable`, `daily`, `categories`, `avg_ticket`, `recurring`, `owed` |
+
+Definições que o front-end pode citar:
+
+- **Projeção do fim do mês** (só no mês corrente e sem filtro de categoria, tipo, estado ou viagem;
+  caso contrário `projection.available = false` com o motivo): saldo realizado + receita marcada
+  "a receber" - contas até o fim do mês (lançamentos `to_pay` e itens fixos, semanais repetidos,
+  atrasado conta uma vez) - gasto variável esperado (média diária dos últimos 30 dias, sem os
+  lançamentos cujo comerciante é o nome de um item fixo, x dias que faltam). Precisa de 10 dias de
+  histórico e 5 lançamentos variáveis; sem isso `sufficient = false`, `projected = null` e só
+  `realized` e `committed` valem. A faixa `low`..`high` é um desvio-padrão do gasto diário somado
+  nos dias restantes. Receita não registrada nunca é projetada.
+- **Mês contra mês:** mês corrente contra os mesmos dias do mês anterior (31/10 contra 30/09 trava
+  no fim de setembro); mês passado contra o mês anterior inteiro; intervalo livre contra o intervalo
+  de mesmo tamanho logo antes. `delta_pct` é `null` sem base (período anterior em zero).
+- **Orçamentos:** o mês de referência é o do último dia do período; 80% e 100% decididos nos valores
+  exatos, como os alertas do chat (99,60 de 100 é 99%, nunca "estourou"); o número mostrado é
+  arredondado meio para cima mas fica dentro da faixa do nível; `crossed_on` é o dia em que o acumulado passou do
+  limite; `days_to_80` só dentro do mês corrente, com 5 dias e 3 lançamentos.
+- **Próximos pagamentos:** itens fixos ativos e lançamentos pendentes de hoje a 30 dias, mais os
+  atrasados; um lançamento pendente com o mesmo nome do item fixo substitui o item (nunca conta
+  duas vezes). Olham para frente: o período da URL não vale; categoria, tipo e estado valem.
+- **Fixo x variável:** despesa paga cujo comerciante é o nome de um item fixo (`RecurringItem`) é
+  fixa; o resto é variável.
+- **Lista:** soma do dia = lançamentos pagos/recebidos do dia inteiro (lançamentos pendentes
+  aparecem na lista, com `settled: false`, e não entram na soma); a soma do cartão, da lista, das
+  categorias, dos maiores gastos, do gasto por dia e do mês contra mês é sempre o mesmo número
+  (teste com 13 combinações de filtro).
+- **Gasto por dia:** um ponto por dia até 62 dias; períodos maiores viram semanas ISO.
+
+Frases: no máximo uma por cartão, só com dado mínimo (cada regra documenta o seu limiar). A
+sugestão é um comando que o roteador do chat entende sem LLM (um teste roda todas, nas 5 línguas),
+exceto "como fica meu mês?" e o exemplo de registrar um gasto, que passam pelo LLM.
+
+### Front-end de Resumo e Dinheiro (`panel.js`, `panel.css`)
+
+Fiel aos mockups aprovados (`Main`, `Mobile`, `Dinheiro`, `MobileDinheiro`); as capturas
+(`scripts/panel_shots.py`) são comparadas com eles a cada mudança visual.
+
+- **Grade.** Desktop (>= 900 px): 12 colunas, cartões `s7`/`s5`/`s6`/`s12` (Resumo: saldo 7 +
+  próximos pagamentos 5, categorias 7 + orçamentos 5, dias no azul 6 + quem te deve 6; Dinheiro:
+  lançamentos 7 + maiores gastos 5, mês contra mês 7 + fixos e variáveis 5, gasto por dia 12,
+  categorias 7 + ticket médio 5, recorrências 7 + quem te deve 5). Celular: 1 coluna; no Resumo a
+  ordem visual é a do mockup móvel (saldo, categorias, orçamentos, dias no azul, próximos
+  pagamentos, quem te deve) via `order` no CSS, sem mexer na ordem do DOM.
+- **Um desenho por cartão** em `renderers[card.id]`; cartão `empty` mostra o `hint` do servidor
+  (texto + chip "Peça no chat"). Cartões desconhecidos são ignorados (as outras abas chegam depois).
+- **Gráficos** (CSS/SVG, sem biblioteca): barra empilhada da projeção (realizado, contas marcadas,
+  receita a receber, gasto variável esperado em listras) com a legenda em linha no desktop e em
+  coluna no celular, e o "fim do mês (estimativa)" ABAIXO da legenda no celular; faixa de
+  estimativa em texto; barras de categoria com Δ (▲ aumento = quente, ▼ queda, "= igual", "novo");
+  barras de orçamento com marcas em 80% e 100% (80-99% listrado, 100% ou mais sólido quente, para
+  não depender só da cor); barras por dia (pico em destaque); fixo x variável. `sparkline()` existe
+  como primitiva, mas nenhum cartão atual recebe uma série que a justifique.
+- **"Ver como tabela"** (`<details>` com `<table>`, cabeçalhos `scope=col`) em todo gráfico, aberto
+  por teclado.
+- **Filtros** (`#filter-bar`): mês (setas no Resumo, lista de 13 meses no Dinheiro), categoria
+  (as 10 do `labels.py`, enviadas na configuração), tipo e estado são `<select>` nativos; escolher
+  escreve `?month=&categories=&kind=&state=` com `history.pushState` e rebusca a aba (a
+  resposta fica em cache por aba + query). Só valores de lista fechada são lidos e escritos
+  (`readFilters` descarta o resto, inclusive parâmetros desconhecidos). A busca por comerciante
+  (Dinheiro) é um `<input>` sem `name` e fora de formulário: filtra as linhas no navegador, não toca
+  na URL nem na rede. Paginação (`?page=N`) só na aba Dinheiro e só mexe nesse número.
+- **Tema:** segue o sistema até o membro escolher no botão do topo; a escolha fica só no
+  `localStorage` do navegador (com `try/catch`) e vira `data-theme` + `data-theme-locked`. O
+  `scripts/contrast_check.py` cobre os pares novos (tokens `--warm-text` para texto sobre
+  `--warm-soft`).
+- **Barra de abas no celular:** decisão: continua em uma linha rolável (como no mockup), com
+  degradê na borda que ainda tem abas (`fade-l`/`fade-r`, atualizado ao rolar) e a aba selecionada
+  é rolada para a vista. Quebrar em duas linhas foi descartado porque empurra o conteúdo e foge
+  do mockup.
+- **Segurança e acessibilidade:** zero `innerHTML` (teste existente), dados do membro só por
+  `textContent`/`dataset`, tamanhos dinâmicos por CSSOM, nada de host externo. Foco visível em tudo
+  (inclusive o `<select>` dentro da pílula, via `:has`), abas por teclado (setas, Home, End),
+  `prefers-reduced-motion` desliga transições e rolagens suaves. O painel não tem formulário nem
+  botão que altere dados; "CSV" não existe no backend: a cópia dos dados é o link de "exportar meus
+  dados" (JSON), citado num texto do cartão de lançamentos.
+- **Testes:** `tests/test_panel_js.py` roda `panel.js` no Chromium com rede falsa e os payloads de
+  `tests/panel_fixtures.py` (formato real da API, números dos mockups): um teste por grupo de
+  cartões, XSS, estados vazios, filtros só na URL, URL adulterada, busca local, paginação, tema,
+  teclado, ordem móvel, legenda no celular, overflow e CSP.
+
 **Abas.** Resumo, Dinheiro, Agenda e tarefas, Hábitos, Viagens. A rota `health` (aba Hábitos) é
 própria, carregada só ao abrir a aba, e cada abertura vai para o `AuditLog`. O botão do chat
 ("Abrir meu painel") é uma mensagem `cta_url` com plano B em texto (`whatsapp.send_cta_url`).

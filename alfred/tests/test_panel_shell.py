@@ -141,3 +141,42 @@ async def test_assets_are_public_whitelisted_and_cacheable(client) -> None:
     assert (await client.get("/panel-assets/..%2Fmodels.py")).status_code in (404, 400)
     assert (await client.get("/panel-assets/secret.txt")).status_code == 404
     await engine.dispose()
+
+
+def test_shell_texts_pass_the_message_audit() -> None:
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location(
+        "message_audit_shell", PANEL.parent.parent.parent / "scripts" / "message_audit.py"
+    )
+    audit = importlib.util.module_from_spec(spec)
+    sys.modules["message_audit_shell"] = audit
+    spec.loader.exec_module(audit)
+    findings, _ = audit.run()
+    assert [str(f) for f in findings if "panel.shell" in f.where] == []
+
+
+def test_every_placeholder_of_a_text_exists_in_all_five_languages() -> None:
+    import re
+
+    for key, names in panel_i18n.SHELL.items():
+        fields = {lang: set(re.findall(r"\{(\w+)\}", text)) for lang, text in names.items()}
+        assert len({frozenset(f) for f in fields.values()}) == 1, (key, fields)
+        assert not any('"' in t and "“" in t for t in names.values()), key  # straight quotes only
+
+
+def test_category_filter_is_the_closed_list_of_labels() -> None:
+    cats = panel_i18n.categories("pt")
+    assert [c["id"] for c in cats][:2] == ["supermarkt", "restaurant"] and len(cats) == 10
+    assert {c["label"] for c in panel_i18n.categories("en")} >= {"Groceries", "Housing"}
+
+
+def test_shell_html_carries_the_name_escaped_and_never_rescans_user_text() -> None:
+    from alfred import panel
+
+    page = panel.render_v2("n0nce", "pt", "tok", '<b>__NONCE__</b>"')
+    assert "&lt;b&gt;__NONCE__&lt;/b&gt;&quot;" in page  # escaped, and not replaced by the nonce
+    assert 'id="theme-toggle"' in page and 'id="filter-bar"' in page
+    assert "Painel de" in page
+    assert 'class="who"' not in panel.render_v2("n0nce", "pt", "tok", None)

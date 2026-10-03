@@ -26,6 +26,7 @@ alfred/                    ← raiz do serviço (Railway "Root Directory")
     web_security.py        cabeçalhos, CSP por nonce (v1 com cdnjs+SRI, v2 sem host externo), limitador
     panel_tokens.py        token do painel (7 dias, renovação deslizante) e da exportação (uso único)
     panel_filters.py       PanelFilter: a ÚNICA função de filtro (lista fechada na URL)
+    panel_calc.py          números dos cartões Resumo e Dinheiro (funções puras + um GROUP BY por cartão)
     panel_phrases.py       motor de frases por regras (sem LLM), catálogo auditado nas 5 línguas
     panel_api.py           /api/d/{token}/summary|money|health|agenda|trips (uma consulta por cartão)
     panel_i18n.py          textos fixos da casca v2 (abas, botão, estados vazios) nas 5 línguas

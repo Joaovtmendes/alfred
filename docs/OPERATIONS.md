@@ -138,6 +138,6 @@ python scripts/contrast_check.py                    # contraste AA dos dois tema
 python scripts/panel_shots.py --base http://127.0.0.1:8000 --out /tmp/panel-shots --check-v1
 ```
 
-`panel_shots.py` abre o Chromium do Playwright e falha se houver violação de CSP, erro de página,
+`panel_shots.py` abre o Chromium do Playwright, captura Resumo e Dinheiro (claro/escuro, 1280 e 390) e falha se houver violação de CSP, erro de página,
 fonte que não carrega ou rolagem horizontal. Sem acesso ao cdnjs (sandbox), `--chartjs` serve um
 `chart.umd.js` local no lugar do CDN para provar que a v1 corre sob a CSP por nonce.

@@ -9,10 +9,14 @@
 </head>
 <body>
 <div class="page">
-  <header class="top"><div class="brand"><span class="logo">A</span><span>Alfred</span></div><div class="muted">__LINK_VALID__</div>__CHAT_TOP__</header>
-  <div role="tablist" aria-label="Alfred">__TABS__</div>
+  <header class="top">
+    <div class="brand"><span class="logo">A</span><span class="word">Alfred</span>__PANEL_OF__</div>
+    <div class="top-right"><div class="muted valid">__LINK_VALID__</div><button type="button" id="theme-toggle" class="theme"></button>__CHAT_TOP__</div>
+  </header>
+  <div class="tabs-wrap"><div role="tablist" aria-label="Alfred">__TABS__</div></div>
+  <div class="filter-bar" id="filter-bar" hidden><div class="filters" id="filters" role="group"></div><p class="fnote" id="filters-note"></p></div>
   <main><div id="panel" role="tabpanel" tabindex="0" aria-live="polite"></div></main>
-  <footer class="foot">__PRIVACY__</footer>
+  <footer class="foot"><span>__READONLY__</span><span>__PRIVACY__</span></footer>
 </div>
 __CHAT_BOTTOM__
 <script type="application/json" id="panel-config" nonce="__NONCE__">__CONFIG__</script>
