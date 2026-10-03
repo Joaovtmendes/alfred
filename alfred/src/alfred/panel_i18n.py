@@ -13,13 +13,7 @@ _TABS = (
     ("money", {"pt": "Dinheiro", "nl": "Geld", "en": "Money", "fr": "Argent", "de": "Geld"}),
     (
         "agenda",
-        {
-            "pt": "Agenda e tarefas",
-            "nl": "Agenda en taken",
-            "en": "Agenda and tasks",
-            "fr": "Agenda et tâches",
-            "de": "Termine und Aufgaben",
-        },
+        {"pt": "Agenda", "nl": "Agenda", "en": "Agenda", "fr": "Agenda", "de": "Termine"},
     ),
     (
         "health",

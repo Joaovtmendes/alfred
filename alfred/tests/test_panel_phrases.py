@@ -342,3 +342,8 @@ def test_blue_days_phrase_is_singular_for_one_day_in_french() -> None:
     assert one and one.text.startswith("1 jour sur 8 ") and "1 jours" not in one.text
     assert pp.rule_blue_days(1, 8, 1, "pt").text.startswith("1 de 8 dias no azul")
     assert pp.rule_blue_days(3, 8, 2, "fr").text.startswith("3 jours sur 8 ")
+
+
+def test_a_phrase_built_from_a_lowercase_merchant_still_starts_with_a_capital() -> None:
+    p = pp.rule_top_share("renda", 99999.0, 100000.0, 10, "pt")
+    assert p and p.text[0] == "R"

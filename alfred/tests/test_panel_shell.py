@@ -25,7 +25,7 @@ def test_tabs_order_and_labels_in_every_language() -> None:
     assert [t["label"] for t in panel_i18n.tabs("pt")] == [
         "Resumo",
         "Dinheiro",
-        "Agenda e tarefas",
+        "Agenda",
         "Hábitos",
         "Viagens",
     ]
@@ -112,7 +112,7 @@ async def test_flag_off_keeps_v1_and_flag_on_serves_v2(lab, client) -> None:
     v2, headers = await _page(lab, client, True)
     assert 'role="tablist"' in v2 and 'data-theme="dark"' in v2
     labels = re.findall(r'role="tab"[^>]*>([^<]+)<', v2)
-    assert labels == ["Resumo", "Dinheiro", "Agenda e tarefas", "Hábitos", "Viagens"]
+    assert labels == ["Resumo", "Dinheiro", "Agenda", "Hábitos", "Viagens"]
     csp = headers["content-security-policy"]
     assert "unsafe-inline" not in csp and "cdnjs" not in v2 and "cdnjs" not in csp
     assert not re.search(r'<(script|link)[^>]+(src|href)="https?://', v2)

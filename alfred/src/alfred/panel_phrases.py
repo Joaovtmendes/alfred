@@ -430,7 +430,9 @@ def render(
     chat = CHAT.get(chat_key or key, {}).get(lang)
     if chat and chat_args:
         chat = chat.format(**{k: _safe(v) for k, v in chat_args.items()})
-    return Phrase(key=key, text=PHRASES[key][lang].format(**values), chat=chat, severity=severity)
+    text = PHRASES[key][lang].format(**values)
+    # A sentence built from a merchant's name ("renda é 99% ...") still starts with a capital.
+    return Phrase(key=key, text=text[:1].upper() + text[1:], chat=chat, severity=severity)
 
 
 def _pct(part: float, whole: float) -> int:

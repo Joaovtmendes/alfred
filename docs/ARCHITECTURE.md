@@ -255,7 +255,7 @@ Fiel aos mockups aprovados (`Main`, `Mobile`, `Dinheiro`, `MobileDinheiro`); as 
   cartões, XSS, estados vazios, filtros só na URL, URL adulterada, busca local, paginação, tema,
   teclado, ordem móvel, legenda no celular, overflow e CSP.
 
-**Abas.** Resumo, Dinheiro, Agenda e tarefas, Hábitos, Viagens. A rota `health` (aba Hábitos) é
+**Abas.** Resumo, Dinheiro, Agenda, Hábitos, Viagens. A rota `health` (aba Hábitos) é
 própria, carregada só ao abrir a aba, e cada abertura vai para o `AuditLog`. O botão do chat
 ("Abrir meu painel") é uma mensagem `cta_url` com plano B em texto (`whatsapp.send_cta_url`).
 

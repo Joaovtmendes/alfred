@@ -14,10 +14,12 @@
   const NS = "http://www.w3.org/2000/svg";
   const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // A sign, the euro mark and the number never split across lines: "− € 5,00" is one word.
+  const nb = (t) => t.replace(/([−+]) €/g, "$1\u00a0€").replace(/€ (?=\d)/g, "€\u00a0");
   function el(tag, cls, text) {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
-    if (text !== undefined) n.textContent = String(text);
+    if (text !== undefined) n.textContent = nb(String(text));
     return n;
   }
   function svg(tag, attrs) {
