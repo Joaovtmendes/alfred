@@ -348,7 +348,7 @@ async def dashboard_page(
     lang = normalize_lang(member.language)
     if member.dashboard_v2:
         request.state.panel_v2 = True  # the middleware drops the Chart.js host from the CSP
-        return HTMLResponse(panel.render_v2(request.state.csp_nonce, lang, token))
+        return HTMLResponse(panel.render_v2(request.state.csp_nonce, lang, token, member.display_name))
     page = (
         _HTML_TEMPLATE.replace("__NONCE__", request.state.csp_nonce)
         .replace("__TOKEN__", token)

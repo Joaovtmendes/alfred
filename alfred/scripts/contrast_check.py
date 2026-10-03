@@ -27,6 +27,11 @@ PAIRS = [  # (foreground, background, minimum ratio)
     ("accent-text", "accent-soft", TEXT),
     ("accent-text", "surface", TEXT),
     ("on-accent", "accent", TEXT),
+    ("ink", "accent-soft", TEXT),  # the Alfred phrase box
+    ("warm-text", "warm-soft", TEXT),  # date tile of a bill due within days
+    ("accent-text", "bg", TEXT),  # "clear filters", links
+    ("accent-text", "surface2", TEXT),
+    ("ink", "warm-soft", TEXT),
     ("warm", "surface", TEXT),  # delta text such as "up 8%"
     ("good", "surface", TEXT),
     ("accent", "bg", GRAPHIC),  # bars, focus ring, active-tab underline
