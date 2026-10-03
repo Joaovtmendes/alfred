@@ -510,6 +510,57 @@ def bloco_l(run_id, delay):
     send_tap("L11 toque com id lixo → silêncio (sem resposta)", "lixo", run_id, delay)
 
 
+def bloco_m(run_id, delay):
+    """V2 lote 1 — alimenta os cartões de Dinheiro, Agenda e Resumo (orçamento, contas fixas,
+    a pagar/receber, dívidas, agenda, score, visões, resumo mensal)."""
+    print("\n══ Bloco M — V2 lote 1 (dados para o painel) ══")
+    for i, t in enumerate(
+        [
+            "recebi €2.800 de salário",
+            "recebi €150 de freela",
+            "Jumbo 62,40",
+            "Albert Heijn 38,15",
+            "mercado 27,90",
+            "jantar no restaurante 48",
+            "almoço restaurante 14,50",
+            "uber 12,50",
+            "NS trem 23",
+            "farmácia 18,90",
+            "Netflix 13,99",
+            "cinema 24",
+            "paguei €180 de aluguel",
+            "Decathlon 89",
+        ],
+        start=1,
+    ):
+        send(f"M{i:02d} lançamento", t, run_id, delay)
+    send("M20 orçamento mercado", "orçamento mercado 400", run_id, delay)
+    send("M21 orçamento restaurante", "orçamento restaurante 120", run_id, delay)
+    send("M22 orçamento transporte", "orçamento transporte 80", run_id, delay)
+    send("M23 meus orçamentos", "meus orçamentos", run_id, delay)
+    send("M24 conta fixa", "aluguel 1200 todo dia 1", run_id, delay)
+    send("M25 parcelado", "celular em 10x de 89,90", run_id, delay)
+    send("M26 contas fixas", "minhas contas fixas", run_id, delay)
+    send("M27 a pagar", "a pagar luz 120 dia 20", run_id, delay)
+    send("M28 a receber", "a receber freela 300", run_id, delay)
+    send("M29 o que tenho a pagar", "o que tenho a pagar", run_id, delay)
+    send("M30 dívida 1", "Pedro me deve 25", run_id, delay)
+    send("M31 dívida 2", "devo 40 pro Lucas", run_id, delay)
+    send("M32 dias no azul", "dias no azul", run_id, delay)
+    send("M33 mês contra mês", "compara por categoria", run_id, delay)
+    send("M34 compromisso 1", "dentista amanhã às 14h", run_id, delay)
+    send("M35 compromisso 2", "reunião de equipe sexta às 10h", run_id, delay)
+    send("M36 agenda", "minha agenda", run_id, delay)
+    send("M37 tarefa 1", "tarefa: comprar presente de aniversário até sexta", run_id, delay)
+    send("M38 tarefa 2", "tarefa: renovar passaporte", run_id, delay)
+    send("M39 nota de saúde", "minha nota de saúde", run_id, delay)
+    send("M40 visão guardada", "salva essa visão como restaurantes", run_id, delay)
+    send("M41 minhas visões", "minhas visões", run_id, delay)
+    send("M42 resumo mensal", "ativar resumo mensal", run_id, delay)
+    send("M43 extrato do que enviei", "o que você me enviou hoje", run_id, delay)
+    send("M44 resumo", "resumo", run_id, delay)
+
+
 def bloco_n(run_id, delay):
     """V2-35 + painel — preenche todos os cartões: treino com cargas, roteiro, mala, orçamento.
 
@@ -604,6 +655,7 @@ BLOCOS = {
     "J": bloco_j,
     "K": bloco_k,
     "L": bloco_l,
+    "M": bloco_m,
     "N": bloco_n,
 }
 
