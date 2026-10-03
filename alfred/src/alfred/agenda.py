@@ -76,7 +76,7 @@ _T_HOUR = re.compile(
 )
 _T_AMPM = re.compile(r"\b(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b")
 _T_LEAD = re.compile(
-    r"\b(?:as|at|om|um)\s+([01]?\d|2[0-3])\b(?!\s*(?:[:h]|euros?|€|km|min|x|%|\d))"
+    r"\b(?:as|at|om|um)\s+([01]?\d|2[0-3])\b(?!\s*(?:[:h]|euros?|€|km|min|x|%|\d|/\s*10|(?:em|de|von|van|sur|of|out\s+of)\s+10\b))"
 )
 _D_DAYNUM = re.compile(
     r"\b(?:dia|day|the|op\s+de|op\s+den|le|am|den)\s+(\d{1,2})(?:st|nd|rd|th|e|ste|de|er|o)?\b(?!\s*[:h/]|\s*(?:euros?|€))"

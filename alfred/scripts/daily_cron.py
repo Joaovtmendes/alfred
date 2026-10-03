@@ -67,6 +67,7 @@ def is_job_due(
     last_sent_at: datetime | None,
     now_local: datetime,
     window: timedelta = WINDOW,
+    day_of_month: int | None = None,
 ) -> bool:
     """Pure decision function — unit-tested in tests/test_cron.py.
 
@@ -77,6 +78,8 @@ def is_job_due(
     now_utc = now_local.astimezone(UTC)
     for day in (now_local, now_local - timedelta(days=1)):
         if not days_mask & weekday_bit(day):
+            continue
+        if day_of_month and day.day != day_of_month:
             continue
         due = due_at(time_of_day, day)
         if due is None:
@@ -342,7 +345,13 @@ async def run_cron() -> int:
     own_weekly = {r.member_id for r in rows if r.job_type == "weekly_summary"}
 
     for r in rows:
-        if not is_job_due(r.time_of_day, r.days_mask, r.last_sent_at, now_local):
+        if not is_job_due(
+            r.time_of_day,
+            r.days_mask,
+            r.last_sent_at,
+            now_local,
+            day_of_month=(r.payload or {}).get("day_of_month"),
+        ):
             continue
         template_name = TEMPLATE_MAP.get(r.job_type)
         if not template_name:
