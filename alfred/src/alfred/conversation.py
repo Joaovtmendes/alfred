@@ -102,6 +102,10 @@ from alfred.recurring import handle_recurring_command
 from alfred.score import STRINGS as _SCORE_STRINGS
 from alfred.score import handle_score_command
 from alfred.settings import settings
+from alfred.training import STRINGS as _TRAINING_STRINGS
+from alfred.training import handle_training_button, handle_training_command
+from alfred.tripplan import STRINGS as _TRIPPLAN_STRINGS
+from alfred.tripplan import handle_tripplan_command
 from alfred.validation import MAX_AMOUNT
 from alfred.whatsapp import send_buttons, send_cta_url, send_text
 
@@ -1474,6 +1478,8 @@ _STRINGS.update(_SCORE_STRINGS)  # V2-09
 _STRINGS.update(_ANALYSIS_STRINGS)  # V2-14
 _STRINGS.update(_INSIGHT_STRINGS)  # V2-15
 _STRINGS.update(_IOU_STRINGS)  # V2-15
+_STRINGS.update(_TRAINING_STRINGS)  # V2-35
+_STRINGS.update(_TRIPPLAN_STRINGS)  # V2-35
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
 _STRINGS.update(_BATCH_STRINGS)  # V2-17
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
@@ -3408,6 +3414,12 @@ async def _handle_button_reply(
         await _save_outbound(member, out.text, session)
         return True
 
+    if action in ("plan_ok", "plan_cancel"):  # V2-35 training plan preview
+        plan_out = await handle_training_button(action, raw_id, member, lang, session)
+        await send_text(to, plan_out.text)
+        await _save_outbound(member, plan_out.text, session)
+        return True
+
     try:
         expense_id = uuid.UUID(raw_id)
     except ValueError:
@@ -3708,6 +3720,23 @@ async def handle_inbound(
                 reply = _t("lembrete_cancel_not_found", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
+            return
+
+        # 4e-0p. V2-35 — training plan / loads and trip itinerary / packing / planned budget
+        # (before the budgets handler so "orçamento da viagem hospedagem 300" is ours)
+        original = unicodedata.normalize("NFC", (message.body or "").strip())  # keeps the capitals
+        train_out = await handle_training_command(original, body_plain, member, lang, session)
+        if train_out is not None:
+            if train_out.buttons:
+                await send_buttons(to, train_out.text, train_out.buttons)
+            else:
+                await send_text(to, train_out.text)
+            await _save_outbound(member, train_out.text, session)
+            return
+        tripplan_reply = await handle_tripplan_command(original, body_plain, member, lang, session)
+        if tripplan_reply is not None:
+            await send_text(to, tripplan_reply)
+            await _save_outbound(member, tripplan_reply, session)
             return
 
         # 4e-0f. V2-01 — budgets: "orçamento mercado 400" / "meus orçamentos" / "tira o orçamento de lazer"
