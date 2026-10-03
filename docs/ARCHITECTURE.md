@@ -57,7 +57,7 @@ disclosure; `pending_response` → sim/não; `rejected` → ignora, excepto `STA
 | 4-0a | "sim" solto sem rascunho → "não há nada a confirmar" | `_BARE_YES_RE` |
 | 4-0b | RGPD: apagar / exportar dados | `privacy.py` |
 | 4a–4d | stop, saldo, ajuda, resumo | comandos exactos |
-| 4e-0, 0b, 0c | lembretes M5: criar, listar, cancelar | `scheduled_job` |
+| 4e-0, 0b, 0c | lembretes M5: criar, listar, cancelar; cadência ("toda segunda", "dias úteis", "todo dia 5") | `scheduled_job`, `recurrence.py` |
 | 4e-0f | orçamentos V2-01 | `budgets.py` |
 | 4e-0h | resumo mensal (activar/desactivar/ver) V2-04 | `monthly_summary.py` |
 | 4e-0l | "dias no azul", mês contra mês V2-15 | `insights.py` |
@@ -65,7 +65,8 @@ disclosure; `pending_response` → sim/não; `rejected` → ignora, excepto `STA
 | 4e-0o | "o que você me enviou" V2-18 | `outbox.py` |
 | 4e-0n | a pagar / a receber / "paguei a luz" V2-16 | `ledger_status.py` |
 | 4e-0g | contas fixas, assinaturas, parcelas V2-02 | `recurring.py` |
-| 4e-0i | agenda V2-06 | `agenda.py` |
+| 4e-0i | agenda V2-06 (ignorada se a mensagem começa por "nota:") | `agenda.py` |
+| 4e-0p | plano de treino com cargas e plano de viagem (roteiro, mala, orçamento por categoria) V2-35, antes dos orçamentos | `training.py`, `tripplan.py` |
 | 4e-0j | nota de saúde V2-09 | `score.py` |
 | 4e-0k | visões guardadas V2-14 | `analysis.py` `handle_view_command` |
 | 4e-1 | correcção de categoria ("Jumbo é supermarkt") | `parsing.py` |
@@ -104,10 +105,13 @@ Tudo pertence a um `member` (e este a um `household`). Tabelas: `household`, `me
 received / to_receive; relatórios só contam paid e received), `merchant_category_overrides`,
 `scheduled_job`, `workout_session`, `health_log`, `goal`, `habit_log`, `note`, `task`, `trip`,
 `llm_usage`, `audit_log` e, do V2, `budget`, `recurring_item`, `appointment`, `saved_view`,
-`iou`, `pending_batch`. Exportar e apagar dados (`privacy.py`) percorre `Base.metadata`: uma
+`iou`, `pending_batch` e, do V2-35, `workout_plan`, `workout_plan_day`,
+`workout_plan_item`, `workout_load`, `trip_item`, `trip_pack_item`, `trip_budget_line` (único por
+viagem+categoria) e `pending_action` (rascunho genérico, TTL de 15 min; o toque "confirmar" faz
+`DELETE … RETURNING`, então um segundo toque não faz nada). Exportar e apagar dados (`privacy.py`) percorre `Base.metadata`: uma
 tabela nova entra sozinha.
-Migrações em `alfred/alembic/versions/` numa cadeia linear; o head actual é `f2a3b4c5d6e7`
-(V2-18). Cada item V2 tem uma migração própria (`e5f6a7b8c9d0` orçamentos … `f2a3b4c5d6e7`
+Migrações em `alfred/alembic/versions/` numa cadeia linear; o head actual é `d5e6f7a8b9c0`
+(V2-35; antes dele `f2a3b4c5d6e7`, V2-18). Cada item V2 tem uma migração própria (`e5f6a7b8c9d0` orçamentos … `f2a3b4c5d6e7`
 extrato de mensagens).
 
 ## Painel v2
@@ -262,11 +266,25 @@ própria, carregada só ao abrir a aba, e cada abertura vai para o `AuditLog`. O
 **Agenda, Hábitos e Viagens** (`panel_tabs.py`, contrato de cada cartão no docstring do módulo).
 Sem filtros: cada cartão tem janela fixa e nomeada. Agenda: próximos 7 dias (`Appointment`
 ativos), tarefas (atrasadas/prazos), mapa de 4 semanas, lembretes (`ScheduledJob` ativos), notas.
-Hábitos: água, sono, humor, medicação (só dias com registro), treinos, hábitos e metas; frases
-só descrevem (média, contagem), nunca julgam, e a aba mostra "não é conselho médico". Viagens:
-viagem ativa, senão a próxima, senão a última (orçamento, gasto, categorias, dias) e as anteriores
-com "dentro/acima do orçamento". Só gastos liquidados (`SETTLED`) com `trip_id` do próprio membro.
-Fora por falta de dados no Alfred: roteiro, bagagem e plano de treino com cargas do mockup.
+Hábitos: água, treinos, plano de treino com cargas e evolução (`training_card`), hábitos e metas;
+sono, humor e medicação saíram da aba por decisão de 02/10. Frases só descrevem (média, contagem),
+nunca julgam, e a aba mostra "não é conselho médico". Viagens: viagem ativa, senão a próxima,
+senão a última (orçamento, gasto, categorias, dias) e as anteriores com "dentro/acima do
+orçamento". Só gastos liquidados (`SETTLED`) com `trip_id` do próprio membro. Os cartões
+`itinerary`, `packing` e `plan_budget` só aparecem com viagem ativa ou próxima, pela mesma escolha
+de viagem do chat (`tripplan.target_trip`); cada um tem frase (`rule_training`, `rule_packing`,
+`rule_plan_budget`) com comando de chat equivalente.
+
+**Treino e plano de viagem no chat (V2-35).** `training.py` e `tripplan.py` não usam LLM:
+`parse_plan` lê "plano de treino: Segunda - Peito: Supino 4x10 60kg"; o rascunho fica em
+`PendingAction` (`workout_plan`) até o botão `plan_ok`/`plan_cancel`; cargas ("supino 62 kg")
+vão para `WorkoutLoad` e alimentam a evolução. Orçamento por categoria usa `resolve_category` de
+`budgets.py` (hospedagem e sinônimos → `wonen`).
+
+**Lembretes recorrentes (`recurrence.py`).** `parse_recurrence` tira a cadência do texto e devolve
+máscara de dias (Seg=1 … Dom=64) mais dia do mês opcional, guardado em `payload["day_of_month"]`
+(máscara 127); `scripts/daily_cron.py::is_job_due(day_of_month=…)` o respeita. `cadence_label` dá a
+frase da confirmação e da listagem nas 5 línguas.
 
 ## Chamadas ao LLM
 
