@@ -698,7 +698,7 @@ async def test_the_panel_is_read_only() -> None:
         await _close(pwm, browser)
 
 
-async def test_days_without_settled_entries_show_no_zero_total_and_few_days_keep_bars_slim() -> (
+async def test_days_without_settled_entries_show_no_zero_total_and_a_running_month_keeps_its_full_width() -> (
     None
 ):
     money = {**fx.MONEY, "cards": [dict(c) for c in fx.MONEY["cards"]]}
@@ -721,7 +721,9 @@ async def test_days_without_settled_entries_show_no_zero_total_and_few_days_keep
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=daily]")
         assert await page.locator("[data-card=transactions] .day .num").count() == 0
-        box = await page.locator("[data-card=daily] .daily").bounding_box()
-        assert box["width"] <= 3 * 56 + 1
+        assert await page.locator("[data-card=daily] .daily > i").count() == 31
+        box = await page.locator("[data-card=daily] .daily > i").first.bounding_box()
+        assert box["width"] < 40
+        assert await page.locator("[data-card=daily] details.table tbody tr").count() == 3
     finally:
         await _close(pwm, browser)

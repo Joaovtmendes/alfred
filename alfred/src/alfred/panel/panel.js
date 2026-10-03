@@ -538,9 +538,17 @@
       const weekly = card.unit === "week";
       const title = weekly ? T.title_weekly : T.title_daily;
       const c = cardShell(card, title, span);
-      const pts = card.points, v = card.values;
+      const real = card.points, v = card.values;
+      // A month still running keeps its full width: the days to come are empty slots, so the
+      // bars stay as thin as on a finished month and the axis reads 1 .. last day.
+      const pts = real.slice();
+      if (!weekly && pts.length && pts[0].date.slice(8, 10) === "01") {
+        const y = Number(pts[0].date.slice(0, 4)), m = Number(pts[0].date.slice(5, 7));
+        const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        const pad = (n) => String(n).padStart(2, "0");
+        for (let d = pts.length + 1; d <= days && pts.length < days; d++) pts.push({ date: y + "-" + pad(m) + "-" + pad(d), amount: 0 });
+      }
       const wrap = el("div", "daily-wrap");
-      if (pts.length < 14) wrap.style.maxWidth = pts.length * 56 + "px"; // few days: bars stay slim
       const chart = el("div", "daily");
       chart.setAttribute("role", "img");
       chart.setAttribute("aria-label", title + ": " + money(v.total) + (v.max_date ? "; " + T.daily_peak + ": " + dm(v.max_date) + " (" + money(v.max) + ")" : ""));
@@ -565,7 +573,7 @@
       });
       wrap.append(axis);
       c.append(wrap);
-      tableView(c, pts.map((p) => [p.date.split("-").reverse().join("/"), money(p.amount)]), { head: [T.th_date, T.th_amount], caption: title });
+      tableView(c, real.map((p) => [p.date.split("-").reverse().join("/"), money(p.amount)]), { head: [T.th_date, T.th_amount], caption: title });
       phraseBlock(c, card.phrase);
       return c;
     },
@@ -695,7 +703,7 @@
       filtersEl.append(pm);
     }
     const soft = isMoney ? "soft" : "";
-    const catOpts = [["", T.f_all_categories], ...cfg.categories.map((x) => [x.id, x.label])];
+    const catOpts = [["", T.f_category], ...cfg.categories.map((x) => [x.id, x.label])];
     let catVal = f.cats[0] || "";
     if (f.cats.length > 1) { catOpts.push(["__multi", fmt(T.f_multi, { n: f.cats.length })]); catVal = "__multi"; }
     const pc = pill("soft");
