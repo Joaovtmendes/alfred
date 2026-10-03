@@ -26,6 +26,8 @@
     return n;
   }
   const fmt = (tpl, vars) => String(tpl).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+  // singular text when the count is exactly 1 ("há 1 dia"): key + "_one", falling back to the plural
+  const fmtN = (key, n, vars) => fmt(n === 1 && T[key + "_one"] ? T[key + "_one"] : T[key], { n, ...vars });
   const quote = (chat) => "“" + String(chat).replace(/^"|"$/g, "") + "”";
   const lc = (s) => (cfg.lang === "de" ? s : s.toLowerCase());
   const pctText = (v) => fmtInt.format(Math.abs(Math.round(v))) + "%";
@@ -373,9 +375,9 @@
       const v = card.values;
       const c = cardShell(card, T.title_blue, span);
       const line = el("div", "hero-line");
-      line.append(el("div", "hero", String(v.blue)), el("div", "sub", fmt(T.blue_of, { n: v.elapsed })));
+      line.append(el("div", "hero", String(v.blue)), el("div", "sub", fmtN("blue_of", v.elapsed)));
       c.append(line, track(v.elapsed ? (v.blue / v.elapsed) * 100 : 0, "", false));
-      if (v.longest > 0) c.append(el("div", "sub", fmt(T.blue_longest, { n: v.longest })));
+      if (v.longest > 0) c.append(el("div", "sub", fmtN("blue_longest", v.longest)));
       phraseBlock(c, card.phrase);
       return c;
     },
@@ -389,7 +391,7 @@
         row.append(el("div", "avatar", (Array.from(it.person)[0] || "?").toUpperCase()));
         const body = el("div");
         body.append(el("div", "t", it.person));
-        const when = it.days === 0 ? T.owed_today : fmt(T.owed_days, { n: it.days });
+        const when = it.days === 0 ? T.owed_today : fmtN("owed_days", it.days);
         body.append(el("div", "s", it.note ? it.note + " · " + when : when));
         row.append(body, el("div", "amt", money(it.amount)));
         list.append(row);
@@ -452,7 +454,7 @@
         none.hidden = shown > 0 || !q;
       });
       const tot = el("div", "total");
-      tot.append(el("span", "", fmt(T.tx_total, { n: card.values.count })), el("span", "num", signed(card.values.balance)));
+      tot.append(el("span", "", fmtN("tx_total", card.values.count)), el("span", "num", signed(card.values.balance)));
       c.append(tot);
       if (card.page && card.page.pages > 1) {
         const pager = el("div", "pager");
@@ -572,7 +574,7 @@
       const v = card.values;
       const c = cardShell(card, T.title_avg, span);
       heroMoney(c, v.average);
-      c.append(el("div", "sub", fmt(T.avg_sub, { n: v.count })));
+      c.append(el("div", "sub", fmtN("avg_sub", v.count)));
       if (v.pct !== null && v.pct !== undefined && v.previous_average > 0 && ctx.prevMonth && v.delta) {
         const up = v.delta > 0;
         c.append(el("div", "d " + (up ? "up" : "down"), (up ? "▲ " : "▼ ") + pctText(v.pct) + " " + fmt(T.vs_month, { month: ctx.prevMonth })));
@@ -583,7 +585,7 @@
 
     recurring(card, span) {
       const c = cardShell(card, T.title_recurring, span);
-      c.append(el("div", "sub", fmt(T.rec_total, { total: money(card.values.monthly_total), n: card.values.count })));
+      c.append(el("div", "sub", fmtN("rec_total", card.values.count, { total: money(card.values.monthly_total) })));
       const list = el("div", "list");
       for (const it of card.items) {
         const row = el("div", "item");

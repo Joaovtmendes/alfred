@@ -435,12 +435,20 @@ SHELL.update(
         "blue_of": _t(
             "de {n} dias", "van {n} dagen", "of {n} days", "sur {n} jours", "von {n} Tagen"
         ),
+        "blue_of_one": _t("de {n} dia", "van {n} dag", "of {n} day", "sur {n} jour", "von {n} Tag"),
         "blue_longest": _t(
             "maior sequência: {n} dias",
             "langste reeks: {n} dagen",
             "longest streak: {n} days",
             "plus longue série : {n} jours",
             "längste Serie: {n} Tage",
+        ),
+        "blue_longest_one": _t(
+            "maior sequência: {n} dia",
+            "langste reeks: {n} dag",
+            "longest streak: {n} day",
+            "plus longue série : {n} jour",
+            "längste Serie: {n} Tag",
         ),
         "title_owed": _t(
             "Quem te deve",
@@ -451,6 +459,9 @@ SHELL.update(
         ),
         "owed_days": _t(
             "há {n} dias", "{n} dagen geleden", "{n} days ago", "il y a {n} jours", "vor {n} Tagen"
+        ),
+        "owed_days_one": _t(
+            "há {n} dia", "{n} dag geleden", "{n} day ago", "il y a {n} jour", "vor {n} Tag"
         ),
         "owed_today": _t("hoje", "vandaag", "today", "aujourd'hui", "heute"),
         # Dinheiro
@@ -490,6 +501,13 @@ SHELL.update(
             "Balance of {n} entries",
             "Solde de {n} écritures",
             "Saldo von {n} Buchungen",
+        ),
+        "tx_total_one": _t(
+            "Saldo de {n} lançamento",
+            "Saldo van {n} boeking",
+            "Balance of {n} entry",
+            "Solde de {n} écriture",
+            "Saldo von {n} Buchung",
         ),
         "page_prev": _t(
             "Página anterior",
@@ -582,6 +600,13 @@ SHELL.update(
             "sur {n} dépenses",
             "bei {n} Ausgaben",
         ),
+        "avg_sub_one": _t(
+            "em {n} gasto",
+            "over {n} uitgave",
+            "over {n} expense",
+            "sur {n} dépense",
+            "bei {n} Ausgabe",
+        ),
         "title_recurring": _t(
             "Recorrências",
             "Terugkerende posten",
@@ -594,6 +619,13 @@ SHELL.update(
             "{total} per maand · {n} posten",
             "{total} a month · {n} items",
             "{total} par mois · {n} éléments",
+            "{total} pro Monat · {n} Posten",
+        ),
+        "rec_total_one": _t(
+            "{total} por mês · {n} item",
+            "{total} per maand · {n} post",
+            "{total} a month · {n} item",
+            "{total} par mois · {n} élément",
             "{total} pro Monat · {n} Posten",
         ),
         "rec_fixed": _t(

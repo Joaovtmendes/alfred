@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
+import re
 import uuid
 
 import pytest
@@ -508,6 +510,49 @@ async def test_a_month_the_server_would_ignore_is_not_shown_as_selected(month) -
         await page.wait_for_selector("[data-card=owed]")
         assert page.api_calls[0][1].endswith("/summary")
         await page.wait_for_selector(".pill.month .cur:has-text('Outubro de 2026')")
+    finally:
+        await _close(pwm, browser)
+
+
+_PLURAL_WRONG = {
+    "pt": r"\b1 (dias|lançamentos|gastos|itens)\b",
+    "nl": r"\b1 (dagen|boekingen|uitgaven)\b",
+    "en": r"\b1 (days|entries|expenses|items)\b",
+    "fr": r"\b1 (jours|écritures|dépenses|éléments)\b",
+    "de": r"\b1 (Tagen|Tage|Buchungen|Ausgaben)\b",
+}
+_ONE = {
+    "pt": ["há 1 dia", "de 1 dia", "maior sequência: 1 dia", "Saldo de 1 lançamento", "em 1 gasto", "1 item"],
+    "nl": ["1 dag geleden", "van 1 dag", "langste reeks: 1 dag", "Saldo van 1 boeking", "over 1 uitgave", "1 post"],
+    "en": ["1 day ago", "of 1 day", "longest streak: 1 day", "Balance of 1 entry", "over 1 expense", "1 item"],
+    "fr": ["il y a 1 jour", "sur 1 jour", "plus longue série : 1 jour", "Solde de 1 écriture", "sur 1 dépense", "1 élément"],
+    "de": ["vor 1 Tag", "von 1 Tag", "längste Serie: 1 Tag", "Saldo von 1 Buchung", "bei 1 Ausgabe", "1 Posten"],
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("lang", ["pt", "nl", "en", "fr", "de"])
+async def test_a_count_of_one_reads_in_the_singular_in_every_language(lang) -> None:
+    summary, money = copy.deepcopy(fx.SUMMARY), copy.deepcopy(fx.MONEY)
+    for body in (summary, money):
+        for c in body["cards"]:
+            if c["id"] == "owed":
+                c["items"][0]["days"] = 1
+            if c["id"] == "blue_days":
+                c["values"].update(blue=1, elapsed=1, longest=1)
+            if c["id"] in ("transactions", "avg_ticket", "recurring"):
+                c["values"]["count"] = 1
+                if c["id"] == "recurring":
+                    c["items"] = c["items"][:1]
+    pwm, browser, page = await _open(_handlers(summary, money), lang=lang)
+    try:
+        await page.wait_for_selector("[data-card=owed]")
+        text = await _text(page, "#panel")
+        await page.click('[data-tab="money"]')
+        await page.wait_for_selector("[data-card=recurring]")
+        text += " " + await _text(page, "#panel")
+        assert not re.search(_PLURAL_WRONG[lang], text), re.findall(_PLURAL_WRONG[lang], text)
+        for fragment in _ONE[lang]:
+            assert fragment in text, (lang, fragment)
     finally:
         await _close(pwm, browser)
 
