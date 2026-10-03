@@ -61,6 +61,11 @@ SEPT_ROWS = [
     ("expense", 75.00, "Restaurante", "restaurant", "paid", 2),
     ("expense", 612.10, "Outros", "overig", "paid", 2),
     ("expense", 48.00, "Uber", "transport", "paid", 2),
+    # Later in September: outside the "first three days" comparison, but they give the end-of-month
+    # projection the history it needs (enough variable entries in the last 30 days).
+    ("expense", 36.50, "Albert Heijn", "supermarkt", "paid", 10),
+    ("expense", 24.00, "Uber", "transport", "paid", 14),
+    ("expense", 41.00, "Restaurante", "restaurant", "paid", 20),
 ]
 EXPECTED_ROWS = len(ROWS) + len(SEPT_ROWS)
 EXPECTED_BUDGETS = 3

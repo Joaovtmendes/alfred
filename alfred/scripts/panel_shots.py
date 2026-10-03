@@ -3,10 +3,9 @@
 
 For each view it opens the demo member's panel with the Chromium that Playwright already has,
 and fails when the real browser reports a Content-Security-Policy violation, a page error, a
-failed font, or horizontal overflow. A second set of images ("-showcase") adds the drawing
-primitives (stacked bar with legend and the "end of month" total, bars, sparkline) to the
-Summary tab, so the layouts the later PRs will reuse are checked now. ``--check-v1`` also loads
-the v1 page (Chart.js) once and reports its CSP violations.
+failed font, or horizontal overflow. Every view captures the Resumo and the Dinheiro tabs
+(files ``<theme>-<kind>-<tab>.png``) so they can be compared with the approved mockups.
+``--check-v1`` also loads the v1 page (Chart.js) once and reports its CSP violations.
 
 Usage:
     python scripts/panel_shots.py [--base URL] [--out DIR] [--check-v1] [--chartjs chart.umd.js]
@@ -44,24 +43,10 @@ document.addEventListener('securitypolicyviolation', e => window.__csp.push(
   e.violatedDirective + ' blocked ' + (e.blockedURI || 'inline')));
 """
 
-SHOWCASE = """
-() => {
-  const P = window.AlfredPanel;
-  const grid = document.querySelector('#panel .grid');
-  const c = P.cardShell({id: 'projection'}, 'Saldo do período e fim do mês projetado', 's5');
-  P.stackedBar(c, [
-    {label: 'realizado até hoje', value: 1842.3, text: P.money(1842.3)},
-    {label: 'contas marcadas', value: 298, text: P.money(-298), tone: 'warm'},
-    {label: 'gasto variável esperado', value: 424, text: P.money(-424), tone: 'hatch'},
-  ], {total: {label: 'fim do mês (estimativa) · faixa € 1.030 a € 1.210', text: '~ € 1.120'}});
-  P.sparkline(c, [3, 5, 4, 8, 6, 9, 7], 'ritmo de gasto');
-  P.barRow(c, {label: 'Restaurante', value: P.money(123), pct: 100, tone: 'warm'});
-  grid.append(c);
-}
-"""
+TABS = ("summary", "money")
 
 
-async def _view(browser, base, token, theme, kind, size, out, showcase, problems):
+async def _view(browser, base, token, theme, kind, size, out, problems):
     ctx = await browser.new_context(
         viewport=size, color_scheme=theme, device_scale_factor=1, is_mobile=(kind == "mobile")
     )
@@ -78,40 +63,36 @@ async def _view(browser, base, token, theme, kind, size, out, showcase, problems
     page.on("requestfailed", lambda r: errors.append(f"requestfailed: {r.url.split('?')[0]}"))
     await page.goto(f"{base}/d/{token}", wait_until="networkidle")
     await page.wait_for_selector("#panel .card")
-    if showcase:
-        await page.evaluate(SHOWCASE)
-    await page.evaluate("document.fonts.ready")
-    tag = f"{theme}-{kind}" + ("-showcase" if showcase else "")
-    await page.screenshot(path=str(out / f"{tag}.png"), full_page=True)
-
-    if kind == "mobile" and not showcase:  # the sticky button must not hide the last content
-        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        await page.screenshot(path=str(out / f"{tag}-bottom.png"))
-    if not showcase and theme == "dark" and kind == "desktop":
+    tag = f"{theme}-{kind}"
+    if theme == "dark" and kind == "desktop":
         await _keyboard(page, problems)
+    for tab in TABS:
+        await page.click(f'[data-tab="{tab}"]')
+        await page.wait_for_selector("#panel [data-card]")
+        await page.evaluate("document.fonts.ready")
+        await page.screenshot(path=str(out / f"{tag}-{tab}.png"), full_page=True)
+        if kind == "mobile" and tab == "summary":  # the sticky button must not hide the content
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await page.screenshot(path=str(out / f"{tag}-{tab}-bottom.png"))
+            await page.evaluate("window.scrollTo(0, 0)")
+        overflow = await page.evaluate(
+            "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+        )
+        if overflow > 0:
+            problems.append(f"{tag}-{tab}: overflow-px: {overflow}")
     csp = await page.evaluate("window.__csp")
-    overflow = await page.evaluate(
-        "document.documentElement.scrollWidth - document.documentElement.clientWidth"
-    )
     fonts = await page.evaluate(
         "[...document.fonts].filter(f => f.status !== 'loaded')"
         ".map(f => f.family + ' ' + f.weight + ' ' + f.status)"
     )
     used = await page.evaluate("document.fonts.check('16px \"Hanken Grotesk\"')")
-    tabs = await page.evaluate(
-        "[...document.querySelectorAll('[role=tab]')].map(t => t.textContent)"
-    )
-    for what, bad in (
-        ("csp", csp),
-        ("errors", errors),
-        ("overflow-px", overflow if overflow > 0 else None),
-    ):
+    for what, bad in (("csp", csp), ("errors", errors)):
         if bad:
             problems.append(f"{tag}: {what}: {bad}")
     # declared-but-unused faces stay 'unloaded'; only 'error' (or an unusable family) is a problem
     if any("error" in f for f in fonts) or not used:
         problems.append(f"{tag}: fonts: {fonts} used={used}")
-    print(f"{tag:22} tabs={tabs} csp={len(csp)} errors={len(errors)} overflow={overflow}px")
+    print(f"{tag:16} csp={len(csp)} errors={len(errors)}")
     await ctx.close()
 
 
@@ -235,8 +216,7 @@ async def main_async(args) -> int:
     async with async_playwright() as pw:
         browser = await pw.chromium.launch()
         for theme, kind, size in VIEWS:
-            for showcase in (False, True):
-                await _view(browser, args.base, token, theme, kind, size, out, showcase, problems)
+            await _view(browser, args.base, token, theme, kind, size, out, problems)
         if args.check_v1:
             await _check_v1(browser, args.base, out, args.chartjs, problems)
         await browser.close()
