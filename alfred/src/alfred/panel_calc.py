@@ -86,9 +86,22 @@ def _settled(stmt):
     return stmt.where(Expense.status.in_(SETTLED))
 
 
-def _is_calendar_month(f: PanelFilter) -> bool:
+def is_calendar_month(f: PanelFilter) -> bool:
     last = monthrange(f.start.year, f.start.month)[1]
     return f.start.day == 1 and f.end == f.start + timedelta(days=last)
+
+
+def projection_block_reason(f: PanelFilter, today: date) -> str | None:
+    """Why the month-end projection is not shown for this view (``None`` = it is).
+
+    A projection of a subset (category, kind, state, trip) or of anything but the running calendar
+    month would be a number nobody can read, so it is simply not offered there.
+    """
+    if f.categories or f.kind or f.states or f.trip_id:
+        return "filtered"
+    if not (is_calendar_month(f) and f.start <= today < f.end):
+        return "not_current_month"
+    return None
 
 
 def month_end_of(day: date) -> date:
@@ -107,7 +120,7 @@ def prev_period(f: PanelFilter, today: date) -> tuple[date, date]:
     * Any other calendar month: the whole previous month.
     * A free range: the range of the same length right before it.
     """
-    if _is_calendar_month(f):
+    if is_calendar_month(f):
         prev_first = (f.start - timedelta(days=1)).replace(day=1)
         prev_len = monthrange(prev_first.year, prev_first.month)[1]
         if f.start <= today < f.end:

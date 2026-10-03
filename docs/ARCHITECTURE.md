@@ -155,6 +155,57 @@ categorias, tipo, estado, viagem); `apply_expense_filter` serve cartões e lista
 com facto relevante, e a sugestão é sempre um comando do chat. O catálogo nas 5 línguas passa pelo
 `scripts/message_audit.py`.
 
+### Resumo e Dinheiro (cartões)
+
+`panel_calc.py` guarda os números (funções puras e uma consulta com `GROUP BY` por cartão, sem N+1),
+`panel_phrases.py` as 12 regras de frase e `panel_api.py` monta o JSON. Toda consulta de lançamentos
+passa por `apply_expense_filter`; um cartão que precisa de outro período (mês anterior, últimos 30
+dias, próximos 30 dias) deriva o filtro com `dataclasses.replace` e continua a usá-lo, então o
+membro e os demais filtros valem também ali. Dias são dias locais (`to_char(timezone(...))`,
+`clock.day_start`), por isso 00:30 do dia 1º, virada de ano, 29/02 e mudança de horário caem no dia
+certo (testes em `test_panel_calc.py` e `test_panel_cards.py`).
+
+Envelope comum: `{"tab", "lang", "today", "filter": {start, end (exclusivo), categories, kind,
+states, trip}, "cards": [...]}`. Todo cartão tem `id` estável, `empty`, `phrase` (`null` ou
+`{key, text, chat, severity}`) e, se vazio, `hint` (a frase do chat que ensina). Dinheiro em EUR com
+2 casas, datas ISO. O formato completo de cada cartão está na docstring de `panel_api.py`.
+
+| Aba | Cartões (em ordem) |
+|---|---|
+| `summary` | `balance` (com `compare` e `projection`), `upcoming`, `categories`, `budgets`, `blue_days`, `owed` |
+| `money` | `transactions` (50 por página, `?page=N`), `top_expenses`, `month_vs_month`, `fixed_variable`, `daily`, `categories`, `avg_ticket`, `recurring`, `owed` |
+
+Definições que o front-end pode citar:
+
+- **Projeção do fim do mês** (só no mês corrente e sem filtro de categoria, tipo, estado ou viagem;
+  caso contrário `projection.available = false` com o motivo): saldo realizado + receita marcada
+  "a receber" - contas até o fim do mês (lançamentos `to_pay` e itens fixos, semanais repetidos,
+  atrasado conta uma vez) - gasto variável esperado (média diária dos últimos 30 dias, sem os
+  lançamentos cujo comerciante é o nome de um item fixo, x dias que faltam). Precisa de 10 dias de
+  histórico e 5 lançamentos variáveis; sem isso `sufficient = false`, `projected = null` e só
+  `realized` e `committed` valem. A faixa `low`..`high` é um desvio-padrão do gasto diário somado
+  nos dias restantes. Receita não registrada nunca é projetada.
+- **Mês contra mês:** mês corrente contra os mesmos dias do mês anterior (31/10 contra 30/09 trava
+  no fim de setembro); mês passado contra o mês anterior inteiro; intervalo livre contra o intervalo
+  de mesmo tamanho logo antes. `delta_pct` é `null` sem base (período anterior em zero).
+- **Orçamentos:** o mês de referência é o do último dia do período; 80% e 100% (arredondamento
+  meio para cima, igual aos alertas do chat); `crossed_on` é o dia em que o acumulado passou do
+  limite; `days_to_80` só dentro do mês corrente, com 5 dias e 3 lançamentos.
+- **Próximos pagamentos:** itens fixos ativos e lançamentos pendentes de hoje a 30 dias, mais os
+  atrasados; um lançamento pendente com o mesmo nome do item fixo substitui o item (nunca conta
+  duas vezes). Olham para frente: o período da URL não vale; categoria, tipo e estado valem.
+- **Fixo x variável:** despesa paga cujo comerciante é o nome de um item fixo (`RecurringItem`) é
+  fixa; o resto é variável.
+- **Lista:** soma do dia = lançamentos pagos/recebidos do dia inteiro (lançamentos pendentes
+  aparecem na lista, com `settled: false`, e não entram na soma); a soma do cartão, da lista, das
+  categorias, dos maiores gastos, do gasto por dia e do mês contra mês é sempre o mesmo número
+  (teste com 13 combinações de filtro).
+- **Gasto por dia:** um ponto por dia até 62 dias; períodos maiores viram semanas ISO.
+
+Frases: no máximo uma por cartão, só com dado mínimo (cada regra documenta o seu limiar). A
+sugestão é um comando que o roteador do chat entende sem LLM (um teste roda todas, nas 5 línguas),
+exceto "como fica meu mês?" e o exemplo de registrar um gasto, que passam pelo LLM.
+
 **Abas.** Resumo, Dinheiro, Agenda e tarefas, Hábitos, Viagens. A rota `health` (aba Hábitos) é
 própria, carregada só ao abrir a aba, e cada abertura vai para o `AuditLog`. O botão do chat
 ("Abrir meu painel") é uma mensagem `cta_url` com plano B em texto (`whatsapp.send_cta_url`).
