@@ -772,6 +772,7 @@ class Owed:
     note: str | None
     since: date
     days: int
+    person_total: Decimal  # all open debts of this person (the row is one debt)
 
 
 async def owed_to_me(
@@ -799,10 +800,29 @@ async def owed_to_me(
         .order_by(Iou.created_at, Iou.id)
         .limit(limit)
     )
+    listed = rows.all()
+    keys = sorted({p.strip().lower() for p, *_ in listed})
+    per_person: dict[str, Decimal] = {}
+    if keys:
+        sums = await session.execute(
+            select(func.lower(func.trim(Iou.person)), func.sum(remaining))
+            .where(*base, func.lower(func.trim(Iou.person)).in_(keys))
+            .group_by(func.lower(func.trim(Iou.person)))
+        )
+        per_person = {k: dec(v) for k, v in sums.all()}
     out = []
-    for person, rem, note, created in rows.all():
+    for person, rem, note, created in listed:
         since = to_local(created).date()
-        out.append(Owed(person, dec(rem), note, since, max((today - since).days, 0)))
+        out.append(
+            Owed(
+                person,
+                dec(rem),
+                note,
+                since,
+                max((today - since).days, 0),
+                per_person.get(person.strip().lower(), dec(rem)),
+            )
+        )
     return out, dec(total), int(n)
 
 

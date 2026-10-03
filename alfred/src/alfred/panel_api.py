@@ -520,7 +520,7 @@ async def owed_card(ctx: _Ctx) -> dict[str, Any]:
         return card
     oldest = rows[0]
     card["phrase"] = _phrase(
-        pp.rule_owed(oldest.person, float(oldest.remaining), oldest.days, ctx.lang)
+        pp.rule_owed(oldest.person, float(oldest.person_total), oldest.days, ctx.lang)
     )
     return card
 

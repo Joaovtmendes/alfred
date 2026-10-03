@@ -340,6 +340,20 @@ async def test_blue_days_and_owed_cards(lab, client, today) -> None:
     )
 
 
+@db
+async def test_owed_phrase_names_what_the_person_owes_in_total(lab, client, today) -> None:
+    """Two open debts of the same person: the sentence says what she owes, not just the oldest."""
+    await lab.add(
+        Iou(member_id=lab.member_id, person="Marta", amount=10, direction="owed_to_me", created_at=datetime(2026, 9, 1, 12, tzinfo=UTC)),
+        Iou(member_id=lab.member_id, person="marta", amount=20, settled_amount=5, direction="owed_to_me", created_at=datetime(2026, 10, 1, 12, tzinfo=UTC)),
+        Iou(member_id=lab.member_id, person="Joana", amount=7, direction="owed_to_me", created_at=datetime(2026, 10, 2, 12, tzinfo=UTC)),
+    )  # fmt: skip
+    owed = _card(await _get(client, await _token(lab.member_id), "summary"), "owed")
+    assert owed["values"] == {"total": 32.0, "count": 3}
+    assert "Marta deve € 25,00 a você há 43 dias" in owed["phrase"]["text"]
+    assert owed["phrase"]["chat"] == '"Marta pagou 25,00"'
+
+
 # ── Dinheiro ──────────────────────────────────────────────────────────────────
 
 
