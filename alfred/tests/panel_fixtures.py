@@ -301,7 +301,7 @@ MONEY: dict[str, Any] = {
                 },
             ],
             "phrase": phrase(
-                "23 lançamentos em outubro. O maior foi o aluguel, € 1.150,00.",
+                "23 lançamentos em outubro. O maior gasto foi o aluguel, € 1.150,00.",
                 '"mostre meus gastos de outubro"',
             ),
         },

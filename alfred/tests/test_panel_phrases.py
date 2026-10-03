@@ -325,3 +325,12 @@ def test_budget_phrase_never_says_over_before_the_limit_is_reached() -> None:
     near = pp.rule_budget_over("Restaurantes", 99.6, 100, "pt")
     assert near and near.key == "budget_near" and "99%" in near.text
     assert pp.rule_budget_over("Restaurantes", 79.5, 100, "pt") is None
+
+
+def test_largest_entry_phrase_names_an_expense_not_an_entry() -> None:
+    """The biggest entry of a list with income may be the salary; the phrase is about spending."""
+    for lang in pp.LANGS:
+        text = pp.PHRASES["largest_entry"][lang]
+        assert "{merchant}" in text
+    assert "gasto" in pp.PHRASES["largest_entry"]["pt"]
+    assert "Ausgabe" in pp.PHRASES["largest_entry"]["de"]

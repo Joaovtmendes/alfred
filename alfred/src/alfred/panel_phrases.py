@@ -113,11 +113,11 @@ PHRASES: dict[str, dict[str, str]] = {
     },
     # ── Rule 8 · the list ─────────────────────────────────────────────────────
     "largest_entry": {
-        "pt": "{count} lançamentos {period}. O maior foi {merchant}, {amount}.",
-        "nl": "{count} boekingen {period}. De grootste was {merchant}, {amount}.",
-        "en": "{count} entries {period}. The largest was {merchant}, {amount}.",
-        "fr": "{count} opérations {period}. La plus grosse était {merchant}, {amount}.",
-        "de": "{count} Buchungen {period}. Die größte war {merchant}, {amount}.",
+        "pt": "{count} lançamentos {period}. O maior gasto foi {merchant}, {amount}.",
+        "nl": "{count} boekingen {period}. De grootste uitgave was {merchant}, {amount}.",
+        "en": "{count} entries {period}. The largest expense was {merchant}, {amount}.",
+        "fr": "{count} opérations {period}. La plus grosse dépense était {merchant}, {amount}.",
+        "de": "{count} Buchungen {period}. Die größte Ausgabe war {merchant}, {amount}.",
     },
     # ── Rule 9 · biggest expenses ─────────────────────────────────────────────
     "top_share": {

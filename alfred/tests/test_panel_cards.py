@@ -372,7 +372,9 @@ async def test_transactions_card_groups_by_day_with_the_whole_day_sum(lab, clien
         pending_day["entries"][0]["status"] == "to_pay"
         and pending_day["entries"][0]["settled"] is False
     )
-    assert c["phrase"]["text"] == "15 lançamentos em outubro. O maior foi Aluguel, € 1.150,00."
+    assert (
+        c["phrase"]["text"] == "15 lançamentos em outubro. O maior gasto foi Aluguel, € 1.150,00."
+    )
 
 
 @db
