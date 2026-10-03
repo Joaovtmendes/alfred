@@ -136,6 +136,20 @@ def _all_phrases(lang: str) -> list[pp.Phrase]:
         pp.rule_mom_driver("Restaurantes", 52, 55, lang),
         pp.rule_fixed_variable(1238, 760, lang),
         pp.rule_busiest_day(date(2026, 10, 18), 230, 8, 14, 23, lang),
+        pp.rule_agenda_week({0: 1, 2: 3, 4: 1}, lang),
+        pp.rule_agenda_map({1: 3, 3: 2, 5: 1}, lang),
+        pp.rule_tasks(2, "Pagar IPTU", 3, 0, None, 0, lang),
+        pp.rule_tasks(0, None, 0, 3, "Enviar relatório", 2, lang),
+        pp.rule_water(1.6, 5, lang),
+        pp.rule_workouts(3, 2, lang),
+        pp.rule_goal("Meditar", 5, lang),
+        pp.rule_trip(540, 900, 5, lang),
+        pp.rule_trip(540, None, 5, lang),
+        pp.rule_trips_history(3, 2, lang),
+        pp.rule_training("Supino reto", 5, "05/09", lang),
+        pp.rule_packing(3, 7, lang),
+        pp.rule_plan_budget("Moradia", 180, 450, lang),
+        pp.rule_plan_budget("Moradia", 500, 450, lang),
     ]
     assert all(out), out
     out += [pp.empty_hint(k, lang) for k in pp.EMPTY]
@@ -291,6 +305,13 @@ def test_singular_plural_and_due_labels() -> None:
 # The chat commands the panel suggests must be understood by the router (no LLM). The only
 # ones that go to the LLM path are balance_projection and log_expense.
 _RUN_ORDER = ("add_recurring", "add_owed", "set_budget")
+_TAB_COMMANDS = (
+    "agenda", "tasks", "reminders", "goals", "water", "workouts",
+    "trips", "add_task", "add_note", "add_goal", "add_reminder",
+)  # fmt: skip
+# Not in the list: the health logs (water, sleep, mood, medication, workouts), appointments and
+# trips are free-form sentences that the LLM extracts; the router has no fixed command for them.
+_LLM_PATH: set[tuple[str, str]] = set()
 
 
 @db
@@ -303,6 +324,13 @@ async def test_suggested_chat_commands_are_understood_by_the_router(lab, lang) -
         assert reply != "[llm]", (key, lang, reply)
     for key in ("budget", "mom", "blue_days", "entries", "top", "fixed", "upcoming", "owed"):
         command = pp.CHAT[key][lang].strip('"').format(**sample)
+        reply = await lab.say(command)
+        assert reply != "[llm]", (key, lang, command, reply)
+    # Agenda, Hábitos and Viagens: queries and the "create it" sentences of the empty states.
+    for key in _TAB_COMMANDS:
+        if (key, lang) in _LLM_PATH:
+            continue
+        command = pp.CHAT[key][lang].strip('"')
         reply = await lab.say(command)
         assert reply != "[llm]", (key, lang, command, reply)
 
@@ -342,3 +370,8 @@ def test_blue_days_phrase_is_singular_for_one_day_in_french() -> None:
     assert one and one.text.startswith("1 jour sur 8 ") and "1 jours" not in one.text
     assert pp.rule_blue_days(1, 8, 1, "pt").text.startswith("1 de 8 dias no azul")
     assert pp.rule_blue_days(3, 8, 2, "fr").text.startswith("3 jours sur 8 ")
+
+
+def test_a_phrase_built_from_a_lowercase_merchant_still_starts_with_a_capital() -> None:
+    p = pp.rule_top_share("renda", 99999.0, 100000.0, 10, "pt")
+    assert p and p.text[0] == "R"

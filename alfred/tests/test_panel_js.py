@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import pathlib
 import re
 import uuid
 
@@ -200,8 +201,13 @@ async def _last_call_ends_with(page, tail: str) -> None:
     raise AssertionError((tail, page.api_calls[-1:]))
 
 
+async def _all_texts(locator) -> list[str]:
+    return [t.replace("\u00a0", " ") for t in await locator.all_inner_texts()]
+
+
 async def _text(page, selector: str) -> str:
-    return await page.inner_text(selector)
+    # The page keeps "€ 5,00" unbreakable (no-break spaces); the tests read it with plain spaces.
+    return (await page.inner_text(selector)).replace("\u00a0", " ")
 
 
 async def test_balance_card_shows_hero_estimate_tiles_bar_and_the_alfred_phrase() -> None:
@@ -212,7 +218,7 @@ async def test_balance_card_shows_hero_estimate_tiles_bar_and_the_alfred_phrase(
         assert "€ 1.842,30" in await _text(page, f"{card} .hero")
         assert "~ € 1.120" in await _text(page, f"{card} .proj-side")
         assert "faixa € 1.030 a € 1.210" in await _text(page, f"{card} .proj-side")
-        tiles = await page.locator(f"{card} .tile").all_inner_texts()
+        tiles = await _all_texts(page.locator(f"{card} .tile"))
         assert "€ 3.840,00" in tiles[0] and "igual a setembro" in tiles[0]
         assert "€ 1.997,70" in tiles[1] and "4% acima de setembro" in tiles[1]
         assert await page.locator(f"{card} .legend li").count() == 3  # realised, bills, variable
@@ -288,11 +294,11 @@ async def test_upcoming_categories_budgets_blue_days_and_owed() -> None:
         assert widths[0] == pytest.approx(100.0) and widths[1] == pytest.approx(
             148 / 312 * 100, abs=0.1
         )
-        texts = await rows.all_inner_texts()
+        texts = await _all_texts(rows)
         assert "▲ 8%" in texts[0] and "▼ 11%" in texts[2] and "= igual" in texts[4]
         budgets = page.locator("[data-card=budgets] .brow")
         assert await budgets.count() == 3
-        assert "€ 148 de € 120 · 123%" in await budgets.nth(0).inner_text()
+        assert "€ 148 de € 120 · 123%" in (await budgets.nth(0).inner_text()).replace("\u00a0", " ")
         assert "74" in await _text(page, "[data-card=budgets] .hero")
         assert (
             await page.locator("[data-card=budgets] .track > u").count() == 6
@@ -352,10 +358,10 @@ async def test_money_cards() -> None:
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=recurring]")
         tx = "[data-card=transactions]"
-        days = await page.locator(f"{tx} .day").all_inner_texts()
+        days = await _all_texts(page.locator(f"{tx} .day"))
         assert "Hoje, 2 out" in days[0] and "+ € 3.797,82" in days[0]  # the day's total
         assert "1 out" in days[1] and "30 set" in days[2]
-        rows = await page.locator(f"{tx} .entry").all_inner_texts()
+        rows = await _all_texts(page.locator(f"{tx} .entry"))
         assert (
             "Albert Heijn" in rows[0]
             and "supermercado · pago" in rows[0].lower()
@@ -370,7 +376,7 @@ async def test_money_cards() -> None:
         mom = await _text(page, "[data-card=month_vs_month]")
         assert "€ 1.997" in mom and "▲ 9% contra setembro" in mom and "igual a setembro" in mom
         assert "62" in await _text(page, "[data-card=fixed_variable] .hero")
-        legend = await page.locator("[data-card=fixed_variable] .legend li").all_inner_texts()
+        legend = await _all_texts(page.locator("[data-card=fixed_variable] .legend li"))
         assert len(legend) == 2 and "1.238" in legend[0] and "760" in legend[1]
         assert await page.locator("[data-card=daily] .daily > i").count() == 31
         assert await page.locator("[data-card=daily] .daily > i.peak").count() == 1
@@ -452,7 +458,7 @@ async def test_empty_cards_say_what_to_type_in_the_chat() -> None:
     try:
         await page.wait_for_selector("[data-card=owed]")
         assert await page.locator("#panel [data-card]").count() == 6
-        for text in await page.locator("#panel [data-card]").all_inner_texts():
+        for text in await _all_texts(page.locator("#panel [data-card]")):
             assert "Registre pelo chat" in text and "Peça no chat: “gastei 25 no mercado”" in text
         assert await page.locator("#panel .hero").count() == 0  # no zeros dressed up as data
         await page.click('[data-tab="money"]')
@@ -698,7 +704,7 @@ async def test_the_panel_is_read_only() -> None:
         await _close(pwm, browser)
 
 
-async def test_days_without_settled_entries_show_no_zero_total_and_few_days_keep_bars_slim() -> (
+async def test_days_without_settled_entries_show_no_zero_total_and_a_running_month_keeps_its_full_width() -> (
     None
 ):
     money = {**fx.MONEY, "cards": [dict(c) for c in fx.MONEY["cards"]]}
@@ -721,7 +727,142 @@ async def test_days_without_settled_entries_show_no_zero_total_and_few_days_keep
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=daily]")
         assert await page.locator("[data-card=transactions] .day .num").count() == 0
-        box = await page.locator("[data-card=daily] .daily").bounding_box()
-        assert box["width"] <= 3 * 56 + 1
+        assert await page.locator("[data-card=daily] .daily > i").count() == 31
+        box = await page.locator("[data-card=daily] .daily > i").first.bounding_box()
+        assert box["width"] < 40
+        assert await page.locator("[data-card=daily] details.table tbody tr").count() == 3
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_the_euro_sign_never_separates_from_its_number_or_its_sign() -> None:
+    pwm, browser, page = await _open(_handlers())
+    try:
+        await page.wait_for_selector("[data-card=balance] .hero")
+        raw = await page.inner_text("[data-card=balance] .hero")
+        assert "€ " in raw and "€ " not in raw
+        for t in await page.locator("#panel [data-card]").all_inner_texts():
+            assert "− € " not in t and "+ € " not in t
+    finally:
+        await _close(pwm, browser)
+
+
+# ── Agenda, Hábitos and Viagens (payloads captured from the real API on the demo member) ──────
+
+_TABS_FX = json.loads((pathlib.Path(__file__).parent / "panel_tabs_fixture.json").read_text())
+
+
+def _tab_handlers():
+    async def mk(tab):
+        return 200, _TABS_FX[tab]
+
+    async def a():
+        return await mk("agenda")
+
+    async def h():
+        return await mk("health")
+
+    async def t():
+        return await mk("trips")
+
+    return {**_handlers(), "agenda": a, "health": h, "trips": t}
+
+
+@pytest.mark.parametrize(
+    ("tab", "cards"),
+    [
+        ("agenda", ["week", "tasks", "month_map", "reminders", "notes"]),
+        ("health", ["water", "workouts", "training", "goals"]),
+        ("trips", ["trip", "packing", "itinerary", "plan_budget", "trips_past"]),
+    ],
+)
+async def test_the_three_new_tabs_draw_every_card_without_breaking_the_page(tab, cards) -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click(f'[data-tab="{tab}"]')
+        await page.wait_for_selector("#panel [data-card]")
+        ids = await page.eval_on_selector_all(
+            "#panel [data-card]", "els => els.map(e => e.dataset.card)"
+        )
+        assert ids == cards
+        for c in cards:  # each one is a table view away from its numbers
+            assert await page.locator(f"[data-card={c}]").count() == 1
+        assert await page.evaluate(
+            "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
+        )
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_agenda_names_today_and_tomorrow_and_flags_overdue_tasks() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click('[data-tab="agenda"]')
+        await page.wait_for_selector("[data-card=week]")
+        heads = await page.locator("[data-card=week] .day-head").all_inner_texts()
+        assert heads[0].lower().startswith("hoje") and heads[1].lower().startswith("amanhã")
+        assert await page.locator("[data-card=week] .appt").count() >= 4
+        assert await page.locator("[data-card=tasks] .stat.warm").count() == 1
+        assert await page.locator("[data-card=tasks] .amt.late").count() == 1
+        assert await page.locator("[data-card=month_map] .cell").count() == 28
+        assert await page.locator("[data-card=month_map] .cell.today").count() == 1
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_trips_show_budget_tiles_and_the_health_tab_says_it_is_not_medical_advice() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click('[data-tab="trips"]')
+        await page.wait_for_selector("[data-card=trip]")
+        assert await page.locator("[data-card=trip] .tile").count() == 3
+        assert "Lisboa" in await _text(page, "[data-card=trip] .hero")
+        assert await page.locator("[data-card=trips_past] .item").count() == 3
+        await page.click('[data-tab="health"]')
+        await page.wait_for_selector("[data-card=water]")
+        assert "conselho médico" in await _text(page, "#panel .grid-note")
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_training_plan_shows_today_first_and_no_arrow_before_two_points() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click('[data-tab="health"]')
+        await page.wait_for_selector("[data-card=training]")
+        card = "[data-card=training]"
+        assert (
+            await page.locator(f"{card} details.plan-day").count() == 3
+        )  # the other days fold away
+        await page.evaluate(
+            "document.querySelectorAll('details.plan-day').forEach(d => d.open = true)"
+        )
+        text = await _text(page, card)
+        assert "↑ +" in text  # a load that went up shows its change
+        assert (
+            await page.locator(
+                f"{card} .item:has-text('Puxada frontal') .s:has-text('1 registro')"
+            ).count()
+            == 1
+        )
+        assert "↑" not in await _text(page, f"{card} .item:has-text('Puxada frontal')")
+        assert await page.locator(f"{card} details.table").count() == 1
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_trip_plan_cards_show_itinerary_packing_and_planned_against_spent() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click('[data-tab="trips"]')
+        await page.wait_for_selector("[data-card=packing]")
+        assert "3 de 7" in await _text(page, "[data-card=packing] .sub")
+        assert await page.locator("[data-card=packing] .item").count() == 7
+        assert await page.locator("[data-card=itinerary] .appt").count() == 8
+        assert await page.locator("[data-card=itinerary] .day-head").count() == 5
+        assert await page.locator("[data-card=plan_budget] .cat").count() == 4
+        assert "€ 180 / € 450" in (await _text(page, "[data-card=plan_budget]")).replace(
+            "\u00a0", " "
+        )
     finally:
         await _close(pwm, browser)

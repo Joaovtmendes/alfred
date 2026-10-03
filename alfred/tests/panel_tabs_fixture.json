@@ -1,0 +1,950 @@
+{
+ "agenda": {
+  "tab": "agenda",
+  "lang": "pt",
+  "today": "2026-10-03",
+  "filter": {
+   "start": "2026-10-01",
+   "end": "2026-11-01",
+   "categories": [],
+   "kind": null,
+   "states": [],
+   "trip": null
+  },
+  "cards": [
+   {
+    "id": "week",
+    "empty": false,
+    "values": {
+     "count": 6,
+     "days": 4
+    },
+    "days": [
+     {
+      "date": "2026-10-03",
+      "weekday": 5,
+      "items": [
+       {
+        "time": "10:00",
+        "title": "Dentista",
+        "notes": "Rua das Flores 12"
+       },
+       {
+        "time": "15:30",
+        "title": "Ligar para o contador",
+        "notes": null
+       }
+      ]
+     },
+     {
+      "date": "2026-10-04",
+      "weekday": 6,
+      "items": [
+       {
+        "time": "09:00",
+        "title": "Reunião de planejamento",
+        "notes": "online"
+       },
+       {
+        "time": "19:00",
+        "title": "Jantar com Marta",
+        "notes": "Foodhallen"
+       }
+      ]
+     },
+     {
+      "date": "2026-10-05",
+      "weekday": 0,
+      "items": [
+       {
+        "time": "11:00",
+        "title": "Corrida longa",
+        "notes": null
+       }
+      ]
+     },
+     {
+      "date": "2026-10-07",
+      "weekday": 2,
+      "items": [
+       {
+        "time": "09:30",
+        "title": "Revisão do carro",
+        "notes": null
+       }
+      ]
+     }
+    ],
+    "more": 0,
+    "phrase": null
+   },
+   {
+    "id": "tasks",
+    "empty": false,
+    "values": {
+     "open": 6,
+     "overdue": 1,
+     "due_week": 3,
+     "no_due": 1,
+     "done_week": 1
+    },
+    "items": [
+     {
+      "body": "Renovar o passaporte",
+      "due": "2026-09-27",
+      "days": 6,
+      "kind": "overdue"
+     },
+     {
+      "body": "Pagar IPTU",
+      "due": "2026-10-05",
+      "days": 2,
+      "kind": "due"
+     },
+     {
+      "body": "Enviar relatório",
+      "due": "2026-10-06",
+      "days": 3,
+      "kind": "due"
+     },
+     {
+      "body": "Marcar revisão do carro",
+      "due": "2026-10-08",
+      "days": 5,
+      "kind": "due"
+     }
+    ],
+    "phrase": {
+     "key": "tasks_overdue",
+     "text": "Tarefas atrasadas: 1. A mais antiga: Renovar o passaporte, atrasada há 6 dias.",
+     "chat": "\"minhas tarefas\"",
+     "severity": "attention"
+    }
+   },
+   {
+    "id": "month_map",
+    "empty": false,
+    "values": {
+     "count": 10,
+     "peak": 6
+    },
+    "weeks": [
+     [
+      {
+       "date": "2026-09-28",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-09-29",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-09-30",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-10-01",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-10-02",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-10-03",
+       "count": 2,
+       "today": true,
+       "past": false
+      },
+      {
+       "date": "2026-10-04",
+       "count": 2,
+       "today": false,
+       "past": false
+      }
+     ],
+     [
+      {
+       "date": "2026-10-05",
+       "count": 1,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-06",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-07",
+       "count": 1,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-08",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-09",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-10",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-11",
+       "count": 0,
+       "today": false,
+       "past": false
+      }
+     ],
+     [
+      {
+       "date": "2026-10-12",
+       "count": 1,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-13",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-14",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-15",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-16",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-17",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-18",
+       "count": 1,
+       "today": false,
+       "past": false
+      }
+     ],
+     [
+      {
+       "date": "2026-10-19",
+       "count": 1,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-20",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-21",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-22",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-23",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-24",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-25",
+       "count": 1,
+       "today": false,
+       "past": false
+      }
+     ]
+    ],
+    "phrase": {
+     "key": "agenda_map",
+     "text": "Os compromissos se concentram em domingo: 4 de 10 nas próximas 4 semanas.",
+     "chat": "\"minha agenda\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "reminders",
+    "empty": false,
+    "values": {
+     "count": 3
+    },
+    "items": [
+     {
+      "kind": "medication_reminder",
+      "text": "Tomar o remédio",
+      "time": "08:00",
+      "days": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "every_day": true
+     },
+     {
+      "kind": "workout_reminder",
+      "text": null,
+      "time": "11:00",
+      "days": [
+       5
+      ],
+      "every_day": false
+     },
+     {
+      "kind": "goal_checkin",
+      "text": "Meditar",
+      "time": "20:00",
+      "days": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "every_day": true
+     }
+    ],
+    "phrase": null
+   },
+   {
+    "id": "notes",
+    "empty": false,
+    "values": {
+     "count": 2
+    },
+    "items": [
+     {
+      "date": "2026-10-03",
+      "body": "Ideia: jantar de aniversário no Foodhallen, reservar para 8 pessoas."
+     },
+     {
+      "date": "2026-10-03",
+      "body": "Perguntar ao contador sobre a declaração do ano passado."
+     }
+    ],
+    "phrase": null
+   }
+  ]
+ },
+ "health": {
+  "tab": "health",
+  "lang": "pt",
+  "today": "2026-10-03",
+  "filter": {
+   "start": "2026-10-01",
+   "end": "2026-11-01",
+   "categories": [],
+   "kind": null,
+   "states": [],
+   "trip": null
+  },
+  "cards": [
+   {
+    "id": "water",
+    "empty": false,
+    "values": {
+     "today": 1.4,
+     "average": 1.7,
+     "days": 6
+    },
+    "points": [
+     {
+      "date": "2026-09-27",
+      "litres": 1.6
+     },
+     {
+      "date": "2026-09-28",
+      "litres": 0.0
+     },
+     {
+      "date": "2026-09-29",
+      "litres": 2.2
+     },
+     {
+      "date": "2026-09-30",
+      "litres": 1.8
+     },
+     {
+      "date": "2026-10-01",
+      "litres": 1.2
+     },
+     {
+      "date": "2026-10-02",
+      "litres": 2.0
+     },
+     {
+      "date": "2026-10-03",
+      "litres": 1.4
+     }
+    ],
+    "phrase": {
+     "key": "water_avg",
+     "text": "Nos últimos 7 dias você registrou em média 1,7 L de água por dia, em 6 dos 7 dias.",
+     "chat": "\"água hoje\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "workouts",
+    "empty": false,
+    "values": {
+     "this_week": 2,
+     "last_week": 2,
+     "km_week": 5.0,
+     "minutes_week": 80
+    },
+    "weeks": [
+     {
+      "start": "2026-09-07",
+      "count": 0
+     },
+     {
+      "start": "2026-09-14",
+      "count": 1
+     },
+     {
+      "start": "2026-09-21",
+      "count": 2
+     },
+     {
+      "start": "2026-09-28",
+      "count": 2
+     }
+    ],
+    "activities": [
+     {
+      "activity": "strength",
+      "count": 1
+     },
+     {
+      "activity": "running",
+      "count": 1
+     }
+    ],
+    "phrase": {
+     "key": "workouts_week",
+     "text": "2 treinos nesta semana contra 2 na semana passada.",
+     "chat": "\"treinos este mês\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "training",
+    "empty": false,
+    "values": {
+     "days": 4,
+     "today": 5,
+     "has_today": true
+    },
+    "days": [
+     {
+      "weekday": 0,
+      "title": "Peito",
+      "today": false,
+      "items": [
+       {
+        "exercise": "Supino reto",
+        "sets": 4,
+        "reps": "10",
+        "planned_kg": 60.0,
+        "last_kg": 60.0,
+        "last_day": "2026-09-26",
+        "points": 4,
+        "first_day": "2026-09-05",
+        "delta_kg": 5.0,
+        "history": [
+         55.0,
+         57.5,
+         60.0,
+         60.0
+        ]
+       },
+       {
+        "exercise": "Crucifixo",
+        "sets": 3,
+        "reps": "12",
+        "planned_kg": 14.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       },
+       {
+        "exercise": "Tríceps corda",
+        "sets": 3,
+        "reps": "12",
+        "planned_kg": 25.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       }
+      ]
+     },
+     {
+      "weekday": 2,
+      "title": "Costas",
+      "today": false,
+      "items": [
+       {
+        "exercise": "Remada curvada",
+        "sets": 4,
+        "reps": "10",
+        "planned_kg": 50.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       },
+       {
+        "exercise": "Puxada frontal",
+        "sets": 4,
+        "reps": "10",
+        "planned_kg": 55.0,
+        "last_kg": 55.0,
+        "last_day": "2026-09-26",
+        "points": 1,
+        "first_day": "2026-09-26",
+        "delta_kg": null,
+        "history": [
+         55.0
+        ]
+       }
+      ]
+     },
+     {
+      "weekday": 4,
+      "title": "Pernas",
+      "today": false,
+      "items": [
+       {
+        "exercise": "Agachamento",
+        "sets": 5,
+        "reps": "5",
+        "planned_kg": 90.0,
+        "last_kg": 90.0,
+        "last_day": "2026-09-30",
+        "points": 3,
+        "first_day": "2026-09-05",
+        "delta_kg": 10.0,
+        "history": [
+         80.0,
+         85.0,
+         90.0
+        ]
+       },
+       {
+        "exercise": "Leg press",
+        "sets": 4,
+        "reps": "12",
+        "planned_kg": 160.0,
+        "last_kg": 160.0,
+        "last_day": "2026-09-26",
+        "points": 2,
+        "first_day": "2026-09-12",
+        "delta_kg": 10.0,
+        "history": [
+         150.0,
+         160.0
+        ]
+       }
+      ]
+     },
+     {
+      "weekday": 5,
+      "title": "Ombros",
+      "today": true,
+      "items": [
+       {
+        "exercise": "Desenvolvimento",
+        "sets": 4,
+        "reps": "10",
+        "planned_kg": 24.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       },
+       {
+        "exercise": "Elevação lateral",
+        "sets": 3,
+        "reps": "15",
+        "planned_kg": 8.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       }
+      ]
+     }
+    ],
+    "phrase": {
+     "key": "training_progress",
+     "text": "Agachamento subiu 10 kg desde 05/09.",
+     "chat": "\"carga supino 62 kg\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "goals",
+    "empty": false,
+    "values": {
+     "count": 3
+    },
+    "items": [
+     {
+      "title": "Meditar",
+      "target": "7 por semana",
+      "deadline": null,
+      "logs_7d": 5,
+      "logs_30d": 5
+     },
+     {
+      "title": "Caminhar 8.000 passos",
+      "target": "7 por semana",
+      "deadline": null,
+      "logs_7d": 4,
+      "logs_30d": 4
+     },
+     {
+      "title": "12 treinos no mês",
+      "target": "12 no mês",
+      "deadline": "2026-10-28",
+      "logs_7d": 2,
+      "logs_30d": 2
+     }
+    ],
+    "phrase": {
+     "key": "goals_pace",
+     "text": "Meditar: 5 registros nos últimos 7 dias.",
+     "chat": "\"minhas metas\"",
+     "severity": "info"
+    }
+   }
+  ]
+ },
+ "trips": {
+  "tab": "trips",
+  "lang": "pt",
+  "today": "2026-10-03",
+  "filter": {
+   "start": "2026-10-01",
+   "end": "2026-11-01",
+   "categories": [],
+   "kind": null,
+   "states": [],
+   "trip": null
+  },
+  "cards": [
+   {
+    "id": "trip",
+    "empty": false,
+    "values": {
+     "budget": 900.0,
+     "spent": 180.0,
+     "remaining": 720.0,
+     "pct": 20,
+     "days": 0,
+     "planned_days": 5
+    },
+    "trip": {
+     "destination": "Lisboa",
+     "start": "2026-11-13",
+     "end": "2026-11-17",
+     "state": "upcoming",
+     "days_to_start": 41
+    },
+    "categories": [
+     {
+      "category": "wonen",
+      "label": "Habitação",
+      "amount": 180.0
+     }
+    ],
+    "points": [
+     {
+      "date": "2026-09-21",
+      "amount": 180.0
+     }
+    ],
+    "phrase": {
+     "key": "trip_budget",
+     "text": "20% do orçamento da viagem já foi usado: € 180,00 de € 900,00.",
+     "chat": "\"minhas viagens\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "packing",
+    "empty": false,
+    "values": {
+     "done": 3,
+     "total": 7
+    },
+    "items": [
+     {
+      "name": "Óculos de sol",
+      "packed": false
+     },
+     {
+      "name": "Casaco leve",
+      "packed": false
+     },
+     {
+      "name": "Adaptador de tomada",
+      "packed": false
+     },
+     {
+      "name": "Câmera",
+      "packed": false
+     },
+     {
+      "name": "Carregador",
+      "packed": true
+     },
+     {
+      "name": "Remédios",
+      "packed": true
+     },
+     {
+      "name": "Passaporte",
+      "packed": true
+     }
+    ],
+    "phrase": {
+     "key": "pack_progress",
+     "text": "3 de 7 já estão na mala.",
+     "chat": "\"bagagem\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "itinerary",
+    "empty": false,
+    "values": {
+     "count": 8,
+     "days": 5
+    },
+    "days": [
+     {
+      "date": "2026-11-13",
+      "items": [
+       {
+        "time": "15:40",
+        "title": "Voo Amsterdã → Lisboa"
+       },
+       {
+        "time": "19:00",
+        "title": "Check-in no hotel (Alfama)"
+       }
+      ]
+     },
+     {
+      "date": "2026-11-14",
+      "items": [
+       {
+        "time": "10:00",
+        "title": "Torre de Belém"
+       },
+       {
+        "time": "13:00",
+        "title": "Almoço no Time Out Market"
+       }
+      ]
+     },
+     {
+      "date": "2026-11-15",
+      "items": [
+       {
+        "time": "09:30",
+        "title": "Passeio no bonde 28"
+       },
+       {
+        "time": "20:00",
+        "title": "Jantar com fado"
+       }
+      ]
+     },
+     {
+      "date": "2026-11-16",
+      "items": [
+       {
+        "time": "11:00",
+        "title": "Sintra: Palácio da Pena"
+       }
+      ]
+     },
+     {
+      "date": "2026-11-17",
+      "items": [
+       {
+        "time": "18:30",
+        "title": "Voo de volta"
+       }
+      ]
+     }
+    ],
+    "phrase": null
+   },
+   {
+    "id": "plan_budget",
+    "empty": false,
+    "values": {
+     "plan": 900.0,
+     "spent": 180.0,
+     "over": 0
+    },
+    "lines": [
+     {
+      "category": "wonen",
+      "label": "Habitação",
+      "plan": 450.0,
+      "spent": 180.0,
+      "pct": 40,
+      "over": false
+     },
+     {
+      "category": "restaurant",
+      "label": "Restaurante",
+      "plan": 220.0,
+      "spent": 0.0,
+      "pct": 0,
+      "over": false
+     },
+     {
+      "category": "reizen",
+      "label": "Reizen",
+      "plan": 150.0,
+      "spent": 0.0,
+      "pct": 0,
+      "over": false
+     },
+     {
+      "category": "transport",
+      "label": "Transporte",
+      "plan": 80.0,
+      "spent": 0.0,
+      "pct": 0,
+      "over": false
+     }
+    ],
+    "phrase": {
+     "key": "plan_budget_ok",
+     "text": "Habitação usou 40% do planejado: € 180,00 de € 450,00.",
+     "chat": "\"orçamento da viagem\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "trips_past",
+    "empty": false,
+    "values": {
+     "count": 3,
+     "with_budget": 3,
+     "within": 2
+    },
+    "items": [
+     {
+      "destination": "Paris",
+      "start": "2026-06-12",
+      "end": "2026-06-14",
+      "days": 3,
+      "spent": 480.0,
+      "budget": 500.0,
+      "within": true
+     },
+     {
+      "destination": "Berlim",
+      "start": "2026-03-06",
+      "end": "2026-03-09",
+      "days": 4,
+      "spent": 610.0,
+      "budget": 550.0,
+      "within": false
+     },
+     {
+      "destination": "Rio de Janeiro",
+      "start": "2025-12-10",
+      "end": "2025-12-23",
+      "days": 14,
+      "spent": 2340.0,
+      "budget": 2500.0,
+      "within": true
+     }
+    ],
+    "phrase": {
+     "key": "trips_history",
+     "text": "Entre as 3 últimas viagens com orçamento, dentro do limite: 2.",
+     "chat": "\"minhas viagens\"",
+     "severity": "info"
+    }
+   }
+  ]
+ }
+}

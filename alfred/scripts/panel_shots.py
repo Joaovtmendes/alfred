@@ -3,7 +3,7 @@
 
 For each view it opens the demo member's panel with the Chromium that Playwright already has,
 and fails when the real browser reports a Content-Security-Policy violation, a page error, a
-failed font, or horizontal overflow. Every view captures the Resumo and the Dinheiro tabs
+failed font, or horizontal overflow. Every view captures the five tabs
 (files ``<theme>-<kind>-<tab>.png``) so they can be compared with the approved mockups.
 ``--check-v1`` also loads the v1 page (Chart.js) once and reports its CSP violations.
 
@@ -43,7 +43,7 @@ document.addEventListener('securitypolicyviolation', e => window.__csp.push(
   e.violatedDirective + ' blocked ' + (e.blockedURI || 'inline')));
 """
 
-TABS = ("summary", "money")
+TABS = ("summary", "money", "agenda", "health", "trips")
 
 
 async def _view(browser, base, token, theme, kind, size, out, problems):

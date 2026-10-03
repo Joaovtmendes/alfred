@@ -662,3 +662,161 @@ class PendingBatch(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+# ── V2-35 — training plan with loads, trip itinerary / packing / planned budget ──
+
+
+def _uuid_pk() -> Mapped[uuid.UUID]:
+    return mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+
+def _member_fk() -> Mapped[uuid.UUID]:
+    return mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("member.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+
+class WorkoutPlan(Base):
+    """The member's weekly training plan. One active plan per member (older ones archived)."""
+
+    __tablename__ = "workout_plan"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    member_id: Mapped[uuid.UUID] = _member_fk()
+    name: Mapped[str] = mapped_column(String(80), nullable=False, default="", server_default="")
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class WorkoutPlanDay(Base):
+    """One training day of a plan; ``weekday`` is 0=Monday..6=Sunday."""
+
+    __tablename__ = "workout_plan_day"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    member_id: Mapped[uuid.UUID] = _member_fk()
+    plan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("workout_plan.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    weekday: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(80), nullable=False, default="", server_default="")
+
+
+class WorkoutPlanItem(Base):
+    """An exercise in a plan day: sets x reps, optional planned load in kg."""
+
+    __tablename__ = "workout_plan_item"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    member_id: Mapped[uuid.UUID] = _member_fk()
+    day_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("workout_plan_day.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    exercise: Mapped[str] = mapped_column(String(80), nullable=False)
+    sets: Mapped[int | None] = mapped_column(Integer)
+    reps: Mapped[str | None] = mapped_column(String(20))
+    load_kg: Mapped[float | None] = mapped_column(Numeric(6, 2, asdecimal=False))
+
+
+class WorkoutLoad(Base):
+    """A load actually used on an exercise on a day; the history feeds the evolution."""
+
+    __tablename__ = "workout_load"
+    __table_args__ = (Index("ix_workout_load_member_ex_day", "member_id", "exercise_key", "day"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    member_id: Mapped[uuid.UUID] = _member_fk()
+    exercise: Mapped[str] = mapped_column(String(80), nullable=False)
+    exercise_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    load_kg: Mapped[float] = mapped_column(Numeric(6, 2, asdecimal=False), nullable=False)
+    sets: Mapped[int | None] = mapped_column(Integer)
+    reps: Mapped[str | None] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class TripItem(Base):
+    """An itinerary entry of a trip (a day, optionally a time, and what happens)."""
+
+    __tablename__ = "trip_item"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    member_id: Mapped[uuid.UUID] = _member_fk()
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trip.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    at_time: Mapped[str | None] = mapped_column(String(5))
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class TripPackItem(Base):
+    """A packing-list item of a trip."""
+
+    __tablename__ = "trip_pack_item"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    member_id: Mapped[uuid.UUID] = _member_fk()
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trip.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    packed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class TripBudgetLine(Base):
+    """Planned budget of a trip for one expense category (compared with what was spent)."""
+
+    __tablename__ = "trip_budget_line"
+    __table_args__ = (UniqueConstraint("trip_id", "category", name="uq_trip_budget_category"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    member_id: Mapped[uuid.UUID] = _member_fk()
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trip.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    category: Mapped[str] = mapped_column(String(40), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
+
+
+class PendingAction(Base):
+    """A draft waiting for the member's confirmation (training plan preview, ...).
+
+    One live draft per member and ``kind``; deleted on confirm/cancel so a second tap is a no-op.
+    """
+
+    __tablename__ = "pending_action"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    member_id: Mapped[uuid.UUID] = _member_fk()
+    kind: Mapped[str] = mapped_column(String(30), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

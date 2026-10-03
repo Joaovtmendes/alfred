@@ -255,9 +255,18 @@ Fiel aos mockups aprovados (`Main`, `Mobile`, `Dinheiro`, `MobileDinheiro`); as 
   cartões, XSS, estados vazios, filtros só na URL, URL adulterada, busca local, paginação, tema,
   teclado, ordem móvel, legenda no celular, overflow e CSP.
 
-**Abas.** Resumo, Dinheiro, Agenda e tarefas, Hábitos, Viagens. A rota `health` (aba Hábitos) é
+**Abas.** Resumo, Dinheiro, Agenda, Hábitos, Viagens. A rota `health` (aba Hábitos) é
 própria, carregada só ao abrir a aba, e cada abertura vai para o `AuditLog`. O botão do chat
 ("Abrir meu painel") é uma mensagem `cta_url` com plano B em texto (`whatsapp.send_cta_url`).
+
+**Agenda, Hábitos e Viagens** (`panel_tabs.py`, contrato de cada cartão no docstring do módulo).
+Sem filtros: cada cartão tem janela fixa e nomeada. Agenda: próximos 7 dias (`Appointment`
+ativos), tarefas (atrasadas/prazos), mapa de 4 semanas, lembretes (`ScheduledJob` ativos), notas.
+Hábitos: água, sono, humor, medicação (só dias com registro), treinos, hábitos e metas; frases
+só descrevem (média, contagem), nunca julgam, e a aba mostra "não é conselho médico". Viagens:
+viagem ativa, senão a próxima, senão a última (orçamento, gasto, categorias, dias) e as anteriores
+com "dentro/acima do orçamento". Só gastos liquidados (`SETTLED`) com `trip_id` do próprio membro.
+Fora por falta de dados no Alfred: roteiro, bagagem e plano de treino com cargas do mockup.
 
 ## Chamadas ao LLM
 
