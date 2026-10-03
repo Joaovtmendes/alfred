@@ -18,7 +18,7 @@ import uuid
 from datetime import UTC, date, datetime, time, timedelta
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.agenda import STRINGS as _AGENDA_STRINGS
@@ -97,6 +97,7 @@ from alfred.parsing import (
     parse_trip_start_date,
     strip_accents,
 )
+from alfred.recurrence import cadence_label, parse_recurrence
 from alfred.recurring import STRINGS as _RECURRING_STRINGS
 from alfred.recurring import handle_recurring_command
 from alfred.score import STRINGS as _SCORE_STRINGS
@@ -456,11 +457,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Ich fand keine aktuelle Ausgabe zum Korrigieren. Bitte gib sie erneut ein.",
     },
     "lembrete_set": {
-        "pt": "⏰ Combinado! Vou te lembrar de *{text}* todo dia às {time}.",
-        "nl": "⏰ Herinnering ingesteld: *{text}* om {time}. Ik herinner je elke dag.",
-        "en": "⏰ Reminder set: *{text}* at {time}. I'll remind you every day.",
-        "fr": "⏰ Rappel configuré : *{text}* à {time}. Je te rappellerai chaque jour.",
-        "de": "⏰ Erinnerung eingestellt: *{text}* um {time} Uhr. Ich erinnere dich täglich.",
+        "pt": "⏰ Combinado! Vou te lembrar de *{text}* {when}, às {time}.",
+        "nl": "⏰ Herinnering ingesteld: *{text}* om {time}, {when}.",
+        "en": "⏰ Reminder set: *{text}* at {time}, {when}.",
+        "fr": "⏰ Rappel configuré : *{text}* à {time}, {when}.",
+        "de": "⏰ Erinnerung eingestellt: *{text}* um {time} Uhr, {when}.",
     },
     "lembrete_invalid": {
         "pt": "Não consegui pegar o horário. Tente assim: *lembrete: tomar o remédio às 08:00*",
@@ -1206,18 +1207,32 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Ich konnte dieses aktive Ziel nicht finden.",
     },
     "habit_frequency": {
-        "pt": "Você registrou *{activity}* {n}x nos últimos 7 dias.",
-        "nl": "Je registreerde *{activity}* {n}x in de afgelopen 7 dagen.",
-        "en": "You logged *{activity}* {n}x in the last 7 days.",
-        "fr": "Tu as enregistre *{activity}* {n}x ces 7 derniers jours.",
-        "de": "Du hast *{activity}* {n}x in den letzten 7 Tagen protokolliert.",
+        "pt": "Você registrou *{activity}* {n}x {period}.",
+        "nl": "Je registreerde *{activity}* {n}x {period}.",
+        "en": "You logged *{activity}* {n}x {period}.",
+        "fr": "Tu as enregistré *{activity}* {n}x {period}.",
+        "de": "Du hast *{activity}* {n}x {period} protokolliert.",
     },
     "habit_frequency_empty": {
-        "pt": "Nenhum registro de *{activity}* esta semana.",
-        "nl": "Geen registraties van *{activity}* deze week.",
-        "en": "No entries for *{activity}* this week.",
-        "fr": "Aucune entree pour *{activity}* cette semaine.",
-        "de": "Keine Eintraege fuer *{activity}* diese Woche.",
+        "pt": "Nenhum registro de *{activity}* {period}.",
+        "nl": "Geen registraties van *{activity}* {period}.",
+        "en": "No entries for *{activity}* {period}.",
+        "fr": "Aucune entrée pour *{activity}* {period}.",
+        "de": "Keine Einträge für *{activity}* {period}.",
+    },
+    "freq_period_week": {
+        "pt": "nos últimos 7 dias",
+        "nl": "in de afgelopen 7 dagen",
+        "en": "in the last 7 days",
+        "fr": "ces 7 derniers jours",
+        "de": "in den letzten 7 Tagen",
+    },
+    "freq_period_month": {
+        "pt": "este mês",
+        "nl": "deze maand",
+        "en": "this month",
+        "fr": "ce mois-ci",
+        "de": "diesen Monat",
     },
     "habit_streak": {
         "pt": "Já são *{n} dias seguidos* de {activity}. 🔥",
@@ -2242,6 +2257,20 @@ def _parse_days_mask(text: str) -> int:
     if any(
         w in lower
         for w in (
+            "dias uteis",
+            "dias de semana",
+            "weekdays",
+            "werkdagen",
+            "jours ouvrables",
+            "werktage",
+        )
+    ):
+        return 31  # Mon–Fri
+    if any(w in lower for w in ("fim de semana", "fins de semana", "weekend", "wochenende")):
+        return 96  # Sat+Sun
+    if any(
+        w in lower
+        for w in (
             "todos os dias",
             "every day",
             "elke dag",
@@ -2252,20 +2281,6 @@ def _parse_days_mask(text: str) -> int:
         )
     ):
         return 127
-    if any(
-        w in lower
-        for w in (
-            "dias uteis",
-            "dias de semana",
-            "weekdays",
-            "werkdagen",
-            "jours ouvrables",
-            "werktage",
-        )
-    ):
-        return 31  # Mon–Fri
-    if any(w in lower for w in ("fim de semana", "weekend", "wochenende")):
-        return 96  # Sat+Sun
     mask = 0
     for day, bit in _DAY_BITS.items():
         day_norm = unicodedata.normalize("NFD", day)
@@ -2373,6 +2388,23 @@ _HABIT_FREQ_RE = re.compile(
     r"meditei|meditated|li|leste|estudei)\b\s*(.+)?",
     re.IGNORECASE,
 )
+_FREQ_MONTH_WORDS = (
+    "este mes",
+    "deste mes",
+    "neste mes",
+    "this month",
+    "deze maand",
+    "ce mois",
+    "diesen monat",
+)
+_FREQ_WORKOUT_WORDS = {
+    "musculacao": "strength", "krachttraining": "strength", "musculation": "strength",
+    "krafttraining": "strength", "gym": "strength", "ginasio": "strength",
+    "corrida": "running", "correr": "running", "hardlop": "running", "course": "running", "laufen": "running",
+    "natacao": "swimming", "zwemmen": "swimming", "swimming": "swimming", "natation": "swimming",
+    "ciclismo": "cycling", "fietsen": "cycling", "cycling": "cycling",
+    "caminhada": "walking", "wandelen": "walking", "walking": "walking",
+}  # fmt: skip
 _HABIT_STREAK_RE = re.compile(
     r"(?:"
     r"quantos\s+dias\s+(?:seguidos|consecutivos|em\s+sequencia)"
@@ -3625,6 +3657,12 @@ async def handle_inbound(
                     await _save_outbound(member, reply, session)
                     return
 
+                rec = parse_recurrence(reminder_text)
+                if rec.text:
+                    reminder_text = rec.text
+                rec_mask = (
+                    rec.mask if rec.mask != 127 or rec.day_of_month else _parse_days_mask(body)
+                )
                 job_type = _detect_job_type(reminder_text)
                 import uuid as _uuid
 
@@ -3635,12 +3673,22 @@ async def handle_inbound(
                     member_id=member.id,
                     job_type=job_type,
                     time_of_day=time_str,
-                    days_mask=_parse_days_mask(body),
-                    payload={"text": reminder_text},
+                    days_mask=rec_mask,
+                    payload=(
+                        {"text": reminder_text, "day_of_month": rec.day_of_month}
+                        if rec.day_of_month
+                        else {"text": reminder_text}
+                    ),
                     active=True,
                 )
                 session.add(job)
-                reply = _t("lembrete_set", lang, text=reminder_text, time=time_str)
+                reply = _t(
+                    "lembrete_set",
+                    lang,
+                    text=reminder_text,
+                    time=time_str,
+                    when=cadence_label(rec_mask, rec.day_of_month, lang),
+                )
                 logger.info(
                     "conversation.lembrete_created",
                     member_id=str(member.id),
@@ -3674,7 +3722,9 @@ async def handle_inbound(
             else:
                 lines = [_t("lembretes_list_header", lang, n=len(jobs))]
                 for j in jobs:
-                    days_label = _mask_to_label(j.days_mask)
+                    days_label = cadence_label(
+                        j.days_mask, (j.payload or {}).get("day_of_month"), lang
+                    )
                     text_label = (j.payload or {}).get("text", j.job_type)
                     lines.append(
                         _t(
@@ -3791,7 +3841,11 @@ async def handle_inbound(
             return
 
         # 4e-0i. V2-06 — agenda: "dentista quinta às 14h" / "minha agenda" / "cancela o dentista"
-        agenda_reply = await handle_agenda_command(body, body_plain, member, lang, session)
+        agenda_reply = (
+            None  # "nota: …" is always a note, even when it mentions a day and a time
+            if _NOTE_RE.match(body)
+            else await handle_agenda_command(body, body_plain, member, lang, session)
+        )
         if agenda_reply is not None:
             if agenda_reply.buttons:
                 await send_buttons(to, agenda_reply.text, agenda_reply.buttons)
@@ -4069,34 +4123,57 @@ async def handle_inbound(
         m_hfreq = _HABIT_FREQ_RE.search(body_plain)
         if m_hfreq:
             freq_raw = _clean_activity((_grp(body, m_hfreq) or body).strip())
-            # extract the activity from the whole body
             from datetime import timedelta as _td
 
             from sqlalchemy import select as _sel
 
-            week_ago = today_local() - _td(days=6)  # 7-day window incl. today
+            monthly = any(w in body_plain for w in _FREQ_MONTH_WORDS)
+            since = month_start(today_local()) if monthly else today_local() - _td(days=6)
+            period = _t("freq_period_month" if monthly else "freq_period_week", lang)
+            freq_kw = (freq_raw or body).lower()
+            # a named workout type ("musculação", "corrida") counts workout sessions
+            wk_act = next(
+                (act for kw, act in _FREQ_WORKOUT_WORDS.items() if kw in body_plain), None
+            )
             res_hf = await session.execute(
                 _sel(HabitLog)
                 .where(HabitLog.member_id == member.id)
-                .where(HabitLog.log_date >= week_ago)
+                .where(HabitLog.log_date >= since)
             )
             all_habits = res_hf.scalars().all()
-            # Find best matching activity
-            freq_kw = freq_raw.lower() if freq_raw else body.lower()
             matched = [
                 h
                 for h in all_habits
                 if freq_kw in h.activity.lower() or h.activity.lower() in freq_kw
             ]
-            if not matched and all_habits:
-                # fallback: count all
-                matched = all_habits
-                freq_kw = "habits"
-            if matched:
-                activity_label = matched[0].activity if matched else "?"
-                reply = _t("habit_frequency", lang, activity=activity_label, n=len(matched))
+            if wk_act and not matched:
+                res_wk = await session.execute(
+                    _sel(func.count())
+                    .select_from(WorkoutSession)
+                    .where(WorkoutSession.member_id == member.id)
+                    .where(WorkoutSession.workout_date >= since)
+                    .where(WorkoutSession.activity_type.ilike(f"%{wk_act}%"))
+                )
+                n_wk = res_wk.scalar_one()
+                label = activity_name(wk_act, lang)
+                reply = (
+                    _t("habit_frequency", lang, activity=label, n=n_wk, period=period)
+                    if n_wk
+                    else _t("habit_frequency_empty", lang, activity=label, period=period)
+                )
             else:
-                reply = _t("habit_frequency_empty", lang, activity=freq_kw)
+                if not matched and all_habits and not freq_raw:
+                    matched = all_habits  # "quantas vezes fiz algo": count everything
+                if matched:
+                    reply = _t(
+                        "habit_frequency",
+                        lang,
+                        activity=matched[0].activity,
+                        n=len(matched),
+                        period=period,
+                    )
+                else:
+                    reply = _t("habit_frequency_empty", lang, activity=freq_kw, period=period)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
