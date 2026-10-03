@@ -250,35 +250,6 @@ async def _seed_life(s, member) -> None:
                     log_date=today - timedelta(days=i),
                 )
             )
-    for i, hours in enumerate((7.2, 6.5, 7.8, 6.0, 7.5, 8.0, 6.8, 7.1, 7.4)):
-        s.add(
-            HealthLog(
-                member_id=mid,
-                log_type="sleep",
-                value=str(hours),
-                unit="hours",
-                log_date=today - timedelta(days=i + 1),
-            )
-        )
-    for i, mood in enumerate((8, 6, 7, 7, 9)):
-        s.add(
-            HealthLog(
-                member_id=mid,
-                log_type="mood",
-                value=str(mood),
-                unit="/10",
-                log_date=today - timedelta(days=i),
-            )
-        )
-    for i in (0, 1, 2, 4, 5):
-        s.add(
-            HealthLog(
-                member_id=mid,
-                log_type="medication",
-                value="remédio",
-                log_date=today - timedelta(days=i),
-            )
-        )
     for days_ago, kind, km, minutes in (
         (0, "strength", None, 50),
         (2, "running", 5.0, 30),

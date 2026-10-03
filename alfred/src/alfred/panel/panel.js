@@ -47,7 +47,6 @@
   const shiftDay = (iso, by) => { const d = day(iso); d.setUTCDate(d.getUTCDate() + by); return d.toISOString().slice(0, 10); };
   const fmt1 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const fmtL = (v) => fmt1.format(v) + " L";
-  const fmtH = (v) => fmt1.format(v) + " h";
 
   // ── building blocks ──
   function chatIcon() {
@@ -224,13 +223,13 @@
     month_vs_month: "title_mom", fixed_variable: "title_fixed", daily: "title_daily", avg_ticket: "title_avg",
     recurring: "title_recurring",
     week: "title_week", tasks: "title_tasks", reminders: "title_reminders", month_map: "title_map", notes: "title_notes",
-    water: "title_water", sleep: "title_sleep", mood: "title_mood", medication: "title_med", workouts: "title_workouts",
+    water: "title_water", workouts: "title_workouts",
     goals: "title_goals", trip: "title_trip",
   };
   const SPANS = {
     summary: { balance: "s7", upcoming: "s5", categories: "s7", budgets: "s5", blue_days: "s6", owed: "s6" },
     agenda: { week: "s7", tasks: "s5", month_map: "s7", reminders: "s5", notes: "s12" },
-    health: { water: "s5", workouts: "s7", goals: "s7", sleep: "s5", mood: "s6", medication: "s6" },
+    health: { water: "s5", workouts: "s7", goals: "s12" },
     trips: { trip: "s7", trips_past: "s5" },
     money: { transactions: "s7", top_expenses: "s5", month_vs_month: "s7", fixed_variable: "s5", daily: "s12", categories: "s7", avg_ticket: "s5", recurring: "s7", owed: "s5" },
   };
@@ -738,44 +737,6 @@
       c.append(h, el("div", "sub", T.water_today + " · " + fmtL(v.average) + " " + T.water_avg_l));
       miniBars(c, card.points.map((p) => ({ date: p.date, value: p.litres })), T.title_water);
       tableView(c, card.points.map((p) => [dm(p.date), fmtL(p.litres)]), { head: [T.th_date, T.title_water], caption: T.title_water });
-      phraseBlock(c, card.phrase);
-      return c;
-    },
-
-    sleep(card, span) {
-      const v = card.values;
-      const c = cardShell(card, T.title_sleep, span);
-      c.append(el("div", "hero", fmtH(v.average)), el("div", "sub", T.sleep_avg_l + " · " + T.sleep_last + ": " + fmtH(v.last)));
-      miniBars(c, card.points.map((p) => ({ date: p.date, value: p.hours || 0 })), T.title_sleep);
-      tableView(c, card.points.filter((p) => p.hours !== null).map((p) => [dm(p.date), fmtH(p.hours)]), { head: [T.th_date, T.title_sleep], caption: T.title_sleep });
-      phraseBlock(c, card.phrase);
-      return c;
-    },
-
-    mood(card, span) {
-      const v = card.values;
-      const c = cardShell(card, T.title_mood, span);
-      const h = el("div", "hero", fmt1.format(v.average));
-      h.append(el("small", "", " " + T.mood_scale));
-      c.append(h, el("div", "sub", T.mood_avg_l));
-      miniBars(c, card.points.map((p) => ({ date: p.date, value: p.value || 0 })), T.title_mood, 10);
-      tableView(c, card.points.filter((p) => p.value !== null).map((p) => [dm(p.date), fmt1.format(p.value)]), { head: [T.th_date, T.title_mood], caption: T.title_mood });
-      phraseBlock(c, card.phrase);
-      return c;
-    },
-
-    medication(card, span) {
-      const v = card.values;
-      const c = cardShell(card, T.title_med, span);
-      const h = el("div", "hero", String(v.days));
-      h.append(el("small", "", " / 7"));
-      c.append(h, el("div", "sub", T.med_days_l));
-      const dots = el("div", "dots");
-      dots.setAttribute("role", "img");
-      dots.setAttribute("aria-label", T.title_med + ": " + v.days + " / 7");
-      for (const p of card.points) dots.append(el("i", p.count > 0 ? "on" : ""));
-      c.append(dots);
-      tableView(c, card.points.map((p) => [dm(p.date), String(p.count)]), { head: [T.th_date, T.th_count], caption: T.title_med });
       phraseBlock(c, card.phrase);
       return c;
     },

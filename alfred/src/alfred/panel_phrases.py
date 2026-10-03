@@ -231,27 +231,6 @@ PHRASES: dict[str, dict[str, str]] = {
         "fr": "Sur les 7 derniers jours, tu as enregistré {avg} d'eau par jour en moyenne, sur {days} des 7 jours.",
         "de": "In den letzten 7 Tagen hast du im Schnitt {avg} Wasser pro Tag erfasst, an {days} von 7 Tagen.",
     },
-    "sleep_avg": {
-        "pt": "Média de sono nos últimos 14 dias: {avg}, em {nights} noites registradas.",
-        "nl": "Gemiddelde slaap in de afgelopen 14 dagen: {avg}, over {nights} vastgelegde nachten.",
-        "en": "Average sleep over the last 14 days: {avg}, across {nights} logged nights.",
-        "fr": "Sommeil moyen sur les 14 derniers jours : {avg}, sur {nights} nuits enregistrées.",
-        "de": "Durchschnittlicher Schlaf in den letzten 14 Tagen: {avg}, über {nights} erfasste Nächte.",
-    },
-    "mood_avg": {
-        "pt": "Humor médio dos últimos 7 dias: {avg} de 10, em {count} registros.",
-        "nl": "Gemiddelde stemming van de afgelopen 7 dagen: {avg} van 10, uit {count} registraties.",
-        "en": "Average mood over the last 7 days: {avg} out of 10, from {count} logs.",
-        "fr": "Humeur moyenne des 7 derniers jours : {avg} sur 10, d'après {count} enregistrements.",
-        "de": "Durchschnittliche Stimmung der letzten 7 Tage: {avg} von 10, aus {count} Einträgen.",
-    },
-    "med_days": {
-        "pt": "Medicação registrada em {days} dos últimos 7 dias.",
-        "nl": "Medicatie vastgelegd op {days} van de afgelopen 7 dagen.",
-        "en": "Medication logged on {days} of the last 7 days.",
-        "fr": "Médicament enregistré sur {days} des 7 derniers jours.",
-        "de": "Medikamente an {days} der letzten 7 Tage erfasst.",
-    },
     "workouts_week": {
         "pt": "{count} nesta semana contra {prev} na semana passada.",
         "nl": "{count} deze week tegen {prev} vorige week.",
@@ -321,27 +300,6 @@ PHRASES: dict[str, dict[str, str]] = {
         "en": "No water logs in the last 7 days yet. Log it in the chat.",
         "fr": "Pas encore d'enregistrements d'eau sur les 7 derniers jours. Enregistre-les dans le chat.",
         "de": "Noch keine Wassereinträge in den letzten 7 Tagen. Erfasse sie im Chat.",
-    },
-    "empty_sleep": {
-        "pt": "Ainda não há registros de sono. Registre pelo chat.",
-        "nl": "Nog geen slaapregistraties. Leg ze vast in de chat.",
-        "en": "No sleep logs yet. Log it in the chat.",
-        "fr": "Pas encore d'enregistrements de sommeil. Enregistre-les dans le chat.",
-        "de": "Noch keine Schlafeinträge. Erfasse sie im Chat.",
-    },
-    "empty_mood": {
-        "pt": "Ainda não há registros de humor. Registre pelo chat.",
-        "nl": "Nog geen stemmingsregistraties. Leg ze vast in de chat.",
-        "en": "No mood logs yet. Log it in the chat.",
-        "fr": "Pas encore d'enregistrements d'humeur. Enregistre-les dans le chat.",
-        "de": "Noch keine Stimmungseinträge. Erfasse sie im Chat.",
-    },
-    "empty_medication": {
-        "pt": "Ainda não há registros de medicação. Registre pelo chat.",
-        "nl": "Nog geen medicatieregistraties. Leg ze vast in de chat.",
-        "en": "No medication logs yet. Log it in the chat.",
-        "fr": "Pas encore d'enregistrements de médicaments. Enregistre-les dans le chat.",
-        "de": "Noch keine Medikamenteneinträge. Erfasse sie im Chat.",
     },
     "empty_workouts": {
         "pt": "Nenhum treino registrado nas últimas semanas. Registre pelo chat.",
@@ -495,27 +453,6 @@ CHAT: dict[str, dict[str, str]] = {
         "fr": '"eau aujourd\'hui"',
         "de": '"Wasser heute"',
     },
-    "sleep": {
-        "pt": '"quantas horas dormi"',
-        "nl": '"gemiddelde slaap"',
-        "en": '"average sleep"',
-        "fr": '"sommeil moyen"',
-        "de": '"durchschnittlicher Schlaf"',
-    },
-    "mood": {
-        "pt": '"humor esta semana"',
-        "nl": '"stemming deze week"',
-        "en": '"mood this week"',
-        "fr": '"humeur cette semaine"',
-        "de": '"Stimmung diese Woche"',
-    },
-    "medication": {
-        "pt": '"aderência da medicação"',
-        "nl": '"medicatie bijgehouden"',
-        "en": '"medication adherence"',
-        "fr": '"observance médicament"',
-        "de": '"Medikamenten Einhaltung"',
-    },
     "workouts": {
         "pt": '"treinos este mês"',
         "nl": '"trainingen deze maand"',
@@ -571,27 +508,6 @@ CHAT: dict[str, dict[str, str]] = {
         "en": '"drank 0.5 L water"',
         "fr": '"bu 0,5 L d\'eau"',
         "de": '"0,5 Liter Wasser getrunken"',
-    },
-    "log_sleep": {
-        "pt": '"dormi 7 horas"',
-        "nl": '"sliep 7 uur"',
-        "en": '"slept 7 hours"',
-        "fr": '"j\'ai dormi 7 heures"',
-        "de": '"7 Stunden geschlafen"',
-    },
-    "log_mood": {
-        "pt": '"humor 7"',
-        "nl": '"stemming 7"',
-        "en": '"mood 7"',
-        "fr": '"humeur 7"',
-        "de": '"Stimmung 7"',
-    },
-    "log_medication": {
-        "pt": '"tomei o remédio"',
-        "nl": '"nam mijn medicijn"',
-        "en": '"took my medication"',
-        "fr": '"pris mon médicament"',
-        "de": '"Medikament genommen"',
     },
     "log_workout": {
         "pt": '"corri 5 km em 30 minutos"',
@@ -1050,8 +966,6 @@ RULES: dict[str, Callable[..., Phrase | None]] = {
 MIN_AGENDA_WEEK = 3
 MIN_AGENDA_MAP = 6
 MIN_WATER_DAYS = 3
-MIN_SLEEP_NIGHTS = 5
-MIN_MOOD_LOGS = 3
 MIN_TRIPS_HISTORY = 2
 
 
@@ -1121,30 +1035,6 @@ def rule_water(avg_litres: float, days_logged: int, lang: str) -> Phrase | None:
     )  # fmt: skip
 
 
-def rule_sleep(avg_hours: float, nights: int, lang: str) -> Phrase | None:
-    """Rule 17. Five logged nights in 14 days. Describes, never judges."""
-    if nights < MIN_SLEEP_NIGHTS or avg_hours <= 0:
-        return None
-    return render(
-        "sleep_avg", lang, chat_key="sleep",
-        avg=fmt_hours(avg_hours), nights=nights,
-    )  # fmt: skip
-
-
-def rule_mood(avg: float, count: int, lang: str) -> Phrase | None:
-    """Rule 18. Three mood logs in 7 days."""
-    if count < MIN_MOOD_LOGS or avg <= 0:
-        return None
-    return render("mood_avg", lang, chat_key="mood", avg=fmt_decimal(avg, 1), count=count)
-
-
-def rule_medication(days_logged: int, lang: str) -> Phrase | None:
-    """Rule 19. Any medication log in the last 7 days; the count of days, nothing more."""
-    if days_logged <= 0:
-        return None
-    return render("med_days", lang, chat_key="medication", days=days_logged)
-
-
 def rule_workouts(this_week: int, last_week: int, lang: str) -> Phrase | None:
     """Rule 20. Only when there is something to compare with."""
     if this_week <= 0 and last_week <= 0:
@@ -1194,10 +1084,6 @@ def fmt_litres(value: float) -> str:
     return f"{fmt_decimal(value, 1)} L"
 
 
-def fmt_hours(value: float) -> str:
-    return f"{fmt_decimal(value, 1)} h"
-
-
 EMPTY: dict[str, tuple[str, str]] = {
     "ledger": ("empty_ledger", "log_expense"),
     "budgets": ("empty_budgets", "set_budget"),
@@ -1209,9 +1095,6 @@ EMPTY: dict[str, tuple[str, str]] = {
     "reminders": ("empty_reminders", "add_reminder"),
     "notes": ("empty_notes", "add_note"),
     "water": ("empty_water", "log_water"),
-    "sleep": ("empty_sleep", "log_sleep"),
-    "mood": ("empty_mood", "log_mood"),
-    "medication": ("empty_medication", "log_medication"),
     "workouts": ("empty_workouts", "log_workout"),
     "goals": ("empty_goals", "add_goal"),
     "trips": ("empty_trips", "add_trip"),

@@ -20,9 +20,6 @@ Agenda cards
 Hábitos cards
 -------------
 ``water``      values {today, average, days}; points [{date, litres}] for the last 7 days (litres 0 = nothing logged).
-``sleep``      values {average, nights, last}; points [{date, hours|null}] for the last 14 days.
-``mood``       values {average, count, last}; points [{date, value|null}] for the last 7 days.
-``medication`` values {days, today}; points [{date, count}] for the last 7 days.
 ``workouts``   values {this_week, last_week, km_week, minutes_week}; weeks [{start, count}] (4, oldest
                first); activities [{activity, count}] this week.
 ``goals``      values {count}; items [{title, target|null, deadline|null, logs_7d, logs_30d}] (6).
@@ -360,82 +357,6 @@ async def water_card(ctx) -> dict[str, Any]:
     )
     if logged:
         card["phrase"] = _phrase(pp.rule_water(avg, len(logged), ctx.lang))
-    return card
-
-
-async def sleep_card(ctx) -> dict[str, Any]:
-    span = _span(ctx.today, 14)
-    hours: dict[date, float] = {}
-    for day, raw, _unit in await _health(ctx, "sleep", span[0]):
-        n = _num(raw)
-        if n is not None and 0 < n <= 24:
-            hours[day] = n  # the last entry of a day wins
-    avg = sum(hours.values()) / len(hours) if hours else 0.0
-    last = hours[max(hours)] if hours else 0.0
-    card = _card(
-        "sleep",
-        not hours,
-        {"average": round(avg, 2), "nights": len(hours), "last": last},
-        ctx,
-        "sleep",
-        points=[{"date": d.isoformat(), "hours": hours.get(d)} for d in span],
-    )
-    if hours:
-        card["phrase"] = _phrase(pp.rule_sleep(avg, len(hours), ctx.lang))
-    return card
-
-
-async def mood_card(ctx) -> dict[str, Any]:
-    span = _span(ctx.today, 7)
-    per_day: dict[date, list[float]] = defaultdict(list)
-    for day, raw, _unit in await _health(ctx, "mood", span[0]):
-        n = _num(raw)
-        if n is not None and 0 < n <= 10:
-            per_day[day].append(n)
-    flat = [v for vals in per_day.values() for v in vals]
-    avg = sum(flat) / len(flat) if flat else 0.0
-    day_avg = {d: sum(v) / len(v) for d, v in per_day.items()}
-    last = day_avg[max(day_avg)] if day_avg else 0.0
-    card = _card(
-        "mood",
-        not flat,
-        {"average": round(avg, 1), "count": len(flat), "last": round(last, 1)},
-        ctx,
-        "mood",
-        points=[
-            {"date": d.isoformat(), "value": round(day_avg[d], 1) if d in day_avg else None}
-            for d in span
-        ],
-    )
-    if flat:
-        card["phrase"] = _phrase(pp.rule_mood(avg, len(flat), ctx.lang))
-    return card
-
-
-async def medication_card(ctx) -> dict[str, Any]:
-    span = _span(ctx.today, 7)
-    stmt = (
-        select(HealthLog.log_date, func.count())
-        .where(
-            HealthLog.member_id == ctx.mid,
-            HealthLog.log_type == "medication",
-            HealthLog.log_date >= span[0],
-            HealthLog.log_date <= ctx.today,
-        )
-        .group_by(HealthLog.log_date)
-    )
-    counts = {d: int(n) for d, n in (await ctx.session.execute(stmt)).all()}
-    days = sum(1 for n in counts.values() if n > 0)
-    card = _card(
-        "medication",
-        days == 0,
-        {"days": days, "today": counts.get(ctx.today, 0)},
-        ctx,
-        "medication",
-        points=[{"date": d.isoformat(), "count": counts.get(d, 0)} for d in span],
-    )
-    if days:
-        card["phrase"] = _phrase(pp.rule_medication(days, ctx.lang))
     return card
 
 

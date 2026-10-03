@@ -141,9 +141,6 @@ def _all_phrases(lang: str) -> list[pp.Phrase]:
         pp.rule_tasks(2, "Pagar IPTU", 3, 0, None, 0, lang),
         pp.rule_tasks(0, None, 0, 3, "Enviar relatório", 2, lang),
         pp.rule_water(1.6, 5, lang),
-        pp.rule_sleep(7.2, 9, lang),
-        pp.rule_mood(7.4, 5, lang),
-        pp.rule_medication(6, lang),
         pp.rule_workouts(3, 2, lang),
         pp.rule_goal("Meditar", 5, lang),
         pp.rule_trip(540, 900, 5, lang),
@@ -305,7 +302,7 @@ def test_singular_plural_and_due_labels() -> None:
 # ones that go to the LLM path are balance_projection and log_expense.
 _RUN_ORDER = ("add_recurring", "add_owed", "set_budget")
 _TAB_COMMANDS = (
-    "agenda", "tasks", "reminders", "goals", "water", "sleep", "mood", "medication", "workouts",
+    "agenda", "tasks", "reminders", "goals", "water", "workouts",
     "trips", "add_task", "add_note", "add_goal", "add_reminder",
 )  # fmt: skip
 # Not in the list: the health logs (water, sleep, mood, medication, workouts), appointments and

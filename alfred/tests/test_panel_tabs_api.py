@@ -76,7 +76,7 @@ def _appt(lab, title, day, hour, minute=0, **kw) -> Appointment:
     ("tab", "ids"),
     [
         ("agenda", ["week", "tasks", "month_map", "reminders", "notes"]),
-        ("health", ["water", "workouts", "goals", "sleep", "mood", "medication"]),
+        ("health", ["water", "workouts", "goals"]),
         ("trips", ["trip"]),
     ],
 )
@@ -249,59 +249,35 @@ def _log(lab, kind, value, day, unit=None) -> HealthLog:
 
 
 @db
-async def test_water_sleep_mood_and_medication_use_their_own_windows(lab, client) -> None:
+async def test_water_uses_its_own_window_and_ignores_bad_values(lab, client) -> None:
     d = lambda n: TODAY - timedelta(days=n)  # noqa: E731
     await lab.add(
-        _log(lab, "water", "1.4", d(0), "L"), _log(lab, "water", "0,6", d(0), "L"),
-        _log(lab, "water", "500", d(1), "ml"), _log(lab, "water", "2", d(2), "L"),
-        _log(lab, "water", "abc", d(3), "L"), _log(lab, "water", "9", d(8), "L"),
-        *[_log(lab, "sleep", str(h), d(i)) for i, h in enumerate([7, 6.5, 8, 7, 6, 99], start=1)],
-        _log(lab, "sleep", "7", d(20)),
-        *[_log(lab, "mood", str(v), d(i)) for i, v in enumerate([8, 6, 7], start=0)],
-        _log(lab, "mood", "11", d(3)),
-        _log(lab, "medication", "x", d(0)), _log(lab, "medication", "x", d(0)), _log(lab, "medication", "x", d(2)),
-    )  # fmt: skip
+        _log(lab, "water", "1.4", d(0), "L"),
+        _log(lab, "water", "0,6", d(0), "L"),
+        _log(lab, "water", "500", d(1), "ml"),
+        _log(lab, "water", "2", d(2), "L"),
+        _log(lab, "water", "abc", d(3), "L"),
+        _log(lab, "water", "9", d(8), "L"),
+        _log(lab, "sleep", "7", d(1)),  # sleep, mood and medication are not shown in the panel
+        _log(lab, "mood", "7", d(1)),
+        _log(lab, "medication", "x", d(1)),
+    )
     cards = await _cards(client, lab, "health")
     water = cards["water"]
-    assert water["values"] == {
-        "today": 2.0,
-        "average": 1.5,
-        "days": 3,
-    }  # 2.0, 0.5, 2.0 (9 L is outside the window)
+    assert water["values"] == {"today": 2.0, "average": 1.5, "days": 3}  # 9 L is outside the window
     assert len(water["points"]) == 7 and water["points"][-1] == {
         "date": TODAY.isoformat(),
         "litres": 2.0,
     }
     assert water["phrase"]["key"] == "water_avg" and "1,5 L" in water["phrase"]["text"]
-    sleep = cards["sleep"]
-    assert (
-        sleep["values"]["nights"] == 5 and sleep["values"]["average"] == 6.9
-    )  # 99 h and day -20 are ignored
-    assert len(sleep["points"]) == 14 and sleep["phrase"]["key"] == "sleep_avg"
-    mood = cards["mood"]
-    assert (
-        mood["values"]["count"] == 3
-        and mood["values"]["average"] == 7.0
-        and mood["values"]["last"] == 8.0
-    )
-    assert mood["phrase"]["key"] == "mood_avg"
-    med = cards["medication"]
-    assert (
-        med["values"] == {"days": 2, "today": 2}
-        and med["phrase"]["text"] == "Medicação registrada em 2 dos últimos 7 dias."
-    )
+    assert not {"sleep", "mood", "medication"} & set(cards)
 
 
 @db
-async def test_health_phrases_wait_for_enough_data(lab, client) -> None:
-    await lab.add(
-        _log(lab, "sleep", "7", TODAY),
-        _log(lab, "water", "1", TODAY, "L"),
-        _log(lab, "mood", "7", TODAY),
-    )
-    cards = await _cards(client, lab, "health")
-    for card_id in ("sleep", "water", "mood"):
-        assert cards[card_id]["empty"] is False and cards[card_id]["phrase"] is None
+async def test_water_phrase_waits_for_enough_data(lab, client) -> None:
+    await lab.add(_log(lab, "water", "1", TODAY, "L"))
+    water = (await _cards(client, lab, "health"))["water"]
+    assert water["empty"] is False and water["phrase"] is None
 
 
 @db
