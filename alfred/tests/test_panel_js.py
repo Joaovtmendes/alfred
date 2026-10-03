@@ -82,7 +82,7 @@ async def test_a_slow_tab_never_overwrites_the_tab_the_member_moved_to() -> None
     pwm, browser, page = await _open({"summary": slow, "money": fast})
     try:
         await page.click('[data-tab="money"]')
-        await page.wait_for_selector("#panel .empty:has-text('Ainda não há dados')")
+        await page.wait_for_selector("#panel .empty:has-text('Em breve')")
         await asyncio.sleep(1.2)  # the slow summary answer arrives now
         assert await page.locator("#panel [data-card]").count() == 0
         assert await page.get_attribute('[data-tab="money"]', "aria-selected") == "true"
@@ -138,5 +138,34 @@ async def test_tabs_are_wired_to_a_labelled_tabpanel() -> None:
         await page.wait_for_selector("#panel [data-card]")
         money_id = await page.get_attribute('[data-tab="money"]', "id")
         assert await page.get_attribute("#panel", "aria-labelledby") == money_id
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_balance_bars_share_one_scale_when_spending_exceeds_income() -> None:
+    card = {**BALANCE, "values": {"income": 12115.0, "expense": 101174.4, "balance": -89059.4}}
+
+    async def good():
+        return await _ok([card])
+
+    pwm, browser, page = await _open({"summary": good})
+    try:
+        await page.wait_for_selector("#panel [data-card]")
+        widths = await page.eval_on_selector_all(
+            "#panel .bar > *", "els => els.map(e => parseFloat(e.style.width))"
+        )
+        assert widths[1] == pytest.approx(100.0)  # the larger one fills the track
+        assert widths[0] == pytest.approx(12115.0 / 101174.4 * 100, abs=0.1)  # not a full bar
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_a_tab_without_cards_yet_says_it_is_coming_not_that_data_is_missing() -> None:
+    async def none():
+        return await _ok([])
+
+    pwm, browser, page = await _open({"summary": none})
+    try:
+        await page.wait_for_selector("#panel .empty:has-text('Em breve')")
     finally:
         await _close(pwm, browser)
