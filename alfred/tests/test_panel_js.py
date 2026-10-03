@@ -772,8 +772,8 @@ def _tab_handlers():
     ("tab", "cards"),
     [
         ("agenda", ["week", "tasks", "month_map", "reminders", "notes"]),
-        ("health", ["water", "workouts", "goals"]),
-        ("trips", ["trip", "trips_past"]),
+        ("health", ["water", "workouts", "training", "goals"]),
+        ("trips", ["trip", "packing", "itinerary", "plan_budget", "trips_past"]),
     ],
 )
 async def test_the_three_new_tabs_draw_every_card_without_breaking_the_page(tab, cards) -> None:
@@ -821,5 +821,48 @@ async def test_trips_show_budget_tiles_and_the_health_tab_says_it_is_not_medical
         await page.click('[data-tab="health"]')
         await page.wait_for_selector("[data-card=water]")
         assert "conselho médico" in await _text(page, "#panel .grid-note")
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_training_plan_shows_today_first_and_no_arrow_before_two_points() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click('[data-tab="health"]')
+        await page.wait_for_selector("[data-card=training]")
+        card = "[data-card=training]"
+        assert (
+            await page.locator(f"{card} details.plan-day").count() == 3
+        )  # the other days fold away
+        await page.evaluate(
+            "document.querySelectorAll('details.plan-day').forEach(d => d.open = true)"
+        )
+        text = await _text(page, card)
+        assert "↑ +" in text  # a load that went up shows its change
+        assert (
+            await page.locator(
+                f"{card} .item:has-text('Puxada frontal') .s:has-text('1 registro')"
+            ).count()
+            == 1
+        )
+        assert "↑" not in await _text(page, f"{card} .item:has-text('Puxada frontal')")
+        assert await page.locator(f"{card} details.table").count() == 1
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_trip_plan_cards_show_itinerary_packing_and_planned_against_spent() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click('[data-tab="trips"]')
+        await page.wait_for_selector("[data-card=packing]")
+        assert "3 de 7" in await _text(page, "[data-card=packing] .sub")
+        assert await page.locator("[data-card=packing] .item").count() == 7
+        assert await page.locator("[data-card=itinerary] .appt").count() == 8
+        assert await page.locator("[data-card=itinerary] .day-head").count() == 5
+        assert await page.locator("[data-card=plan_budget] .cat").count() == 4
+        assert "€ 180 / € 450" in (await _text(page, "[data-card=plan_budget]")).replace(
+            "\u00a0", " "
+        )
     finally:
         await _close(pwm, browser)

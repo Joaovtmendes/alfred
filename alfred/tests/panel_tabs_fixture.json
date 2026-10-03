@@ -485,6 +485,173 @@
     }
    },
    {
+    "id": "training",
+    "empty": false,
+    "values": {
+     "days": 4,
+     "today": 5,
+     "has_today": true
+    },
+    "days": [
+     {
+      "weekday": 0,
+      "title": "Peito",
+      "today": false,
+      "items": [
+       {
+        "exercise": "Supino reto",
+        "sets": 4,
+        "reps": "10",
+        "planned_kg": 60.0,
+        "last_kg": 60.0,
+        "last_day": "2026-09-26",
+        "points": 4,
+        "first_day": "2026-09-05",
+        "delta_kg": 5.0,
+        "history": [
+         55.0,
+         57.5,
+         60.0,
+         60.0
+        ]
+       },
+       {
+        "exercise": "Crucifixo",
+        "sets": 3,
+        "reps": "12",
+        "planned_kg": 14.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       },
+       {
+        "exercise": "Tríceps corda",
+        "sets": 3,
+        "reps": "12",
+        "planned_kg": 25.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       }
+      ]
+     },
+     {
+      "weekday": 2,
+      "title": "Costas",
+      "today": false,
+      "items": [
+       {
+        "exercise": "Remada curvada",
+        "sets": 4,
+        "reps": "10",
+        "planned_kg": 50.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       },
+       {
+        "exercise": "Puxada frontal",
+        "sets": 4,
+        "reps": "10",
+        "planned_kg": 55.0,
+        "last_kg": 55.0,
+        "last_day": "2026-09-26",
+        "points": 1,
+        "first_day": "2026-09-26",
+        "delta_kg": null,
+        "history": [
+         55.0
+        ]
+       }
+      ]
+     },
+     {
+      "weekday": 4,
+      "title": "Pernas",
+      "today": false,
+      "items": [
+       {
+        "exercise": "Agachamento",
+        "sets": 5,
+        "reps": "5",
+        "planned_kg": 90.0,
+        "last_kg": 90.0,
+        "last_day": "2026-09-30",
+        "points": 3,
+        "first_day": "2026-09-05",
+        "delta_kg": 10.0,
+        "history": [
+         80.0,
+         85.0,
+         90.0
+        ]
+       },
+       {
+        "exercise": "Leg press",
+        "sets": 4,
+        "reps": "12",
+        "planned_kg": 160.0,
+        "last_kg": 160.0,
+        "last_day": "2026-09-26",
+        "points": 2,
+        "first_day": "2026-09-12",
+        "delta_kg": 10.0,
+        "history": [
+         150.0,
+         160.0
+        ]
+       }
+      ]
+     },
+     {
+      "weekday": 5,
+      "title": "Ombros",
+      "today": true,
+      "items": [
+       {
+        "exercise": "Desenvolvimento",
+        "sets": 4,
+        "reps": "10",
+        "planned_kg": 24.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       },
+       {
+        "exercise": "Elevação lateral",
+        "sets": 3,
+        "reps": "15",
+        "planned_kg": 8.0,
+        "last_kg": null,
+        "last_day": null,
+        "points": 0,
+        "first_day": null,
+        "delta_kg": null,
+        "history": []
+       }
+      ]
+     }
+    ],
+    "phrase": {
+     "key": "training_progress",
+     "text": "Agachamento subiu 10 kg desde 05/09.",
+     "chat": "\"carga supino 62 kg\"",
+     "severity": "info"
+    }
+   },
+   {
     "id": "goals",
     "empty": false,
     "values": {
@@ -519,168 +686,6 @@
      "chat": "\"minhas metas\"",
      "severity": "info"
     }
-   },
-   {
-    "id": "sleep",
-    "empty": false,
-    "values": {
-     "average": 7.14,
-     "nights": 9,
-     "last": 7.2
-    },
-    "points": [
-     {
-      "date": "2026-09-20",
-      "hours": null
-     },
-     {
-      "date": "2026-09-21",
-      "hours": null
-     },
-     {
-      "date": "2026-09-22",
-      "hours": null
-     },
-     {
-      "date": "2026-09-23",
-      "hours": null
-     },
-     {
-      "date": "2026-09-24",
-      "hours": 7.4
-     },
-     {
-      "date": "2026-09-25",
-      "hours": 7.1
-     },
-     {
-      "date": "2026-09-26",
-      "hours": 6.8
-     },
-     {
-      "date": "2026-09-27",
-      "hours": 8.0
-     },
-     {
-      "date": "2026-09-28",
-      "hours": 7.5
-     },
-     {
-      "date": "2026-09-29",
-      "hours": 6.0
-     },
-     {
-      "date": "2026-09-30",
-      "hours": 7.8
-     },
-     {
-      "date": "2026-10-01",
-      "hours": 6.5
-     },
-     {
-      "date": "2026-10-02",
-      "hours": 7.2
-     },
-     {
-      "date": "2026-10-03",
-      "hours": null
-     }
-    ],
-    "phrase": {
-     "key": "sleep_avg",
-     "text": "Média de sono nos últimos 14 dias: 7,1 h, em 9 noites registradas.",
-     "chat": "\"quantas horas dormi\"",
-     "severity": "info"
-    }
-   },
-   {
-    "id": "mood",
-    "empty": false,
-    "values": {
-     "average": 7.4,
-     "count": 5,
-     "last": 8.0
-    },
-    "points": [
-     {
-      "date": "2026-09-27",
-      "value": null
-     },
-     {
-      "date": "2026-09-28",
-      "value": null
-     },
-     {
-      "date": "2026-09-29",
-      "value": 9.0
-     },
-     {
-      "date": "2026-09-30",
-      "value": 7.0
-     },
-     {
-      "date": "2026-10-01",
-      "value": 7.0
-     },
-     {
-      "date": "2026-10-02",
-      "value": 6.0
-     },
-     {
-      "date": "2026-10-03",
-      "value": 8.0
-     }
-    ],
-    "phrase": {
-     "key": "mood_avg",
-     "text": "Humor médio dos últimos 7 dias: 7,4 de 10, em 5 registros.",
-     "chat": "\"humor esta semana\"",
-     "severity": "info"
-    }
-   },
-   {
-    "id": "medication",
-    "empty": false,
-    "values": {
-     "days": 5,
-     "today": 1
-    },
-    "points": [
-     {
-      "date": "2026-09-27",
-      "count": 0
-     },
-     {
-      "date": "2026-09-28",
-      "count": 1
-     },
-     {
-      "date": "2026-09-29",
-      "count": 1
-     },
-     {
-      "date": "2026-09-30",
-      "count": 0
-     },
-     {
-      "date": "2026-10-01",
-      "count": 1
-     },
-     {
-      "date": "2026-10-02",
-      "count": 1
-     },
-     {
-      "date": "2026-10-03",
-      "count": 1
-     }
-    ],
-    "phrase": {
-     "key": "med_days",
-     "text": "Medicação registrada em 5 dos últimos 7 dias.",
-     "chat": "\"aderência da medicação\"",
-     "severity": "info"
-    }
    }
   ]
  },
@@ -702,9 +707,9 @@
     "empty": false,
     "values": {
      "budget": 900.0,
-     "spent": 0.0,
-     "remaining": 900.0,
-     "pct": 0,
+     "spent": 180.0,
+     "remaining": 720.0,
+     "pct": 20,
      "days": 0,
      "planned_days": 5
     },
@@ -715,9 +720,186 @@
      "state": "upcoming",
      "days_to_start": 41
     },
-    "categories": [],
-    "points": [],
+    "categories": [
+     {
+      "category": "wonen",
+      "label": "Habitação",
+      "amount": 180.0
+     }
+    ],
+    "points": [
+     {
+      "date": "2026-09-21",
+      "amount": 180.0
+     }
+    ],
+    "phrase": {
+     "key": "trip_budget",
+     "text": "20% do orçamento da viagem já foi usado: € 180,00 de € 900,00.",
+     "chat": "\"minhas viagens\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "packing",
+    "empty": false,
+    "values": {
+     "done": 3,
+     "total": 7
+    },
+    "items": [
+     {
+      "name": "Óculos de sol",
+      "packed": false
+     },
+     {
+      "name": "Casaco leve",
+      "packed": false
+     },
+     {
+      "name": "Adaptador de tomada",
+      "packed": false
+     },
+     {
+      "name": "Câmera",
+      "packed": false
+     },
+     {
+      "name": "Carregador",
+      "packed": true
+     },
+     {
+      "name": "Remédios",
+      "packed": true
+     },
+     {
+      "name": "Passaporte",
+      "packed": true
+     }
+    ],
+    "phrase": {
+     "key": "pack_progress",
+     "text": "3 de 7 já estão na mala.",
+     "chat": "\"bagagem\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "itinerary",
+    "empty": false,
+    "values": {
+     "count": 8,
+     "days": 5
+    },
+    "days": [
+     {
+      "date": "2026-11-13",
+      "items": [
+       {
+        "time": "15:40",
+        "title": "Voo Amsterdã → Lisboa"
+       },
+       {
+        "time": "19:00",
+        "title": "Check-in no hotel (Alfama)"
+       }
+      ]
+     },
+     {
+      "date": "2026-11-14",
+      "items": [
+       {
+        "time": "10:00",
+        "title": "Torre de Belém"
+       },
+       {
+        "time": "13:00",
+        "title": "Almoço no Time Out Market"
+       }
+      ]
+     },
+     {
+      "date": "2026-11-15",
+      "items": [
+       {
+        "time": "09:30",
+        "title": "Passeio no bonde 28"
+       },
+       {
+        "time": "20:00",
+        "title": "Jantar com fado"
+       }
+      ]
+     },
+     {
+      "date": "2026-11-16",
+      "items": [
+       {
+        "time": "11:00",
+        "title": "Sintra: Palácio da Pena"
+       }
+      ]
+     },
+     {
+      "date": "2026-11-17",
+      "items": [
+       {
+        "time": "18:30",
+        "title": "Voo de volta"
+       }
+      ]
+     }
+    ],
     "phrase": null
+   },
+   {
+    "id": "plan_budget",
+    "empty": false,
+    "values": {
+     "plan": 900.0,
+     "spent": 180.0,
+     "over": 0
+    },
+    "lines": [
+     {
+      "category": "wonen",
+      "label": "Habitação",
+      "plan": 450.0,
+      "spent": 180.0,
+      "pct": 40,
+      "over": false
+     },
+     {
+      "category": "restaurant",
+      "label": "Restaurante",
+      "plan": 220.0,
+      "spent": 0.0,
+      "pct": 0,
+      "over": false
+     },
+     {
+      "category": "reizen",
+      "label": "Reizen",
+      "plan": 150.0,
+      "spent": 0.0,
+      "pct": 0,
+      "over": false
+     },
+     {
+      "category": "transport",
+      "label": "Transporte",
+      "plan": 80.0,
+      "spent": 0.0,
+      "pct": 0,
+      "over": false
+     }
+    ],
+    "phrase": {
+     "key": "plan_budget_ok",
+     "text": "Habitação usou 40% do planejado: € 180,00 de € 450,00.",
+     "chat": "\"orçamento da viagem\"",
+     "severity": "info"
+    }
    },
    {
     "id": "trips_past",

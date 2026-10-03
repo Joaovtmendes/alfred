@@ -847,6 +847,7 @@ async def health(
     cards = [
         await pt.water_card(ctx),
         await pt.workouts_card(ctx),
+        await pt.training_card(ctx),
         await pt.goals_card(ctx),
     ]
     return _envelope("health", member, f, cards, ctx.today)
@@ -879,6 +880,13 @@ async def trips(
     member, f = await _open(token, request, session)
     ctx = _Ctx(session, member, f, today_local())
     cards = [await pt.trip_card(ctx)]
+    plan_trip = await pt._plan_trip(ctx)
+    if plan_trip is not None:  # itinerary, packing and planned budget belong to a trip that exists
+        cards += [
+            await pt.packing_card(ctx, plan_trip),
+            await pt.itinerary_card(ctx, plan_trip),
+            await pt.plan_budget_card(ctx, plan_trip),
+        ]
     past = await pt.trips_past_card(ctx)
     if not past["empty"]:  # a card of "other trips" with no other trip would only be noise
         cards.append(past)

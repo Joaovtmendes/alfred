@@ -322,6 +322,62 @@ PHRASES: dict[str, dict[str, str]] = {
         "fr": "Aucun voyage enregistré. Crées-en un dans le chat, avec un budget si tu veux.",
         "de": "Keine Reisen erfasst. Lege im Chat eine an, auf Wunsch mit Budget.",
     },
+    "training_progress": {
+        "pt": "{name} subiu {delta} desde {since}.",
+        "nl": "{name} is {delta} gestegen sinds {since}.",
+        "en": "{name} is up {delta} since {since}.",
+        "fr": "{name} a gagné {delta} depuis le {since}.",
+        "de": "{name}: {delta} mehr seit {since}.",
+    },
+    "pack_progress": {
+        "pt": "{done} de {total} já estão na mala.",
+        "nl": "{done} van {total} zijn ingepakt.",
+        "en": "{done} of {total} are packed.",
+        "fr": "{done} sur {total} sont dans la valise.",
+        "de": "{done} von {total} sind gepackt.",
+    },
+    "plan_budget_ok": {
+        "pt": "{cat} usou {pct}% do planejado: {spent} de {plan}.",
+        "nl": "{cat} heeft {pct}% van het geplande gebruikt: {spent} van {plan}.",
+        "en": "{cat} used {pct}% of the plan: {spent} of {plan}.",
+        "fr": "{cat} a utilisé {pct}% du prévu : {spent} sur {plan}.",
+        "de": "{cat} hat {pct}% des Plans genutzt: {spent} von {plan}.",
+    },
+    "plan_budget_over": {
+        "pt": "{cat} passou do planejado: {spent} de {plan}.",
+        "nl": "{cat} zit boven het geplande: {spent} van {plan}.",
+        "en": "{cat} went over the plan: {spent} of {plan}.",
+        "fr": "{cat} a dépassé le prévu : {spent} sur {plan}.",
+        "de": "{cat} liegt über dem Plan: {spent} von {plan}.",
+    },
+    "empty_training": {
+        "pt": "Você ainda não tem plano de treino. Mande o plano pelo chat, um dia por linha.",
+        "nl": "Je hebt nog geen trainingsschema. Stuur het via de chat, één dag per regel.",
+        "en": "You don't have a training plan yet. Send it in the chat, one day per line.",
+        "fr": "Tu n'as pas encore de plan d'entraînement. Envoie-le dans le chat, un jour par ligne.",
+        "de": "Du hast noch keinen Trainingsplan. Schick ihn im Chat, ein Tag pro Zeile.",
+    },
+    "empty_itinerary": {
+        "pt": "O roteiro desta viagem ainda está vazio. Adicione pelo chat.",
+        "nl": "Het reisschema van deze reis is nog leeg. Voeg items toe via de chat.",
+        "en": "This trip's itinerary is still empty. Add entries in the chat.",
+        "fr": "L'itinéraire de ce voyage est encore vide. Ajoute des étapes dans le chat.",
+        "de": "Der Reiseplan für diese Reise ist noch leer. Füge Einträge im Chat hinzu.",
+    },
+    "empty_packing": {
+        "pt": "A bagagem desta viagem ainda está vazia. Adicione itens pelo chat.",
+        "nl": "De paklijst van deze reis is nog leeg. Voeg spullen toe via de chat.",
+        "en": "This trip's packing list is still empty. Add items in the chat.",
+        "fr": "La liste de bagages de ce voyage est encore vide. Ajoute des éléments dans le chat.",
+        "de": "Die Packliste für diese Reise ist noch leer. Füge Dinge im Chat hinzu.",
+    },
+    "empty_plan_budget": {
+        "pt": "Ainda não há orçamento planejado por categoria nesta viagem. Defina pelo chat.",
+        "nl": "Er is nog geen geplande begroting per categorie voor deze reis. Stel hem in via de chat.",
+        "en": "There's no planned budget by category for this trip yet. Set one in the chat.",
+        "fr": "Pas encore de budget prévu par catégorie pour ce voyage. Définis-le dans le chat.",
+        "de": "Für diese Reise gibt es noch kein geplantes Budget je Kategorie. Lege es im Chat fest.",
+    },
 }
 
 # Commands the phrases suggest. Every one is deterministic in the chat router (no LLM involved)
@@ -522,6 +578,69 @@ CHAT: dict[str, dict[str, str]] = {
         "en": '"create trip Lisbon 900"',
         "fr": '"créer voyage Lisbonne 900"',
         "de": '"Reise anlegen Lissabon 900"',
+    },
+    "add_plan": {
+        "pt": '"plano de treino: segunda: supino 4x10 60kg"',
+        "nl": '"trainingsschema: maandag: bankdrukken 4x10 60kg"',
+        "en": '"training plan: monday: bench press 4x10 60kg"',
+        "fr": '"plan d\'entraînement: lundi: développé couché 4x10 60kg"',
+        "de": '"Trainingsplan: Montag: Bankdrücken 4x10 60kg"',
+    },
+    "workout_today": {
+        "pt": '"treino de hoje"',
+        "nl": '"training vandaag"',
+        "en": '"workout today"',
+        "fr": '"entraînement du jour"',
+        "de": '"training heute"',
+    },
+    "log_load": {
+        "pt": '"carga supino 62 kg"',
+        "nl": '"gewicht bankdrukken 62 kg"',
+        "en": '"load bench press 62 kg"',
+        "fr": '"charge développé couché 62 kg"',
+        "de": '"Gewicht Bankdrücken 62 kg"',
+    },
+    "itinerary": {
+        "pt": '"roteiro"',
+        "nl": '"reisschema"',
+        "en": '"itinerary"',
+        "fr": '"itinéraire"',
+        "de": '"Reiseplan"',
+    },
+    "add_itinerary": {
+        "pt": '"roteiro 12/10 10:00 Museu do Fado"',
+        "nl": '"reisschema 12/10 10:00 Fadomuseum"',
+        "en": '"itinerary 12/10 10:00 Fado Museum"',
+        "fr": '"itinéraire 12/10 10:00 Musée du Fado"',
+        "de": '"Reiseplan 12/10 10:00 Fado-Museum"',
+    },
+    "packing": {
+        "pt": '"bagagem"',
+        "nl": '"paklijst"',
+        "en": '"packing list"',
+        "fr": '"liste de bagages"',
+        "de": '"Packliste"',
+    },
+    "add_packing": {
+        "pt": '"bagagem: passaporte, carregador"',
+        "nl": '"paklijst: paspoort, oplader"',
+        "en": '"packing: passport, charger"',
+        "fr": '"bagages: passeport, chargeur"',
+        "de": '"Packliste: Reisepass, Ladegerät"',
+    },
+    "plan_budget": {
+        "pt": '"orçamento da viagem"',
+        "nl": '"reisbudget"',
+        "en": '"trip budget"',
+        "fr": '"budget voyage"',
+        "de": '"Reisebudget"',
+    },
+    "set_trip_budget": {
+        "pt": '"orçamento da viagem hospedagem 300"',
+        "nl": '"reisbudget accommodatie 300"',
+        "en": '"trip budget accommodation 300"',
+        "fr": '"budget voyage hébergement 300"',
+        "de": '"Reisebudget Unterkunft 300"',
     },
 }
 
@@ -1076,6 +1195,40 @@ def rule_trips_history(count: int, within: int, lang: str) -> Phrase | None:
     return render("trips_history", lang, chat_key="trips", count=count, within=within)
 
 
+def rule_training(name: str, delta_kg: float, since: str, lang: str) -> Phrase | None:
+    """Rule 24. The exercise whose load grew the most; only with 2+ points and a real increase."""
+    if not name or delta_kg <= 0:
+        return None
+    return render(
+        "training_progress", lang, chat_key="log_load",
+        name=name, delta=fmt_kg(delta_kg, lang), since=since,
+    )  # fmt: skip
+
+
+def rule_packing(done: int, total: int, lang: str) -> Phrase | None:
+    """Rule 25. How much of the packing list is in the suitcase."""
+    if total <= 0:
+        return None
+    return render("pack_progress", lang, chat_key="packing", done=done, total=total)
+
+
+def rule_plan_budget(cat: str, spent: float, plan: float, lang: str) -> Phrase | None:
+    """Rule 26. The category closest to (or past) its planned amount."""
+    if plan <= 0 or spent <= 0:
+        return None
+    pct = budget_pct(spent, plan)
+    return render(
+        "plan_budget_over" if spent > plan else "plan_budget_ok", lang, chat_key="plan_budget",
+        severity="attention" if spent > plan else "info",
+        cat=cat, pct=pct, spent=fmt_eur(spent, lang), plan=fmt_eur(plan, lang),
+    )  # fmt: skip
+
+
+def fmt_kg(value: float, lang: str) -> str:
+    text = f"{value:.2f}".rstrip("0").rstrip(".")
+    return f"{text if _lang(lang) == 'en' else text.replace('.', ',')} kg"
+
+
 def fmt_decimal(value: float, places: int = 1) -> str:
     return f"{value:.{places}f}".replace(".", ",")
 
@@ -1098,6 +1251,10 @@ EMPTY: dict[str, tuple[str, str]] = {
     "workouts": ("empty_workouts", "log_workout"),
     "goals": ("empty_goals", "add_goal"),
     "trips": ("empty_trips", "add_trip"),
+    "training": ("empty_training", "add_plan"),
+    "itinerary": ("empty_itinerary", "add_itinerary"),
+    "packing": ("empty_packing", "add_packing"),
+    "plan_budget": ("empty_plan_budget", "set_trip_budget"),
 }
 
 

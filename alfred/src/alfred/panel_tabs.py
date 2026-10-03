@@ -23,6 +23,11 @@ Hábitos cards
 ``workouts``   values {this_week, last_week, km_week, minutes_week}; weeks [{start, count}] (4, oldest
                first); activities [{activity, count}] this week.
 ``goals``      values {count}; items [{title, target|null, deadline|null, logs_7d, logs_30d}] (6).
+``training``   the active weekly plan. values {days, today (weekday 0-6), has_today}; days [{weekday, title,
+               today, items [{exercise, sets|null, reps|null, planned_kg|null, last_kg|null, last_day|null,
+               points, first_day|null, delta_kg|null, history [kg x 6 at most, oldest first]}]}] ordered by
+               weekday. ``delta_kg`` is last minus first load and exists only with 2+ points (the panel
+               draws no arrow before that).
 
 Viagens cards
 -------------
@@ -32,6 +37,10 @@ Viagens cards
                (5); points [{date, amount}] (at most 62 days).
 ``trips_past`` values {count, with_budget, within}; items [{destination, start, end|null, days, spent, budget|null,
                within|null}] newest first (6).
+``itinerary``  of the active/next trip (no card without one). values {count, days}; days [{date, items [{time|null,
+               title}]}] by date (60 entries shown).
+``packing``    values {done, total}; items [{name, packed}] (60 shown, unpacked first).
+``plan_budget`` values {plan, spent, over}; lines [{category, label, plan, spent, pct, over}] by plan size.
 """
 
 from __future__ import annotations
@@ -56,6 +65,13 @@ from alfred.models import (
     ScheduledJob,
     Task,
     Trip,
+    TripBudgetLine,
+    TripItem,
+    TripPackItem,
+    WorkoutLoad,
+    WorkoutPlan,
+    WorkoutPlanDay,
+    WorkoutPlanItem,
     WorkoutSession,
 )
 from alfred.panel_calc import _local_day, dec, money
@@ -612,4 +628,215 @@ async def trips_past_card(ctx) -> dict[str, Any]:
     )
     if items:
         card["phrase"] = _phrase(pp.rule_trips_history(len(with_budget), within, ctx.lang))
+    return card
+
+
+# ── V2-35 — training plan, itinerary, packing, planned budget ────────────────
+
+_HISTORY_POINTS = 6
+_ITINERARY_SHOWN = 60
+_PACK_SHOWN = 60
+
+
+async def training_card(ctx) -> dict[str, Any]:
+    from alfred.training import key_of
+
+    plan = await ctx.session.scalar(
+        select(WorkoutPlan)
+        .where(WorkoutPlan.member_id == ctx.mid, WorkoutPlan.active.is_(True))
+        .order_by(WorkoutPlan.created_at.desc())
+    )
+    today_wd = ctx.today.weekday()
+    base = {"days": 0, "today": today_wd, "has_today": False}
+    if plan is None:
+        return _card("training", True, base, ctx, "training", days=[])
+    days = (
+        (
+            await ctx.session.execute(
+                select(WorkoutPlanDay)
+                .where(WorkoutPlanDay.plan_id == plan.id)
+                .order_by(WorkoutPlanDay.weekday)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    items = (
+        (
+            await ctx.session.execute(
+                select(WorkoutPlanItem)
+                .where(WorkoutPlanItem.day_id.in_([d.id for d in days]))
+                .order_by(WorkoutPlanItem.day_id, WorkoutPlanItem.position)
+            )
+        )
+        .scalars()
+        .all()
+        if days
+        else []
+    )
+    keys = sorted({key_of(i.exercise) for i in items})
+    loads: dict[str, list[WorkoutLoad]] = defaultdict(list)
+    if keys:
+        rows = (
+            (
+                await ctx.session.execute(
+                    select(WorkoutLoad)
+                    .where(WorkoutLoad.member_id == ctx.mid, WorkoutLoad.exercise_key.in_(keys))
+                    .order_by(WorkoutLoad.day, WorkoutLoad.created_at)
+                    .limit(5000)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for r in rows:
+            loads[r.exercise_key].append(r)
+    best: tuple[float, str, str] | None = None  # (delta, exercise, since)
+    out_days = []
+    for d in days:
+        out_items = []
+        for i in (x for x in items if x.day_id == d.id):
+            pts = loads.get(key_of(i.exercise), [])
+            last, first = (pts[-1], pts[0]) if pts else (None, None)
+            delta = round(float(last.load_kg) - float(first.load_kg), 2) if len(pts) >= 2 else None
+            if delta is not None and delta > 0 and (best is None or delta > best[0]):
+                best = (delta, i.exercise, first.day.strftime("%d/%m"))
+            out_items.append(
+                {
+                    "exercise": i.exercise,
+                    "sets": i.sets,
+                    "reps": i.reps,
+                    "planned_kg": float(i.load_kg) if i.load_kg is not None else None,
+                    "last_kg": float(last.load_kg) if last else None,
+                    "last_day": last.day.isoformat() if last else None,
+                    "points": len(pts),
+                    "first_day": first.day.isoformat() if first else None,
+                    "delta_kg": delta,
+                    "history": [float(p.load_kg) for p in pts[-_HISTORY_POINTS:]],
+                }
+            )
+        out_days.append(
+            {
+                "weekday": d.weekday,
+                "title": d.title or None,
+                "today": d.weekday == today_wd,
+                "items": out_items,
+            }
+        )
+    values = {
+        "days": len(out_days),
+        "today": today_wd,
+        "has_today": any(x["today"] for x in out_days),
+    }
+    card = _card("training", not out_days, values, ctx, "training", days=out_days)
+    if best is not None:
+        card["phrase"] = _phrase(pp.rule_training(best[1], best[0], best[2], ctx.lang))
+    return card
+
+
+async def _plan_trip(ctx) -> Trip | None:
+    from alfred.tripplan import main_trip
+
+    return main_trip(await _trips(ctx), ctx.today)
+
+
+async def itinerary_card(ctx, trip: Trip) -> dict[str, Any]:
+    rows = (
+        (
+            await ctx.session.execute(
+                select(TripItem)
+                .where(TripItem.trip_id == trip.id, TripItem.member_id == ctx.mid)
+                .order_by(TripItem.day, TripItem.at_time.nulls_first(), TripItem.created_at)
+                .limit(_ITINERARY_SHOWN)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    by_day: dict[date, list[dict[str, Any]]] = defaultdict(list)
+    for r in rows:
+        by_day[r.day].append({"time": r.at_time, "title": r.title})
+    days = [{"date": d.isoformat(), "items": v} for d, v in sorted(by_day.items())]
+    return _card(
+        "itinerary", not rows, {"count": len(rows), "days": len(days)}, ctx, "itinerary", days=days
+    )
+
+
+async def packing_card(ctx, trip: Trip) -> dict[str, Any]:
+    rows = (
+        (
+            await ctx.session.execute(
+                select(TripPackItem)
+                .where(TripPackItem.trip_id == trip.id, TripPackItem.member_id == ctx.mid)
+                .order_by(TripPackItem.packed, TripPackItem.created_at, TripPackItem.id)
+                .limit(_PACK_SHOWN)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    done = sum(1 for r in rows if r.packed)
+    card = _card(
+        "packing", not rows, {"done": done, "total": len(rows)}, ctx, "packing",
+        items=[{"name": r.name, "packed": r.packed} for r in rows],
+    )  # fmt: skip
+    if rows:
+        card["phrase"] = _phrase(pp.rule_packing(done, len(rows), ctx.lang))
+    return card
+
+
+async def plan_budget_card(ctx, trip: Trip) -> dict[str, Any]:
+    lines = (
+        (
+            await ctx.session.execute(
+                select(TripBudgetLine)
+                .where(TripBudgetLine.trip_id == trip.id, TripBudgetLine.member_id == ctx.mid)
+                .order_by(TripBudgetLine.amount.desc(), TripBudgetLine.category)
+                .limit(20)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    cat = func.coalesce(Expense.category, "overig")
+    spent = dict(
+        (
+            await ctx.session.execute(
+                select(cat, func.sum(Expense.amount))
+                .where(
+                    Expense.member_id == ctx.mid,
+                    Expense.trip_id == trip.id,
+                    Expense.transaction_type == "expense",
+                    Expense.status.in_(SETTLED),
+                )
+                .group_by(cat)
+            )
+        ).all()
+    )
+    out = []
+    worst: tuple[float, str, float, float] | None = None
+    for ln in lines:
+        plan = float(ln.amount)
+        s = float(spent.get(ln.category) or 0)
+        out.append(
+            {
+                "category": ln.category,
+                "label": ctx.label(ln.category),
+                "plan": money(plan),
+                "spent": money(s),
+                "pct": pp.budget_pct(s, plan) if s > 0 else 0,
+                "over": s > plan,
+            }
+        )
+        ratio = s / plan if plan else 0
+        if s > 0 and (worst is None or ratio > worst[0]):
+            worst = (ratio, ctx.label(ln.category), s, plan)
+    values = {
+        "plan": money(sum(float(x.amount) for x in lines)),
+        "spent": money(sum(float(spent.get(x.category) or 0) for x in lines)),
+        "over": sum(1 for x in out if x["over"]),
+    }
+    card = _card("plan_budget", not lines, values, ctx, "plan_budget", lines=out)
+    if worst is not None:
+        card["phrase"] = _phrase(pp.rule_plan_budget(worst[1], worst[2], worst[3], ctx.lang))
     return card

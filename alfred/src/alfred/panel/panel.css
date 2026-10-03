@@ -189,6 +189,9 @@ details.table table{width:100%;border-collapse:collapse;margin-top:8px}
 details.table td,details.table th{padding:4px 8px 4px 0;border-top:1px solid var(--line);text-align:left;font-weight:400}
 details.table th{font-weight:600}
 details.table td.r,details.table th.r{text-align:right;font-variant-numeric:tabular-nums;padding-right:0}
+details.plan-day{border-top:1px solid var(--line);padding:4px 0}
+details.plan-day summary{cursor:pointer;min-height:32px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--muted)}
+.item .s.good{color:var(--good)}
 footer.foot{display:flex;flex-direction:column;gap:6px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
 .cta{position:sticky;bottom:0;padding:12px 16px calc(16px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
 .cta a{display:flex;justify-content:center;align-items:center;gap:8px;height:48px;border-radius:24px;background:var(--accent);color:var(--on-accent);font-weight:600;text-decoration:none}

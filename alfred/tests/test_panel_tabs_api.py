@@ -76,7 +76,7 @@ def _appt(lab, title, day, hour, minute=0, **kw) -> Appointment:
     ("tab", "ids"),
     [
         ("agenda", ["week", "tasks", "month_map", "reminders", "notes"]),
-        ("health", ["water", "workouts", "goals"]),
+        ("health", ["water", "workouts", "training", "goals"]),
         ("trips", ["trip"]),
     ],
 )
@@ -518,3 +518,147 @@ async def test_a_trip_never_counts_another_members_expenses(lab, client) -> None
             await s.execute(delete(Expense).where(Expense.member_id == other_id))
             await s.execute(delete(Member).where(Member.id == other_id))
             await s.commit()
+
+
+# ── V2-35: training plan, itinerary, packing, planned budget ─────────────────
+
+
+@db
+async def test_training_card_shows_loads_and_a_delta_only_with_two_points(lab, client) -> None:
+    from alfred.models import WorkoutLoad, WorkoutPlan, WorkoutPlanDay, WorkoutPlanItem
+
+    plan = WorkoutPlan(member_id=lab.member_id, active=True)
+    await lab.add(plan)
+    day = WorkoutPlanDay(
+        member_id=lab.member_id, plan_id=plan.id, weekday=TODAY.weekday(), title="Peito"
+    )
+    await lab.add(day)
+    await lab.add(
+        WorkoutPlanItem(
+            member_id=lab.member_id,
+            day_id=day.id,
+            position=0,
+            exercise="Supino",
+            sets=4,
+            reps="10",
+            load_kg=60,
+        ),
+        WorkoutPlanItem(
+            member_id=lab.member_id, day_id=day.id, position=1, exercise="Remada", sets=3, reps="12"
+        ),
+        WorkoutLoad(
+            member_id=lab.member_id,
+            exercise="Supino",
+            exercise_key="supino",
+            day=TODAY - timedelta(days=14),
+            load_kg=55,
+        ),
+        WorkoutLoad(
+            member_id=lab.member_id,
+            exercise="Supino",
+            exercise_key="supino",
+            day=TODAY - timedelta(days=7),
+            load_kg=60,
+        ),
+        WorkoutLoad(
+            member_id=lab.member_id,
+            exercise="Remada",
+            exercise_key="remada",
+            day=TODAY - timedelta(days=7),
+            load_kg=50,
+        ),
+    )
+    card = (await _cards(client, lab, "health"))["training"]
+    assert card["empty"] is False and card["values"]["has_today"] is True
+    (d,) = card["days"]
+    assert d["today"] is True and d["title"] == "Peito"
+    supino, remada = d["items"]
+    assert (supino["last_kg"], supino["delta_kg"], supino["points"]) == (60.0, 5.0, 2)
+    assert remada["points"] == 1 and remada["delta_kg"] is None  # one point: no change to show
+    assert "Supino subiu 5 kg" in card["phrase"]["text"]
+
+
+@db
+async def test_training_card_never_shows_another_members_plan(lab, client) -> None:
+    from alfred.models import Household, WorkoutPlan
+
+    async with AsyncSessionLocal() as s:
+        hh = Household(name="other")
+        s.add(hh)
+        await s.flush()
+        other = Member(
+            household_id=hh.id,
+            wa_phone="3199" + uuid.uuid4().hex[:7],
+            consent_state="accepted",
+            language="pt",
+        )
+        s.add(other)
+        await s.flush()
+        s.add(WorkoutPlan(member_id=other.id, active=True))
+        await s.commit()
+        other_id, hh_id = other.id, hh.id
+    try:
+        assert (await _cards(client, lab, "health"))["training"]["empty"] is True
+    finally:
+        async with AsyncSessionLocal() as s:
+            await s.execute(delete(WorkoutPlan).where(WorkoutPlan.member_id == other_id))
+            await s.execute(delete(Member).where(Member.id == other_id))
+            from alfred.models import Household as H
+
+            await s.execute(delete(H).where(H.id == hh_id))
+            await s.commit()
+
+
+@db
+async def test_trip_plan_cards_exist_only_with_a_trip_and_compare_planned_with_spent(
+    lab, client
+) -> None:
+    from alfred.models import TripBudgetLine, TripItem, TripPackItem
+
+    assert list(await _cards(client, lab, "trips")) == ["trip"]  # no trip: nothing to plan
+    trip = Trip(
+        member_id=lab.member_id,
+        destination="Lisboa",
+        started_at=TODAY + timedelta(days=10),
+        ended_at=TODAY + timedelta(days=14),
+        active=False,
+        budget=900,
+    )
+    await lab.add(trip)
+    await lab.add(
+        TripItem(
+            member_id=lab.member_id,
+            trip_id=trip.id,
+            day=TODAY + timedelta(days=11),
+            at_time="10:00",
+            title="<b>Museu</b>",
+        ),
+        TripItem(
+            member_id=lab.member_id, trip_id=trip.id, day=TODAY + timedelta(days=10), title="Voo"
+        ),
+        TripPackItem(member_id=lab.member_id, trip_id=trip.id, name="Passaporte", packed=True),
+        TripPackItem(member_id=lab.member_id, trip_id=trip.id, name="Carregador"),
+        TripBudgetLine(member_id=lab.member_id, trip_id=trip.id, category="wonen", amount=300),
+        Expense(
+            member_id=lab.member_id,
+            household_id=lab.household_id,
+            transaction_type="expense",
+            amount=330,
+            merchant="Hotel",
+            category="wonen",
+            status="paid",
+            trip_id=trip.id,
+            expense_date=_at(TODAY, 12),
+        ),
+    )
+    cards = await _cards(client, lab, "trips")
+    assert list(cards)[:4] == ["trip", "packing", "itinerary", "plan_budget"]
+    assert [x["title"] for d in cards["itinerary"]["days"] for x in d["items"]] == [
+        "Voo",
+        "<b>Museu</b>",
+    ]
+    assert cards["itinerary"]["days"][0]["date"] < cards["itinerary"]["days"][1]["date"]
+    assert cards["packing"]["values"] == {"done": 1, "total": 2}
+    (line,) = cards["plan_budget"]["lines"]
+    assert line["over"] is True and line["spent"] == 330 and line["plan"] == 300
+    assert "passou do planejado" in cards["plan_budget"]["phrase"]["text"]

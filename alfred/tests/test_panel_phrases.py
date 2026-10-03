@@ -146,6 +146,10 @@ def _all_phrases(lang: str) -> list[pp.Phrase]:
         pp.rule_trip(540, 900, 5, lang),
         pp.rule_trip(540, None, 5, lang),
         pp.rule_trips_history(3, 2, lang),
+        pp.rule_training("Supino reto", 5, "05/09", lang),
+        pp.rule_packing(3, 7, lang),
+        pp.rule_plan_budget("Moradia", 180, 450, lang),
+        pp.rule_plan_budget("Moradia", 500, 450, lang),
     ]
     assert all(out), out
     out += [pp.empty_hint(k, lang) for k in pp.EMPTY]

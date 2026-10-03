@@ -46,9 +46,17 @@ from alfred.models import (  # noqa: E402
     ScheduledJob,
     Task,
     Trip,
+    TripBudgetLine,
+    TripItem,
+    TripPackItem,
+    WorkoutLoad,
+    WorkoutPlan,
+    WorkoutPlanDay,
+    WorkoutPlanItem,
     WorkoutSession,
 )
 from alfred.settings import settings  # noqa: E402
+from alfred.training import key_of  # noqa: E402
 
 DEMO_PHONE = "31000000000"
 
@@ -76,7 +84,7 @@ SEPT_ROWS = [
     ("expense", 24.00, "Uber", "transport", "paid", 14),
     ("expense", 41.00, "Restaurante", "restaurant", "paid", 20),
 ]
-TRIP_ROWS = 6  # two paid entries on each of the three past trips
+TRIP_ROWS = 7  # two paid entries on each of the three past trips + the Lisbon hotel deposit
 EXPECTED_ROWS = len(ROWS) + len(SEPT_ROWS) + TRIP_ROWS
 EXPECTED_BUDGETS = 3
 
@@ -101,9 +109,22 @@ async def run() -> str:
         member.dashboard_v2 = True
         await s.flush()
         for model in (
-            HabitLog, Goal, HealthLog, WorkoutSession, Appointment, Task, Note, ScheduledJob,
-            Expense, Trip, Budget, RecurringItem, Iou,
-        ):  # fmt: skip
+            HabitLog,
+            Goal,
+            HealthLog,
+            WorkoutSession,
+            Appointment,
+            Task,
+            Note,
+            ScheduledJob,
+            Expense,
+            Trip,
+            Budget,
+            RecurringItem,
+            Iou,
+            WorkoutLoad,
+            WorkoutPlan,
+        ):  # fmt: skip  (plan days/items and trip entries go with their parents)
             await s.execute(delete(model).where(model.member_id == member.id))
         for month, rows in ((10, ROWS), (9, SEPT_ROWS)):
             for kind, amount, merchant, category, status, day in rows:
@@ -278,6 +299,7 @@ async def _seed_life(s, member) -> None:
         deadline=date(today.year, today.month, 28),
     )
     s.add_all([meditar, walk, gym])
+    await _seed_training(s, mid, today)
     await s.flush()  # the goals need their ids for the check-ins
     for i in (0, 1, 2, 4, 5):
         s.add(
@@ -324,6 +346,8 @@ async def _seed_life(s, member) -> None:
         )
         s.add(trip)
         await s.flush()
+        if destination == "Lisboa":
+            await _seed_trip_plan(s, mid, hid, trip, at)
         for n, (amount, category) in enumerate(spent_on.get(destination, ())):
             s.add(
                 Expense(
@@ -338,6 +362,91 @@ async def _seed_life(s, member) -> None:
                     expense_date=at(start + timedelta(days=n), 12),
                 )
             )
+
+
+async def _seed_training(s, mid, today: date) -> None:
+    """A weekly plan (Mon/Wed/Fri/Sat) and the loads used on it over the last four weeks."""
+    plan = WorkoutPlan(member_id=mid, name="", active=True)
+    s.add(plan)
+    await s.flush()
+    for weekday, title, items in (
+        (
+            0,
+            "Peito",
+            (
+                ("Supino reto", 4, "10", 60),
+                ("Crucifixo", 3, "12", 14),
+                ("Tríceps corda", 3, "12", 25),
+            ),
+        ),
+        (2, "Costas", (("Remada curvada", 4, "10", 50), ("Puxada frontal", 4, "10", 55))),
+        (4, "Pernas", (("Agachamento", 5, "5", 90), ("Leg press", 4, "12", 160))),
+        (5, "Ombros", (("Desenvolvimento", 4, "10", 24), ("Elevação lateral", 3, "15", 8))),
+    ):
+        day = WorkoutPlanDay(member_id=mid, plan_id=plan.id, weekday=weekday, title=title)
+        s.add(day)
+        await s.flush()
+        for pos, (name, sets, reps, kg) in enumerate(items):
+            s.add(
+                WorkoutPlanItem(
+                    member_id=mid, day_id=day.id, position=pos, exercise=name,
+                    sets=sets, reps=reps, load_kg=kg,
+                )
+            )  # fmt: skip
+    for name, history in (
+        ("Supino reto", ((28, 55), (21, 57.5), (14, 60), (7, 60))),
+        ("Agachamento", ((28, 80), (14, 85), (3, 90))),
+        ("Puxada frontal", ((7, 55),)),  # one point only: no arrow in the panel
+        ("Leg press", ((21, 150), (7, 160))),
+    ):
+        key = key_of(name)
+        for days_ago, kg in history:
+            s.add(
+                WorkoutLoad(
+                    member_id=mid, exercise=name, exercise_key=key,
+                    day=today - timedelta(days=days_ago), load_kg=kg,
+                )
+            )  # fmt: skip
+
+
+async def _seed_trip_plan(s, mid, hid, trip: Trip, at) -> None:
+    """Itinerary, packing list, planned budget by category and a paid hotel deposit (Lisbon)."""
+    first = trip.started_at
+    for offset, hhmm, title in (
+        (0, "15:40", "Voo Amsterdã → Lisboa"),
+        (0, "19:00", "Check-in no hotel (Alfama)"),
+        (1, "10:00", "Torre de Belém"),
+        (1, "13:00", "Almoço no Time Out Market"),
+        (2, "09:30", "Passeio no bonde 28"),
+        (2, "20:00", "Jantar com fado"),
+        (3, "11:00", "Sintra: Palácio da Pena"),
+        (4, "18:30", "Voo de volta"),
+    ):
+        s.add(
+            TripItem(
+                member_id=mid, trip_id=trip.id, day=first + timedelta(days=offset),
+                at_time=hhmm, title=title,
+            )
+        )  # fmt: skip
+    for name, packed in (
+        ("Passaporte", True), ("Carregador", True), ("Adaptador de tomada", False),
+        ("Óculos de sol", False), ("Casaco leve", False), ("Remédios", True), ("Câmera", False),
+    ):  # fmt: skip
+        s.add(TripPackItem(member_id=mid, trip_id=trip.id, name=name, packed=packed))
+    for category, amount in (
+        ("wonen", 450),
+        ("restaurant", 220),
+        ("reizen", 150),
+        ("transport", 80),
+    ):
+        s.add(TripBudgetLine(member_id=mid, trip_id=trip.id, category=category, amount=amount))
+    s.add(
+        Expense(
+            member_id=mid, household_id=hid, transaction_type="expense", amount=180,
+            merchant="Hotel Alfama", category="wonen", status="paid", trip_id=trip.id,
+            expense_date=at(today_local() - timedelta(days=12), 11),
+        )
+    )  # fmt: skip
 
 
 async def purge() -> None:
