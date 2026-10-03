@@ -206,6 +206,54 @@ Frases: no máximo uma por cartão, só com dado mínimo (cada regra documenta o
 sugestão é um comando que o roteador do chat entende sem LLM (um teste roda todas, nas 5 línguas),
 exceto "como fica meu mês?" e o exemplo de registrar um gasto, que passam pelo LLM.
 
+### Front-end de Resumo e Dinheiro (`panel.js`, `panel.css`)
+
+Fiel aos mockups aprovados (`Main`, `Mobile`, `Dinheiro`, `MobileDinheiro`); as capturas
+(`scripts/panel_shots.py`) são comparadas com eles a cada mudança visual.
+
+- **Grade.** Desktop (>= 900 px): 12 colunas, cartões `s7`/`s5`/`s6`/`s12` (Resumo: saldo 7 +
+  próximos pagamentos 5, categorias 7 + orçamentos 5, dias no azul 6 + quem te deve 6; Dinheiro:
+  lançamentos 7 + maiores gastos 5, mês contra mês 7 + fixos e variáveis 5, gasto por dia 12,
+  categorias 7 + ticket médio 5, recorrências 7 + quem te deve 5). Celular: 1 coluna; no Resumo a
+  ordem visual é a do mockup móvel (saldo, categorias, orçamentos, dias no azul, próximos
+  pagamentos, quem te deve) via `order` no CSS, sem mexer na ordem do DOM.
+- **Um desenho por cartão** em `renderers[card.id]`; cartão `empty` mostra o `hint` do servidor
+  (texto + chip "Peça no chat"). Cartões desconhecidos são ignorados (as outras abas chegam depois).
+- **Gráficos** (CSS/SVG, sem biblioteca): barra empilhada da projeção (realizado, contas marcadas,
+  receita a receber, gasto variável esperado em listras) com a legenda em linha no desktop e em
+  coluna no celular, e o "fim do mês (estimativa)" ABAIXO da legenda no celular; faixa de
+  estimativa em texto; barras de categoria com Δ (▲ aumento = quente, ▼ queda, "= igual", "novo");
+  barras de orçamento com marcas em 80% e 100% (80-99% listrado, 100% ou mais sólido quente, para
+  não depender só da cor); barras por dia (pico em destaque); fixo x variável. `sparkline()` existe
+  como primitiva, mas nenhum cartão atual recebe uma série que a justifique.
+- **"Ver como tabela"** (`<details>` com `<table>`, cabeçalhos `scope=col`) em todo gráfico, aberto
+  por teclado.
+- **Filtros** (`#filter-bar`): mês (setas no Resumo, lista de 13 meses no Dinheiro), categoria
+  (as 10 do `labels.py`, enviadas na configuração), tipo e estado são `<select>` nativos; escolher
+  escreve `?month=&categories=&kind=&state=` com `history.pushState` e rebusca a aba (a
+  resposta fica em cache por aba + query). Só valores de lista fechada são lidos e escritos
+  (`readFilters` descarta o resto, inclusive parâmetros desconhecidos). A busca por comerciante
+  (Dinheiro) é um `<input>` sem `name` e fora de formulário: filtra as linhas no navegador, não toca
+  na URL nem na rede. Paginação (`?page=N`) só na aba Dinheiro e só mexe nesse número.
+- **Tema:** segue o sistema até o membro escolher no botão do topo; a escolha fica só no
+  `localStorage` do navegador (com `try/catch`) e vira `data-theme` + `data-theme-locked`. O
+  `scripts/contrast_check.py` cobre os pares novos (tokens `--warm-text` para texto sobre
+  `--warm-soft`).
+- **Barra de abas no celular:** decisão: continua em uma linha rolável (como no mockup), com
+  degradê na borda que ainda tem abas (`fade-l`/`fade-r`, atualizado ao rolar) e a aba selecionada
+  é rolada para a vista. Quebrar em duas linhas foi descartado porque empurra o conteúdo e foge
+  do mockup.
+- **Segurança e acessibilidade:** zero `innerHTML` (teste existente), dados do membro só por
+  `textContent`/`dataset`, tamanhos dinâmicos por CSSOM, nada de host externo. Foco visível em tudo
+  (inclusive o `<select>` dentro da pílula, via `:has`), abas por teclado (setas, Home, End),
+  `prefers-reduced-motion` desliga transições e rolagens suaves. O painel não tem formulário nem
+  botão que altere dados; "CSV" não existe no backend: a cópia dos dados é o link de "exportar meus
+  dados" (JSON), citado num texto do cartão de lançamentos.
+- **Testes:** `tests/test_panel_js.py` roda `panel.js` no Chromium com rede falsa e os payloads de
+  `tests/panel_fixtures.py` (formato real da API, números dos mockups): um teste por grupo de
+  cartões, XSS, estados vazios, filtros só na URL, URL adulterada, busca local, paginação, tema,
+  teclado, ordem móvel, legenda no celular, overflow e CSP.
+
 **Abas.** Resumo, Dinheiro, Agenda e tarefas, Hábitos, Viagens. A rota `health` (aba Hábitos) é
 própria, carregada só ao abrir a aba, e cada abertura vai para o `AuditLog`. O botão do chat
 ("Abrir meu painel") é uma mensagem `cta_url` com plano B em texto (`whatsapp.send_cta_url`).
