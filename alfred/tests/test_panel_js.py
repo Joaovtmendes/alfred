@@ -638,3 +638,21 @@ async def test_the_panel_is_read_only() -> None:
         assert all(method == "GET" for method, _ in page.api_calls)
     finally:
         await _close(pwm, browser)
+
+
+async def test_days_without_settled_entries_show_no_zero_total_and_few_days_keep_bars_slim() -> None:
+    money = {**fx.MONEY, "cards": [dict(c) for c in fx.MONEY["cards"]]}
+    for c in money["cards"]:
+        if c["id"] == "transactions":
+            c["days"] = [{"date": "2026-10-18", "income": 0.0, "expense": 0.0, "net": 0.0, "entries_total": 1, "entries": [fx._entry("Energia", "Habitação", 118.0, status="to_pay")]}]
+        if c["id"] == "daily":
+            c["points"] = c["points"][:3]
+    pwm, browser, page = await _open(_handlers(money=money))
+    try:
+        await page.click('[data-tab="money"]')
+        await page.wait_for_selector("[data-card=daily]")
+        assert await page.locator("[data-card=transactions] .day .num").count() == 0
+        box = await page.locator("[data-card=daily] .daily").bounding_box()
+        assert box["width"] <= 3 * 56 + 1
+    finally:
+        await _close(pwm, browser)

@@ -416,7 +416,7 @@
         const g = el("div", "daygrp");
         const head = el("div", "day");
         head.append(el("span", "", (d.date === ctx.body.today ? T.today_word + ", " : "") + dayShort(d.date)));
-        if (d.entries_total) head.append(el("span", "num", signed(d.net)));
+        if (d.income || d.expense) head.append(el("span", "num", signed(d.net)));
         g.append(head);
         const list = el("div", "list");
         for (const e of d.entries) {
@@ -537,6 +537,8 @@
       const title = weekly ? T.title_weekly : T.title_daily;
       const c = cardShell(card, title, span);
       const pts = card.points, v = card.values;
+      const wrap = el("div", "daily-wrap");
+      if (pts.length < 14) wrap.style.maxWidth = pts.length * 56 + "px"; // few days: bars stay slim
       const chart = el("div", "daily");
       chart.setAttribute("role", "img");
       chart.setAttribute("aria-label", title + ": " + money(v.total) + (v.max_date ? "; " + T.daily_peak + ": " + dm(v.max_date) + " (" + money(v.max) + ")" : ""));
@@ -546,7 +548,7 @@
         b.style.height = (p.amount > 0 ? Math.max(2, (p.amount / top) * 100) : 0) + "%";
         chart.append(b);
       }
-      c.append(chart);
+      wrap.append(chart);
       const axis = el("div", "axis");
       axis.setAttribute("aria-hidden", "true");
       const n = pts.length;
@@ -559,7 +561,8 @@
         if (!edge) lab.style.left = ((i + 0.5) / n) * 100 + "%";
         axis.append(lab);
       });
-      c.append(axis);
+      wrap.append(axis);
+      c.append(wrap);
       tableView(c, pts.map((p) => [p.date.split("-").reverse().join("/"), money(p.amount)]), { head: [T.th_date, T.th_amount], caption: title });
       phraseBlock(c, card.phrase);
       return c;

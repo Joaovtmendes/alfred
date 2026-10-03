@@ -228,7 +228,7 @@ footer.foot{display:flex;flex-direction:column;gap:6px;padding-top:16px;border-t
   .tile .big-num{font-size:28px}
   .tile .s{font-size:13px}
   .bar.stacked{height:18px;border-radius:9px}
-  .legend{flex-direction:row;flex-wrap:wrap;gap:6px 20px}
+  .legend{flex-direction:row;flex-wrap:wrap;gap:6px 14px}
   .legend li{gap:6px}
   .legend li>span{flex:none}
   .legend li>.num{margin-left:-2px}
@@ -252,3 +252,5 @@ footer.foot{display:flex;flex-direction:column;gap:6px;padding-top:16px;border-t
 .d.up{color:var(--warm)}.d.down{color:var(--accent-text)}
 .list-days{display:flex;flex-direction:column}
 .label .note{text-transform:none;letter-spacing:0;font-weight:400}
+.daily-wrap{width:100%}
+.legend .num{font-family:inherit}
