@@ -127,6 +127,7 @@ def _all_phrases(lang: str) -> list[pp.Phrase]:
         pp.rule_upcoming(3, 298, 1, 118, "Energia", lang),
         pp.rule_owed("Marta", 34.5, 9, lang),
         pp.rule_blue_days(9, 14, 9, lang),
+        pp.rule_blue_days(1, 14, 1, lang),
         pp.rule_largest_entry(
             23, "Aluguel", 1150, pp.period_fragment(date(2026, 10, 1), lang), lang
         ),
@@ -334,3 +335,10 @@ def test_largest_entry_phrase_names_an_expense_not_an_entry() -> None:
         assert "{merchant}" in text
     assert "gasto" in pp.PHRASES["largest_entry"]["pt"]
     assert "Ausgabe" in pp.PHRASES["largest_entry"]["de"]
+
+
+def test_blue_days_phrase_is_singular_for_one_day_in_french() -> None:
+    one = pp.rule_blue_days(1, 8, 1, "fr")
+    assert one and one.text.startswith("1 jour sur 8 ") and "1 jours" not in one.text
+    assert pp.rule_blue_days(1, 8, 1, "pt").text.startswith("1 de 8 dias no azul")
+    assert pp.rule_blue_days(3, 8, 2, "fr").text.startswith("3 jours sur 8 ")

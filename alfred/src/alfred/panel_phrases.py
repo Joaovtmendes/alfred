@@ -111,6 +111,14 @@ PHRASES: dict[str, dict[str, str]] = {
         "fr": "{blue} jours sur {elapsed} dans le vert ; la plus longue série a duré {longest}.",
         "de": "{blue} von {elapsed} Tagen im Plus; die längste Serie dauerte {longest}.",
     },
+    # exactly one day in the black: only French changes ("1 jour", not "1 jours")
+    "blue_days_one": {
+        "pt": "{blue} de {elapsed} dias no azul; a maior sequência foi de {longest}.",
+        "nl": "{blue} van {elapsed} dagen in de plus; de langste reeks was {longest}.",
+        "en": "{blue} of {elapsed} days in the black; the longest streak was {longest}.",
+        "fr": "{blue} jour sur {elapsed} dans le vert ; la plus longue série a duré {longest}.",
+        "de": "{blue} von {elapsed} Tagen im Plus; die längste Serie dauerte {longest}.",
+    },
     # ── Rule 8 · the list ─────────────────────────────────────────────────────
     "largest_entry": {
         "pt": "{count} lançamentos {period}. O maior gasto foi {merchant}, {amount}.",
@@ -601,8 +609,9 @@ def rule_blue_days(blue: int, elapsed: int, longest: int, lang: str) -> Phrase |
     if elapsed < MIN_BLUE_DAYS_ELAPSED:
         return None
     return render(
-        "blue_days",
+        "blue_days_one" if blue == 1 else "blue_days",
         lang,
+        chat_key="blue_days",
         blue=blue,
         elapsed=elapsed,
         longest=unit("day", longest, lang),
