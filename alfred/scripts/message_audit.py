@@ -258,6 +258,7 @@ def run() -> tuple[list[Finding], dict]:
     os.environ.setdefault("WHATSAPP_APP_SECRET", "x")
     from alfred import llm
     from alfred.conversation import _STRINGS
+    from alfred.panel_i18n import SHELL
     from alfred.panel_phrases import CHAT, LABELS, PHRASES
 
     extra = {
@@ -267,6 +268,7 @@ def run() -> tuple[list[Finding], dict]:
     panel = {f"panel.phrase.{k}": v for k, v in PHRASES.items()}
     panel |= {f"panel.chat.{k}": v for k, v in CHAT.items()}
     panel |= {f"panel.label.{k}": v for k, v in LABELS.items()}
+    panel |= {f"panel.shell.{k}": v for k, v in SHELL.items()}  # the fixed texts of the page
     findings = (
         audit_catalogue(_STRINGS)
         + audit_catalogue(extra)
