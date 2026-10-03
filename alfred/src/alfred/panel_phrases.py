@@ -195,6 +195,175 @@ PHRASES: dict[str, dict[str, str]] = {
         "fr": "Personne ne te doit rien pour le moment. Enregistre-le dans le chat quand quelqu'un te doit.",
         "de": "Im Moment schuldet dir niemand etwas. Erfasse es im Chat, sobald jemand dir etwas schuldet.",
     },
+    # ── Rules 13-24 · Agenda, Hábitos, Viagens ───────────────────────────────
+    "agenda_week": {
+        "pt": "{count} compromissos nos próximos 7 dias; {day} é o dia mais cheio, com {top}.",
+        "nl": "{count} afspraken in de komende 7 dagen; {day} is de drukste dag, met {top}.",
+        "en": "{count} appointments in the next 7 days; {day} is the busiest day, with {top}.",
+        "fr": "{count} rendez-vous dans les 7 prochains jours ; {day} est le jour le plus chargé, avec {top}.",
+        "de": "{count} Termine in den nächsten 7 Tagen; {day} ist der vollste Tag, mit {top}.",
+    },
+    "agenda_map": {
+        "pt": "Os compromissos se concentram em {day}: {top} de {count} nas próximas 4 semanas.",
+        "nl": "De afspraken concentreren zich op {day}: {top} van {count} in de komende 4 weken.",
+        "en": "Appointments cluster on {day}: {top} of {count} over the next 4 weeks.",
+        "fr": "Les rendez-vous se concentrent le {day} : {top} sur {count} dans les 4 prochaines semaines.",
+        "de": "Die Termine häufen sich am {day}: {top} von {count} in den nächsten 4 Wochen.",
+    },
+    "tasks_overdue": {
+        "pt": "Tarefas atrasadas: {count}. A mais antiga: {task}, {late}.",
+        "nl": "Achterstallige taken: {count}. De oudste: {task}, {late}.",
+        "en": "Overdue tasks: {count}. The oldest: {task}, {late}.",
+        "fr": "Tâches en retard : {count}. La plus ancienne : {task}, {late}.",
+        "de": "Überfällige Aufgaben: {count}. Die älteste: {task}, {late}.",
+    },
+    "tasks_deadlines": {
+        "pt": "Prazos nos próximos 7 dias: {count}. O primeiro: {task}, {when}.",
+        "nl": "Deadlines in de komende 7 dagen: {count}. De eerste: {task}, {when}.",
+        "en": "Deadlines in the next 7 days: {count}. The first: {task}, {when}.",
+        "fr": "Échéances dans les 7 prochains jours : {count}. La première : {task}, {when}.",
+        "de": "Fristen in den nächsten 7 Tagen: {count}. Die erste: {task}, {when}.",
+    },
+    "water_avg": {
+        "pt": "Nos últimos 7 dias você registrou em média {avg} de água por dia, em {days} dos 7 dias.",
+        "nl": "In de afgelopen 7 dagen legde je gemiddeld {avg} water per dag vast, op {days} van de 7 dagen.",
+        "en": "Over the last 7 days you logged {avg} of water per day on average, on {days} of the 7 days.",
+        "fr": "Sur les 7 derniers jours, tu as enregistré {avg} d'eau par jour en moyenne, sur {days} des 7 jours.",
+        "de": "In den letzten 7 Tagen hast du im Schnitt {avg} Wasser pro Tag erfasst, an {days} von 7 Tagen.",
+    },
+    "sleep_avg": {
+        "pt": "Média de sono nos últimos 14 dias: {avg}, em {nights} noites registradas.",
+        "nl": "Gemiddelde slaap in de afgelopen 14 dagen: {avg}, over {nights} vastgelegde nachten.",
+        "en": "Average sleep over the last 14 days: {avg}, across {nights} logged nights.",
+        "fr": "Sommeil moyen sur les 14 derniers jours : {avg}, sur {nights} nuits enregistrées.",
+        "de": "Durchschnittlicher Schlaf in den letzten 14 Tagen: {avg}, über {nights} erfasste Nächte.",
+    },
+    "mood_avg": {
+        "pt": "Humor médio dos últimos 7 dias: {avg} de 10, em {count} registros.",
+        "nl": "Gemiddelde stemming van de afgelopen 7 dagen: {avg} van 10, uit {count} registraties.",
+        "en": "Average mood over the last 7 days: {avg} out of 10, from {count} logs.",
+        "fr": "Humeur moyenne des 7 derniers jours : {avg} sur 10, d'après {count} enregistrements.",
+        "de": "Durchschnittliche Stimmung der letzten 7 Tage: {avg} von 10, aus {count} Einträgen.",
+    },
+    "med_days": {
+        "pt": "Medicação registrada em {days} dos últimos 7 dias.",
+        "nl": "Medicatie vastgelegd op {days} van de afgelopen 7 dagen.",
+        "en": "Medication logged on {days} of the last 7 days.",
+        "fr": "Médicament enregistré sur {days} des 7 derniers jours.",
+        "de": "Medikamente an {days} der letzten 7 Tage erfasst.",
+    },
+    "workouts_week": {
+        "pt": "{count} nesta semana contra {prev} na semana passada.",
+        "nl": "{count} deze week tegen {prev} vorige week.",
+        "en": "{count} this week against {prev} last week.",
+        "fr": "{count} cette semaine contre {prev} la semaine dernière.",
+        "de": "{count} diese Woche gegenüber {prev} letzte Woche.",
+    },
+    "goals_pace": {
+        "pt": "{title}: {logs} registros nos últimos 7 dias.",
+        "nl": "{title}: {logs} registraties in de afgelopen 7 dagen.",
+        "en": "{title}: {logs} logs in the last 7 days.",
+        "fr": "{title} : {logs} enregistrements sur les 7 derniers jours.",
+        "de": "{title}: {logs} Einträge in den letzten 7 Tagen.",
+    },
+    "trip_budget": {
+        "pt": "{pct}% do orçamento da viagem já foi usado: {spent} de {budget}.",
+        "nl": "{pct}% van het reisbudget is gebruikt: {spent} van {budget}.",
+        "en": "{pct}% of the trip budget is used: {spent} of {budget}.",
+        "fr": "{pct} % du budget du voyage est utilisé : {spent} sur {budget}.",
+        "de": "{pct} % des Reisebudgets sind verbraucht: {spent} von {budget}.",
+    },
+    "trip_spent": {
+        "pt": "Gasto até agora na viagem: {spent}, em {days}.",
+        "nl": "Tot nu toe uitgegeven op de reis: {spent}, in {days}.",
+        "en": "Spent on the trip so far: {spent}, over {days}.",
+        "fr": "Dépensé jusqu'ici pendant le voyage : {spent}, sur {days}.",
+        "de": "Bisher auf der Reise ausgegeben: {spent}, in {days}.",
+    },
+    "trips_history": {
+        "pt": "Entre as {count} últimas viagens com orçamento, dentro do limite: {within}.",
+        "nl": "Van de laatste {count} reizen met budget, binnen de grens: {within}.",
+        "en": "Of the last {count} trips with a budget, within the limit: {within}.",
+        "fr": "Sur les {count} derniers voyages avec budget, dans la limite : {within}.",
+        "de": "Von den letzten {count} Reisen mit Budget im Rahmen geblieben: {within}.",
+    },
+    "empty_agenda": {
+        "pt": "Nenhum compromisso nos próximos dias. Marque um pelo chat e ele aparece aqui.",
+        "nl": "Geen afspraken de komende dagen. Plan er een via de chat en hij verschijnt hier.",
+        "en": "No appointments in the coming days. Book one in the chat and it shows up here.",
+        "fr": "Aucun rendez-vous dans les prochains jours. Ajoutes-en un dans le chat et il apparaît ici.",
+        "de": "Keine Termine in den nächsten Tagen. Lege im Chat einen an, dann erscheint er hier.",
+    },
+    "empty_tasks": {
+        "pt": "Você não tem tarefas em aberto. Anote uma pelo chat.",
+        "nl": "Je hebt geen openstaande taken. Voeg er een toe via de chat.",
+        "en": "You have no open tasks. Add one in the chat.",
+        "fr": "Tu n'as aucune tâche en cours. Ajoutes-en une dans le chat.",
+        "de": "Du hast keine offenen Aufgaben. Lege im Chat eine an.",
+    },
+    "empty_reminders": {
+        "pt": "Nenhum lembrete ativo. Crie um pelo chat, com o horário.",
+        "nl": "Geen actieve herinneringen. Maak er een via de chat, met de tijd.",
+        "en": "No active reminders. Create one in the chat, with the time.",
+        "fr": "Aucun rappel actif. Crée-en un dans le chat, avec l'heure.",
+        "de": "Keine aktiven Erinnerungen. Lege im Chat eine an, mit der Uhrzeit.",
+    },
+    "empty_notes": {
+        "pt": "Você ainda não guardou notas. Guarde uma pelo chat.",
+        "nl": "Je hebt nog geen notities bewaard. Bewaar er een via de chat.",
+        "en": "You have not saved any notes yet. Save one in the chat.",
+        "fr": "Tu n'as pas encore de notes. Enregistres-en une dans le chat.",
+        "de": "Du hast noch keine Notizen gespeichert. Speichere im Chat eine.",
+    },
+    "empty_water": {
+        "pt": "Ainda não há registros de água nos últimos 7 dias. Registre pelo chat.",
+        "nl": "Nog geen waterregistraties in de afgelopen 7 dagen. Leg ze vast in de chat.",
+        "en": "No water logs in the last 7 days yet. Log it in the chat.",
+        "fr": "Pas encore d'enregistrements d'eau sur les 7 derniers jours. Enregistre-les dans le chat.",
+        "de": "Noch keine Wassereinträge in den letzten 7 Tagen. Erfasse sie im Chat.",
+    },
+    "empty_sleep": {
+        "pt": "Ainda não há registros de sono. Registre pelo chat.",
+        "nl": "Nog geen slaapregistraties. Leg ze vast in de chat.",
+        "en": "No sleep logs yet. Log it in the chat.",
+        "fr": "Pas encore d'enregistrements de sommeil. Enregistre-les dans le chat.",
+        "de": "Noch keine Schlafeinträge. Erfasse sie im Chat.",
+    },
+    "empty_mood": {
+        "pt": "Ainda não há registros de humor. Registre pelo chat.",
+        "nl": "Nog geen stemmingsregistraties. Leg ze vast in de chat.",
+        "en": "No mood logs yet. Log it in the chat.",
+        "fr": "Pas encore d'enregistrements d'humeur. Enregistre-les dans le chat.",
+        "de": "Noch keine Stimmungseinträge. Erfasse sie im Chat.",
+    },
+    "empty_medication": {
+        "pt": "Ainda não há registros de medicação. Registre pelo chat.",
+        "nl": "Nog geen medicatieregistraties. Leg ze vast in de chat.",
+        "en": "No medication logs yet. Log it in the chat.",
+        "fr": "Pas encore d'enregistrements de médicaments. Enregistre-les dans le chat.",
+        "de": "Noch keine Medikamenteneinträge. Erfasse sie im Chat.",
+    },
+    "empty_workouts": {
+        "pt": "Nenhum treino registrado nas últimas semanas. Registre pelo chat.",
+        "nl": "Geen trainingen vastgelegd in de afgelopen weken. Leg ze vast in de chat.",
+        "en": "No workouts logged in the last weeks. Log one in the chat.",
+        "fr": "Aucun entraînement enregistré ces dernières semaines. Enregistres-en un dans le chat.",
+        "de": "Keine Workouts in den letzten Wochen erfasst. Erfasse eines im Chat.",
+    },
+    "empty_goals": {
+        "pt": "Você ainda não tem metas ativas. Crie uma pelo chat.",
+        "nl": "Je hebt nog geen actieve doelen. Maak er een via de chat.",
+        "en": "You have no active goals yet. Create one in the chat.",
+        "fr": "Tu n'as pas encore d'objectifs actifs. Crées-en un dans le chat.",
+        "de": "Du hast noch keine aktiven Ziele. Lege im Chat eines an.",
+    },
+    "empty_trips": {
+        "pt": "Nenhuma viagem registrada. Crie uma pelo chat, com o orçamento se quiser.",
+        "nl": "Geen reizen vastgelegd. Maak er een via de chat, desgewenst met budget.",
+        "en": "No trips recorded. Create one in the chat, with a budget if you like.",
+        "fr": "Aucun voyage enregistré. Crées-en un dans le chat, avec un budget si tu veux.",
+        "de": "Keine Reisen erfasst. Lege im Chat eine an, auf Wunsch mit Budget.",
+    },
 }
 
 # Commands the phrases suggest. Every one is deterministic in the chat router (no LLM involved)
@@ -291,6 +460,153 @@ CHAT: dict[str, dict[str, str]] = {
         "fr": '"Marta me doit 34,50"',
         "de": '"Marta schuldet mir 34,50"',
     },
+    "agenda": {
+        "pt": '"minha agenda"',
+        "nl": '"mijn agenda"',
+        "en": '"my agenda"',
+        "fr": '"mon agenda"',
+        "de": '"meine Termine"',
+    },
+    "tasks": {
+        "pt": '"minhas tarefas"',
+        "nl": '"mijn taken"',
+        "en": '"my tasks"',
+        "fr": '"mes tâches"',
+        "de": '"meine Aufgaben"',
+    },
+    "reminders": {
+        "pt": '"meus lembretes"',
+        "nl": '"mijn herinneringen"',
+        "en": '"my reminders"',
+        "fr": '"mes rappels"',
+        "de": '"meine Erinnerungen"',
+    },
+    "goals": {
+        "pt": '"minhas metas"',
+        "nl": '"mijn doelen"',
+        "en": '"my goals"',
+        "fr": '"mes objectifs"',
+        "de": '"meine Ziele"',
+    },
+    "water": {
+        "pt": '"água hoje"',
+        "nl": '"water vandaag"',
+        "en": '"water today"',
+        "fr": '"eau aujourd\'hui"',
+        "de": '"Wasser heute"',
+    },
+    "sleep": {
+        "pt": '"quantas horas dormi"',
+        "nl": '"gemiddelde slaap"',
+        "en": '"average sleep"',
+        "fr": '"sommeil moyen"',
+        "de": '"durchschnittlicher Schlaf"',
+    },
+    "mood": {
+        "pt": '"humor esta semana"',
+        "nl": '"stemming deze week"',
+        "en": '"mood this week"',
+        "fr": '"humeur cette semaine"',
+        "de": '"Stimmung diese Woche"',
+    },
+    "medication": {
+        "pt": '"aderência da medicação"',
+        "nl": '"medicatie bijgehouden"',
+        "en": '"medication adherence"',
+        "fr": '"observance médicament"',
+        "de": '"Medikamenten Einhaltung"',
+    },
+    "workouts": {
+        "pt": '"treinos este mês"',
+        "nl": '"trainingen deze maand"',
+        "en": '"workouts this month"',
+        "fr": '"workouts ce mois"',
+        "de": '"trainings diesen Monat"',
+    },
+    "trips": {
+        "pt": '"minhas viagens"',
+        "nl": '"mijn reizen"',
+        "en": '"my trips"',
+        "fr": '"mes voyages"',
+        "de": '"meine Reisen"',
+    },
+    "add_task": {
+        "pt": '"tarefa: pagar o IPTU"',
+        "nl": '"taak: belasting betalen"',
+        "en": '"task: pay the tax bill"',
+        "fr": '"tâche: payer les impôts"',
+        "de": '"Aufgabe: Steuer bezahlen"',
+    },
+    "add_note": {
+        "pt": '"nota: ideia para o fim de semana"',
+        "nl": '"notitie: idee voor het weekend"',
+        "en": '"note: idea for the weekend"',
+        "fr": '"note: idée pour le week-end"',
+        "de": '"Notiz: Idee fürs Wochenende"',
+    },
+    "add_goal": {
+        "pt": '"meta: treinar 3 vezes por semana"',
+        "nl": '"doel: 3 keer per week sporten"',
+        "en": '"goal: work out 3 times a week"',
+        "fr": '"objectif: sport 3 fois par semaine"',
+        "de": '"Ziel: 3 Mal pro Woche trainieren"',
+    },
+    "add_reminder": {
+        "pt": '"lembrete tomar remédio às 08:00"',
+        "nl": '"herinnering medicijn nemen om 08:00"',
+        "en": '"reminder take medication at 08:00"',
+        "fr": '"rappel prendre le médicament à 08:00"',
+        "de": '"Erinnerung Medikament nehmen um 08:00"',
+    },
+    "add_appointment": {
+        "pt": '"dentista amanhã às 15h"',
+        "nl": '"tandarts morgen om 15:00"',
+        "en": '"dentist tomorrow at 3pm"',
+        "fr": '"dentiste demain à 15h"',
+        "de": '"Zahnarzt morgen um 15 Uhr"',
+    },
+    "log_water": {
+        "pt": '"bebi 0,5 L de água"',
+        "nl": '"dronk 0,5 L water"',
+        "en": '"drank 0.5 L water"',
+        "fr": '"bu 0,5 L d\'eau"',
+        "de": '"0,5 Liter Wasser getrunken"',
+    },
+    "log_sleep": {
+        "pt": '"dormi 7 horas"',
+        "nl": '"sliep 7 uur"',
+        "en": '"slept 7 hours"',
+        "fr": '"j\'ai dormi 7 heures"',
+        "de": '"7 Stunden geschlafen"',
+    },
+    "log_mood": {
+        "pt": '"humor 7"',
+        "nl": '"stemming 7"',
+        "en": '"mood 7"',
+        "fr": '"humeur 7"',
+        "de": '"Stimmung 7"',
+    },
+    "log_medication": {
+        "pt": '"tomei o remédio"',
+        "nl": '"nam mijn medicijn"',
+        "en": '"took my medication"',
+        "fr": '"pris mon médicament"',
+        "de": '"Medikament genommen"',
+    },
+    "log_workout": {
+        "pt": '"corri 5 km em 30 minutos"',
+        "nl": '"5 km gelopen in 30 minuten"',
+        "en": '"ran 5 km in 30 minutes"',
+        "fr": '"couru 5 km en 30 minutes"',
+        "de": '"5 km gelaufen in 30 Minuten"',
+    },
+    "add_trip": {
+        "pt": '"criar viagem Lisboa 900"',
+        "nl": '"reis aanmaken Lissabon 900"',
+        "en": '"create trip Lisbon 900"',
+        "fr": '"créer voyage Lisbonne 900"',
+        "de": '"Reise anlegen Lissabon 900"',
+    },
 }
 
 # Fragments that phrases and API items compose. ``{month}``, ``{days}`` are filled by the caller.
@@ -321,6 +637,21 @@ UNITS: dict[str, dict[str, tuple[str, str]]] = {
         "fr": ("facture", "factures"),
         "de": ("Rechnung", "Rechnungen"),
     },
+    "workout": {
+        "pt": ("treino", "treinos"),
+        "nl": ("training", "trainingen"),
+        "en": ("workout", "workouts"),
+        "fr": ("entraînement", "entraînements"),
+        "de": ("Workout", "Workouts"),
+    },
+}
+
+WEEKDAYS: dict[str, tuple[str, ...]] = {
+    "pt": ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"),
+    "nl": ("maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"),
+    "en": ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
+    "fr": ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"),
+    "de": ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"),
 }
 
 # Words a phrase must never contain: the panel describes the member's own records, it does not
@@ -715,12 +1046,175 @@ RULES: dict[str, Callable[..., Phrase | None]] = {
 }
 
 # Empty-state card kind -> (phrase key, chat key).
+# ── Rules 13-24 · Agenda, Hábitos, Viagens ────────────────────────────────────
+MIN_AGENDA_WEEK = 3
+MIN_AGENDA_MAP = 6
+MIN_WATER_DAYS = 3
+MIN_SLEEP_NIGHTS = 5
+MIN_MOOD_LOGS = 3
+MIN_TRIPS_HISTORY = 2
+
+
+def weekday_word(weekday: int, lang: str) -> str:
+    """Monday is 0. Lower case in pt/nl/fr, capitalised in en/de (as in a sentence)."""
+    return WEEKDAYS[_lang(lang)][weekday % 7]
+
+
+def _unique_peak(counts: dict[int, int]) -> tuple[int, int] | None:
+    """The one key with the highest count, or ``None`` when nothing or two keys tie."""
+    if not counts:
+        return None
+    top = max(counts.values())
+    leaders = [k for k, v in counts.items() if v == top]
+    return (leaders[0], top) if len(leaders) == 1 and top > 0 else None
+
+
+def rule_agenda_week(by_weekday: dict[int, int], lang: str) -> Phrase | None:
+    """Rule 13. Three appointments in the next 7 days and one clearly busiest weekday."""
+    total = sum(by_weekday.values())
+    peak = _unique_peak(by_weekday)
+    if total < MIN_AGENDA_WEEK or peak is None or peak[1] < 2:
+        return None
+    return render(
+        "agenda_week", lang, chat_key="agenda",
+        count=total, day=weekday_word(peak[0], lang), top=peak[1],
+    )  # fmt: skip
+
+
+def rule_agenda_map(by_weekday: dict[int, int], lang: str) -> Phrase | None:
+    """Rule 14. Six appointments in 4 weeks and one weekday that holds the most."""
+    total = sum(by_weekday.values())
+    peak = _unique_peak(by_weekday)
+    if total < MIN_AGENDA_MAP or peak is None or peak[1] < 2:
+        return None
+    return render(
+        "agenda_map", lang, chat_key="agenda",
+        count=total, day=weekday_word(peak[0], lang), top=peak[1],
+    )  # fmt: skip
+
+
+def rule_tasks(
+    overdue: int, oldest: str | None, oldest_days: int,
+    due_week: int, first: str | None, first_days: int, lang: str,
+) -> Phrase | None:  # fmt: skip
+    """Rule 15. Overdue tasks first (attention); else the deadlines of the next 7 days."""
+    if overdue > 0 and oldest:
+        return render(
+            "tasks_overdue", lang, chat_key="tasks", severity="attention",
+            count=overdue, task=oldest, late=due_label(-max(oldest_days, 1), lang),
+        )  # fmt: skip
+    if due_week > 0 and first:
+        return render(
+            "tasks_deadlines", lang, chat_key="tasks",
+            count=due_week, task=first, when=due_label(max(first_days, 0), lang),
+        )  # fmt: skip
+    return None
+
+
+def rule_water(avg_litres: float, days_logged: int, lang: str) -> Phrase | None:
+    """Rule 16. Three days with a water log in the last 7."""
+    if days_logged < MIN_WATER_DAYS or avg_litres <= 0:
+        return None
+    return render(
+        "water_avg", lang, chat_key="water",
+        avg=fmt_litres(avg_litres), days=days_logged,
+    )  # fmt: skip
+
+
+def rule_sleep(avg_hours: float, nights: int, lang: str) -> Phrase | None:
+    """Rule 17. Five logged nights in 14 days. Describes, never judges."""
+    if nights < MIN_SLEEP_NIGHTS or avg_hours <= 0:
+        return None
+    return render(
+        "sleep_avg", lang, chat_key="sleep",
+        avg=fmt_hours(avg_hours), nights=nights,
+    )  # fmt: skip
+
+
+def rule_mood(avg: float, count: int, lang: str) -> Phrase | None:
+    """Rule 18. Three mood logs in 7 days."""
+    if count < MIN_MOOD_LOGS or avg <= 0:
+        return None
+    return render("mood_avg", lang, chat_key="mood", avg=fmt_decimal(avg, 1), count=count)
+
+
+def rule_medication(days_logged: int, lang: str) -> Phrase | None:
+    """Rule 19. Any medication log in the last 7 days; the count of days, nothing more."""
+    if days_logged <= 0:
+        return None
+    return render("med_days", lang, chat_key="medication", days=days_logged)
+
+
+def rule_workouts(this_week: int, last_week: int, lang: str) -> Phrase | None:
+    """Rule 20. Only when there is something to compare with."""
+    if this_week <= 0 and last_week <= 0:
+        return None
+    return render(
+        "workouts_week", lang, chat_key="workouts",
+        count=unit("workout", this_week, lang), prev=last_week,
+    )  # fmt: skip
+
+
+def rule_goal(title: str, logs_7d: int, lang: str) -> Phrase | None:
+    """Rule 21. The goal with the most check-ins in the last 7 days."""
+    if not title or logs_7d <= 0:
+        return None
+    return render("goals_pace", lang, chat_key="goals", title=title, logs=logs_7d)
+
+
+def rule_trip(spent: float, budget: float | None, days: int, lang: str) -> Phrase | None:
+    """Rules 22 and 23. With a budget: the share used ("attention" at 100 %); without: the spend."""
+    if spent <= 0:
+        return None
+    if budget and budget > 0:
+        pct = budget_pct(spent, budget)
+        return render(
+            "trip_budget", lang, chat_key="trips",
+            severity="attention" if pct >= 100 else "info",
+            pct=pct, spent=fmt_eur(spent, lang), budget=fmt_eur(budget, lang),
+        )  # fmt: skip
+    return render(
+        "trip_spent", lang, chat_key="trips",
+        spent=fmt_eur(spent, lang), days=unit("day", max(days, 1), lang),
+    )  # fmt: skip
+
+
+def rule_trips_history(count: int, within: int, lang: str) -> Phrase | None:
+    """Rule 24. At least two past trips that had a budget."""
+    if count < MIN_TRIPS_HISTORY:
+        return None
+    return render("trips_history", lang, chat_key="trips", count=count, within=within)
+
+
+def fmt_decimal(value: float, places: int = 1) -> str:
+    return f"{value:.{places}f}".replace(".", ",")
+
+
+def fmt_litres(value: float) -> str:
+    return f"{fmt_decimal(value, 1)} L"
+
+
+def fmt_hours(value: float) -> str:
+    return f"{fmt_decimal(value, 1)} h"
+
+
 EMPTY: dict[str, tuple[str, str]] = {
     "ledger": ("empty_ledger", "log_expense"),
     "budgets": ("empty_budgets", "set_budget"),
     "upcoming": ("empty_upcoming", "add_recurring"),
     "recurring": ("empty_recurring", "add_recurring"),
     "owed": ("empty_owed", "add_owed"),
+    "agenda": ("empty_agenda", "add_appointment"),
+    "tasks": ("empty_tasks", "add_task"),
+    "reminders": ("empty_reminders", "add_reminder"),
+    "notes": ("empty_notes", "add_note"),
+    "water": ("empty_water", "log_water"),
+    "sleep": ("empty_sleep", "log_sleep"),
+    "mood": ("empty_mood", "log_mood"),
+    "medication": ("empty_medication", "log_medication"),
+    "workouts": ("empty_workouts", "log_workout"),
+    "goals": ("empty_goals", "add_goal"),
+    "trips": ("empty_trips", "add_trip"),
 }
 
 

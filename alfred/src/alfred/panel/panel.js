@@ -44,6 +44,10 @@
   const monthTitle = (ym) => cap1(F_MY.format(day(ym + "-01")));
   const dm = (iso) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
   const dayShort = (iso) => String(Number(iso.slice(8, 10))) + " " + monthShort(iso);
+  const shiftDay = (iso, by) => { const d = day(iso); d.setUTCDate(d.getUTCDate() + by); return d.toISOString().slice(0, 10); };
+  const fmt1 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const fmtL = (v) => fmt1.format(v) + " L";
+  const fmtH = (v) => fmt1.format(v) + " h";
 
   // ── building blocks ──
   function chatIcon() {
@@ -154,6 +158,29 @@
     parent.append(d);
   }
 
+  // Small column chart of {date, value}: one bar per point, the biggest one warm unless ``flat``;
+  // ``max`` fixes the scale (mood is out of 10). Always followed by its own table view.
+  function miniBars(parent, pts, label, max, flat) {
+    const chart = el("div", "daily mini");
+    chart.setAttribute("role", "img");
+    chart.setAttribute("aria-label", label + ": " + pts.map((p) => dm(p.date) + " " + p.value).join(", "));
+    const top = max || Math.max(...pts.map((p) => p.value), 0) || 1;
+    for (const p of pts) {
+      const b = el("i", "");
+      b.style.height = (p.value > 0 ? Math.max(4, (p.value / top) * 100) : 0) + "%";
+      chart.append(b);
+    }
+    parent.append(chart);
+    const axis = el("div", "axis");
+    axis.setAttribute("aria-hidden", "true");
+    if (pts.length) {
+      axis.append(el("span", "", dm(pts[0].date)));
+      const last = el("span", "last", dm(pts[pts.length - 1].date));
+      axis.append(last);
+    }
+    parent.append(axis);
+  }
+
   function phraseBlock(parent, phrase) {
     if (!phrase) return;
     const p = el("div", "phrase", phrase.text);
@@ -196,9 +223,15 @@
     blue_days: "title_blue", owed: "title_owed", transactions: "title_tx", top_expenses: "title_top",
     month_vs_month: "title_mom", fixed_variable: "title_fixed", daily: "title_daily", avg_ticket: "title_avg",
     recurring: "title_recurring",
+    week: "title_week", tasks: "title_tasks", reminders: "title_reminders", month_map: "title_map", notes: "title_notes",
+    water: "title_water", sleep: "title_sleep", mood: "title_mood", medication: "title_med", workouts: "title_workouts",
+    goals: "title_goals", trip: "title_trip",
   };
   const SPANS = {
     summary: { balance: "s7", upcoming: "s5", categories: "s7", budgets: "s5", blue_days: "s6", owed: "s6" },
+    agenda: { week: "s7", tasks: "s5", month_map: "s7", reminders: "s5", notes: "s12" },
+    health: { water: "s5", workouts: "s7", goals: "s7", sleep: "s5", mood: "s6", medication: "s6" },
+    trips: { trip: "s7", trips_past: "s5" },
     money: { transactions: "s7", top_expenses: "s5", month_vs_month: "s7", fixed_variable: "s5", daily: "s12", categories: "s7", avg_ticket: "s5", recurring: "s7", owed: "s5" },
   };
 
@@ -593,6 +626,254 @@
       return c;
     },
 
+    // ── Agenda ──
+    week(card, span, ctx) {
+      const c = cardShell(card, T.title_week, span);
+      const today = ctx.body.today, tomorrow = shiftDay(today, 1);
+      const wd = dtf({ weekday: "long" });
+      for (const d of card.days) {
+        const head = el("div", "day-head");
+        const name = d.date === today ? T.day_today : (d.date === tomorrow ? T.day_tomorrow : cap1(wd.format(day(d.date))));
+        head.append(el("span", "", name), el("span", "", dayShort(d.date)));
+        c.append(head);
+        for (const it of d.items) {
+          const row = el("div", "appt");
+          const body = el("div");
+          body.append(el("div", "t", it.title));
+          if (it.notes) body.append(el("div", "s", it.notes));
+          row.append(el("b", "num", it.time), body);
+          c.append(row);
+        }
+      }
+      if (card.more) c.append(el("div", "cap", fmt(T.more_items, { n: card.more })));
+      const rows = [];
+      for (const d of card.days) for (const it of d.items) rows.push([dm(d.date), it.time, it.title]);
+      tableView(c, rows, { head: [T.th_date, T.th_time, T.th_item], caption: T.title_week });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    tasks(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_tasks, span);
+      const stats = el("div", "stats");
+      for (const [n, label, warm] of [[v.open, T.tasks_open], [v.overdue, T.tasks_overdue_l, v.overdue > 0], [v.due_week, T.tasks_week_l], [v.done_week, T.tasks_done_l]]) {
+        const s = el("div", "stat" + (warm ? " warm" : ""));
+        s.append(el("b", "num", String(n)), el("span", "", label));
+        stats.append(s);
+      }
+      c.append(stats);
+      if (card.items.length) {
+        const list = el("div", "list");
+        for (const it of card.items) {
+          const row = el("div", "item");
+          const body = el("div");
+          body.append(el("div", "t", it.body), el("div", "s", dayShort(it.due)));
+          row.append(body, el("div", "amt" + (it.kind === "overdue" ? " late" : ""), it.kind === "overdue" ? "− " + fmtN("trip_days", it.days) : (it.days === 0 ? T.day_today : (it.days === 1 ? T.day_tomorrow : "+ " + fmtN("trip_days", it.days)))));
+          list.append(row);
+        }
+        c.append(list);
+      }
+      tableView(c, card.items.map((it) => [it.body, dm(it.due)]), { head: [T.th_item, T.th_date], caption: T.title_tasks });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    reminders(card, span) {
+      const c = cardShell(card, T.title_reminders, span);
+      const wd = dtf({ weekday: "short" });
+      const list = el("div", "list");
+      for (const it of card.items) {
+        const row = el("div", "item");
+        const body = el("div");
+        const dayNames = it.every_day ? T.rem_every_day : it.days.map((i) => wd.format(new Date(Date.UTC(2024, 0, 1 + i)))).join(", ");
+        body.append(el("div", "t", it.text || T["rem_kind_" + it.kind] || it.kind), el("div", "s", (it.text ? (T["rem_kind_" + it.kind] || "") + " · " : "") + dayNames));
+        row.append(body, el("div", "amt num", it.time));
+        list.append(row);
+      }
+      c.append(list);
+      tableView(c, card.items.map((it) => [it.text || T["rem_kind_" + it.kind] || it.kind, it.time]), { head: [T.th_item, T.th_time], caption: T.title_reminders });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    month_map(card, span) {
+      const c = cardShell(card, T.title_map, span);
+      const wk = dtf({ weekday: "narrow" });
+      const grid = el("div", "heat");
+      grid.setAttribute("role", "img");
+      const top = Math.max(1, ...card.weeks.flat().map((x) => x.count));
+      grid.setAttribute("aria-label", T.title_map + ": " + card.weeks.flat().filter((x) => x.count).map((x) => dm(x.date) + " " + x.count).join(", "));
+      for (let i = 0; i < 7; i++) grid.append(el("span", "hd", wk.format(new Date(Date.UTC(2024, 0, 1 + i)))));
+      for (const w of card.weeks) for (const d of w) {
+        const cell = el("span", "cell lv" + (d.count ? Math.min(4, Math.ceil((d.count / top) * 4)) : 0) + (d.today ? " today" : "") + (d.past ? " past" : ""), d.count ? String(d.count) : "");
+        cell.title = dm(d.date);
+        grid.append(cell);
+      }
+      c.append(grid, el("div", "cap", T.map_legend));
+      tableView(c, card.weeks.flat().filter((x) => x.count).map((x) => [dm(x.date), String(x.count)]), { head: [T.th_date, T.th_count], caption: T.title_map });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    notes(card, span) {
+      const c = cardShell(card, T.title_notes, span);
+      const list = el("div", "list");
+      for (const it of card.items) {
+        const row = el("div", "item note");
+        const body = el("div");
+        body.append(el("div", "t clamp", it.body), el("div", "s", dayShort(it.date)));
+        row.append(body);
+        list.append(row);
+      }
+      c.append(list);
+      return c;
+    },
+
+    // ── Hábitos ──
+    water(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_water, span);
+      const h = el("div", "hero", fmtL(v.today));
+      c.append(h, el("div", "sub", T.water_today + " · " + fmtL(v.average) + " " + T.water_avg_l));
+      miniBars(c, card.points.map((p) => ({ date: p.date, value: p.litres })), T.title_water);
+      tableView(c, card.points.map((p) => [dm(p.date), fmtL(p.litres)]), { head: [T.th_date, T.title_water], caption: T.title_water });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    sleep(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_sleep, span);
+      c.append(el("div", "hero", fmtH(v.average)), el("div", "sub", T.sleep_avg_l + " · " + T.sleep_last + ": " + fmtH(v.last)));
+      miniBars(c, card.points.map((p) => ({ date: p.date, value: p.hours || 0 })), T.title_sleep);
+      tableView(c, card.points.filter((p) => p.hours !== null).map((p) => [dm(p.date), fmtH(p.hours)]), { head: [T.th_date, T.title_sleep], caption: T.title_sleep });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    mood(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_mood, span);
+      const h = el("div", "hero", fmt1.format(v.average));
+      h.append(el("small", "", " " + T.mood_scale));
+      c.append(h, el("div", "sub", T.mood_avg_l));
+      miniBars(c, card.points.map((p) => ({ date: p.date, value: p.value || 0 })), T.title_mood, 10);
+      tableView(c, card.points.filter((p) => p.value !== null).map((p) => [dm(p.date), fmt1.format(p.value)]), { head: [T.th_date, T.title_mood], caption: T.title_mood });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    medication(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_med, span);
+      const h = el("div", "hero", String(v.days));
+      h.append(el("small", "", " / 7"));
+      c.append(h, el("div", "sub", T.med_days_l));
+      const dots = el("div", "dots");
+      dots.setAttribute("role", "img");
+      dots.setAttribute("aria-label", T.title_med + ": " + v.days + " / 7");
+      for (const p of card.points) dots.append(el("i", p.count > 0 ? "on" : ""));
+      c.append(dots);
+      tableView(c, card.points.map((p) => [dm(p.date), String(p.count)]), { head: [T.th_date, T.th_count], caption: T.title_med });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    workouts(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_workouts, span);
+      c.append(el("div", "hero", String(v.this_week)), el("div", "sub", T.workouts_this + " · " + T.workouts_last + ": " + v.last_week + (v.km_week ? " · " + fmt(T.workouts_km, { km: fmt1.format(v.km_week) }) : "")));
+      miniBars(c, card.weeks.map((w) => ({ date: w.start, value: w.count })), T.workouts_weeks_l, 0, true);
+      if (card.activities.length) {
+        const list = el("div", "list");
+        for (const a of card.activities) {
+          const row = el("div", "item");
+          row.append(el("div", "t", cap1(a.activity)), el("div", "amt", "× " + a.count));
+          list.append(row);
+        }
+        c.append(list);
+      }
+      tableView(c, card.weeks.map((w) => [dm(w.start), String(w.count)]), { head: [T.th_date, T.th_count], caption: T.workouts_weeks_l });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    goals(card, span) {
+      const c = cardShell(card, T.title_goals, span);
+      const rows = el("div", "rows");
+      for (const it of card.items) {
+        const b = el("div", "brow");
+        const h = el("div", "h");
+        h.append(el("span", "n", it.title), el("span", "v", fmt(T.goal_days, { n: Math.min(it.logs_7d, 7) })));
+        b.append(h, track((Math.min(it.logs_7d, 7) / 7) * 100, ""));
+        const sub = [it.target, it.deadline ? fmt(T.goal_until, { date: dayShort(it.deadline) }) : null].filter(Boolean).join(" · ");
+        if (sub) b.append(el("div", "cap", sub));
+        rows.append(b);
+      }
+      c.append(rows);
+      tableView(c, card.items.map((it) => [it.title, String(it.logs_7d), String(it.logs_30d)]), { head: [T.th_item, "7", "30"], caption: T.title_goals });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    // ── Viagens ──
+    trip(card, span) {
+      const t = card.trip, v = card.values;
+      const c = cardShell(card, T.title_trip, span);
+      c.append(el("div", "hero small", t.destination));
+      const when = dayShort(t.start) + (t.end ? " – " + dayShort(t.end) : "");
+      const state = t.state === "active" ? T.trip_state_active : (t.state === "upcoming" ? fmtN("trip_state_upcoming", t.days_to_start) : T.trip_state_ended);
+      c.append(el("div", "sub", when + " · " + state));
+      const tiles = el("div", "tiles three");
+      const tile = (k, val, cls) => { const x = el("div", "tile"); x.append(el("div", "k", k), el("div", "big-num" + (cls ? " " + cls : ""), val)); return x; };
+      if (v.budget !== null) {
+        tiles.append(tile(T.trip_budget_l, money0(v.budget)), tile(T.trip_spent_l, money0(v.spent)), v.remaining >= 0 ? tile(T.trip_left_l, money0(v.remaining)) : tile(T.trip_over_l, money0(-v.remaining), "up"));
+      } else {
+        tiles.append(tile(T.trip_spent_l, money0(v.spent)));
+      }
+      c.append(tiles);
+      if (v.budget !== null) c.append(track(v.pct, v.pct >= 100 ? "warm" : "", true));
+      else c.append(el("div", "cap", T.trip_no_budget));
+      if (card.categories.length) {
+        c.append(el("div", "label sub-label", T.trip_cats));
+        const top = Math.max(1, ...card.categories.map((x) => x.amount));
+        const rows = el("div", "rows");
+        for (const x of card.categories) {
+          const r = el("div", "cat");
+          r.append(el("span", "n", x.label), track((x.amount / top) * 100, "", true), el("span", "v", money0(x.amount)));
+          rows.append(r);
+        }
+        c.append(rows);
+      }
+      if (card.points.length > 1) {
+        c.append(el("div", "label sub-label", T.trip_daily));
+        miniBars(c, card.points.map((p) => ({ date: p.date, value: p.amount })), T.trip_daily);
+      }
+      tableView(c, card.categories.map((x) => [x.label, money(x.amount)]), { head: [T.th_item, T.th_amount], caption: T.title_trip });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    trips_past(card, span) {
+      const c = cardShell(card, T.title_past, span);
+      const list = el("div", "list");
+      for (const it of card.items) {
+        const row = el("div", "item");
+        const body = el("div");
+        body.append(el("div", "t", it.destination), el("div", "s", [dayShort(it.start), fmtN("trip_days", it.days), it.budget !== null ? fmt(T.past_budget_of, { budget: money0(it.budget) }) : null].filter(Boolean).join(" · ")));
+        const right = el("div", "amt");
+        right.append(el("div", "num", money0(it.spent)));
+        if (it.budget !== null) right.append(el("div", "s " + (it.within ? "good" : "up"), it.within ? T.past_within : T.past_over));
+        row.append(body, right);
+        list.append(row);
+      }
+      c.append(list);
+      tableView(c, card.items.map((it) => [it.destination, dm(it.start), money(it.spent)]), { head: [T.th_item, T.th_date, T.th_amount], caption: T.title_past });
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
     recurring(card, span) {
       const c = cardShell(card, T.title_recurring, span);
       c.append(el("div", "sub", fmtN("rec_total", card.values.count, { total: money(card.values.monthly_total) })));
@@ -763,6 +1044,7 @@
         const span = (SPANS[tabId] && SPANS[tabId][card.id]) || "s12";
         grid.append(card.empty ? emptyCard(card, span) : draw(card, span, ctx));
       }
+      if (tabId === "health" && grid.children.length) grid.append(el("p", "cap grid-note", T.health_note));
       panel.replaceChildren(grid.children.length ? grid : el("div", "empty", T.soon));
     } catch (_) {
       if (mine === latest) panel.replaceChildren(el("div", "empty", message || T.error));

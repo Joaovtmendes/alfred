@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import pathlib
 import sys
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time, timedelta
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
@@ -27,17 +27,26 @@ sys.path.insert(0, str(ROOT / "src"))
 from sqlalchemy import delete, select  # noqa: E402
 
 from alfred import panel_tokens  # noqa: E402
-from alfred.clock import day_start  # noqa: E402
+from alfred.clock import day_start, today_local  # noqa: E402
 from alfred.db import AsyncSessionLocal, engine  # noqa: E402
 from alfred.models import (  # noqa: E402
+    Appointment,
     Base,
     Budget,
     Expense,
+    Goal,
+    HabitLog,
+    HealthLog,
     Household,
     Iou,
     Member,
     Message,
+    Note,
     RecurringItem,
+    ScheduledJob,
+    Task,
+    Trip,
+    WorkoutSession,
 )
 from alfred.settings import settings  # noqa: E402
 
@@ -67,7 +76,8 @@ SEPT_ROWS = [
     ("expense", 24.00, "Uber", "transport", "paid", 14),
     ("expense", 41.00, "Restaurante", "restaurant", "paid", 20),
 ]
-EXPECTED_ROWS = len(ROWS) + len(SEPT_ROWS)
+TRIP_ROWS = 6  # two paid entries on each of the three past trips
+EXPECTED_ROWS = len(ROWS) + len(SEPT_ROWS) + TRIP_ROWS
 EXPECTED_BUDGETS = 3
 
 
@@ -90,7 +100,10 @@ async def run() -> str:
         member.consent_state = "pending"
         member.dashboard_v2 = True
         await s.flush()
-        for model in (Expense, Budget, RecurringItem, Iou):
+        for model in (
+            HabitLog, Goal, HealthLog, WorkoutSession, Appointment, Task, Note, ScheduledJob,
+            Expense, Trip, Budget, RecurringItem, Iou,
+        ):  # fmt: skip
             await s.execute(delete(model).where(model.member_id == member.id))
         for month, rows in ((10, ROWS), (9, SEPT_ROWS)):
             for kind, amount, merchant, category, status, day in rows:
@@ -150,11 +163,210 @@ async def run() -> str:
                 created_at=datetime(2026, 10, 1, 12, tzinfo=UTC),
             )
         )
+        await _seed_life(s, member)
         await panel_tokens.ensure_panel_token(s, member)
         await s.commit()
         token = str(member.dashboard_token)
     await engine.dispose()
     return token
+
+
+async def _seed_life(s, member) -> None:
+    """Agenda, habits and trips, dated from today (these cards look at the days around it)."""
+    today = today_local()
+    tz = day_start(today).tzinfo
+
+    def at(day: date, hour: int, minute: int = 0) -> datetime:
+        return datetime.combine(day, time(hour, minute), tzinfo=tz)
+
+    mid, hid = member.id, member.household_id
+    for offset, hour, minute, title, notes in (
+        (0, 10, 0, "Dentista", "Rua das Flores 12"),
+        (0, 15, 30, "Ligar para o contador", None),
+        (1, 9, 0, "Reunião de planejamento", "online"),
+        (1, 19, 0, "Jantar com Marta", "Foodhallen"),
+        (2, 11, 0, "Corrida longa", None),
+        (4, 9, 30, "Revisão do carro", None),
+        (9, 14, 0, "Dentista (retorno)", None),
+        (15, 10, 0, "Contador", None),
+        (16, 18, 30, "Aniversário da Marta", None),
+        (22, 9, 0, "Reunião de planejamento", None),
+    ):
+        s.add(
+            Appointment(
+                member_id=mid,
+                household_id=hid,
+                title=title,
+                notes=notes,
+                starts_at=at(today + timedelta(days=offset), hour, minute),
+            )
+        )
+    for body, due in (
+        ("Renovar o passaporte", today - timedelta(days=6)),
+        ("Pagar IPTU", today + timedelta(days=2)),
+        ("Enviar relatório", today + timedelta(days=3)),
+        ("Marcar revisão do carro", today + timedelta(days=5)),
+        ("Comprar presente", today + timedelta(days=12)),
+        ("Organizar documentos", None),
+    ):
+        s.add(Task(member_id=mid, body=body, due_date=due))
+    s.add(
+        Task(
+            member_id=mid,
+            body="Fazer o imposto",
+            due_date=today - timedelta(days=3),
+            done_at=datetime.now(UTC),
+        )
+    )
+    for kind, hhmm, mask, text in (
+        ("medication_reminder", "08:00", 127, "Tomar o remédio"),
+        ("workout_reminder", "11:00", 32, None),
+        ("goal_checkin", "20:00", 127, "Meditar"),
+    ):
+        s.add(
+            ScheduledJob(
+                member_id=mid,
+                job_type=kind,
+                time_of_day=hhmm,
+                days_mask=mask,
+                payload={"text": text} if text else None,
+            )
+        )
+    s.add(
+        Note(
+            member_id=mid,
+            body="Ideia: jantar de aniversário no Foodhallen, reservar para 8 pessoas.",
+        )
+    )
+    s.add(Note(member_id=mid, body="Perguntar ao contador sobre a declaração do ano passado."))
+    for i, litres in enumerate((1.4, 2.0, 1.2, 1.8, 2.2, 0.0, 1.6)):
+        if litres:
+            s.add(
+                HealthLog(
+                    member_id=mid,
+                    log_type="water",
+                    value=str(litres),
+                    unit="L",
+                    log_date=today - timedelta(days=i),
+                )
+            )
+    for i, hours in enumerate((7.2, 6.5, 7.8, 6.0, 7.5, 8.0, 6.8, 7.1, 7.4)):
+        s.add(
+            HealthLog(
+                member_id=mid,
+                log_type="sleep",
+                value=str(hours),
+                unit="hours",
+                log_date=today - timedelta(days=i + 1),
+            )
+        )
+    for i, mood in enumerate((8, 6, 7, 7, 9)):
+        s.add(
+            HealthLog(
+                member_id=mid,
+                log_type="mood",
+                value=str(mood),
+                unit="/10",
+                log_date=today - timedelta(days=i),
+            )
+        )
+    for i in (0, 1, 2, 4, 5):
+        s.add(
+            HealthLog(
+                member_id=mid,
+                log_type="medication",
+                value="remédio",
+                log_date=today - timedelta(days=i),
+            )
+        )
+    for days_ago, kind, km, minutes in (
+        (0, "strength", None, 50),
+        (2, "running", 5.0, 30),
+        (7, "strength", None, 45),
+        (9, "running", 8.0, 55),
+        (14, "strength", None, 50),
+    ):
+        s.add(
+            WorkoutSession(
+                member_id=mid,
+                activity_type=kind,
+                distance_km=km,
+                duration_minutes=minutes,
+                workout_date=today - timedelta(days=days_ago),
+            )
+        )
+    meditar = Goal(member_id=mid, title="Meditar", target_value="7", target_unit="por semana")
+    walk = Goal(
+        member_id=mid, title="Caminhar 8.000 passos", target_value="7", target_unit="por semana"
+    )
+    gym = Goal(
+        member_id=mid,
+        title="12 treinos no mês",
+        target_value="12",
+        target_unit="no mês",
+        deadline=date(today.year, today.month, 28),
+    )
+    s.add_all([meditar, walk, gym])
+    await s.flush()  # the goals need their ids for the check-ins
+    for i in (0, 1, 2, 4, 5):
+        s.add(
+            HabitLog(
+                member_id=mid,
+                goal_id=meditar.id,
+                activity="meditei",
+                log_date=today - timedelta(days=i),
+            )
+        )
+    for i in (0, 2, 3, 6):
+        s.add(
+            HabitLog(
+                member_id=mid,
+                goal_id=walk.id,
+                activity="caminhei",
+                log_date=today - timedelta(days=i),
+            )
+        )
+    for i in (0, 2):
+        s.add(
+            HabitLog(
+                member_id=mid, goal_id=gym.id, activity="treino", log_date=today - timedelta(days=i)
+            )
+        )
+    spent_on = {
+        "Paris": ((300, "reizen"), (180, "restaurant")),
+        "Berlim": ((350, "reizen"), (260, "restaurant")),
+        "Rio de Janeiro": ((1400, "reizen"), (940, "restaurant")),
+    }
+    for destination, start, days, budget in (
+        ("Lisboa", today + timedelta(days=41), 5, 900),
+        ("Paris", date(2026, 6, 12), 3, 500),
+        ("Berlim", date(2026, 3, 6), 4, 550),
+        ("Rio de Janeiro", date(2025, 12, 10), 14, 2500),
+    ):
+        trip = Trip(
+            member_id=mid,
+            destination=destination,
+            started_at=start,
+            ended_at=start + timedelta(days=days - 1),
+            budget=budget,
+            active=False,
+        )
+        s.add(trip)
+        await s.flush()
+        for n, (amount, category) in enumerate(spent_on.get(destination, ())):
+            s.add(
+                Expense(
+                    member_id=mid,
+                    household_id=hid,
+                    transaction_type="expense",
+                    amount=amount,
+                    merchant=destination,
+                    category=category,
+                    status="paid",
+                    trip_id=trip.id,
+                    expense_date=at(start + timedelta(days=n), 12),
+                )
+            )
 
 
 async def purge() -> None:

@@ -81,6 +81,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred import panel_calc as pc
 from alfred import panel_phrases as pp
+from alfred import panel_tabs as pt
 from alfred.audit import audit
 from alfred.clock import today_local
 from alfred.dashboard import _get_member
@@ -842,7 +843,16 @@ async def health(
     audit(session, "panel_health_opened", member.id)
     # get_session also commits on exit, but the audit row must not depend on that ordering.
     await session.commit()
-    return _envelope("health", member, f, [])
+    ctx = _Ctx(session, member, f, today_local())
+    cards = [
+        await pt.water_card(ctx),
+        await pt.workouts_card(ctx),
+        await pt.goals_card(ctx),
+        await pt.sleep_card(ctx),
+        await pt.mood_card(ctx),
+        await pt.medication_card(ctx),
+    ]
+    return _envelope("health", member, f, cards, ctx.today)
 
 
 @router.get(
@@ -852,7 +862,15 @@ async def agenda(
     token: str, request: Request, session: AsyncSession = Depends(get_session)
 ) -> JSONResponse:
     member, f = await _open(token, request, session)
-    return _envelope("agenda", member, f, [])
+    ctx = _Ctx(session, member, f, today_local())
+    cards = [
+        await pt.week_card(ctx),
+        await pt.tasks_card(ctx),
+        await pt.month_map_card(ctx),
+        await pt.reminders_card(ctx),
+        await pt.notes_card(ctx),
+    ]
+    return _envelope("agenda", member, f, cards, ctx.today)
 
 
 @router.get(
@@ -862,4 +880,9 @@ async def trips(
     token: str, request: Request, session: AsyncSession = Depends(get_session)
 ) -> JSONResponse:
     member, f = await _open(token, request, session)
-    return _envelope("trips", member, f, [])
+    ctx = _Ctx(session, member, f, today_local())
+    cards = [await pt.trip_card(ctx)]
+    past = await pt.trips_past_card(ctx)
+    if not past["empty"]:  # a card of "other trips" with no other trip would only be noise
+        cards.append(past)
+    return _envelope("trips", member, f, cards, ctx.today)

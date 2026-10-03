@@ -136,6 +136,19 @@ def _all_phrases(lang: str) -> list[pp.Phrase]:
         pp.rule_mom_driver("Restaurantes", 52, 55, lang),
         pp.rule_fixed_variable(1238, 760, lang),
         pp.rule_busiest_day(date(2026, 10, 18), 230, 8, 14, 23, lang),
+        pp.rule_agenda_week({0: 1, 2: 3, 4: 1}, lang),
+        pp.rule_agenda_map({1: 3, 3: 2, 5: 1}, lang),
+        pp.rule_tasks(2, "Pagar IPTU", 3, 0, None, 0, lang),
+        pp.rule_tasks(0, None, 0, 3, "Enviar relatório", 2, lang),
+        pp.rule_water(1.6, 5, lang),
+        pp.rule_sleep(7.2, 9, lang),
+        pp.rule_mood(7.4, 5, lang),
+        pp.rule_medication(6, lang),
+        pp.rule_workouts(3, 2, lang),
+        pp.rule_goal("Meditar", 5, lang),
+        pp.rule_trip(540, 900, 5, lang),
+        pp.rule_trip(540, None, 5, lang),
+        pp.rule_trips_history(3, 2, lang),
     ]
     assert all(out), out
     out += [pp.empty_hint(k, lang) for k in pp.EMPTY]
@@ -291,6 +304,13 @@ def test_singular_plural_and_due_labels() -> None:
 # The chat commands the panel suggests must be understood by the router (no LLM). The only
 # ones that go to the LLM path are balance_projection and log_expense.
 _RUN_ORDER = ("add_recurring", "add_owed", "set_budget")
+_TAB_COMMANDS = (
+    "agenda", "tasks", "reminders", "goals", "water", "sleep", "mood", "medication", "workouts",
+    "trips", "add_task", "add_note", "add_goal", "add_reminder",
+)  # fmt: skip
+# Not in the list: the health logs (water, sleep, mood, medication, workouts), appointments and
+# trips are free-form sentences that the LLM extracts; the router has no fixed command for them.
+_LLM_PATH: set[tuple[str, str]] = set()
 
 
 @db
@@ -303,6 +323,13 @@ async def test_suggested_chat_commands_are_understood_by_the_router(lab, lang) -
         assert reply != "[llm]", (key, lang, reply)
     for key in ("budget", "mom", "blue_days", "entries", "top", "fixed", "upcoming", "owed"):
         command = pp.CHAT[key][lang].strip('"').format(**sample)
+        reply = await lab.say(command)
+        assert reply != "[llm]", (key, lang, command, reply)
+    # Agenda, Hábitos and Viagens: queries and the "create it" sentences of the empty states.
+    for key in _TAB_COMMANDS:
+        if (key, lang) in _LLM_PATH:
+            continue
+        command = pp.CHAT[key][lang].strip('"')
         reply = await lab.say(command)
         assert reply != "[llm]", (key, lang, command, reply)
 

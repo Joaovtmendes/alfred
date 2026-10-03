@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import pathlib
 import re
 import uuid
 
@@ -742,5 +743,83 @@ async def test_the_euro_sign_never_separates_from_its_number_or_its_sign() -> No
         assert "€ " in raw and "€ " not in raw
         for t in await page.locator("#panel [data-card]").all_inner_texts():
             assert "− € " not in t and "+ € " not in t
+    finally:
+        await _close(pwm, browser)
+
+
+# ── Agenda, Hábitos and Viagens (payloads captured from the real API on the demo member) ──────
+
+_TABS_FX = json.loads((pathlib.Path(__file__).parent / "panel_tabs_fixture.json").read_text())
+
+
+def _tab_handlers():
+    async def mk(tab):
+        return 200, _TABS_FX[tab]
+
+    async def a():
+        return await mk("agenda")
+
+    async def h():
+        return await mk("health")
+
+    async def t():
+        return await mk("trips")
+
+    return {**_handlers(), "agenda": a, "health": h, "trips": t}
+
+
+@pytest.mark.parametrize(
+    ("tab", "cards"),
+    [
+        ("agenda", ["week", "tasks", "month_map", "reminders", "notes"]),
+        ("health", ["water", "workouts", "goals", "sleep", "mood", "medication"]),
+        ("trips", ["trip", "trips_past"]),
+    ],
+)
+async def test_the_three_new_tabs_draw_every_card_without_breaking_the_page(tab, cards) -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click(f'[data-tab="{tab}"]')
+        await page.wait_for_selector("#panel [data-card]")
+        ids = await page.eval_on_selector_all(
+            "#panel [data-card]", "els => els.map(e => e.dataset.card)"
+        )
+        assert ids == cards
+        for c in cards:  # each one is a table view away from its numbers
+            assert await page.locator(f"[data-card={c}]").count() == 1
+        assert await page.evaluate(
+            "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
+        )
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_agenda_names_today_and_tomorrow_and_flags_overdue_tasks() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click('[data-tab="agenda"]')
+        await page.wait_for_selector("[data-card=week]")
+        heads = await page.locator("[data-card=week] .day-head").all_inner_texts()
+        assert heads[0].lower().startswith("hoje") and heads[1].lower().startswith("amanhã")
+        assert await page.locator("[data-card=week] .appt").count() >= 4
+        assert await page.locator("[data-card=tasks] .stat.warm").count() == 1
+        assert await page.locator("[data-card=tasks] .amt.late").count() == 1
+        assert await page.locator("[data-card=month_map] .cell").count() == 28
+        assert await page.locator("[data-card=month_map] .cell.today").count() == 1
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_trips_show_budget_tiles_and_the_health_tab_says_it_is_not_medical_advice() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click('[data-tab="trips"]')
+        await page.wait_for_selector("[data-card=trip]")
+        assert await page.locator("[data-card=trip] .tile").count() == 3
+        assert "Lisboa" in await _text(page, "[data-card=trip] .hero")
+        assert await page.locator("[data-card=trips_past] .item").count() == 3
+        await page.click('[data-tab="health"]')
+        await page.wait_for_selector("[data-card=water]")
+        assert "conselho médico" in await _text(page, "#panel .grid-note")
     finally:
         await _close(pwm, browser)

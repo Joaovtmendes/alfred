@@ -1,0 +1,768 @@
+{
+ "agenda": {
+  "tab": "agenda",
+  "lang": "pt",
+  "today": "2026-10-03",
+  "filter": {
+   "start": "2026-10-01",
+   "end": "2026-11-01",
+   "categories": [],
+   "kind": null,
+   "states": [],
+   "trip": null
+  },
+  "cards": [
+   {
+    "id": "week",
+    "empty": false,
+    "values": {
+     "count": 6,
+     "days": 4
+    },
+    "days": [
+     {
+      "date": "2026-10-03",
+      "weekday": 5,
+      "items": [
+       {
+        "time": "10:00",
+        "title": "Dentista",
+        "notes": "Rua das Flores 12"
+       },
+       {
+        "time": "15:30",
+        "title": "Ligar para o contador",
+        "notes": null
+       }
+      ]
+     },
+     {
+      "date": "2026-10-04",
+      "weekday": 6,
+      "items": [
+       {
+        "time": "09:00",
+        "title": "Reunião de planejamento",
+        "notes": "online"
+       },
+       {
+        "time": "19:00",
+        "title": "Jantar com Marta",
+        "notes": "Foodhallen"
+       }
+      ]
+     },
+     {
+      "date": "2026-10-05",
+      "weekday": 0,
+      "items": [
+       {
+        "time": "11:00",
+        "title": "Corrida longa",
+        "notes": null
+       }
+      ]
+     },
+     {
+      "date": "2026-10-07",
+      "weekday": 2,
+      "items": [
+       {
+        "time": "09:30",
+        "title": "Revisão do carro",
+        "notes": null
+       }
+      ]
+     }
+    ],
+    "more": 0,
+    "phrase": null
+   },
+   {
+    "id": "tasks",
+    "empty": false,
+    "values": {
+     "open": 6,
+     "overdue": 1,
+     "due_week": 3,
+     "no_due": 1,
+     "done_week": 1
+    },
+    "items": [
+     {
+      "body": "Renovar o passaporte",
+      "due": "2026-09-27",
+      "days": 6,
+      "kind": "overdue"
+     },
+     {
+      "body": "Pagar IPTU",
+      "due": "2026-10-05",
+      "days": 2,
+      "kind": "due"
+     },
+     {
+      "body": "Enviar relatório",
+      "due": "2026-10-06",
+      "days": 3,
+      "kind": "due"
+     },
+     {
+      "body": "Marcar revisão do carro",
+      "due": "2026-10-08",
+      "days": 5,
+      "kind": "due"
+     }
+    ],
+    "phrase": {
+     "key": "tasks_overdue",
+     "text": "Tarefas atrasadas: 1. A mais antiga: Renovar o passaporte, atrasada há 6 dias.",
+     "chat": "\"minhas tarefas\"",
+     "severity": "attention"
+    }
+   },
+   {
+    "id": "month_map",
+    "empty": false,
+    "values": {
+     "count": 10,
+     "peak": 6
+    },
+    "weeks": [
+     [
+      {
+       "date": "2026-09-28",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-09-29",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-09-30",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-10-01",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-10-02",
+       "count": 0,
+       "today": false,
+       "past": true
+      },
+      {
+       "date": "2026-10-03",
+       "count": 2,
+       "today": true,
+       "past": false
+      },
+      {
+       "date": "2026-10-04",
+       "count": 2,
+       "today": false,
+       "past": false
+      }
+     ],
+     [
+      {
+       "date": "2026-10-05",
+       "count": 1,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-06",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-07",
+       "count": 1,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-08",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-09",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-10",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-11",
+       "count": 0,
+       "today": false,
+       "past": false
+      }
+     ],
+     [
+      {
+       "date": "2026-10-12",
+       "count": 1,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-13",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-14",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-15",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-16",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-17",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-18",
+       "count": 1,
+       "today": false,
+       "past": false
+      }
+     ],
+     [
+      {
+       "date": "2026-10-19",
+       "count": 1,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-20",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-21",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-22",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-23",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-24",
+       "count": 0,
+       "today": false,
+       "past": false
+      },
+      {
+       "date": "2026-10-25",
+       "count": 1,
+       "today": false,
+       "past": false
+      }
+     ]
+    ],
+    "phrase": {
+     "key": "agenda_map",
+     "text": "Os compromissos se concentram em domingo: 4 de 10 nas próximas 4 semanas.",
+     "chat": "\"minha agenda\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "reminders",
+    "empty": false,
+    "values": {
+     "count": 3
+    },
+    "items": [
+     {
+      "kind": "medication_reminder",
+      "text": "Tomar o remédio",
+      "time": "08:00",
+      "days": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "every_day": true
+     },
+     {
+      "kind": "workout_reminder",
+      "text": null,
+      "time": "11:00",
+      "days": [
+       5
+      ],
+      "every_day": false
+     },
+     {
+      "kind": "goal_checkin",
+      "text": "Meditar",
+      "time": "20:00",
+      "days": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "every_day": true
+     }
+    ],
+    "phrase": null
+   },
+   {
+    "id": "notes",
+    "empty": false,
+    "values": {
+     "count": 2
+    },
+    "items": [
+     {
+      "date": "2026-10-03",
+      "body": "Ideia: jantar de aniversário no Foodhallen, reservar para 8 pessoas."
+     },
+     {
+      "date": "2026-10-03",
+      "body": "Perguntar ao contador sobre a declaração do ano passado."
+     }
+    ],
+    "phrase": null
+   }
+  ]
+ },
+ "health": {
+  "tab": "health",
+  "lang": "pt",
+  "today": "2026-10-03",
+  "filter": {
+   "start": "2026-10-01",
+   "end": "2026-11-01",
+   "categories": [],
+   "kind": null,
+   "states": [],
+   "trip": null
+  },
+  "cards": [
+   {
+    "id": "water",
+    "empty": false,
+    "values": {
+     "today": 1.4,
+     "average": 1.7,
+     "days": 6
+    },
+    "points": [
+     {
+      "date": "2026-09-27",
+      "litres": 1.6
+     },
+     {
+      "date": "2026-09-28",
+      "litres": 0.0
+     },
+     {
+      "date": "2026-09-29",
+      "litres": 2.2
+     },
+     {
+      "date": "2026-09-30",
+      "litres": 1.8
+     },
+     {
+      "date": "2026-10-01",
+      "litres": 1.2
+     },
+     {
+      "date": "2026-10-02",
+      "litres": 2.0
+     },
+     {
+      "date": "2026-10-03",
+      "litres": 1.4
+     }
+    ],
+    "phrase": {
+     "key": "water_avg",
+     "text": "Nos últimos 7 dias você registrou em média 1,7 L de água por dia, em 6 dos 7 dias.",
+     "chat": "\"água hoje\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "workouts",
+    "empty": false,
+    "values": {
+     "this_week": 2,
+     "last_week": 2,
+     "km_week": 5.0,
+     "minutes_week": 80
+    },
+    "weeks": [
+     {
+      "start": "2026-09-07",
+      "count": 0
+     },
+     {
+      "start": "2026-09-14",
+      "count": 1
+     },
+     {
+      "start": "2026-09-21",
+      "count": 2
+     },
+     {
+      "start": "2026-09-28",
+      "count": 2
+     }
+    ],
+    "activities": [
+     {
+      "activity": "strength",
+      "count": 1
+     },
+     {
+      "activity": "running",
+      "count": 1
+     }
+    ],
+    "phrase": {
+     "key": "workouts_week",
+     "text": "2 treinos nesta semana contra 2 na semana passada.",
+     "chat": "\"treinos este mês\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "goals",
+    "empty": false,
+    "values": {
+     "count": 3
+    },
+    "items": [
+     {
+      "title": "Meditar",
+      "target": "7 por semana",
+      "deadline": null,
+      "logs_7d": 5,
+      "logs_30d": 5
+     },
+     {
+      "title": "Caminhar 8.000 passos",
+      "target": "7 por semana",
+      "deadline": null,
+      "logs_7d": 4,
+      "logs_30d": 4
+     },
+     {
+      "title": "12 treinos no mês",
+      "target": "12 no mês",
+      "deadline": "2026-10-28",
+      "logs_7d": 2,
+      "logs_30d": 2
+     }
+    ],
+    "phrase": {
+     "key": "goals_pace",
+     "text": "Meditar: 5 registros nos últimos 7 dias.",
+     "chat": "\"minhas metas\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "sleep",
+    "empty": false,
+    "values": {
+     "average": 7.14,
+     "nights": 9,
+     "last": 7.2
+    },
+    "points": [
+     {
+      "date": "2026-09-20",
+      "hours": null
+     },
+     {
+      "date": "2026-09-21",
+      "hours": null
+     },
+     {
+      "date": "2026-09-22",
+      "hours": null
+     },
+     {
+      "date": "2026-09-23",
+      "hours": null
+     },
+     {
+      "date": "2026-09-24",
+      "hours": 7.4
+     },
+     {
+      "date": "2026-09-25",
+      "hours": 7.1
+     },
+     {
+      "date": "2026-09-26",
+      "hours": 6.8
+     },
+     {
+      "date": "2026-09-27",
+      "hours": 8.0
+     },
+     {
+      "date": "2026-09-28",
+      "hours": 7.5
+     },
+     {
+      "date": "2026-09-29",
+      "hours": 6.0
+     },
+     {
+      "date": "2026-09-30",
+      "hours": 7.8
+     },
+     {
+      "date": "2026-10-01",
+      "hours": 6.5
+     },
+     {
+      "date": "2026-10-02",
+      "hours": 7.2
+     },
+     {
+      "date": "2026-10-03",
+      "hours": null
+     }
+    ],
+    "phrase": {
+     "key": "sleep_avg",
+     "text": "Média de sono nos últimos 14 dias: 7,1 h, em 9 noites registradas.",
+     "chat": "\"quantas horas dormi\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "mood",
+    "empty": false,
+    "values": {
+     "average": 7.4,
+     "count": 5,
+     "last": 8.0
+    },
+    "points": [
+     {
+      "date": "2026-09-27",
+      "value": null
+     },
+     {
+      "date": "2026-09-28",
+      "value": null
+     },
+     {
+      "date": "2026-09-29",
+      "value": 9.0
+     },
+     {
+      "date": "2026-09-30",
+      "value": 7.0
+     },
+     {
+      "date": "2026-10-01",
+      "value": 7.0
+     },
+     {
+      "date": "2026-10-02",
+      "value": 6.0
+     },
+     {
+      "date": "2026-10-03",
+      "value": 8.0
+     }
+    ],
+    "phrase": {
+     "key": "mood_avg",
+     "text": "Humor médio dos últimos 7 dias: 7,4 de 10, em 5 registros.",
+     "chat": "\"humor esta semana\"",
+     "severity": "info"
+    }
+   },
+   {
+    "id": "medication",
+    "empty": false,
+    "values": {
+     "days": 5,
+     "today": 1
+    },
+    "points": [
+     {
+      "date": "2026-09-27",
+      "count": 0
+     },
+     {
+      "date": "2026-09-28",
+      "count": 1
+     },
+     {
+      "date": "2026-09-29",
+      "count": 1
+     },
+     {
+      "date": "2026-09-30",
+      "count": 0
+     },
+     {
+      "date": "2026-10-01",
+      "count": 1
+     },
+     {
+      "date": "2026-10-02",
+      "count": 1
+     },
+     {
+      "date": "2026-10-03",
+      "count": 1
+     }
+    ],
+    "phrase": {
+     "key": "med_days",
+     "text": "Medicação registrada em 5 dos últimos 7 dias.",
+     "chat": "\"aderência da medicação\"",
+     "severity": "info"
+    }
+   }
+  ]
+ },
+ "trips": {
+  "tab": "trips",
+  "lang": "pt",
+  "today": "2026-10-03",
+  "filter": {
+   "start": "2026-10-01",
+   "end": "2026-11-01",
+   "categories": [],
+   "kind": null,
+   "states": [],
+   "trip": null
+  },
+  "cards": [
+   {
+    "id": "trip",
+    "empty": false,
+    "values": {
+     "budget": 900.0,
+     "spent": 0.0,
+     "remaining": 900.0,
+     "pct": 0,
+     "days": 0,
+     "planned_days": 5
+    },
+    "trip": {
+     "destination": "Lisboa",
+     "start": "2026-11-13",
+     "end": "2026-11-17",
+     "state": "upcoming",
+     "days_to_start": 41
+    },
+    "categories": [],
+    "points": [],
+    "phrase": null
+   },
+   {
+    "id": "trips_past",
+    "empty": false,
+    "values": {
+     "count": 3,
+     "with_budget": 3,
+     "within": 2
+    },
+    "items": [
+     {
+      "destination": "Paris",
+      "start": "2026-06-12",
+      "end": "2026-06-14",
+      "days": 3,
+      "spent": 480.0,
+      "budget": 500.0,
+      "within": true
+     },
+     {
+      "destination": "Berlim",
+      "start": "2026-03-06",
+      "end": "2026-03-09",
+      "days": 4,
+      "spent": 610.0,
+      "budget": 550.0,
+      "within": false
+     },
+     {
+      "destination": "Rio de Janeiro",
+      "start": "2025-12-10",
+      "end": "2025-12-23",
+      "days": 14,
+      "spent": 2340.0,
+      "budget": 2500.0,
+      "within": true
+     }
+    ],
+    "phrase": {
+     "key": "trips_history",
+     "text": "Entre as 3 últimas viagens com orçamento, dentro do limite: 2.",
+     "chat": "\"minhas viagens\"",
+     "severity": "info"
+    }
+   }
+  ]
+ }
+}
