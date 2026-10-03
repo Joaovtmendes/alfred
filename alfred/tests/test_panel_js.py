@@ -499,6 +499,19 @@ async def test_a_tampered_address_is_dropped_before_it_reaches_the_server() -> N
         await _close(pwm, browser)
 
 
+@pytest.mark.parametrize("month", ["2099-01", "1999-12", "0001-01"])
+async def test_a_month_the_server_would_ignore_is_not_shown_as_selected(month) -> None:
+    """The server only answers 2000 .. next year; anything else would show the current month's
+    numbers under another month's title, so the address is dropped before it is read."""
+    pwm, browser, page = await _open(_handlers(), query=f"?month={month}")
+    try:
+        await page.wait_for_selector("[data-card=owed]")
+        assert page.api_calls[0][1].endswith("/summary")
+        await page.wait_for_selector(".pill.month .cur:has-text('Outubro de 2026')")
+    finally:
+        await _close(pwm, browser)
+
+
 async def test_month_arrows_stop_at_the_current_month() -> None:
     pwm, browser, page = await _open(_handlers())
     try:

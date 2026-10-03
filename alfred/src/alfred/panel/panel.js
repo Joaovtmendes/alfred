@@ -610,7 +610,9 @@
 
   function readFilters() {
     const p = new URLSearchParams(location.search);
-    const month = MONTH_RE.test(p.get("month") || "") ? p.get("month") : "";
+    // the server answers 2000 .. next year only: anything else would label current data wrongly
+    const m = p.get("month") || "", y = Number(m.slice(0, 4));
+    const month = MONTH_RE.test(m) && y >= 2000 && y <= Number(cfg.today.slice(0, 4)) + 1 ? m : "";
     const cats = (p.get("categories") || "").split(",").filter((x) => CAT_IDS.includes(x));
     const kind = KINDS.includes(p.get("kind")) ? p.get("kind") : "";
     const st = (p.get("state") || "").split(",").filter((x) => STATES.includes(x));
