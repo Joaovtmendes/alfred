@@ -510,6 +510,83 @@ def bloco_l(run_id, delay):
     send_tap("L11 toque com id lixo → silêncio (sem resposta)", "lixo", run_id, delay)
 
 
+def bloco_n(run_id, delay):
+    """V2-35 + painel — preenche todos os cartões: treino com cargas, roteiro, mala, orçamento.
+
+    O plano de treino só grava depois de tocar [Confirmar] no rascunho (o botão tem o id do
+    rascunho, que só o WhatsApp conhece): o script envia o rascunho e PARA 20 s para o J tocar.
+    """
+    from datetime import date, timedelta
+
+    print("\n══ Bloco N — Painel completo (treino, roteiro, mala, orçamento) ══")
+    hoje = date.today()
+    fim = min(
+        hoje + timedelta(days=6),
+        (hoje.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1),
+    )
+    meses = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto",
+             "setembro", "outubro", "novembro", "dezembro"]  # fmt: skip
+
+    send("N00 fechar viagem anterior", "voltei", run_id, delay)
+    send(
+        "N01 viagem ativa",
+        f"criar viagem Lisboa €900 de {hoje.day} a {fim.day} de {meses[hoje.month - 1]}",
+        run_id,
+        delay,
+    )
+    send("N02 confirmar", "sim", run_id, delay)
+    send("N03 gasto hotel", "hotel Lisboa 180€", run_id, delay)
+    send("N04 gasto jantar", "jantar Alfama 52€", run_id, delay)
+    send("N05 gasto transporte", "uber aeroporto 18€", run_id, delay)
+
+    d1 = (hoje + timedelta(days=1)).strftime("%d/%m")
+    d2 = (hoje + timedelta(days=2)).strftime("%d/%m")
+    send("N10 roteiro 1", f"roteiro {d1} 10:00 Museu do Fado", run_id, delay)
+    send("N11 roteiro 2", f"roteiro {d1} 20:30 Jantar em Alfama", run_id, delay)
+    send("N12 roteiro 3", f"roteiro {d2} 09:00 Passeio a Sintra", run_id, delay)
+    send("N13 ver roteiro", "roteiro", run_id, delay)
+    send(
+        "N14 mala", "bagagem: passaporte, carregador, óculos de sol, protetor solar", run_id, delay
+    )
+    send("N15 marcar item", "peguei o passaporte", run_id, delay)
+    send("N16 ver mala", "bagagem", run_id, delay)
+    send("N17 orçamento moradia", "orçamento da viagem moradia 400", run_id, delay)
+    send("N18 orçamento restaurante", "orçamento da viagem restaurante 250", run_id, delay)
+    send("N19 orçamento transporte", "orçamento da viagem transporte 120", run_id, delay)
+    send("N20 ver orçamento", "orçamento da viagem", run_id, delay)
+
+    send(
+        "N30 plano de treino (rascunho: TOQUE EM [Confirmar] no WhatsApp)",
+        "plano de treino:\nSegunda - Peito: Supino 4x10 60kg, Crucifixo 3x12 14kg\n"
+        "Quarta - Costas: Remada 4x10 50kg, Puxada 3x12 45kg\n"
+        "Sexta - Pernas: Agachamento 4x8 80kg, Leg press 3x12 140kg",
+        run_id,
+        delay,
+    )
+    print("   → toque em [Confirmar] no rascunho; continuo em 20 s…")
+    time.sleep(20)
+    send("N31 plano", "meu plano de treino", run_id, delay)
+    send("N32 treino de hoje", "treino de hoje", run_id, delay)
+    send("N33 carga 1", "carga supino 60 kg", run_id, delay)
+    send("N34 carga 2", "carga supino 62,5 kg", run_id, delay)
+    send("N35 carga 3", "carga agachamento 85 kg", run_id, delay)
+    send("N36 evolução", "evolução do supino", run_id, delay)
+
+    send("N40 corrida", "corri 5km em 30 minutos hoje", run_id, delay)
+    send("N41 musculação", "fiz 50 minutos de musculação", run_id, delay)
+    send("N42 contagem no mês", "quantas vezes fiz musculação este mês?", run_id, delay)
+    send("N43 água", "bebi 1,5L de água", run_id, delay)
+    send("N44 hábito", "meditei", run_id, delay)
+    send("N45 meta", "meta: correr 3x por semana", run_id, delay)
+
+    send("N50 lembrete semanal", "me lembra de tomar vitamina toda segunda às 8h", run_id, delay)
+    send("N51 lembrete dias úteis", "me lembra de regar as plantas dias úteis às 9h", run_id, delay)
+    send("N52 lembrete mensal", "me lembra de pagar o aluguel todo dia 5 às 10h", run_id, delay)
+    send("N53 listar lembretes", "os meus lembretes", run_id, delay)
+    send("N54 nota", "nota: reunião com cliente segunda às 14h, levar contrato", run_id, delay)
+    send("N55 dashboard", "meu dashboard", run_id, delay)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
@@ -527,6 +604,7 @@ BLOCOS = {
     "J": bloco_j,
     "K": bloco_k,
     "L": bloco_l,
+    "N": bloco_n,
 }
 
 if __name__ == "__main__":
