@@ -598,6 +598,16 @@ async def test_every_card_and_the_list_agree_on_the_total(lab, client, today, qu
         )
 
 
+@db
+async def test_average_ticket_rounds_half_up_like_every_other_amount(lab, client, today) -> None:
+    """10,05 over 2 entries is 5,025: 5,03 (half up), never 5,02 (the decimal default is half even)."""
+    await lab.add(
+        _exp(lab, 10, "A", "overig", date(2026, 10, 3)), _exp(lab, 0.05, "B", "overig", date(2026, 10, 4))
+    )  # fmt: skip
+    avg = _card(await _get(client, await _token(lab.member_id), "money"), "avg_ticket")
+    assert avg["values"]["total"] == 10.05 and avg["values"]["average"] == 5.03
+
+
 # ── security: IDOR, hostile input, XSS ───────────────────────────────────────
 
 

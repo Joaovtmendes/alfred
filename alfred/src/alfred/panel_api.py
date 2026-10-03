@@ -733,8 +733,8 @@ async def avg_ticket_card(ctx: _Ctx) -> dict[str, Any]:
     total = sum((c.amount for c in cats), Decimal(0))
     pn = sum(c.count for c in prev)
     ptotal = sum((c.amount for c in prev), Decimal(0))
-    avg = (total / n).quantize(Decimal("0.01")) if n else Decimal(0)
-    pavg = (ptotal / pn).quantize(Decimal("0.01")) if pn else Decimal(0)
+    avg = pc.dec(total / n) if n else Decimal(0)  # half up, like every other amount
+    pavg = pc.dec(ptotal / pn) if pn else Decimal(0)
     card: dict[str, Any] = {
         "id": "avg_ticket",
         "empty": n == 0,
