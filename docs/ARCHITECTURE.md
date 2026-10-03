@@ -188,8 +188,9 @@ Definições que o front-end pode citar:
 - **Mês contra mês:** mês corrente contra os mesmos dias do mês anterior (31/10 contra 30/09 trava
   no fim de setembro); mês passado contra o mês anterior inteiro; intervalo livre contra o intervalo
   de mesmo tamanho logo antes. `delta_pct` é `null` sem base (período anterior em zero).
-- **Orçamentos:** o mês de referência é o do último dia do período; 80% e 100% (arredondamento
-  meio para cima, igual aos alertas do chat); `crossed_on` é o dia em que o acumulado passou do
+- **Orçamentos:** o mês de referência é o do último dia do período; 80% e 100% decididos nos valores
+  exatos, como os alertas do chat (99,60 de 100 é 99%, nunca "estourou"); o número mostrado é
+  arredondado meio para cima mas fica dentro da faixa do nível; `crossed_on` é o dia em que o acumulado passou do
   limite; `days_to_80` só dentro do mês corrente, com 5 dias e 3 lançamentos.
 - **Próximos pagamentos:** itens fixos ativos e lançamentos pendentes de hoje a 30 dias, mais os
   atrasados; um lançamento pendente com o mesmo nome do item fixo substitui o item (nunca conta

@@ -76,7 +76,7 @@ def test_percent_helpers_have_no_base_for_zero() -> None:
     assert pc.pct_change(D("90"), D("100")) == -10.0
     assert pc.pct_change(D("5"), D("0")) is None
     assert pc.pct_of(D("5"), D("0")) is None
-    assert pc.pct_of(D("79.5"), D("100")) == 80  # half up, like the alerts
+    assert pc.pct_of(D("79.5"), D("100")) == 80  # half up
     assert pc.pct_of(D("123"), D("100")) == 123
 
 
@@ -587,3 +587,14 @@ def test_fold_daily_switches_to_weeks_for_long_ranges() -> None:
         "day",
         [],
     )
+
+
+def test_budget_percent_never_contradicts_its_level() -> None:
+    """99.60 of 100 is 99 %, not "100 %, over budget", and 79.50 is not "80 %": the level is
+    decided on the exact amounts (as the chat alerts do) and the number stays in its band."""
+    near = _use(100, {date(2026, 10, 2): D("99.60")})
+    assert near.pct == 99 and near.level == 80 and near.crossed_on is None
+    assert _use(100, {date(2026, 10, 2): D("79.50")}).pct == 79
+    assert _use(100, {date(2026, 10, 2): D("79.50")}).level == 0
+    assert _use(100, {date(2026, 10, 2): D("100")}).level == 100
+    assert pc.budget_pct(D("99.99"), D("100")) == 99 and pc.budget_pct(D("5"), D("0")) == 0

@@ -35,6 +35,7 @@ from alfred.clock import local_tz, to_local
 from alfred.insights import count_blue
 from alfred.models import PENDING, SETTLED, Budget, Expense, Iou, RecurringItem
 from alfred.panel_filters import PanelFilter, apply_expense_filter
+from alfred.panel_phrases import budget_pct
 
 PAGE_SIZE = 50
 UPCOMING_DAYS = 30
@@ -60,7 +61,7 @@ def money(value: Decimal | float | None) -> float:
 
 
 def pct_of(part: Decimal, whole: Decimal) -> int | None:
-    """Whole percent, half up (the same rounding the budget alerts use); ``None`` without a base."""
+    """Whole percent, half up; ``None`` without a base."""
     if whole <= 0:
         return None
     return int((part * 100 / whole).quantize(Decimal(1), ROUND_HALF_UP))
@@ -233,7 +234,7 @@ def budget_row(
     today: date,
 ) -> BudgetUse:
     spent = sum(per_day.values(), _ZERO)
-    pct = pct_of(spent, limit) or 0
+    pct = budget_pct(spent, limit)
     level = 100 if pct >= 100 else 80 if pct >= 80 else 0
     crossed: date | None = None
     if limit > 0 and spent >= limit:

@@ -319,3 +319,9 @@ def test_message_audit_covers_labels_and_stays_clean() -> None:
         str(f) for f in findings if "panel." in f.where
     ]
     assert audit.panel_catalogue_size() == len(pp.PHRASES) + len(pp.CHAT) + len(pp.LABELS)
+
+
+def test_budget_phrase_never_says_over_before_the_limit_is_reached() -> None:
+    near = pp.rule_budget_over("Restaurantes", 99.6, 100, "pt")
+    assert near and near.key == "budget_near" and "99%" in near.text
+    assert pp.rule_budget_over("Restaurantes", 79.5, 100, "pt") is None

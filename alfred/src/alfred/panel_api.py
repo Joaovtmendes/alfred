@@ -434,7 +434,7 @@ async def budgets_card(ctx: _Ctx) -> dict[str, Any]:
         "values": {
             "spent": _m(spent),
             "limit": _m(limit),
-            "pct": pc.pct_of(spent, limit),
+            "pct": pc.budget_pct(spent, limit) if limit > 0 else None,
             "month": f"{ref_first.year:04d}-{ref_first.month:02d}",
             "day": day,
             "days_in_month": last.day,

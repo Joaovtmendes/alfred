@@ -429,6 +429,23 @@ def _pct(part: float, whole: float) -> int:
     return int((Decimal(str(part)) * 100 / Decimal(str(whole))).quantize(Decimal(1), ROUND_HALF_UP))
 
 
+def budget_pct(spent: Decimal | float, limit: Decimal | float) -> int:
+    """Percent of a budget used: whole percent, half up, kept inside its level's band.
+
+    The level (80 / 100) is decided on the exact amounts, as the chat alerts do, and the number
+    never contradicts it: 99.60 of 100 reads 99 % (not "100 %, over"), 79.50 reads 79 % (not "80 %").
+    """
+    spent, limit = Decimal(str(spent)), Decimal(str(limit))
+    if limit <= 0:
+        return 0
+    pct = int((spent * 100 / limit).quantize(Decimal(1), ROUND_HALF_UP))
+    if spent >= limit:
+        return max(pct, 100)
+    if spent * 100 >= limit * 80:
+        return min(max(pct, 80), 99)
+    return min(pct, 79)
+
+
 # ── The 12 rules ──────────────────────────────────────────────────────────────
 
 
@@ -458,7 +475,7 @@ def rule_budget_over(category: str, spent: float, limit: float, lang: str) -> Ph
     """Rule 2. Silent below 80 % of the limit; "info" from 80 %, "attention" from 100 %."""
     if limit <= 0:
         return None
-    pct = _pct(spent, limit)
+    pct = budget_pct(spent, limit)
     if pct < 80:
         return None
     over = pct >= 100
