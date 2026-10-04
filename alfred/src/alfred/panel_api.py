@@ -860,3 +860,23 @@ async def trips(
     if not past["empty"]:  # a card of "other trips" with no other trip would only be noise
         cards.append(past)
     return _envelope("trips", member, f, cards, ctx.today)
+
+
+@router.get("/api/d/{token}/home", include_in_schema=False, dependencies=[Depends(limit_dashboard)])
+async def home(
+    token: str, request: Request, session: AsyncSession = Depends(get_session)
+) -> JSONResponse:
+    """V2-10 — the couple's tab: this month's shared total, who paid, the split and who owes whom.
+
+    Only the member's own token opens it, and only with an active link; without one the cards
+    are empty (the tab is not even listed). Rows are the ones marked "da casa" by either side.
+    """
+    from alfred import couple
+
+    member, f = await _open(token, request, session)
+    audit(session, "panel_home_opened", member.id)
+    await session.commit()
+    cards = await couple.panel_cards(
+        session, member, normalize_lang(member.language), today_local()
+    )
+    return _envelope("home", member, f, cards, today_local())

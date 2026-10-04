@@ -17,8 +17,8 @@ from alfred.settings import settings
 
 router = APIRouter(tags=["legal"])
 
-POLICY_VERSION = "1.3"
-POLICY_DATE = "2026-10-04"
+POLICY_VERSION = "1.4"
+POLICY_DATE = "2026-10-05"
 CONTROLLER = "JVM Solutions, Biesbosch 179, 1181 JB Amstelveen, Nederland"
 # Public contact for data requests — set PRIVACY_CONTACT_EMAIL in the environment.
 CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
@@ -127,6 +127,12 @@ POLICY: dict[str, dict] = {
                     "Data travels over encrypted connections. Health information (what you log about medication, mood, sleep and water) is additionally encrypted inside our database. Access to the systems is limited to the operator.",
                 ],
             ),
+            (
+                "Sharing with your partner",
+                [
+                    "If you invite a partner and they accept, you share the household finances. Nothing is shared by default: only the expenses that you or your partner mark as shared are visible to both (amount, category, shop, date and who paid), and Alfred uses them to work out who owes whom. Everything else stays private. Either of you can leave at any time with 'leave home'; the shared marks are then removed. If one of you erases their data, the other keeps only their own entries.",
+                ],
+            ),
         ],
     },
     "nl": {
@@ -232,6 +238,12 @@ POLICY: dict[str, dict] = {
                     "Gegevens gaan via versleutelde verbindingen. Gezondheidsgegevens (wat je vastlegt over medicatie, stemming, slaap en water) worden bovendien versleuteld in onze database opgeslagen. Toegang tot de systemen is beperkt tot de beheerder.",
                 ],
             ),
+            (
+                "Delen met je partner",
+                [
+                    "Als je een partner uitnodigt en die accepteert, delen jullie de huishoudfinanciën. Standaard wordt niets gedeeld: alleen de uitgaven die jij of je partner als gedeeld markeert zijn voor beiden zichtbaar (bedrag, categorie, winkel, datum en wie betaalde) en Alfred rekent daarmee uit wie wie iets schuldig is. Al het andere blijft privé. Je kunt altijd stoppen met 'verlaat het huis'; de markeringen worden dan verwijderd. Wist een van jullie de eigen gegevens, dan houdt de ander alleen de eigen boekingen.",
+                ],
+            ),
         ],
     },
     "pt": {
@@ -334,6 +346,12 @@ POLICY: dict[str, dict] = {
                 "Segurança",
                 [
                     "Os dados trafegam por conexões criptografadas. As informações de saúde (o que você registra sobre medicação, humor, sono e água) ficam, além disso, criptografadas dentro do nosso banco de dados. O acesso aos sistemas é restrito ao operador.",
+                ],
+            ),
+            (
+                "Compartilhar com seu par",
+                [
+                    "Se você convidar uma pessoa e ela aceitar, vocês passam a dividir o financeiro da casa. Nada é compartilhado por padrão: só os gastos que você ou a outra pessoa marcarem como da casa ficam visíveis para os dois (valor, categoria, loja, data e quem pagou), e o Alfred usa isso para calcular quem deve a quem. Todo o resto continua privado. Qualquer um pode sair a qualquer momento com 'sair da casa'; as marcas de compartilhamento são então removidas. Se um dos dois apagar os próprios dados, o outro fica só com os próprios lançamentos.",
                 ],
             ),
         ],

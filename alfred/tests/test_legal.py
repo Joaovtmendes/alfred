@@ -28,12 +28,14 @@ def test_every_language_has_the_same_sections() -> None:
     assert len(set(counts.values())) == 1, counts
 
 
-def test_policy_1_3_covers_the_v2_data_categories_in_every_language() -> None:
+def test_policy_1_4_covers_the_v2_data_categories_and_the_couple_in_every_language() -> None:
     from alfred.legal import POLICY_VERSION
 
-    assert POLICY_VERSION == "1.3"
+    assert POLICY_VERSION == "1.4"
     for lang, policy in POLICY.items():
         text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
         assert any(w in text for w in ("three months", "drie maanden", "três meses")), lang
         assert any(w in text for w in ("trip", "reis", "viage")), lang
         assert any(w in text for w in ("encrypted", "versleuteld", "criptografad")), lang
+        assert any(w in text for w in ("partner", "par")), lang
+        assert any(w in text for w in ("mark as shared", "als gedeeld", "como da casa")), lang
