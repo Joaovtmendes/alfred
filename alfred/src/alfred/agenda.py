@@ -650,7 +650,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     "agenda_past": {
         "pt": "Essa data e hora já passaram. Diga de novo com uma data futura, por exemplo “dentista amanhã às 14h”.",
-        "nl": "Dat moment is al voorbij. Geef een datum in de toekomst, bijvoorbeeld “tandarts morgen om 14u”.",
+        "nl": "Dat moment is al voorbij. Geef een datum in de toekomst, bijvoorbeeld “tandarts morgen om 14:00”.",
         "en": "That date and time have passed. Try again with a future date, for example “dentist tomorrow at 2pm”.",
         "fr": "Cette date est déjà passée. Redis-le avec une date à venir, par exemple « dentiste demain à 14h ».",
         "de": "Dieser Zeitpunkt ist schon vorbei. Nenne ein Datum in der Zukunft, zum Beispiel „Zahnarzt morgen um 14 Uhr“.",
@@ -671,7 +671,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     "agenda_move_what": {
         "pt": "Para quando? Por exemplo “muda o dentista para sexta às 15h”.",
-        "nl": "Naar wanneer? Bijvoorbeeld “verplaats tandarts naar vrijdag 15u”.",
+        "nl": "Naar wanneer? Bijvoorbeeld “verplaats tandarts naar vrijdag 15:00”.",
         "en": "To when? For example “move dentist to Friday at 3pm”.",
         "fr": "Pour quand ? Par exemple « déplace dentiste à vendredi 15h ».",
         "de": "Auf wann? Zum Beispiel „verschiebe Zahnarzt auf Freitag 15 Uhr“.",
@@ -692,9 +692,9 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     "agenda_list_empty": {
         "pt": "Nada na agenda nesse período. Para marcar, diga por exemplo “dentista quinta às 14h”.",
-        "nl": "Niets in je agenda voor deze periode. Plan er een met bijvoorbeeld “tandarts donderdag om 14u”.",
+        "nl": "Niets in je agenda voor deze periode. Plan er een met bijvoorbeeld “tandarts donderdag om 14:00”.",
         "en": "Nothing on your agenda for that period. Add one, for example “dentist Thursday at 2pm”.",
-        "fr": "Rien dans ton agenda pour cette période. Ajoute-en un, par exemple « dentiste jeudi à 14h ».",
+        "fr": "Rien dans ton agenda pour cette période. Ajoutes-en un, par exemple « dentiste jeudi à 14h ».",
         "de": "Nichts in deinem Kalender für diesen Zeitraum. Trage etwas ein, zum Beispiel „Zahnarzt Donnerstag um 14 Uhr“.",
     },
     "agenda_list_help": {

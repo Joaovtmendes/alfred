@@ -122,7 +122,7 @@ PHRASES: dict[str, dict[str, str]] = {
     # ── Rule 8 · the list ─────────────────────────────────────────────────────
     "largest_entry": {
         "pt": "{count} lançamentos {period}. O maior gasto foi {merchant}, {amount}.",
-        "nl": "{count} boekingen {period}. De grootste uitgave was {merchant}, {amount}.",
+        "nl": "{count} transacties {period}. De grootste uitgave was {merchant}, {amount}.",
         "en": "{count} entries {period}. The largest expense was {merchant}, {amount}.",
         "fr": "{count} opérations {period}. La plus grosse dépense était {merchant}, {amount}.",
         "de": "{count} Buchungen {period}. Die größte Ausgabe war {merchant}, {amount}.",
@@ -162,7 +162,7 @@ PHRASES: dict[str, dict[str, str]] = {
     # ── Empty states: they teach the chat sentence ────────────────────────────
     "empty_ledger": {
         "pt": "Ainda não há lançamentos neste período. Registre um gasto pelo chat e ele aparece aqui.",
-        "nl": "Er zijn nog geen boekingen in deze periode. Leg een uitgave vast in de chat en ze verschijnt hier.",
+        "nl": "Er zijn nog geen transacties in deze periode. Leg een uitgave vast in de chat en ze verschijnt hier.",
         "en": "There are no entries in this period yet. Record an expense in the chat and it shows up here.",
         "fr": "Il n'y a pas encore d'opérations sur cette période. Enregistre une dépense dans le chat et elle apparaît ici.",
         "de": "In diesem Zeitraum gibt es noch keine Buchungen. Erfasse eine Ausgabe im Chat, dann erscheint sie hier.",
@@ -261,7 +261,7 @@ PHRASES: dict[str, dict[str, str]] = {
     },
     "trips_history": {
         "pt": "Entre as {count} últimas viagens com orçamento, dentro do limite: {within}.",
-        "nl": "Van de laatste {count} reizen met budget, binnen de grens: {within}.",
+        "nl": "Van de laatste {count} reizen met budget, binnen budget gebleven: {within}.",
         "en": "Of the last {count} trips with a budget, within the limit: {within}.",
         "fr": "Sur les {count} derniers voyages avec budget, dans la limite : {within}.",
         "de": "Von den letzten {count} Reisen mit Budget im Rahmen geblieben: {within}.",
@@ -340,8 +340,8 @@ PHRASES: dict[str, dict[str, str]] = {
         "pt": "{cat} usou {pct}% do planejado: {spent} de {plan}.",
         "nl": "{cat} heeft {pct}% van het geplande gebruikt: {spent} van {plan}.",
         "en": "{cat} used {pct}% of the plan: {spent} of {plan}.",
-        "fr": "{cat} a utilisé {pct}% du prévu : {spent} sur {plan}.",
-        "de": "{cat} hat {pct}% des Plans genutzt: {spent} von {plan}.",
+        "fr": "{cat} a utilisé {pct} % du prévu : {spent} sur {plan}.",
+        "de": "{cat} hat {pct} % des Plans genutzt: {spent} von {plan}.",
     },
     "plan_budget_over": {
         "pt": "{cat} passou do planejado: {spent} de {plan}.",

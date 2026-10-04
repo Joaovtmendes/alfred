@@ -374,7 +374,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "pt": "Você ainda não tem orçamentos. Para criar um, diga por exemplo “orçamento mercado 400”.",
         "nl": "Je hebt nog geen budgetten. Maak er een met bijvoorbeeld “budget boodschappen 400”.",
         "en": "You don't have any budgets yet. Create one, for example “budget groceries 400”.",
-        "fr": "Tu n'as pas encore de budgets. Crée-en un, par exemple « budget courses 400 ».",
+        "fr": "Tu n'as pas encore de budgets. Crées-en un, par exemple « budget courses 400 ».",
         "de": "Du hast noch keine Budgets. Lege eines an, zum Beispiel „Budget Lebensmittel 400“.",
     },
     "budget_list_header": {

@@ -185,7 +185,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     ),
     "blue_none": _all(
         "Ainda não há lançamentos neste mês para medir os dias no positivo e no negativo.",
-        "Er zijn deze maand nog geen boekingen om de dagen in de plus en de min te meten.",
+        "Er zijn deze maand nog geen transacties om de dagen in de plus en de min te meten.",
         "There are no entries this month yet to measure positive and negative days.",
         "Il n'y a pas encore d'opérations ce mois-ci pour mesurer les jours en positif et en négatif.",
         "Diesen Monat gibt es noch keine Buchungen, um die Tage im Plus und im Minus zu messen.",

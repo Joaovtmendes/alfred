@@ -462,7 +462,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Você já tem {n} pendências, que é o máximo. Pague ou apague algumas antes de anotar outras.",
         "Je hebt al {n} openstaande items, dat is het maximum. Betaal of verwijder er eerst een paar.",
         "You already have {n} pending items, which is the maximum. Pay or delete a few first.",
-        "Tu as déjà {n} éléments en attente, c'est le maximum. Paie-en ou supprime-en quelques-uns d'abord.",
+        "Tu as déjà {n} éléments en attente, c'est le maximum. Paies-en ou supprimes-en quelques-uns d'abord.",
         "Du hast schon {n} offene Einträge, das ist das Maximum. Zahle oder lösche zuerst einige.",
     ),
     "pending_forecast": _all(
@@ -474,7 +474,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     ),
     "pending_overdue": _all(
         'Atenção: {n} a pagar em atraso ({total}). Veja com "o que tenho a pagar".',
-        'Let op: {n} te late betalingen ({total}). Bekijk met "wat moet ik nog betalen".',
+        'Let op: {n} betalingen te laat ({total}). Bekijk met "wat moet ik nog betalen".',
         'Heads up: {n} overdue to pay ({total}). See them with "what do i have to pay".',
         "Attention : {n} à payer en retard ({total}). Vois-les avec « ce que j'ai à payer ».",
         'Achtung: {n} überfällige Zahlungen ({total}). Sieh nach mit "was muss ich noch zahlen".',

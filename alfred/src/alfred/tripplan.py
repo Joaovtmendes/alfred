@@ -406,7 +406,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Você não tem uma viagem ativa nem próxima. Crie uma primeiro, por exemplo “criar viagem Lisboa”.",
         "Je hebt geen actieve of komende reis. Maak er eerst een, bijvoorbeeld “start reis Lissabon”.",
         "You have no active or upcoming trip. Create one first, for example “start trip Lisbon”.",
-        "Tu n'as aucun voyage actif ou à venir. Crée-en un d'abord, par exemple « créer voyage Lisbonne ».",
+        "Tu n'as aucun voyage actif ou à venir. Crées-en un d'abord, par exemple « créer voyage Lisbonne ».",
         "Du hast keine aktive oder kommende Reise. Lege zuerst eine an, zum Beispiel „reise Lissabon starten“.",
     ),
     "tp_limit": _all(
