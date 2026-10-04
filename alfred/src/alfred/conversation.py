@@ -1012,6 +1012,13 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Aufgabe notiert: *{body}*",
         ),
     },
+    "task_due_suffix": {
+        "pt": " (prazo: {when})",
+        "nl": " (deadline: {when})",
+        "en": " (due {when})",
+        "fr": " (échéance : {when})",
+        "de": " (fällig: {when})",
+    },
     "task_done": {
         "pt": (
             "Tarefa concluída.",
@@ -4083,6 +4090,9 @@ async def handle_inbound(
             )
             session.add(task)
             reply = _t("task_saved", lang, body=task_body)
+            if due_date_val is not None:
+                when_txt = f"{weekday_abbr(due_date_val, lang)} {due_date_val:%d/%m}"
+                reply += _t("task_due_suffix", lang, when=when_txt)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
