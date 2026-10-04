@@ -146,7 +146,16 @@ async def _take(session: AsyncSession, member_id: uuid.UUID, batch_id: uuid.UUID
     return list(row.items), row.expires_at < now_local()
 
 
-async def record_items(session: AsyncSession, member: Member, items: list[dict], lang: str) -> str:
+MAX_UNDO_IDS = 5  # a reply-button id holds at most 256 characters
+
+
+async def record_items(
+    session: AsyncSession,
+    member: Member,
+    items: list[dict],
+    lang: str,
+    ids_out: list[uuid.UUID] | None = None,
+) -> str:
     from alfred.budgets import alerts_for_categories
     from alfred.conversation import _fmt_eur, _t
     from alfred.settings import settings
@@ -156,9 +165,12 @@ async def record_items(session: AsyncSession, member: Member, items: list[dict],
     )
     any_high = False
     for it in items:
+        new_id = uuid.uuid4()
+        if ids_out is not None:
+            ids_out.append(new_id)
         session.add(
             Expense(
-                id=uuid.uuid4(),
+                id=new_id,
                 member_id=member.id,
                 household_id=member.household_id,
                 transaction_type=it["type"],
@@ -186,6 +198,48 @@ async def record_items(session: AsyncSession, member: Member, items: list[dict],
     if any_high:
         reply += _t("high_value_hint", lang)
     return reply
+
+
+async def _recorded(
+    session: AsyncSession, member: Member, items: list[dict], lang: str
+) -> BatchReply:
+    """The confirmation, with [Undo all] when the ids fit in a button."""
+    ids: list[uuid.UUID] = []
+    text = await record_items(session, member, items, lang, ids)
+    if 0 < len(ids) <= MAX_UNDO_IDS:
+        from alfred.conversation import _t
+
+        payload = ",".join(str(i) for i in ids)
+        return BatchReply(text, [(f"batch_undo:{payload}", _t("batch_btn_undo_all", lang))])
+    return BatchReply(text)
+
+
+async def undo_recorded(raw_ids: str, member: Member, lang: str, session: AsyncSession) -> str:
+    """Delete the entries of a just-confirmed batch (only this member's; a second tap finds none)."""
+    from alfred.conversation import _t
+
+    ids: list[uuid.UUID] = []
+    for part in raw_ids.split(",")[:MAX_UNDO_IDS]:
+        try:
+            ids.append(uuid.UUID(part))
+        except ValueError:
+            continue
+    if not ids:
+        return _t("batch_gone", lang)
+    rows = (
+        (
+            await session.execute(
+                select(Expense).where(Expense.member_id == member.id, Expense.id.in_(ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for row in rows:
+        await session.delete(row)
+    await session.flush()
+    audit(session, "batch_undone", member.id, n=len(rows))
+    return _t("batch_undone", lang, n=len(rows)) if rows else _t("batch_gone", lang)
 
 
 # ── buttons ───────────────────────────────────────────────────────────────────
@@ -217,7 +271,7 @@ async def handle_batch_button(
         return BatchReply(_t("batch_expired", lang))
     if action == "batch_cancel":
         return BatchReply(_t("batch_cancelled", lang))
-    return BatchReply(await record_items(session, member, items, lang))
+    return await _recorded(session, member, items, lang)
 
 
 # ── text ──────────────────────────────────────────────────────────────────────
@@ -305,7 +359,7 @@ async def handle_batch_text(
             return BatchReply(_t("batch_expired", lang))
         if is_no:
             return BatchReply(_t("batch_cancelled", lang))
-        return BatchReply(await record_items(session, member, items, lang))
+        return await _recorded(session, member, items, lang)
 
     if rm:
         idx = _ordinal(rm.group("ord"), len(items))
@@ -356,6 +410,16 @@ STRINGS: dict[str, dict[str, str]] = {
     ),
     "batch_btn_ok": _all("Confirmar", "Bevestigen", "Confirm", "Confirmer", "Bestätigen"),
     "batch_btn_edit": _all("Ajustar", "Aanpassen", "Adjust", "Ajuster", "Anpassen"),
+    "batch_btn_undo_all": _all(
+        "Desfazer tudo", "Alles ongedaan", "Undo all", "Tout annuler", "Alles rückgängig"
+    ),
+    "batch_undone": _all(
+        "Desfeito: {n} lançamentos apagados.",
+        "Ongedaan gemaakt: {n} boekingen verwijderd.",
+        "Undone: {n} entries removed.",
+        "Annulé : {n} écritures supprimées.",
+        "Rückgängig: {n} Buchungen gelöscht.",
+    ),
     "batch_btn_cancel": _all("Desfazer", "Ongedaan maken", "Undo", "Annuler", "Rückgängig"),
     "batch_edit_hint": _all(
         'Diga o que mudar: "tira o segundo" ou "o primeiro foi 4". Depois confirme.',

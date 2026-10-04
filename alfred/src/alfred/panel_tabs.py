@@ -48,9 +48,10 @@ from __future__ import annotations
 import uuid
 from collections import Counter, defaultdict
 from datetime import date, timedelta
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 
 from alfred import panel_phrases as pp
 from alfred.clock import day_start, to_local, week_start
@@ -442,6 +443,48 @@ def _is_money_goal(goal: Goal) -> bool:
     return "€" in goal.title or "eur" in unit or "€" in unit or "euro" in unit
 
 
+def _target_amount(goal: Goal) -> float | None:
+    raw = (goal.target_value or "").replace(" ", "").replace(",", ".")
+    try:
+        value = float(raw)
+    except ValueError:
+        return None
+    return value if 0 < value < 1e9 else None
+
+
+def _money_progress(goal: Goal, saved: Decimal | None) -> dict[str, Any]:
+    """Savings progress: the settled balance (income minus spending) since the goal was set."""
+    target = _target_amount(goal) if _is_money_goal(goal) else None
+    if target is None or saved is None:
+        return {}
+    got = max(float(saved), 0.0)
+    return {
+        "saved": round(got, 2),
+        "target_amount": round(target, 2),
+        "saved_pct": min(int(got * 100 / target), 100),
+    }
+
+
+async def _net_saved_since(ctx, goals: list[Goal]) -> dict[uuid.UUID, Decimal]:
+    out: dict[uuid.UUID, Decimal] = {}
+    for g in goals:
+        if not _is_money_goal(g):
+            continue
+        net = func.coalesce(
+            func.sum(
+                case((Expense.transaction_type == "income", Expense.amount), else_=-Expense.amount)
+            ),
+            0,
+        )
+        stmt = select(net).where(
+            Expense.member_id == ctx.mid,
+            Expense.status.in_(SETTLED),
+            Expense.expense_date >= g.created_at,
+        )
+        out[g.id] = dec((await ctx.session.execute(stmt)).scalar_one())
+    return out
+
+
 async def goals_card(ctx) -> dict[str, Any]:
     goals = (
         (
@@ -471,6 +514,7 @@ async def goals_card(ctx) -> dict[str, Any]:
     for gid, day in (await ctx.session.execute(stmt)).all():
         logs[gid].append(day)
     items = []
+    saved_net = await _net_saved_since(ctx, goals)
     for g in goals:
         days = set(logs.get(g.id, []))  # one check-in per day counts once
         target = " ".join(x for x in (g.target_value, g.target_unit) if x) or None
@@ -480,6 +524,7 @@ async def goals_card(ctx) -> dict[str, Any]:
                 "target": target,
                 "deadline": g.deadline.isoformat() if g.deadline else None,
                 "money": _is_money_goal(g),
+                **_money_progress(g, saved_net.get(g.id)),
                 "logs_7d": sum(1 for d in days if d >= since7),
                 "logs_30d": len(days),
             }

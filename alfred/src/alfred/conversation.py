@@ -1185,6 +1185,13 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Keine Wassereintraege heute.",
     },
     # ── M9 — extras ───────────────────────────────────────────────────────────
+    "habit_already_today": {
+        "pt": "{activity} já está anotado hoje. Uma vez por dia conta.",
+        "nl": "{activity} staat vandaag al genoteerd. Eén keer per dag telt.",
+        "en": "{activity} is already logged for today. Once a day counts.",
+        "fr": "{activity} est déjà noté aujourd'hui. Une fois par jour compte.",
+        "de": "{activity} ist für heute schon eingetragen. Einmal pro Tag zählt.",
+    },
     "habit_logged_with_goal": {
         "pt": "Anotei: {activity}. Meta: {goal}.",
         "nl": "Gewoonte gelogd: *{activity}* (doel: {goal})",
@@ -2526,6 +2533,38 @@ def _is_workout_text(body: str) -> bool:
     return any(strip_accents(w) in words for w in _WORKOUT_WORDS if " " not in w)
 
 
+_HABIT_NOUNS = {
+    "pt": {
+        "meditei": "meditação", "fiz yoga": "yoga", "fiz pilates": "pilates",
+        "fiz alongamento": "alongamento", "bebi água": "água", "leste": "leitura",
+        "li": "leitura", "estudei": "estudo",
+    },
+    "en": {"meditated": "meditation", "drank water": "water", "studied": "study"},
+}  # fmt: skip
+
+
+def _habit_label(activity: str, lang: str) -> str:
+    """ "meditei" reads as "meditação" in a sentence like "dias seguidos de ___"."""
+    return _HABIT_NOUNS.get(lang, {}).get(activity.strip().lower(), activity)
+
+
+async def _habit_already_logged(session, member_id, activity: str, day) -> bool:
+    """True when this habit already has a check-in today (one per day counts once)."""
+    from sqlalchemy import func as _f
+    from sqlalchemy import select as _s
+
+    found = await session.scalar(
+        _s(HabitLog.id)
+        .where(
+            HabitLog.member_id == member_id,
+            _f.lower(HabitLog.activity) == activity.strip().lower(),
+            HabitLog.log_date == day,
+        )
+        .limit(1)
+    )
+    return found is not None
+
+
 def _goal_for_activity(goals, activity: str):
     """The active goal a habit log belongs to: a shared word, or a shared stem of 5+ letters
     ("meditei" × "meditar todos os dias")."""
@@ -3526,6 +3565,14 @@ async def _handle_button_reply(
         await _save_outbound(member, out.text, session)
         return True
 
+    if action == "batch_undo":  # undo the whole just-confirmed batch
+        from alfred.batch import undo_recorded
+
+        undo_text = await undo_recorded(raw_id, member, lang, session)
+        await send_text(to, undo_text)
+        await _save_outbound(member, undo_text, session)
+        return True
+
     if action in ("plan_ok", "plan_cancel"):  # V2-35 training plan preview
         plan_out = await handle_training_button(action, raw_id, member, lang, session)
         await send_text(to, plan_out.text)
@@ -4336,12 +4383,14 @@ async def handle_inbound(
                         else:
                             break
                 if streak_count == 0:
-                    reply = _t("habit_streak_none", lang, activity=activity_label)
+                    reply = _t(
+                        "habit_streak_none", lang, activity=_habit_label(activity_label, lang)
+                    )
                 else:
                     reply = _t(
                         "habit_streak_one" if streak_count == 1 else "habit_streak",
                         lang,
-                        activity=activity_label,
+                        activity=_habit_label(activity_label, lang),
                         n=streak_count,
                     )
             await send_text(to, reply)
@@ -4361,6 +4410,11 @@ async def handle_inbound(
                 _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
             )
             linked_goal = _goal_for_activity(res_hg.scalars().all(), habit_activity)
+            if await _habit_already_logged(session, member.id, habit_activity, today_local()):
+                reply = _t("habit_already_today", lang, activity=habit_activity)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
             habit_log = HabitLog(
                 id=uuid.uuid4(),
                 member_id=member.id,
@@ -4414,6 +4468,11 @@ async def handle_inbound(
                     _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
                 )
                 linked_goal2 = _goal_for_activity(res_hg2.scalars().all(), h_activity)
+                if await _habit_already_logged(session, member.id, h_activity, h_date):
+                    reply = _t("habit_already_today", lang, activity=h_activity)
+                    await send_text(to, reply)
+                    await _save_outbound(member, reply, session)
+                    return
                 hlog2 = HabitLog(
                     id=uuid.uuid4(),
                     member_id=member.id,

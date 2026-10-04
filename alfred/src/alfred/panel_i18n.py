@@ -788,6 +788,13 @@ SHELL.update(
             "{n} jours sur 7",
             "{n} von 7 Tagen",
         ),
+        "goal_saved": _t(
+            "{saved} de {target}",
+            "{saved} van {target}",
+            "{saved} of {target}",
+            "{saved} sur {target}",
+            "{saved} von {target}",
+        ),
         "goal_until": _t(
             "até {date}",
             "tot {date}",
