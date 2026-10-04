@@ -175,9 +175,10 @@ async def _ingest_value(
         # Only process text messages for now (M18/M19 will add image/audio).
         # Reactions, system notifications, delivery receipts in messages[] all
         # have body=None and must NOT reach handle_inbound.
-        # Allow 'text', 'interactive' (Flow nfm_reply) and 'document' (V2-05 bank statement,
-        # downloaded only when the member is onboarded); drop everything else.
-        if msg_type not in ("text", "interactive", "document"):
+        # Allow 'text', 'interactive' (Flow nfm_reply), 'document' (V2-05 bank statement, V2-35b
+        # training PDF) and 'image' (V2-35b training photo); files are downloaded only when the
+        # member is onboarded. Drop everything else.
+        if msg_type not in ("text", "interactive", "document", "image"):
             log.info(
                 "webhook.non_text_ignored",
                 wa_message_id=wa_message_id,
@@ -198,7 +199,7 @@ async def _ingest_value(
                 )
                 continue
         else:
-            # Interactive (nfm_reply from WhatsApp Flow) or document — body is None;
+            # Interactive (nfm_reply from WhatsApp Flow), document or image — body is None;
             # handle_inbound inspects message.raw directly.
             body = None
 

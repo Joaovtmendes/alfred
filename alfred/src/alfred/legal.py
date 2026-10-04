@@ -17,8 +17,8 @@ from alfred.settings import settings
 
 router = APIRouter(tags=["legal"])
 
-POLICY_VERSION = "1.5"
-POLICY_DATE = "2026-10-06"
+POLICY_VERSION = "1.6"
+POLICY_DATE = "2026-10-07"
 CONTROLLER = "JVM Solutions, Biesbosch 179, 1181 JB Amstelveen, Nederland"
 # Public contact for data requests — set PRIVACY_CONTACT_EMAIL in the environment.
 CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
@@ -139,6 +139,12 @@ POLICY: dict[str, dict] = {
                     "If you send a bank statement file (CSV), Alfred reads it only to create entries after your confirmation: date, amount, counterparty name and description of each line. Account numbers (IBAN) are masked and the file itself is not kept. The entries are stored like any other entry of yours, so they are covered by export and erasure, and 'undo import' removes the last import. Statements often contain details about other people (names of those who paid you); only send files you are entitled to use.",
                 ],
             ),
+            (
+                "Photos and PDFs of training plans and receipts",
+                [
+                    "If you send a photo or a PDF of your training plan or of a receipt, the file is sent to Anthropic (our AI provider) only to read it (the exercises, or the shop, total and date), and Alfred shows you the result to confirm before anything is saved. The file itself is not kept: only what you confirm is stored, like any other data of yours (covered by export and erasure). Only send files you are entitled to use, and leave out other people's details or health information.",
+                ],
+            ),
         ],
     },
     "nl": {
@@ -256,6 +262,12 @@ POLICY: dict[str, dict] = {
                     "Als je een bankafschrift (CSV) stuurt, leest Alfred het alleen om na jouw bevestiging boekingen aan te maken: datum, bedrag, naam van de tegenpartij en omschrijving van elke regel. Rekeningnummers (IBAN) worden afgeschermd en het bestand zelf wordt niet bewaard. De boekingen worden opgeslagen zoals al je andere boekingen, dus export en verwijdering gelden ook voor hen, en 'import ongedaan maken' verwijdert de laatste import. Afschriften bevatten vaak gegevens van anderen (namen van wie jou betaalde); stuur alleen bestanden die je mag gebruiken.",
                 ],
             ),
+            (
+                "Foto's en pdf's van trainingsschema's en bonnen",
+                [
+                    "Als je een foto of pdf van je trainingsschema of van een bon stuurt, wordt het bestand alleen naar Anthropic (onze AI-leverancier) gestuurd om het te lezen (de oefeningen, of winkel, totaal en datum), en toont Alfred je het resultaat ter bevestiging voordat iets wordt opgeslagen. Het bestand zelf wordt niet bewaard: alleen wat je bevestigt blijft staan, zoals al je andere gegevens (ze vallen onder export en verwijdering). Stuur alleen bestanden die je mag gebruiken en laat gegevens van anderen of over je gezondheid erbuiten.",
+                ],
+            ),
         ],
     },
     "pt": {
@@ -370,6 +382,12 @@ POLICY: dict[str, dict] = {
                 "Extratos bancários",
                 [
                     "Se você enviar um extrato bancário (CSV), o Alfred o lê apenas para criar lançamentos depois da sua confirmação: data, valor, nome da outra parte e descrição de cada linha. Números de conta (IBAN) são ocultados e o arquivo em si não é guardado. Os lançamentos ficam armazenados como todos os seus outros, então a exportação e a exclusão também os cobrem, e 'desfazer importação' remove a última importação. Extratos costumam ter dados de outras pessoas (nomes de quem pagou você); envie só arquivos que você possa usar.",
+                ],
+            ),
+            (
+                "Fotos e PDFs de planos de treino e recibos",
+                [
+                    "Se você enviar uma foto ou um PDF do seu plano de treino ou de um recibo, o arquivo é enviado à Anthropic (nossa provedora de IA) apenas para ser lido (os exercícios, ou a loja, o total e a data), e Alfred mostra o resultado para você confirmar antes de guardar. O arquivo em si não é guardado: fica só o que você confirmar, como qualquer outro dado seu (incluídos na exportação e na exclusão). Envie apenas arquivos que você pode usar e evite incluir dados de outras pessoas ou de saúde.",
                 ],
             ),
         ],

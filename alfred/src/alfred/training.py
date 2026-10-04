@@ -254,14 +254,15 @@ def _item_text(item: PlanItem, lang: str) -> str:
     return out
 
 
-def _preview(days: list[PlanDay], lang: str) -> str:
+def _preview(days: list[PlanDay], lang: str, note: str = "") -> str:
     from alfred.conversation import _t
 
     blocks = []
     for d in days:
         head = weekday_name(d.weekday, lang) + (f" · {d.title}" if d.title else "")
         blocks.append("\n".join([f"*{head}*", *(f"• {_item_text(i, lang)}" for i in d.items)]))
-    return _t("plan_preview", lang) + "\n\n" + "\n\n".join(blocks) + "\n\n" + _t("plan_ask", lang)
+    tail = (note + "\n\n" if note else "") + _t("plan_ask", lang)
+    return _t("plan_preview", lang) + "\n\n" + "\n\n".join(blocks) + "\n\n" + tail
 
 
 def _buttons(draft_id: uuid.UUID, lang: str) -> list[tuple[str, str]]:
@@ -399,6 +400,13 @@ async def _draft(text: str, member: Member, lang: str, session: AsyncSession) ->
     parsed = parse_plan(text)
     if isinstance(parsed, int):
         return Reply(_t("plan_bad_line", lang, n=parsed))
+    return await draft_days(parsed, member, lang, session)
+
+
+async def draft_days(
+    parsed: list[PlanDay], member: Member, lang: str, session: AsyncSession, note: str = ""
+) -> Reply:
+    """Store the days as the member's one pending plan and answer with the preview + buttons."""
     await session.execute(
         delete(PendingAction).where(
             PendingAction.member_id == member.id, PendingAction.kind == KIND
@@ -429,7 +437,7 @@ async def _draft(text: str, member: Member, lang: str, session: AsyncSession) ->
     )
     session.add(draft)
     await session.flush()
-    return Reply(_preview(parsed, lang), _buttons(draft.id, lang))
+    return Reply(_preview(parsed, lang, note), _buttons(draft.id, lang))
 
 
 async def handle_training_button(

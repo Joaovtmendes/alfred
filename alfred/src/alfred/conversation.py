@@ -70,6 +70,8 @@ from alfred.llm import (
     extract_workout,
     generate_reply,
 )
+from alfred.media_input import STRINGS as _MEDIA_STRINGS
+from alfred.media_input import handle_media_file, is_media_file
 from alfred.models import (
     SETTLED,
     Expense,
@@ -106,6 +108,7 @@ from alfred.parsing import (
     parse_trip_start_date,
     strip_accents,
 )
+from alfred.receipt import STRINGS as _RECEIPT_STRINGS
 from alfred.recurrence import cadence_label, parse_recurrence
 from alfred.recurring import STRINGS as _RECURRING_STRINGS
 from alfred.recurring import handle_recurring_command
@@ -120,6 +123,7 @@ from alfred.statement import (
 )
 from alfred.training import STRINGS as _TRAINING_STRINGS
 from alfred.training import handle_training_button, handle_training_command
+from alfred.training_media import STRINGS as _TRAINING_MEDIA_STRINGS
 from alfred.tripplan import STRINGS as _TRIPPLAN_STRINGS
 from alfred.tripplan import handle_tripplan_command
 from alfred.validation import MAX_AMOUNT
@@ -1533,6 +1537,9 @@ _STRINGS.update(_COUPLE_STRINGS)  # V2-10
 _STRINGS.update(_STATEMENT_STRINGS)  # V2-05
 _STRINGS.update(_ACCT_STRINGS)  # V2-12
 _STRINGS.update(_TRAINING_STRINGS)  # V2-35
+_STRINGS.update(_TRAINING_MEDIA_STRINGS)  # V2-35b
+_STRINGS.update(_MEDIA_STRINGS)  # V2-35b / V2-07 photo and PDF intake
+_STRINGS.update(_RECEIPT_STRINGS)  # V2-07 receipt photo
 _STRINGS.update(_TRIPPLAN_STRINGS)  # V2-35
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
 _STRINGS.update(_BATCH_STRINGS)  # V2-17
@@ -3748,6 +3755,16 @@ async def handle_inbound(
     if member.consent_state == "accepted":
         # 4-0. Reply-button taps (Undo / Edit / It's right on a confirmation)
         if await _handle_button_reply(member, message, session, lang):
+            return
+
+        # 4-0a0. V2-35b / V2-07 — a photo or a PDF: a training plan or a receipt
+        if is_media_file(message.raw or {}):
+            file_out = await handle_media_file(member, message, lang, session)
+            if file_out.buttons:
+                await send_buttons(to, file_out.text, file_out.buttons)
+            else:
+                await send_text(to, file_out.text)
+            await _save_outbound(member, file_out.text, session)
             return
 
         # 4-0a. V2-05 — a bank statement sent as a document
