@@ -220,6 +220,8 @@ _REMIND_LEAD = re.compile(
     r"^(?:me\s+lembra(?:r)?|lembre-me|lembra-me|remind\s+me|herinner\s+me|"
     r"rappelle[-\s]moi|rappeler|erinnere\s+mich)\s*(?:(?:eraan|daran|to|de|que|zu)(?![\w])|d')?[\s,]*"
 )
+# "lembrete: X" / "reminder: X": a label in front of the thing, not part of its title (defect 9).
+_REMIND_LABEL = re.compile(r"^(?:lembrete|reminder|herinnering|rappel|erinnerung)\s*:\s*")
 _EDGE_WORDS = {
     "na", "no", "em", "de", "do", "da", "a", "as", "para", "pra", "um", "uma", "dia", "com", "e",
     "at", "on", "for", "the", "an", "om", "op", "voor", "een", "le", "la", "au", "pour", "am", "fur", "für",
@@ -242,7 +244,7 @@ def clean_title(body: str, spans: list[tuple[int, int]]) -> str:
     out.append(body[pos:])
     text = re.sub(r"[,;]+", " ", " ".join(out))
     text = re.sub(r"\s+", " ", text).strip(" .-–—:")
-    text = _REMIND_LEAD.sub("", _LEAD_VERBS.sub("", text))
+    text = _REMIND_LEAD.sub("", _LEAD_VERBS.sub("", _REMIND_LABEL.sub("", text)))
     words = text.split()
     while words and strip_accents(words[0]) in _EDGE_WORDS:
         words.pop(0)
@@ -452,6 +454,17 @@ async def _create(
         .order_by(Appointment.starts_at)
         .limit(1)
     )
+    if clash is not None and clash.starts_at == a.starts_at:
+        want, have = _tokens(a.title), _tokens(clash.title)
+        if want and have and (want <= have or have <= want):  # the same thing, said twice
+            return AgendaReply(
+                _t(
+                    "agenda_duplicate",
+                    lang,
+                    title=clash.title,
+                    when=_fmt_when(clash.starts_at, lang),
+                )
+            )
     appt = Appointment(
         id=uuid.uuid4(),
         member_id=member.id,
@@ -620,6 +633,13 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": ("Noted: {title}, {when}. I'll remind you {lead} before.", "Scheduled: {title}, {when}. I'll ping you {lead} before."),
         "fr": ("C'est noté : {title}, {when}. Je te préviens {lead} avant.", "Planifié : {title}, {when}. Je te préviens {lead} avant."),
         "de": ("Notiert: {title}, {when}. Ich erinnere dich {lead} vorher.", "Eingetragen: {title}, {when}. Ich melde mich {lead} vorher."),
+    },
+    "agenda_duplicate": {
+        "pt": "Isso já está na agenda: {title}, {when}. Não criei outro.",
+        "nl": "Dat staat al in je agenda: {title}, {when}. Ik heb geen tweede gemaakt.",
+        "en": "That is already in your agenda: {title}, {when}. I did not add another.",
+        "fr": "C'est déjà dans ton agenda : {title}, {when}. Je n'en ai pas créé un autre.",
+        "de": "Das steht schon in deinem Kalender: {title}, {when}. Ich habe keinen zweiten angelegt.",
     },
     "agenda_conflict": {
         "pt": " Atenção: você já tem {title} às {time}.",

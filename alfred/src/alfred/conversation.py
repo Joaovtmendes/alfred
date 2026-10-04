@@ -2819,6 +2819,25 @@ _FAKE_CONFIRM_RE = re.compile(
 _ZERO_OR_NEG_RE = re.compile(r"(?<!\S)-\d|(?<![\d.,-])0+(?:[.,]0+)?(?![\d.,])")
 
 
+# "cinema 24", "café 3,50": words, then one bare number and nothing after it. No unit, so it is
+# money (defect 19 of the 03/10 hard test: the habit classifier took it for a habit and the 24 EUR
+# was lost). "leitura 30 min" has a unit and stays free text.
+_BARE_AMOUNT_RE = re.compile(r"^\s*[^\W\d_][^\d]*?\s+\d+(?:[.,]\d{1,2})?\s*$")
+
+
+def _original_text(message, start: int, end: int) -> str:
+    """Slice of what the member typed (NFC, stripped) at the span found in the lower-cased body."""
+    original = unicodedata.normalize("NFC", (message.body or "").strip())
+    lowered = original.lower()
+    if len(lowered) != len(original):  # a character whose lower case changes the length: keep it
+        return lowered[start:end].strip()
+    return original[start:end].strip()
+
+
+def _looks_like_bare_amount(body: str) -> bool:
+    return bool(_BARE_AMOUNT_RE.match(body))
+
+
 def _has_zero_or_negative_amount(body: str) -> bool:
     """A message with a bare 0 or a leading-minus amount that the extractors will drop."""
     return bool(_ZERO_OR_NEG_RE.search(body))
@@ -3912,7 +3931,8 @@ async def handle_inbound(
         # 4e-2. M10 — nota rápida: "nota: X"
         m_note = _NOTE_RE.match(body)
         if m_note:
-            note_body = m_note.group(1).strip()
+            # the text as written (``body`` is lower case, matching only needs that)
+            note_body = _original_text(message, m_note.start(1), m_note.end(1))
             note = Note(id=uuid.uuid4(), member_id=member.id, body=note_body)
             session.add(note)
             reply = _t("note_saved", lang)
@@ -3925,7 +3945,7 @@ async def handle_inbound(
         if m_task:
             import re as _re
 
-            raw_task = m_task.group(1).strip()
+            raw_task = _original_text(message, m_task.start(1), m_task.end(1))
             # try to extract due_date ("até <date>" / "by <date>" / "voor <date>")
             due_m = _re.search(r"\s(?:até|by|voor|bis|avant)\s+(.+)$", raw_task, _re.IGNORECASE)
             task_body = raw_task
@@ -4323,6 +4343,7 @@ async def handle_inbound(
             and _not_workout
             and _not_health
             and not _has_zero_or_negative_amount(body)  # "café 0" is an invalid amount, not a habit
+            and not _looks_like_bare_amount(body)  # "cinema 24" is an expense, not a habit
             and not body.rstrip().endswith("?")  # a question is not a log
         ):
             habit_data = await extract_habit(body, lang=member.language or "en")
