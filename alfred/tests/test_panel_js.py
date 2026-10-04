@@ -669,7 +669,7 @@ async def test_tabs_work_from_the_keyboard_and_focus_is_visible() -> None:
         await page.keyboard.press("ArrowRight")
         assert await page.get_attribute('[data-tab="money"]', "aria-selected") == "true"
         await page.keyboard.press("End")
-        assert await page.get_attribute('[data-tab="trips"]', "aria-selected") == "true"
+        assert await page.get_attribute('[data-tab="books"]', "aria-selected") == "true"
         await page.keyboard.press("Home")
         await page.keyboard.press("Tab")  # leaves the tab list for the filters
         outline = await page.evaluate("getComputedStyle(document.activeElement).outlineStyle")
@@ -988,15 +988,19 @@ async def test_a_trip_in_progress_with_no_end_date_says_it_is_still_going() -> N
 # ── group H — phone (M1, M2) ─────────────────────────────────────────────────
 
 
-async def test_all_five_tabs_fit_a_375_px_phone_without_scrolling_the_bar() -> None:
-    """M1: "Viagens" was clipped at the right edge of the tab bar."""
+async def test_the_tab_bar_scrolls_on_a_375_px_phone_and_no_tab_is_clipped_at_rest() -> None:
+    """M1: "Viagens" was clipped. With six tabs (V2-12) the bar scrolls and fades at the edge that
+    still has tabs: the first four are whole, and the last one is reachable by scrolling."""
     pwm, browser, page = await _open(_handlers(), size={"width": 375, "height": 812})
     try:
         await page.wait_for_selector("[data-card=upcoming]")
-        for tab in ("summary", "money", "agenda", "health", "trips"):
+        for tab in ("summary", "money", "agenda", "health"):
             box = await page.locator(f'[data-tab="{tab}"]').bounding_box()
             assert box["x"] >= 0 and box["x"] + box["width"] <= 375, tab
-        assert not await page.eval_on_selector(".tabs-wrap", "e => e.classList.contains('fade-r')")
+        assert await page.eval_on_selector(".tabs-wrap", "e => e.classList.contains('fade-r')")
+        await page.locator('[data-tab="books"]').scroll_into_view_if_needed()
+        box = await page.locator('[data-tab="books"]').bounding_box()
+        assert box["x"] >= 0 and box["x"] + box["width"] <= 375
     finally:
         await _close(pwm, browser)
 

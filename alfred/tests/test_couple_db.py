@@ -336,7 +336,7 @@ async def test_settle_records_the_debtors_payment_and_brings_balance_to_zero(
 async def test_settle_by_the_creditor_names_the_debtor(lab: Lab, lab2: Lab, today) -> None:
     await _link(lab, lab2)
     await lab.add(_exp(lab, 100, shared=True))
-    assert "paga" not in (await lab.say("acertamos")).lower() or True
+    await lab.say("acertamos")
     assert (
         await lab.scalar(
             select(PartnerSettlement.member_id).where(PartnerSettlement.link_id.is_not(None))

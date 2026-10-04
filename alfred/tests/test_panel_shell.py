@@ -20,7 +20,7 @@ PANEL = pathlib.Path(__file__).parent.parent / "src" / "alfred" / "panel"
 def test_tabs_order_and_labels_in_every_language() -> None:
     for lang in ("pt", "nl", "en", "fr", "de"):
         ids = [t["id"] for t in panel_i18n.tabs(lang)]
-        assert ids == ["summary", "money", "agenda", "health", "trips"]
+        assert ids == ["summary", "money", "agenda", "health", "trips", "books"]
         assert all(t["label"].strip() for t in panel_i18n.tabs(lang))
     assert [t["label"] for t in panel_i18n.tabs("pt")] == [
         "Resumo",
@@ -28,6 +28,7 @@ def test_tabs_order_and_labels_in_every_language() -> None:
         "Agenda",
         "Hábitos",
         "Viagens",
+        "Contabilidade",
     ]
 
 
@@ -111,7 +112,7 @@ async def test_every_member_gets_the_v2_panel_whatever_the_old_flag_says(lab, cl
         assert 'role="tablist"' in v2 and 'data-theme="dark"' in v2, old_flag
         assert "Chart" not in v2
         labels = re.findall(r'role="tab"[^>]*>([^<]+)<', v2)
-        assert labels == ["Resumo", "Dinheiro", "Agenda", "Hábitos", "Viagens"]
+        assert labels == ["Resumo", "Dinheiro", "Agenda", "Hábitos", "Viagens", "Contabilidade"]
         csp = headers["content-security-policy"]
         assert "unsafe-inline" not in csp and "cdnjs" not in v2 and "cdnjs" not in csp
         assert not re.search(r'<(script|link)[^>]+(src|href)="https?://', v2)
@@ -142,7 +143,7 @@ async def test_the_language_chosen_in_the_chat_is_the_language_of_the_panel(lab,
     page, _ = await _page(lab, client, True)
     assert '<html lang="en"' in page
     assert re.findall(r'role="tab"[^>]*>([^<]+)<', page) == [
-        "Summary", "Money", "Agenda", "Habits", "Trips",
+        "Summary", "Money", "Agenda", "Habits", "Trips", "Accounting",
     ]  # fmt: skip
     await lab.say("language Dutch")
     page, _ = await _page(lab, client, True)

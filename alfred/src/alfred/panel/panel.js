@@ -39,6 +39,7 @@
   const dtf = (opts) => new Intl.DateTimeFormat(LANG, { timeZone: "UTC", ...opts });
   const F_SHORT = dtf({ month: "short" }), F_LONG = dtf({ month: "long" }), F_MY = dtf({ month: "long", year: "numeric" });
   const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const monthN = (m) => F_SHORT.format(new Date(Date.UTC(2026, m - 1, 1))).replace(/\.$/, "");
   const monthShort = (iso) => F_SHORT.format(day(iso)).replace(/\.$/, "");
   const monthWord = (iso) => { const w = F_LONG.format(day(iso)); return cfg.lang === "de" || cfg.lang === "en" ? w : w.toLowerCase(); };
   const monthTitle = (ym) => cap1(F_MY.format(day(ym + "-01")));
@@ -203,6 +204,9 @@
     goals: "title_goals", trip: "title_trip",
     training: "title_training", itinerary: "title_itinerary", packing: "title_packing", plan_budget: "title_planbudget",
     home_balance: "title_home_balance", home_entries: "title_home_entries",
+    books_year: "title_books_year", books_categories: "title_books_categories", books_fixed: "title_books_fixed",
+    books_emergency: "title_books_emergency", books_pl: "title_books_pl", books_btw: "title_books_btw",
+    books_deductible: "title_books_deductible", books_reserve: "title_books_reserve",
   };
   const SPANS = {
     summary: { balance: "s7", categories: "s5", goals: "s5", week: "s7", upcoming: "s12" },
@@ -210,6 +214,7 @@
     health: { goals: "s7", workouts: "s5", training: "s12", water: "s12" },
     trips: { trip: "s7", packing: "s5", itinerary: "s7", plan_budget: "s5", trips_past: "s12" },
     home: { home_balance: "s5", home_entries: "s7" },
+    books: { books_year: "s7", books_categories: "s5", books_fixed: "s5", books_emergency: "s7", books_pl: "s7", books_btw: "s5", books_deductible: "s5", books_reserve: "s7" },
     money: { transactions: "s7", month_vs_month: "s5", top_expenses: "s5", categories: "s7", budgets: "s7", fixed_variable: "s5", owed: "s5", daily: "s7", recurring: "s12" },
   };
 
@@ -444,6 +449,149 @@
         list.append(row);
       }
       c.append(list);
+      return c;
+    },
+
+    books_year(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_books_year + " " + v.year, span);
+      heroMoney(c, v.balance, true);
+      c.append(el("div", "sub", T.books_balance));
+      const tiles = el("div", "tiles");
+      for (const [k, val] of [[T.books_income, v.income], [T.books_expense, v.expense]]) {
+        const t = el("div", "tile");
+        t.append(el("div", "k", k), el("div", "big-num", money0(val)));
+        tiles.append(t);
+      }
+      c.append(tiles);
+      if (v.saving_rate !== null && v.saving_rate !== undefined) {
+        c.append(el("div", "cap", fmt(T.books_saving_rate, { pct: fmtInt.format(Math.round(v.saving_rate)) })));
+      }
+      const top = Math.max(1, ...card.months.map((m) => Math.max(m.income, m.expense)));
+      const rows = el("div", "rows");
+      for (const m of card.months) {
+        const r = el("div", "cat");
+        r.append(el("span", "n", monthN(m.m)), track((m.expense / top) * 100, "", true), el("span", "v", money0(m.balance)));
+        rows.append(r);
+      }
+      c.append(rows);
+      return c;
+    },
+
+    books_categories(card, span) {
+      const c = cardShell(card, T.title_books_categories, span);
+      const rows = el("div", "rows");
+      const top = Math.max(1, ...card.items.map((i) => i.amount));
+      for (const it of card.items) {
+        const r = el("div", "cat");
+        r.append(el("span", "n", it.label), track((it.amount / top) * 100, "", true), el("span", "v", money0(it.amount) + " · " + fmtInt.format(Math.round(it.pct)) + "%"));
+        rows.append(r);
+      }
+      c.append(rows);
+      return c;
+    },
+
+    books_fixed(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_books_fixed, span);
+      const tiles = el("div", "tiles");
+      for (const [k, val] of [[T.books_fixed_label, v.fixed], [T.books_variable_label, v.variable]]) {
+        const t = el("div", "tile");
+        t.append(el("div", "k", k), el("div", "big-num", money0(val)));
+        tiles.append(t);
+      }
+      c.append(tiles);
+      if (v.fixed_pct !== null && v.fixed_pct !== undefined) {
+        c.append(track(v.fixed_pct, "", true));
+        c.append(el("div", "cap", fmt(T.books_fixed_pct, { pct: fmtInt.format(Math.round(v.fixed_pct)) })));
+      }
+      return c;
+    },
+
+    books_emergency(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_books_emergency, span);
+      if (v.months !== null && v.months !== undefined) {
+        c.append(el("div", "hero xl", String(v.months).replace(".", ",")));
+        c.append(el("div", "sub", fmt(T.books_months_covered, { n: "" }).trim()));
+      }
+      const tiles = el("div", "tiles");
+      const pairs = [[T.books_savings, v.savings]];
+      if (v.avg_monthly !== null && v.avg_monthly !== undefined) pairs.push([T.books_avg_monthly, v.avg_monthly]);
+      for (const [k, val] of pairs) {
+        const t = el("div", "tile");
+        t.append(el("div", "k", k), el("div", "big-num", money0(val)));
+        tiles.append(t);
+      }
+      c.append(tiles);
+      return c;
+    },
+
+    books_pl(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_books_pl, span);
+      heroMoney(c, v.profit, true);
+      c.append(el("div", "sub", T.books_profit));
+      const tiles = el("div", "tiles");
+      for (const [k, val] of [[T.books_net_income, v.income], [T.books_net_expense, v.expense]]) {
+        const t = el("div", "tile");
+        t.append(el("div", "k", k), el("div", "big-num", money0(val)));
+        tiles.append(t);
+      }
+      c.append(tiles);
+      if (v.unrated) c.append(el("div", "cap", fmt(T.books_unrated, { n: v.unrated })));
+      if (v.non_deductible) c.append(el("div", "cap", fmt(T.books_non_deductible, { amount: money0(v.non_deductible) })));
+      const top = Math.max(1, ...card.months.map((m) => Math.max(m.income, m.expense)));
+      const rows = el("div", "rows");
+      for (const m of card.months) {
+        const r = el("div", "cat");
+        r.append(el("span", "n", monthN(m.m)), track((m.income / top) * 100, "", true), el("span", "v", money0(m.profit)));
+        rows.append(r);
+      }
+      c.append(rows);
+      c.append(el("div", "cap", T.books_estimate));
+      return c;
+    },
+
+    books_btw(card, span) {
+      const c = cardShell(card, T.title_books_btw + " " + card.values.year, span);
+      const list = el("div", "list");
+      for (const q of card.quarters) {
+        const row = el("div", "item");
+        const body = el("div");
+        const name = fmt(T.books_quarter, { q: q.q }) + (q.q === card.values.current_quarter ? " · " + T.books_current : "");
+        body.append(el("div", "t", name));
+        let sub = T.books_btw_owed + " " + money(q.owed) + " · " + T.books_btw_input + " " + money(q.input);
+        if (q.unrated) sub += " · " + fmt(T.books_unrated, { n: q.unrated });
+        body.append(el("div", "s", sub));
+        const amt = el("div", "amt" + (q.net > 0 ? " neg" : ""), money(Math.abs(q.net)));
+        row.append(body, amt, el("div", "s", q.net > 0 ? T.books_btw_net : (q.net < 0 ? T.books_btw_refund : "")));
+        list.append(row);
+      }
+      c.append(list);
+      c.append(el("div", "cap", T.books_estimate));
+      return c;
+    },
+
+    books_deductible(card, span) {
+      const c = cardShell(card, T.title_books_deductible, span);
+      const rows = el("div", "rows");
+      const top = Math.max(1, ...card.items.map((i) => i.amount));
+      for (const it of card.items) {
+        const r = el("div", "cat");
+        r.append(el("span", "n", it.label), track((it.amount / top) * 100, "", true), el("span", "v", money0(it.amount)));
+        rows.append(r);
+      }
+      c.append(rows);
+      return c;
+    },
+
+    books_reserve(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_books_reserve, span);
+      heroMoney(c, v.reserve, true);
+      c.append(el("div", "sub", fmt(T.books_reserve_line, { pct: v.pct })));
+      c.append(el("div", "cap", T.books_estimate));
       return c;
     },
 

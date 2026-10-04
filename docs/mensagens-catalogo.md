@@ -2,6 +2,285 @@
 
 > Gerado por `scripts/message_audit.py --catalog`. Não editar à mão.
 
+## `acct_always_cleared`
+
+- **pt** — Pronto: nenhuma categoria é da empresa por padrão.
+- **nl** — Klaar: geen enkele categorie is standaard zakelijk.
+- **en** — Done: no category is business by default.
+- **fr** — C'est fait : aucune catégorie n'est pro par défaut.
+- **de** — Fertig: keine Kategorie ist standardmäßig geschäftlich.
+
+## `acct_always_none`
+
+- **pt** — Não reconheci essas categorias. Exemplo: *sempre da empresa: software, transporte*.
+- **nl** — Ik herken die categorieën niet. Voorbeeld: *altijd zakelijk: software, vervoer*.
+- **en** — I did not recognise those categories. Example: *always business: software, transport*.
+- **fr** — Je n'ai pas reconnu ces catégories. Exemple : *toujours pro : logiciel, transport*.
+- **de** — Ich habe diese Kategorien nicht erkannt. Beispiel: *immer geschäftlich: Software, Transport*.
+
+## `acct_always_set`
+
+- **pt** — Combinado: {cats} entram como da empresa sempre que você lançar. Para desfazer: *nada sempre da empresa*.
+- **nl** — Afgesproken: {cats} worden zakelijk geboekt als je iets invoert. Ongedaan maken: *niets altijd zakelijk*.
+- **en** — Done: {cats} are booked as business whenever you add something. To undo: *nothing always business*.
+- **fr** — C'est noté : {cats} sont enregistrées en pro à chaque saisie. Pour annuler : *rien de toujours pro*.
+- **de** — Abgemacht: {cats} werden bei jeder Eingabe als geschäftlich gebucht. Zum Rückgängigmachen: *nichts immer geschäftlich*.
+
+## `acct_btw_bad_rate`
+
+- **pt** — Use 21, 9 ou 0, por exemplo *btw 21*.
+- **nl** — Gebruik 21, 9 of 0, bijvoorbeeld *btw 21*.
+- **en** — Use 21, 9 or 0, for example *btw 21*.
+- **fr** — Utilise 21, 9 ou 0, par exemple *btw 21*.
+- **de** — Nimm 21, 9 oder 0, zum Beispiel *btw 21*.
+
+## `acct_btw_need_business`
+
+- **pt** — O último lançamento precisa estar marcado como da empresa (*foi da empresa*) no modo empresa.
+- **nl** — De laatste boeking moet als zakelijk zijn gemarkeerd (*was zakelijk*) in de zakelijke modus.
+- **en** — The last entry must be marked as business (*it was business*) in business mode.
+- **fr** — La dernière écriture doit être marquée pro (*c'était pro*) en mode entreprise.
+- **de** — Die letzte Buchung muss im Firmenmodus als geschäftlich markiert sein (*war geschäftlich*).
+
+## `acct_btw_set`
+
+- **pt** — BTW {rate}% em {name}: cerca de {btw} do valor é BTW.
+- **nl** — Btw {rate}% bij {name}: ongeveer {btw} van het bedrag is btw.
+- **en** — VAT {rate}% on {name}: about {btw} of the amount is VAT.
+- **fr** — TVA {rate}% sur {name} : environ {btw} du montant est de la TVA.
+- **de** — MwSt {rate}% bei {name}: etwa {btw} des Betrags sind MwSt.
+
+## `acct_deduct_set`
+
+- **pt** — {name} conta como despesa dedutível.
+- **nl** — {name} telt als aftrekbare uitgave.
+- **en** — {name} counts as a deductible expense.
+- **fr** — {name} compte comme dépense déductible.
+- **de** — {name} zählt als absetzbare Ausgabe.
+
+## `acct_export_all`
+
+- **pt** — CSV de {year} com todos os seus lançamentos: {url}
+  > O link vale uma vez e por {minutes} minutos.
+- **nl** — CSV van {year} met al je boekingen: {url}
+  > De link werkt één keer en {minutes} minuten.
+- **en** — CSV for {year} with all your entries: {url}
+  > The link works once and for {minutes} minutes.
+- **fr** — CSV de {year} avec toutes tes écritures : {url}
+  > Le lien est valable une fois et {minutes} minutes.
+- **de** — CSV für {year} mit allen deinen Buchungen: {url}
+  > Der Link gilt einmal und {minutes} Minuten.
+
+## `acct_export_bad_year`
+
+- **pt** — Não tenho esse ano. Exemplo: *exportar contabilidade 2026*.
+- **nl** — Dat jaar heb ik niet. Voorbeeld: *exporteer boekhouding 2026*.
+- **en** — I do not have that year. Example: *export accounting 2026*.
+- **fr** — Je n'ai pas cette année. Exemple : *exporter comptabilité 2026*.
+- **de** — Dieses Jahr habe ich nicht. Beispiel: *buchhaltung exportieren 2026*.
+
+## `acct_export_business`
+
+- **pt** — CSV de {year} só com os lançamentos da empresa, para o seu contador: {url}
+  > O link vale uma vez e por {minutes} minutos.
+- **nl** — CSV van {year} alleen met de zakelijke boekingen, voor je boekhouder: {url}
+  > De link werkt één keer en {minutes} minuten.
+- **en** — CSV for {year} with the business entries only, for your accountant: {url}
+  > The link works once and for {minutes} minutes.
+- **fr** — CSV de {year} avec les écritures pro seulement, pour ton comptable : {url}
+  > Le lien est valable une fois et {minutes} minutes.
+- **de** — CSV für {year} nur mit den geschäftlichen Buchungen, für deinen Steuerberater: {url}
+  > Der Link gilt einmal und {minutes} Minuten.
+
+## `acct_marked_business`
+
+- **pt** — Marcado como da empresa: {name} ({amount}). Se tiver BTW: *btw 21*, *btw 9* ou *btw 0*. Se não for dedutível: *não dedutível*.
+- **nl** — Als zakelijk gemarkeerd: {name} ({amount}). Met btw: *btw 21*, *btw 9* of *btw 0*. Niet aftrekbaar: *niet aftrekbaar*.
+- **en** — Marked as business: {name} ({amount}). With VAT: *btw 21*, *btw 9* or *btw 0*. If it is not deductible: *not deductible*.
+- **fr** — Marqué comme pro : {name} ({amount}). Avec TVA : *btw 21*, *btw 9* ou *btw 0*. Si non déductible : *non déductible*.
+- **de** — Als geschäftlich markiert: {name} ({amount}). Mit MwSt: *btw 21*, *btw 9* oder *btw 0*. Wenn nicht absetzbar: *nicht absetzbar*.
+
+## `acct_marked_private`
+
+- **pt** — Voltou a ser pessoal: {name} ({amount}).
+- **nl** — Weer persoonlijk: {name} ({amount}).
+- **en** — Back to personal: {name} ({amount}).
+- **fr** — De nouveau personnel : {name} ({amount}).
+- **de** — Wieder privat: {name} ({amount}).
+
+## `acct_mode_business`
+
+- **pt** — Modo empresa ligado. Marque um lançamento com *foi da empresa* e, se quiser, informe o BTW com *btw 21* (ou 9 ou 0). Para a empresa ter uma categoria padrão: *sempre da empresa: software, transporte*. Veja tudo na aba Contabilidade do painel (*meu dashboard*). Para voltar: *modo pessoal*.
+- **nl** — Zakelijke modus aan. Markeer een boeking met *was zakelijk* en geef eventueel de btw door met *btw 21* (of 9 of 0). Voor een standaard zakelijke categorie: *altijd zakelijk: software, vervoer*. Alles staat in het tabblad Boekhouding van je dashboard (*mijn dashboard*). Terug: *persoonlijke modus*.
+- **en** — Business mode on. Mark an entry with *it was business* and, if you like, add the VAT with *btw 21* (or 9 or 0). For a default business category: *always business: software, transport*. Everything is in the Accounting tab of your panel (*my dashboard*). To go back: *personal mode*.
+- **fr** — Mode entreprise activé. Marque une écriture avec *c'était pro* et, si tu veux, indique la TVA avec *btw 21* (ou 9 ou 0). Pour une catégorie pro par défaut : *toujours pro : logiciel, transport*. Tout est dans l'onglet Comptabilité du tableau de bord (*mon dashboard*). Pour revenir : *mode personnel*.
+- **de** — Firmenmodus an. Markiere eine Buchung mit *war geschäftlich* und gib bei Bedarf die MwSt mit *btw 21* (oder 9 oder 0) an. Für eine geschäftliche Standardkategorie: *immer geschäftlich: Software, Transport*. Alles steht im Tab Buchhaltung deines Dashboards (*mein Dashboard*). Zurück: *privatmodus*.
+
+## `acct_mode_personal`
+
+- **pt** — Modo pessoal. Suas marcações da empresa continuam guardadas; a aba Contabilidade volta a mostrar só as análises pessoais.
+- **nl** — Persoonlijke modus. Je zakelijke markeringen blijven bewaard; het tabblad Boekhouding toont weer alleen de persoonlijke analyses.
+- **en** — Personal mode. Your business tags stay saved; the Accounting tab shows only the personal analyses again.
+- **fr** — Mode personnel. Tes marques pro restent enregistrées ; l'onglet Comptabilité n'affiche plus que les analyses personnelles.
+- **de** — Privatmodus. Deine geschäftlichen Markierungen bleiben gespeichert; der Tab Buchhaltung zeigt wieder nur die privaten Analysen.
+
+## `acct_need_business_mode`
+
+- **pt** — Isso é do modo empresa. Ligue com *modo empresa* primeiro.
+- **nl** — Dit hoort bij de zakelijke modus. Zet hem eerst aan met *zakelijke modus*.
+- **en** — That belongs to business mode. Turn it on first with *business mode*.
+- **fr** — Cela relève du mode entreprise. Active-le d'abord avec *mode entreprise*.
+- **de** — Das gehört zum Firmenmodus. Schalte ihn zuerst mit *firmenmodus* ein.
+
+## `acct_no_entry`
+
+- **pt** — Não achei um lançamento para marcar.
+- **nl** — Ik vond geen boeking om te markeren.
+- **en** — I found no entry to mark.
+- **fr** — Je n'ai trouvé aucune écriture à marquer.
+- **de** — Ich habe keine Buchung zum Markieren gefunden.
+
+## `acct_nondeduct_set`
+
+- **pt** — {name} não conta como dedutível: fica fora do lucro e do BTW da empresa.
+- **nl** — {name} telt niet als aftrekbaar: het blijft buiten de winst en de btw van het bedrijf.
+- **en** — {name} no longer counts as deductible: it stays out of the business profit and BTW.
+- **fr** — {name} ne compte plus comme déductible : hors du bénéfice et de la TVA de l'entreprise.
+- **de** — {name} zählt nicht mehr als absetzbar: es bleibt außerhalb von Gewinn und MwSt des Betriebs.
+
+## `acct_reserve_bad`
+
+- **pt** — Use uma porcentagem de 1 a 60, por exemplo *reserva de imposto 30%*.
+- **nl** — Gebruik een percentage van 1 tot 60, bijvoorbeeld *belastingreserve 30%*.
+- **en** — Use a percentage from 1 to 60, for example *tax reserve 30%*.
+- **fr** — Utilise un pourcentage de 1 à 60, par exemple *réserve d'impôts 30%*.
+- **de** — Nimm einen Prozentsatz von 1 bis 60, zum Beispiel *steuerrücklage 30%*.
+
+## `acct_reserve_off`
+
+- **pt** — Reserva de imposto desligada.
+- **nl** — Belastingreserve uitgezet.
+- **en** — Tax reserve turned off.
+- **fr** — Réserve d'impôt désactivée.
+- **de** — Steuerrücklage ausgeschaltet.
+
+## `acct_reserve_set`
+
+- **pt** — Combinado: separar {pct}% do lucro da empresa para impostos. É só uma estimativa para você se organizar; o valor real vem do seu contador ou da Belastingdienst.
+- **nl** — Afgesproken: {pct}% van de winst opzij voor belastingen. Dit is alleen een schatting om je te organiseren; het echte bedrag komt van je boekhouder of de Belastingdienst.
+- **en** — Done: set aside {pct}% of the business profit for taxes. This is only an estimate to help you plan; the real amount comes from your accountant or the Belastingdienst.
+- **fr** — C'est noté : mettre {pct}% du bénéfice de côté pour les impôts. Ce n'est qu'une estimation pour t'organiser ; le montant réel vient de ton comptable ou de la Belastingdienst.
+- **de** — Abgemacht: {pct}% des Gewinns für Steuern zurücklegen. Das ist nur eine Schätzung zur Orientierung; den echten Betrag nennt dein Steuerberater oder die Belastingdienst.
+
+## `acct_savings_bad`
+
+- **pt** — Não entendi o valor. Exemplo: *reserva de emergência 5000*.
+- **nl** — Ik begrijp het bedrag niet. Voorbeeld: *noodfonds 5000*.
+- **en** — I did not understand the amount. Example: *emergency fund 5000*.
+- **fr** — Je n'ai pas compris le montant. Exemple : *fonds d'urgence 5000*.
+- **de** — Ich habe den Betrag nicht verstanden. Beispiel: *notgroschen 5000*.
+
+## `acct_savings_set`
+
+- **pt** — Anotado: reserva de emergência de {amount}. Mostro quantos meses ela cobre na aba Contabilidade.
+- **nl** — Genoteerd: noodfonds van {amount}. Het tabblad Boekhouding toont hoeveel maanden dat dekt.
+- **en** — Noted: emergency fund of {amount}. The Accounting tab shows how many months it covers.
+- **fr** — Noté : fonds d'urgence de {amount}. L'onglet Comptabilité montre combien de mois il couvre.
+- **de** — Notiert: Notgroschen von {amount}. Der Tab Buchhaltung zeigt, wie viele Monate er abdeckt.
+
+## `acct_summary`
+
+- **pt** — Contabilidade {year}
+  > Entradas {income} · Saídas {expense} · Saldo {balance}
+  > Maiores categorias: {cats}
+- **nl** — Boekhouding {year}
+  > Inkomsten {income} · Uitgaven {expense} · Saldo {balance}
+  > Grootste categorieën: {cats}
+- **en** — Accounting {year}
+  > Income {income} · Spending {expense} · Balance {balance}
+  > Biggest categories: {cats}
+- **fr** — Comptabilité {year}
+  > Revenus {income} · Dépenses {expense} · Solde {balance}
+  > Principales catégories : {cats}
+- **de** — Buchhaltung {year}
+  > Einnahmen {income} · Ausgaben {expense} · Saldo {balance}
+  > Größte Kategorien: {cats}
+
+## `acct_summary_business`
+
+- **pt** — 
+  > 
+  > Empresa (sem BTW): receita {income}, despesas dedutíveis {expense}, lucro {profit}
+  > BTW do {quarter}º trimestre: {btw} (positivo = a pagar)
+- **nl** — 
+  > 
+  > Bedrijf (excl. btw): omzet {income}, aftrekbare kosten {expense}, winst {profit}
+  > Btw {quarter}e kwartaal: {btw} (positief = te betalen)
+- **en** — 
+  > 
+  > Business (excl. VAT): income {income}, deductible costs {expense}, profit {profit}
+  > BTW for quarter {quarter}: {btw} (positive = to pay)
+- **fr** — 
+  > 
+  > Entreprise (hors TVA) : revenus {income}, charges déductibles {expense}, bénéfice {profit}
+  > TVA du trimestre {quarter} : {btw} (positif = à payer)
+- **de** — 
+  > 
+  > Betrieb (ohne MwSt): Einnahmen {income}, absetzbare Kosten {expense}, Gewinn {profit}
+  > MwSt Quartal {quarter}: {btw} (positiv = zu zahlen)
+
+## `acct_summary_empty`
+
+- **pt** — Ainda não há lançamentos neste ano para a contabilidade.
+- **nl** — Er zijn dit jaar nog geen boekingen voor de boekhouding.
+- **en** — There are no entries for the accounting yet this year.
+- **fr** — Il n'y a pas encore d'écritures cette année pour la comptabilité.
+- **de** — In diesem Jahr gibt es noch keine Buchungen für die Buchhaltung.
+
+## `acct_summary_reserve`
+
+- **pt** — 
+  > Reserva de imposto ({pct}%): {reserve}
+- **nl** — 
+  > Belastingreserve ({pct}%): {reserve}
+- **en** — 
+  > Tax reserve ({pct}%): {reserve}
+- **fr** — 
+  > Réserve d'impôt ({pct}%) : {reserve}
+- **de** — 
+  > Steuerrücklage ({pct}%): {reserve}
+
+## `acct_summary_tail`
+
+- **pt** — 
+  > 
+  > É uma estimativa para organizar suas contas, não uma declaração. Detalhes na aba Contabilidade (*meu dashboard*).
+- **nl** — 
+  > 
+  > Dit is een schatting om je administratie te ordenen, geen aangifte. Details in het tabblad Boekhouding (*mijn dashboard*).
+- **en** — 
+  > 
+  > This is an estimate to organise your records, not a tax return. Details in the Accounting tab (*my dashboard*).
+- **fr** — 
+  > 
+  > C'est une estimation pour organiser tes comptes, pas une déclaration. Détails dans l'onglet Comptabilité (*mon dashboard*).
+- **de** — 
+  > 
+  > Das ist eine Schätzung zur Ordnung deiner Unterlagen, keine Steuererklärung. Details im Tab Buchhaltung (*mein Dashboard*).
+
+## `acct_summary_unrated`
+
+- **pt** — 
+  > Sem BTW informado: {n} lançamentos da empresa, contados pelo valor total.
+- **nl** — 
+  > Zonder btw-percentage: {n} zakelijke boekingen, voor het volle bedrag meegeteld.
+- **en** — 
+  > Without a BTW rate: {n} business entries, counted at the full amount.
+- **fr** — 
+  > Sans taux de TVA : {n} écritures pro, comptées au montant total.
+- **de** — 
+  > Ohne MwSt-Satz: {n} geschäftliche Buchungen, mit vollem Betrag gezählt.
+
 ## `agenda_ambiguous`
 
 - **pt** — Mais de um compromisso combina: {names}. Diga o nome completo.
@@ -414,6 +693,62 @@
 - **en** — This month: {blue} days positive and {neg} negative, of {elapsed} (running balance from day 1). Longest positive streak: {longest} days. Balance so far: {balance}.
 - **fr** — Ce mois-ci : {blue} jours en positif et {neg} en négatif sur {elapsed} (solde cumulé depuis le jour 1). Plus longue série en positif : {longest} jours. Solde à ce jour : {balance}.
 - **de** — Diesen Monat: {blue} Tage im Plus und {neg} im Minus von {elapsed} (laufender Saldo seit Tag 1). Längste Serie im Plus: {longest} Tage. Saldo bisher: {balance}.
+
+## `books_emergency_cmd`
+
+- **pt** — reserva de emergência 5000
+- **nl** — noodfonds 5000
+- **en** — emergency fund 5000
+- **fr** — fonds d'urgence 5000
+- **de** — notgroschen 5000
+
+## `books_emergency_hint`
+
+- **pt** — Diga quanto você tem guardado e eu mostro quantos meses isso cobre.
+- **nl** — Zeg hoeveel je op zij hebt en ik laat zien hoeveel maanden dat dekt.
+- **en** — Tell me how much you have set aside and I show how many months it covers.
+- **fr** — Dis-moi combien tu as de côté et je montre combien de mois cela couvre.
+- **de** — Sag mir, wie viel du zurückgelegt hast, und ich zeige, wie viele Monate das abdeckt.
+
+## `books_pl_cmd`
+
+- **pt** — foi da empresa
+- **nl** — was zakelijk
+- **en** — it was business
+- **fr** — c'était pro
+- **de** — war geschäftlich
+
+## `books_pl_hint`
+
+- **pt** — Marque lançamentos como da empresa para ver receita, despesas e lucro.
+- **nl** — Markeer boekingen als zakelijk om omzet, kosten en winst te zien.
+- **en** — Mark entries as business to see income, costs and profit.
+- **fr** — Marque des écritures comme pro pour voir revenus, charges et bénéfice.
+- **de** — Markiere Buchungen als geschäftlich, um Einnahmen, Kosten und Gewinn zu sehen.
+
+## `books_reserve_cmd`
+
+- **pt** — reserva de imposto 30%
+- **nl** — belastingreserve 30%
+- **en** — tax reserve 30%
+- **fr** — réserve d'impôts 30%
+- **de** — steuerrücklage 30%
+
+## `books_reserve_hint`
+
+- **pt** — Diga que parte do lucro você quer separar para impostos.
+- **nl** — Zeg welk deel van de winst je voor belastingen opzij wilt zetten.
+- **en** — Tell me what share of the profit you want to set aside for taxes.
+- **fr** — Dis-moi quelle part du bénéfice tu veux mettre de côté pour les impôts.
+- **de** — Sag mir, welchen Teil des Gewinns du für Steuern zurücklegen möchtest.
+
+## `books_year_hint`
+
+- **pt** — Ainda não há lançamentos neste ano.
+- **nl** — Er zijn dit jaar nog geen boekingen.
+- **en** — No entries this year yet.
+- **fr** — Pas encore d'écritures cette année.
+- **de** — In diesem Jahr gibt es noch keine Buchungen.
 
 ## `btn_cancel`
 

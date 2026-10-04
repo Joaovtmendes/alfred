@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred import clock
 from alfred import statement_csv as csvp
+from alfred.accounting import default_scope
 from alfred.audit import audit
 from alfred.couple import Reply, is_home_by_default
 from alfred.labels import category_label
@@ -315,6 +316,7 @@ async def _commit(
                 expense_date=clock.day_start(date.fromisoformat(i["d"])) + timedelta(hours=12),
                 status="received" if income else "paid",
                 shared=(not income) and await is_home_by_default(session, member, cat),
+                scope=default_scope(member, cat, "income" if income else "expense"),
                 source="csv",
                 external_id=i["e"],
                 import_batch_id=batch.id,
