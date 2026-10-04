@@ -409,6 +409,13 @@ SHELL.update(
             "Qui te doit",
             "Wer dir Geld schuldet",
         ),
+        "owing_title": _t(
+            "Você deve",
+            "Jij bent verschuldigd",
+            "You owe",
+            "Tu dois",
+            "Du schuldest",
+        ),
         "owed_days": _t(
             "há {n} dias", "{n} dagen geleden", "{n} days ago", "il y a {n} jours", "vor {n} Tagen"
         ),
@@ -654,6 +661,20 @@ SHELL.update(
             "Medication",
             "Médicament",
             "Medikamente",
+        ),
+        "rem_kind_reminder": _t(
+            "Lembrete",
+            "Herinnering",
+            "Reminder",
+            "Rappel",
+            "Erinnerung",
+        ),
+        "rem_monthly": _t(
+            "todo dia {d} do mês",
+            "elke maand op de {d}e",
+            "on the {d}th of every month",
+            "le {d} de chaque mois",
+            "jeden Monat am {d}.",
         ),
         "rem_kind_goal_checkin": _t(
             "Meta",

@@ -447,6 +447,11 @@ class Entry:
     status: str
 
 
+def _capital(text: str | None) -> str | None:
+    """Display only: "jumbo" becomes "Jumbo"; the rest of the text stays as typed."""
+    return text[:1].upper() + text[1:] if text else text
+
+
 async def top_expenses(
     session: AsyncSession, member_id: uuid.UUID, f: PanelFilter, limit: int = 5
 ) -> list[Entry]:
@@ -469,7 +474,8 @@ async def top_expenses(
         await session.execute(stmt.order_by(Expense.amount.desc(), Expense.id).limit(limit))
     ).all()
     return [
-        Entry(date.fromisoformat(d), m or desc, c, t, dec(a), s) for d, m, desc, c, t, a, s in rows
+        Entry(date.fromisoformat(d), _capital(m or desc), c, t, dec(a), s)
+        for d, m, desc, c, t, a, s in rows
     ]
 
 
@@ -481,8 +487,12 @@ async def recurring_names(session: AsyncSession, member_id: uuid.UUID) -> set[st
     return {n for (n,) in rows.all() if n}
 
 
+FIXED_CATEGORIES = ("wonen", "abonnement")  # housing and subscriptions are fixed by nature
+
+
 def _is_fixed(names: set[str]):
-    return func.lower(Expense.merchant).in_(sorted(names)) if names else false()
+    by_name = func.lower(Expense.merchant).in_(sorted(names)) if names else false()
+    return by_name | Expense.category.in_(FIXED_CATEGORIES)
 
 
 async def fixed_variable(
@@ -776,7 +786,11 @@ class Owed:
 
 
 async def owed_to_me(
-    session: AsyncSession, member_id: uuid.UUID, today: date, limit: int = 5
+    session: AsyncSession,
+    member_id: uuid.UUID,
+    today: date,
+    limit: int = 5,
+    direction: str = "owed_to_me",
 ) -> tuple[list[Owed], Decimal, int]:
     """Open money people owe the member: (oldest first, total, number of open debts).
 
@@ -785,7 +799,7 @@ async def owed_to_me(
     remaining = Iou.amount - Iou.settled_amount
     base = (
         Iou.member_id == member_id,
-        Iou.direction == "owed_to_me",
+        Iou.direction == direction,
         Iou.settled_at.is_(None),
         remaining > 0,
     )
@@ -891,7 +905,10 @@ async def transactions_page(
     )
     stmt = stmt.order_by(Expense.expense_date.desc(), Expense.id.desc())
     rows = (await session.execute(stmt.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE))).all()
-    return [Entry(date.fromisoformat(d), m or None, c, t, dec(a), s) for d, m, c, t, a, s in rows]
+    return [
+        Entry(date.fromisoformat(d), _capital(m or None), c, t, dec(a), s)
+        for d, m, c, t, a, s in rows
+    ]
 
 
 def fold_daily(

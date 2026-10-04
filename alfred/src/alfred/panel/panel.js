@@ -377,7 +377,7 @@
 
     owed(card, span) {
       const c = cardShell(card, T.title_owed, span);
-      heroMoney(c, card.values.total);
+      if (card.values.count) heroMoney(c, card.values.total);
       const list = el("div", "list");
       for (const it of card.items) {
         const row = el("div", "item person");
@@ -390,6 +390,21 @@
         list.append(row);
       }
       c.append(list);
+      if (card.owing && card.owing.items.length) {
+        const head = el("div", "subhead", T.owing_title);
+        const mine = el("div", "list");
+        for (const it of card.owing.items) {
+          const row = el("div", "item person");
+          row.append(el("div", "avatar", (Array.from(it.person)[0] || "?").toUpperCase()));
+          const body = el("div");
+          body.append(el("div", "t", it.person));
+          const when = it.days === 0 ? T.owed_today : fmtN("owed_days", it.days);
+          body.append(el("div", "s", it.note ? it.note + " · " + when : when));
+          row.append(body, el("div", "amt neg", money(it.amount)));
+          mine.append(row);
+        }
+        c.append(head, mine);
+      }
       phraseBlock(c, card.phrase);
       return c;
     },
@@ -647,7 +662,7 @@
       for (const it of card.items) {
         const row = el("div", "item");
         const body = el("div");
-        const dayNames = it.every_day ? T.rem_every_day : it.days.map((i) => wd.format(new Date(Date.UTC(2024, 0, 1 + i)))).join(", ");
+        const dayNames = it.day_of_month ? T.rem_monthly.replace("{d}", it.day_of_month) : it.every_day ? T.rem_every_day : it.days.map((i) => wd.format(new Date(Date.UTC(2024, 0, 1 + i)))).join(", ");
         body.append(el("div", "t", it.text || T["rem_kind_" + it.kind] || it.kind), el("div", "s", (it.text ? (T["rem_kind_" + it.kind] || "") + " · " : "") + dayNames));
         row.append(body, el("div", "amt num", it.time));
         list.append(row);
@@ -724,8 +739,10 @@
       for (const it of card.items) {
         const b = el("div", "brow");
         const h = el("div", "h");
-        h.append(el("span", "n", it.title), el("span", "v", fmt(T.goal_days, { n: Math.min(it.logs_7d, 7) })));
-        b.append(h, track((Math.min(it.logs_7d, 7) / 7) * 100, ""));
+        h.append(el("span", "n", it.title));
+        if (!it.money) h.append(el("span", "v", fmt(T.goal_days, { n: Math.min(it.logs_7d, 7) })));
+        b.append(h);
+        if (!it.money) b.append(track((Math.min(it.logs_7d, 7) / 7) * 100, ""));
         const sub = [it.target, it.deadline ? fmt(T.goal_until, { date: dayShort(it.deadline) }) : null].filter(Boolean).join(" · ");
         if (sub) b.append(el("div", "cap", sub));
         rows.append(b);
@@ -800,7 +817,7 @@
       const t = card.trip, v = card.values;
       const c = cardShell(card, T.title_trip, span);
       c.append(el("div", "hero small", t.destination));
-      const when = dayShort(t.start) + (t.end ? " – " + dayShort(t.end) : "");
+      const when = dayShort(t.start) + (t.end ? " – " + dayShort(t.end) : (t.state === "active" ? " – " + T.owed_today : ""));
       const state = t.state === "active" ? T.trip_state_active : (t.state === "upcoming" ? fmtN("trip_state_upcoming", t.days_to_start) : T.trip_state_ended);
       c.append(el("div", "sub", when + " · " + state));
       const tiles = el("div", "tiles three");
@@ -1052,7 +1069,12 @@
     const mine = ++latest;
     const tab = cfg.tabs.find((x) => x.id === tabId);
     panel.setAttribute("aria-labelledby", "tab-" + tabId);
-    panel.replaceChildren(el("div", "empty", T.loading));
+    const skeleton = el("div", "grid");
+    for (let i = 0; i < 3; i++) skeleton.append(el("div", "skel"));
+    const status = el("p", "sr-only", T.loading);
+    status.setAttribute("role", "status");
+    panel.replaceChildren(skeleton, status);
+    panel.setAttribute("aria-busy", "true");
     let message = null;
     try {
       const qs = apiQuery(tabId), key = tabId + qs;
@@ -1074,8 +1096,29 @@
       }
       if (tabId === "health" && grid.children.length) grid.append(el("p", "cap grid-note", T.health_note));
       panel.replaceChildren(grid.children.length ? grid : el("div", "empty", T.soon));
+      panel.setAttribute("aria-busy", "false");
+      prefetchOthers(tabId);
     } catch (_) {
-      if (mine === latest) panel.replaceChildren(el("div", "empty", message || T.error));
+      if (mine === latest) {
+        panel.replaceChildren(el("div", "empty", message || T.error));
+        panel.setAttribute("aria-busy", "false");
+      }
+    }
+  }
+
+  // The other tabs are fetched quietly once the visible one is drawn, so switching is instant.
+  let prefetched = false;
+  async function prefetchOthers(shown) {
+    if (prefetched) return;
+    prefetched = true;
+    for (const t of cfg.tabs) {
+      if (t.id === shown) continue;
+      try {
+        const qs = apiQuery(t.id), key = t.id + qs;
+        if (loaded.has(key)) continue;
+        const r = await fetch(t.path.replace("{token}", cfg.token) + qs, { headers: { Accept: "application/json" } });
+        if (r.ok) loaded.set(key, await r.json());
+      } catch (_) { /* a failed background fetch is retried when the tab is opened */ }
     }
   }
 
@@ -1088,6 +1131,8 @@
   }
   tablist.addEventListener("scroll", fade, { passive: true });
   window.addEventListener("resize", fade);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fade); // text width changes
+  if (window.ResizeObserver) new ResizeObserver(fade).observe(tablist);
 
   function refresh() {
     renderFilters(current);

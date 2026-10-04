@@ -2506,6 +2506,52 @@ def _is_command(body: str, keywords: set[str]) -> bool:
     return False
 
 
+_DID_LEAD_RE = re.compile(
+    r"^(?:eu\s+)?(?:fiz|fui|faço|facas|did|had|ik\s+deed|deed|j'ai\s+fait|ich\s+habe)\b"
+)
+
+
+_DURATION_RE = re.compile(r"\b\d+\s*(?:min\w*|h\b|hora\w*|hour\w*|uur|uren|heure\w*|stunde\w*)")
+
+
+def _is_workout_text(body: str) -> bool:
+    """A workout line: starts with an activity word ("corri 5 km") or with a "did" verb
+    followed by one ("fiz 50 minutos de musculação", "fiz yoga durante 20 minutos")."""
+    if _is_command(body, _WORKOUT_WORDS):
+        return True
+    plain = strip_accents(body)
+    if not _DID_LEAD_RE.match(plain):
+        return False
+    words = set(re.findall(r"[a-z']+", plain))
+    return any(strip_accents(w) in words for w in _WORKOUT_WORDS if " " not in w)
+
+
+def _goal_for_activity(goals, activity: str):
+    """The active goal a habit log belongs to: a shared word, or a shared stem of 5+ letters
+    ("meditei" × "meditar todos os dias")."""
+    words = [w for w in strip_accents((activity or "").lower()).split() if w]
+    for g in goals:
+        title = strip_accents(g.title.lower())
+        title_words = re.findall(r"[a-z]+", title)
+        for w in words:
+            if w in title_words or (len(w) >= 2 and w in title and len(w) > 3):
+                return g
+            if len(w) >= 5 and any(
+                len(t) >= 5 and t[:5] == w[:5] and _common_prefix(t, w) >= 5 for t in title_words
+            ):
+                return g
+    return None
+
+
+def _common_prefix(a: str, b: str) -> int:
+    n = 0
+    for x, y in zip(a, b, strict=False):
+        if x != y:
+            break
+        n += 1
+    return n
+
+
 def _is_bare_command(body: str, keywords: set[str]) -> bool:
     """True when body is *only* a command keyword (plus punctuation / a polite word).
 
@@ -2871,11 +2917,13 @@ def _num_str(value: str, lang: str) -> str:
 
 
 def _workout_dur(minutes: int | None, km: float | None, lang: str) -> str:
+    """ "30 min · 5 km": the distance is never dropped when the duration is known."""
+    parts = []
     if minutes:
-        return f"{minutes} min"
+        parts.append(f"{minutes} min")
     if km:
-        return f"{_num(km, lang)} km"
-    return ""
+        parts.append(f"{_num(km, lang)} km")
+    return " · ".join(parts)
 
 
 _ACTIVITY_TAIL_RE = re.compile(
@@ -3951,15 +3999,23 @@ async def handle_inbound(
             task_body = raw_task
             due_date_val = None
             if due_m:
-                try:
-                    from dateutil import parser as _dp
+                from alfred.agenda import parse_when
 
-                    due_date_val = _dp.parse(
-                        due_m.group(1), default=datetime.combine(today_local(), datetime.min.time())
-                    ).date()
+                # words first ("sexta", "amanhã", "dia 20", "15/10"), then dateutil ("Oct 15")
+                when = parse_when(strip_accents(due_m.group(1).lower()), now_local())
+                due_date_val = when.day
+                if due_date_val is None:
+                    try:
+                        from dateutil import parser as _dp
+
+                        due_date_val = _dp.parse(
+                            due_m.group(1),
+                            default=datetime.combine(today_local(), datetime.min.time()),
+                        ).date()
+                    except Exception:
+                        due_date_val = None  # not a date ("até logo"): keep the full text
+                if due_date_val is not None:
                     task_body = raw_task[: due_m.start()].strip() or raw_task
-                except Exception:
-                    due_date_val = None  # not a date ("até logo"): keep the full text
             task = Task(
                 id=uuid.uuid4(),
                 member_id=member.id,
@@ -4294,6 +4350,8 @@ async def handle_inbound(
 
         # 4e-8. M9 — log de hábito: "meditei hoje" (regex fast-path)
         m_habit = None if body.rstrip().endswith("?") else _HABIT_LOG_RE.search(body)
+        if m_habit and _is_workout_text(body) and _DURATION_RE.search(body_plain):
+            m_habit = None  # "fiz yoga durante 20 minutos" is a workout, not the habit "fiz yoga"
         if m_habit:
             habit_activity = m_habit.group("activity").strip()
             # Try to link to a matching active goal
@@ -4302,11 +4360,7 @@ async def handle_inbound(
             res_hg = await session.execute(
                 _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
             )
-            linked_goal = None
-            for g in res_hg.scalars().all():
-                if any(w in g.title.lower() for w in habit_activity.lower().split()):
-                    linked_goal = g
-                    break
+            linked_goal = _goal_for_activity(res_hg.scalars().all(), habit_activity)
             habit_log = HabitLog(
                 id=uuid.uuid4(),
                 member_id=member.id,
@@ -4332,7 +4386,7 @@ async def handle_inbound(
             w in _body_lower
             for w in ("€", "$", "£", "gastei", "comprei", "paguei", "spent", "paid", "bought")
         )
-        _not_workout = not _is_command(body, _WORKOUT_WORDS)
+        _not_workout = not _is_workout_text(body)
         _is_health = _is_command(body, _HEALTH_WORDS) or bool(
             _HEALTH_HINT_RE.search(body_plain) and not body.rstrip().endswith("?")
         )
@@ -4359,11 +4413,7 @@ async def handle_inbound(
                 res_hg2 = await session.execute(
                     _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
                 )
-                linked_goal2 = None
-                for g in res_hg2.scalars().all():
-                    if any(w in g.title.lower() for w in h_activity.lower().split()):
-                        linked_goal2 = g
-                        break
+                linked_goal2 = _goal_for_activity(res_hg2.scalars().all(), h_activity)
                 hlog2 = HabitLog(
                     id=uuid.uuid4(),
                     member_id=member.id,
@@ -4535,8 +4585,8 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-        # 4e-10. M7 — treino: "corri 30 min"
-        if _is_command(body, _WORKOUT_WORDS):
+        # 4e-10. M7 — treino: "corri 30 min", "fiz yoga durante 20 minutos"
+        if _is_workout_text(body):
             today = today_local()
             workout_data = await extract_workout(body, lang=member.language or "en")
             if workout_data:
