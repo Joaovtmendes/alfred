@@ -1069,7 +1069,12 @@
     const mine = ++latest;
     const tab = cfg.tabs.find((x) => x.id === tabId);
     panel.setAttribute("aria-labelledby", "tab-" + tabId);
-    panel.replaceChildren(el("div", "empty", T.loading));
+    const skeleton = el("div", "grid");
+    for (let i = 0; i < 3; i++) skeleton.append(el("div", "skel"));
+    const status = el("p", "sr-only", T.loading);
+    status.setAttribute("role", "status");
+    panel.replaceChildren(skeleton, status);
+    panel.setAttribute("aria-busy", "true");
     let message = null;
     try {
       const qs = apiQuery(tabId), key = tabId + qs;
@@ -1091,8 +1096,29 @@
       }
       if (tabId === "health" && grid.children.length) grid.append(el("p", "cap grid-note", T.health_note));
       panel.replaceChildren(grid.children.length ? grid : el("div", "empty", T.soon));
+      panel.setAttribute("aria-busy", "false");
+      prefetchOthers(tabId);
     } catch (_) {
-      if (mine === latest) panel.replaceChildren(el("div", "empty", message || T.error));
+      if (mine === latest) {
+        panel.replaceChildren(el("div", "empty", message || T.error));
+        panel.setAttribute("aria-busy", "false");
+      }
+    }
+  }
+
+  // The other tabs are fetched quietly once the visible one is drawn, so switching is instant.
+  let prefetched = false;
+  async function prefetchOthers(shown) {
+    if (prefetched) return;
+    prefetched = true;
+    for (const t of cfg.tabs) {
+      if (t.id === shown) continue;
+      try {
+        const qs = apiQuery(t.id), key = t.id + qs;
+        if (loaded.has(key)) continue;
+        const r = await fetch(t.path.replace("{token}", cfg.token) + qs, { headers: { Accept: "application/json" } });
+        if (r.ok) loaded.set(key, await r.json());
+      } catch (_) { /* a failed background fetch is retried when the tab is opened */ }
     }
   }
 
@@ -1105,6 +1131,8 @@
   }
   tablist.addEventListener("scroll", fade, { passive: true });
   window.addEventListener("resize", fade);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fade); // text width changes
+  if (window.ResizeObserver) new ResizeObserver(fade).observe(tablist);
 
   function refresh() {
     renderFilters(current);

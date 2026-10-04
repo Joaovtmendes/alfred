@@ -66,6 +66,9 @@ async def _open(handlers: dict, lang: str = "pt", query: str = "", size: dict | 
         elif path.startswith(f"/api/d/{TOKEN}/"):
             tab = path.split("/")[-1].split("?")[0]
             page.api_calls.append((r.request.method, url))
+            if tab not in handlers:  # a tab this test does not care about
+                await r.fulfill(status=404, content_type="application/json", body="{}")
+                return
             status, body = await handlers[tab]()
             await r.fulfill(status=status, content_type="application/json", body=json.dumps(body))
         else:
@@ -640,7 +643,7 @@ async def test_theme_switch_toggles_and_remembers_the_choice() -> None:
 
 
 async def test_tab_bar_on_a_phone_scrolls_with_a_fade_and_keeps_the_selected_tab_visible() -> None:
-    pwm, browser, page = await _open(_handlers(), size={"width": 390, "height": 844})
+    pwm, browser, page = await _open(_handlers(), size={"width": 320, "height": 640})
     try:
         await page.wait_for_selector("[data-card=upcoming]")
         assert await page.eval_on_selector(".tabs-wrap", "e => e.classList.contains('fade-r')")
@@ -649,7 +652,7 @@ async def test_tab_bar_on_a_phone_scrolls_with_a_fade_and_keeps_the_selected_tab
         await _poll(page, "document.querySelector('.tabs-wrap').classList.contains('fade-l')")
         box = await page.locator('[data-tab="trips"]').bounding_box()
         assert (
-            box["x"] >= 0 and box["x"] + box["width"] <= 390 + 1
+            box["x"] >= 0 and box["x"] + box["width"] <= 320 + 1
         )  # selected tab scrolled into view
         assert await page.evaluate(
             "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
@@ -978,5 +981,66 @@ async def test_a_trip_in_progress_with_no_end_date_says_it_is_still_going() -> N
         await page.wait_for_selector("[data-card=trip]")
         sub = await _text(page, "[data-card=trip] .sub")
         assert "–" in sub and "hoje" in sub
+    finally:
+        await _close(pwm, browser)
+
+
+# ── group H — phone (M1, M2) ─────────────────────────────────────────────────
+
+
+async def test_all_five_tabs_fit_a_375_px_phone_without_scrolling_the_bar() -> None:
+    """M1: "Viagens" was clipped at the right edge of the tab bar."""
+    pwm, browser, page = await _open(_handlers(), size={"width": 375, "height": 812})
+    try:
+        await page.wait_for_selector("[data-card=upcoming]")
+        for tab in ("summary", "money", "agenda", "health", "trips"):
+            box = await page.locator(f'[data-tab="{tab}"]').bounding_box()
+            assert box["x"] >= 0 and box["x"] + box["width"] <= 375, tab
+        assert not await page.eval_on_selector(".tabs-wrap", "e => e.classList.contains('fade-r')")
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_a_slow_tab_shows_card_skeletons_not_an_empty_page() -> None:
+    """M2: Hábitos stayed blank for 2–3 s."""
+    import asyncio
+
+    gate = asyncio.Event()
+    base = _tab_handlers()
+
+    async def slow_health():
+        await gate.wait()
+        return 200, _TABS_FX["health"]
+
+    pwm, browser, page = await _open({**base, "health": slow_health})
+    try:
+        await page.wait_for_selector("[data-card=upcoming]")
+        await page.click('[data-tab="health"]')
+        await page.wait_for_selector("#panel .skel")
+        assert await page.locator("#panel .skel").count() >= 2
+        assert await page.get_attribute("#panel", "aria-busy") == "true"
+        gate.set()
+        await page.wait_for_selector("[data-card=water]")
+        assert await page.locator("#panel .skel").count() == 0
+        assert await page.get_attribute("#panel", "aria-busy") in (None, "false")
+    finally:
+        gate.set()
+        await _close(pwm, browser)
+
+
+async def test_the_other_tabs_are_fetched_in_the_background_after_the_first_one() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.wait_for_selector("[data-card=upcoming]")
+        for _ in range(40):
+            tabs = {u.split("/")[-1].split("?")[0] for _, u in page.api_calls}
+            if {"summary", "money", "agenda", "health", "trips"} <= tabs:
+                break
+            await page.wait_for_timeout(100)
+        assert {"money", "agenda", "health", "trips"} <= tabs
+        calls = len(page.api_calls)
+        await page.click('[data-tab="health"]')
+        await page.wait_for_selector("[data-card=water]")
+        assert len(page.api_calls) == calls  # served from what was already fetched
     finally:
         await _close(pwm, browser)
