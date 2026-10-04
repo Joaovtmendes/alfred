@@ -156,6 +156,20 @@ def send_tap(label: str, button_id: str, run_id: str, delay: float = DEFAULT_DEL
 # ══════════════════════════════════════════════════════════════════════════════
 
 
+def abertura(run_id, delay):
+    """Boas-vindas — "oi" e "sim" primeiro: depois de apagar os dados a conta é nova e só
+    responde ao resto depois do aceite (sem isto o teste inteiro cai no pedido de consentimento)."""
+    print("\n══ Abertura — oi + sim (conta nova) ══")
+    send("Z01 oi", "oi", run_id, delay)
+    send("Z02 aceitar", "sim", run_id, delay)
+
+
+def plano(selecionados, sem_abertura=False):
+    """Funções a correr, em ordem: a abertura vem antes de qualquer bloco."""
+    passos = [BLOCOS[b] for b in selecionados]
+    return passos if sem_abertura else [abertura, *passos]
+
+
 def bloco_a(run_id, delay):
     """Core Financeiro — despesas, receitas, correcção, queries temporais."""
     print("\n══ Bloco A — Core Financeiro ══")
@@ -620,6 +634,11 @@ if __name__ == "__main__":
         default=DEFAULT_DELAY,
         help=f"Segundos entre mensagens (default: {DEFAULT_DELAY})",
     )
+    parser.add_argument(
+        "--sem-abertura",
+        action="store_true",
+        help='Não enviar "oi" e "sim" antes dos blocos (conta já aceitou os termos).',
+    )
     args = parser.parse_args()
 
     run_id = str(int(time.time()))
@@ -639,8 +658,8 @@ if __name__ == "__main__":
 
     t_start = time.time()
 
-    for bloco in selecionados:
-        BLOCOS[bloco](run_id, args.delay)
+    for passo in plano(selecionados, args.sem_abertura):
+        passo(run_id, args.delay)
 
     elapsed = time.time() - t_start
     print(f"\n{'=' * 60}")
