@@ -6,7 +6,7 @@ M2 — expense table + preferred_name / language on member
 Design decisions:
 - All PKs are UUID generated server-side (no auto-increment)
 - wa_message_id has a UNIQUE constraint → idempotency key for deduplication
-- member.consent_state: pending | pending_response | accepted | rejected
+- member.consent_state: pending | pending_language | pending_response | accepted | rejected
 - message.direction: inbound | outbound
 - All timestamps in UTC (timestamptz)
 """
@@ -71,7 +71,7 @@ class Member(Base):
     # AVG consent + EU AI Act Art. 50 disclosure
     consent_state: Mapped[str] = mapped_column(
         String(20), nullable=False, default="pending"
-    )  # pending | pending_response | accepted | rejected
+    )  # pending | pending_language | pending_response | accepted | rejected
     disclosure_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     disclosure_version: Mapped[str | None] = mapped_column(String(20))
 

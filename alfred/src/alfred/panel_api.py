@@ -21,8 +21,8 @@ Every card has a stable ``id``, ``empty`` (bool), ``phrase`` and, when it is emp
 Money is a plain number in EUR (2 decimals), dates are ISO ``YYYY-MM-DD`` local days. At most one
 phrase per card. ``values`` always has the same keys (zeros when empty).
 
-Summary cards (in this order)
------------------------------
+Summary cards (in this order: balance, categories, goals, week, upcoming)
+-------------------------------------------------------------------------
 ``balance``    values {income, expense, balance} (settled entries); ``compare`` null | {start, end,
                income|expense: {previous, delta, pct|null}}; ``projection`` is
                {available: false, reason: "empty"|"filtered"|"not_current_month"} or
@@ -30,38 +30,38 @@ Summary cards (in this order)
                scheduled_in (income marked "to receive"), variable|null, projected|null, low|null,
                high|null, month_end, days_left, window_days, entries, history_days}. With
                sufficient=false only the realized and committed parts are real (no estimate).
+``categories`` values {total, previous_total, delta, pct|null}; items [{category, label, amount,
+               pct_of_total, count, previous, delta, delta_pct|null, trend: "up"|"down"|"flat"|"new"}]
+               (top 5; 8 in Dinheiro), ``others`` null | {amount, count}, ``compare`` {start, end}.
+``goals`` / ``week``  the same cards as in Hábitos / Agenda (see ``panel_tabs``).
 ``upcoming``   values {to_pay, to_receive, overdue, count_pay, count_receive, count_overdue,
                horizon_days: 30}; items [{name, amount, due, days (negative = overdue), due_text,
                overdue, direction: "pay"|"receive", source: "recurring"|"expense", kind|null,
                category|null, label|null}] (10 at most) and ``more``.
-``categories`` values {total, previous_total, delta, pct|null}; items [{category, label, amount,
-               pct_of_total, count, previous, delta, delta_pct|null, trend: "up"|"down"|"flat"|"new"}]
-               (top 5; 8 in Dinheiro), ``others`` null | {amount, count}, ``compare`` {start, end}.
-``budgets``    values {spent, limit, pct|null, month: "YYYY-MM", day, days_in_month}; items [{category,
-               label, spent, limit, pct, level: 0|80|100, crossed_on|null, days_to_80|null}], worst first.
-``blue_days``  values {blue, elapsed, longest, balance}.
-``owed``       values {total, count}; items [{person, amount, note|null, since, days}] (5, oldest first).
 
-Dinheiro cards (in this order)
-------------------------------
+Dinheiro cards (in this order: transactions, month_vs_month, top_expenses, categories, budgets,
+fixed_variable, owed, daily, recurring)
+------------------------------------------------------------------------------------------------
 ``transactions`` values {income, expense, balance, count} (sums of settled entries over the whole
                filter, count of all entries); page {number, size: 50, pages, total}; days [{date,
                income, expense, net (settled sums of the WHOLE day), entries_total, entries [{merchant|null,
                category|null, label|null, kind: "expense"|"income", amount, status, settled}]}] for
                the entries of this page only. ``?page=N`` (1-based) is the only non-filter parameter.
-``top_expenses`` values {total, count}; items [{merchant|null, category|null, label|null, amount,
-               date, pct_of_total, pct_of_top}] (5).
 ``month_vs_month`` values {expense|income: {current, previous, delta, pct|null}}; compare {start, end};
                drivers [{category, label, delta}] (3 biggest rises).
+``top_expenses`` values {total, count}; items [{merchant|null, category|null, label|null, amount,
+               date, pct_of_total, pct_of_top}] (5).
+``categories`` as in Resumo (the category chart).
+``budgets``    values {spent, limit, pct|null, month: "YYYY-MM", day, days_in_month}; items [{category,
+               label, spent, limit, pct, level: 0|80|100, crossed_on|null, days_to_80|null}], worst first.
 ``fixed_variable`` values {fixed, variable, total, fixed_pct|null} (fixed = expenses whose merchant is
                the name of a fixed item).
+``owed``       values {total, count}; items [{person, amount, note|null, since, days}] (5, oldest first).
+
 ``daily``      unit "day"|"week" (weeks beyond 62 days); points [{date, amount}]; values {total, max,
                max_date|null, quiet_days, elapsed_days}.
-``categories`` as in Resumo (the category chart).
-``avg_ticket`` values {average, count, total, previous_average, delta, pct|null}.
 ``recurring``  values {count, monthly_total}; items [{name, amount, kind, frequency, next_due, due_text,
                installment: null | {number, total}, category|null, label|null}].
-``owed``       as in Resumo.
 
 Filters and the cards that are not ledger entries: fixed items (``upcoming``, ``recurring``) honour
 the category filter and are hidden by ``kind=income`` or by a ``state`` that excludes "to_pay"; the
@@ -477,27 +477,6 @@ async def budgets_card(ctx: _Ctx) -> dict[str, Any]:
     return card
 
 
-async def blue_days_card(ctx: _Ctx) -> dict[str, Any]:
-    net = await ctx.memo("net", lambda: pc.daily_net(ctx.session, ctx.mid, ctx.f))
-    res = pc.blue_days(net, ctx.f, ctx.today)
-    card: dict[str, Any] = {
-        "id": "blue_days",
-        "empty": res is None,
-        "values": {
-            "blue": res.blue if res else 0,
-            "elapsed": res.elapsed if res else 0,
-            "longest": res.longest if res else 0,
-            "balance": _m(res.balance) if res else 0.0,
-        },
-        "phrase": None,
-    }
-    if res is None:
-        card["hint"] = ctx.hint("ledger")
-        return card
-    card["phrase"] = _phrase(pp.rule_blue_days(res.blue, res.elapsed, res.longest, ctx.lang))
-    return card
-
-
 async def owed_card(ctx: _Ctx) -> dict[str, Any]:
     rows, total, n = await ctx.owed()
     card: dict[str, Any] = {
@@ -728,32 +707,6 @@ async def daily_card(ctx: _Ctx) -> dict[str, Any]:
     return card
 
 
-async def avg_ticket_card(ctx: _Ctx) -> dict[str, Any]:
-    cats, prev = await ctx.cats(), await ctx.prev_cats()
-    n = sum(c.count for c in cats)
-    total = sum((c.amount for c in cats), Decimal(0))
-    pn = sum(c.count for c in prev)
-    ptotal = sum((c.amount for c in prev), Decimal(0))
-    avg = pc.dec(total / n) if n else Decimal(0)  # half up, like every other amount
-    pavg = pc.dec(ptotal / pn) if pn else Decimal(0)
-    card: dict[str, Any] = {
-        "id": "avg_ticket",
-        "empty": n == 0,
-        "values": {
-            "average": _m(avg),
-            "count": n,
-            "total": _m(total),
-            "previous_average": _m(pavg),
-            "delta": _m(avg - pavg),
-            "pct": pc.pct_change(avg, pavg),
-        },
-        "phrase": None,
-    }
-    if n == 0:
-        card["hint"] = ctx.hint("ledger")
-    return card
-
-
 async def recurring_card(ctx: _Ctx) -> dict[str, Any]:
     items = await ctx.memo("recurring", lambda: pc.recurring_items(ctx.session, ctx.mid, ctx.f))
     monthly = sum((monthly_equivalent(float(i.amount), i.frequency) for i in items), Decimal(0))
@@ -801,11 +754,10 @@ async def summary(
     ctx = _Ctx(session, member, f, today_local())
     cards = [
         await balance_card(ctx),
-        await upcoming_card(ctx),
         await categories_card(ctx, 5),
-        await budgets_card(ctx),
-        await blue_days_card(ctx),
-        await owed_card(ctx),
+        await pt.goals_card(ctx),
+        await pt.week_card(ctx),
+        await upcoming_card(ctx),
     ]
     return _envelope("summary", member, f, cards, ctx.today)
 
@@ -820,14 +772,14 @@ async def money(
     ctx = _Ctx(session, member, f, today_local(), _parse_page(request.query_params.get("page")))
     cards = [
         await transactions_card(ctx),
-        await top_expenses_card(ctx),
         await month_vs_month_card(ctx),
-        await fixed_variable_card(ctx),
-        await daily_card(ctx),
+        await top_expenses_card(ctx),
         await categories_card(ctx, 8),
-        await avg_ticket_card(ctx),
-        await recurring_card(ctx),
+        await budgets_card(ctx),
+        await fixed_variable_card(ctx),
         await owed_card(ctx),
+        await daily_card(ctx),
+        await recurring_card(ctx),
     ]
     return _envelope("money", member, f, cards, ctx.today)
 
@@ -845,10 +797,10 @@ async def health(
     await session.commit()
     ctx = _Ctx(session, member, f, today_local())
     cards = [
-        await pt.water_card(ctx),
+        await pt.goals_card(ctx),
         await pt.workouts_card(ctx),
         await pt.training_card(ctx),
-        await pt.goals_card(ctx),
+        await pt.water_card(ctx),
     ]
     return _envelope("health", member, f, cards, ctx.today)
 

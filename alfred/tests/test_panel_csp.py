@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from alfred import dashboard, panel_tokens
+from alfred import panel_tokens
 from alfred.db import AsyncSessionLocal, engine
 from alfred.models import Expense, Member, Note, Task
 
@@ -43,20 +43,6 @@ async def test_csp_uses_a_fresh_nonce_and_no_unsafe_inline(lab, client) -> None:
     await engine.dispose()
 
 
-def test_template_has_no_inline_event_handlers_or_style_attributes() -> None:
-    html = dashboard._HTML_TEMPLATE
-    assert 'style="' not in html
-    assert not re.search(r"\son[a-z]+=", html)
-    assert '<script nonce="__NONCE__">' in html and '<style nonce="__NONCE__">' in html
-
-
-def test_every_user_text_field_goes_through_esc_in_the_page_script() -> None:
-    # field names the v1 page really renders: transactions, tasks and notes
-    js = dashboard._HTML_TEMPLATE
-    for field in ("t.merchant", "t.body", "n.body"):
-        assert f"esc({field})" in js, field
-
-
 @db
 async def test_hostile_text_is_inert_in_the_json_and_stored_raw(lab, client) -> None:
     async with AsyncSessionLocal() as s:
@@ -77,11 +63,11 @@ async def test_hostile_text_is_inert_in_the_json_and_stored_raw(lab, client) -> 
         await s.commit()
     await engine.dispose()
     token = await _token(lab)
-    r = await client.get(f"/api/d/{token}")
+    r = await client.get(f"/api/d/{token}/money")
     await engine.dispose()
     assert "application/json" in r.headers["content-type"]
-    data = r.json()
-    merchants = {t["merchant"] for t in data["recent_transactions"]}
+    tx = next(c for c in r.json()["cards"] if c["id"] == "transactions")
+    merchants = {e["merchant"] for d in tx["days"] for e in d["entries"]}
     assert set(XSS) <= merchants  # raw in JSON is fine; the page escapes on render
     # the HTML shell itself never embeds user text
     page = (await client.get(f"/d/{token}")).text

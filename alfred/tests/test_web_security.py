@@ -24,15 +24,10 @@ async def test_security_headers_on_every_response(client) -> None:
 
 async def test_dashboard_routes_are_never_cached(client) -> None:
     await engine.dispose()  # this test runs in its own event loop
-    for path in (f"/d/{uuid.uuid4()}", f"/api/d/{uuid.uuid4()}"):
+    for path in (f"/d/{uuid.uuid4()}", f"/api/d/{uuid.uuid4()}/summary"):
         r = await client.get(path)
         assert r.status_code == 404
         assert r.headers["cache-control"] == "no-store"
-
-
-def test_chartjs_is_pinned_with_sri() -> None:
-    html = dashboard._HTML_TEMPLATE
-    assert 'integrity="sha384-' in html and 'crossorigin="anonymous"' in html
 
 
 async def test_no_cors_headers_are_ever_sent(client) -> None:

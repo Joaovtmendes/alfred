@@ -396,47 +396,38 @@
   },
   "cards": [
    {
-    "id": "water",
+    "id": "goals",
     "empty": false,
     "values": {
-     "today": 1.4,
-     "average": 1.7,
-     "days": 6
+     "count": 3
     },
-    "points": [
+    "items": [
      {
-      "date": "2026-09-27",
-      "litres": 1.6
+      "title": "Meditar",
+      "target": "7 por semana",
+      "deadline": null,
+      "logs_7d": 5,
+      "logs_30d": 5
      },
      {
-      "date": "2026-09-28",
-      "litres": 0.0
+      "title": "Caminhar 8.000 passos",
+      "target": "7 por semana",
+      "deadline": null,
+      "logs_7d": 4,
+      "logs_30d": 4
      },
      {
-      "date": "2026-09-29",
-      "litres": 2.2
-     },
-     {
-      "date": "2026-09-30",
-      "litres": 1.8
-     },
-     {
-      "date": "2026-10-01",
-      "litres": 1.2
-     },
-     {
-      "date": "2026-10-02",
-      "litres": 2.0
-     },
-     {
-      "date": "2026-10-03",
-      "litres": 1.4
+      "title": "12 treinos no mês",
+      "target": "12 no mês",
+      "deadline": "2026-10-28",
+      "logs_7d": 2,
+      "logs_30d": 2
      }
     ],
     "phrase": {
-     "key": "water_avg",
-     "text": "Nos últimos 7 dias você registrou em média 1,7 L de água por dia, em 6 dos 7 dias.",
-     "chat": "\"água hoje\"",
+     "key": "goals_pace",
+     "text": "Meditar: 5 registros nos últimos 7 dias.",
+     "chat": "\"minhas metas\"",
      "severity": "info"
     }
    },
@@ -652,38 +643,47 @@
     }
    },
    {
-    "id": "goals",
+    "id": "water",
     "empty": false,
     "values": {
-     "count": 3
+     "today": 1.4,
+     "average": 1.7,
+     "days": 6
     },
-    "items": [
+    "points": [
      {
-      "title": "Meditar",
-      "target": "7 por semana",
-      "deadline": null,
-      "logs_7d": 5,
-      "logs_30d": 5
+      "date": "2026-09-27",
+      "litres": 1.6
      },
      {
-      "title": "Caminhar 8.000 passos",
-      "target": "7 por semana",
-      "deadline": null,
-      "logs_7d": 4,
-      "logs_30d": 4
+      "date": "2026-09-28",
+      "litres": 0.0
      },
      {
-      "title": "12 treinos no mês",
-      "target": "12 no mês",
-      "deadline": "2026-10-28",
-      "logs_7d": 2,
-      "logs_30d": 2
+      "date": "2026-09-29",
+      "litres": 2.2
+     },
+     {
+      "date": "2026-09-30",
+      "litres": 1.8
+     },
+     {
+      "date": "2026-10-01",
+      "litres": 1.2
+     },
+     {
+      "date": "2026-10-02",
+      "litres": 2.0
+     },
+     {
+      "date": "2026-10-03",
+      "litres": 1.4
      }
     ],
     "phrase": {
-     "key": "goals_pace",
-     "text": "Meditar: 5 registros nos últimos 7 dias.",
-     "chat": "\"minhas metas\"",
+     "key": "water_avg",
+     "text": "Nos últimos 7 dias você registrou em média 1,7 L de água por dia, em 6 dos 7 dias.",
+     "chat": "\"água hoje\"",
      "severity": "info"
     }
    }

@@ -127,6 +127,13 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:8px
 .item .s{font-size:12px;color:var(--muted)}
 .item .amt{font-size:14px;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .item .amt.pending{color:var(--muted)}
+.item .amt.neg{color:var(--warm-text)}.item .amt.pos{color:var(--good)}.item .amt.pending.neg,.item .amt.pending.pos{opacity:.7}
+.entry{padding:8px 0}
+.day .num.neg{color:var(--warm-text)}.day .num.pos{color:var(--good)}
+.daychips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.daychips::-webkit-scrollbar{display:none}
+.daychips button{flex:none;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.daychips button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text);font-weight:600}
 .bill{grid-template-columns:48px minmax(0,1fr) auto;gap:14px;padding:12px 0}
 .bill .t{font-size:15px}
 .bill .s{font-size:13px}
@@ -183,12 +190,6 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:8px
 .axis{position:relative;height:18px;font-size:12px;color:var(--muted)}
 .axis>span{position:absolute;top:0;white-space:nowrap}
 
-details.table{font-size:13px;color:var(--muted)}
-details.table summary{cursor:pointer;width:fit-content;min-height:24px}
-details.table table{width:100%;border-collapse:collapse;margin-top:8px}
-details.table td,details.table th{padding:4px 8px 4px 0;border-top:1px solid var(--line);text-align:left;font-weight:400}
-details.table th{font-weight:600}
-details.table td.r,details.table th.r{text-align:right;font-variant-numeric:tabular-nums;padding-right:0}
 details.plan-day{border-top:1px solid var(--line);padding:4px 0}
 details.plan-day summary{cursor:pointer;min-height:32px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--muted)}
 .item .s.good{color:var(--good)}
@@ -197,10 +198,8 @@ footer.foot{display:flex;flex-direction:column;gap:6px;padding-top:16px;border-t
 .cta a{display:flex;justify-content:center;align-items:center;gap:8px;height:48px;border-radius:24px;background:var(--accent);color:var(--on-accent);font-weight:600;text-decoration:none}
 .cta-top{display:none;flex:none;height:44px;padding:0 18px;border-radius:22px;background:var(--accent);color:var(--on-accent);font-weight:600;font-size:14px;text-decoration:none;align-items:center;gap:8px}
 
-/* phone: the order the approved mobile mockup shows (balance, categories, budgets, ..., bills) */
+/* phone: one column, cards in the order the API sends them (the same on every screen) */
 @media (max-width:899px){
-  [data-card="balance"]{order:1}[data-card="categories"]{order:2}[data-card="budgets"]{order:3}
-  [data-card="blue_days"]{order:4}[data-card="upcoming"]{order:5}[data-card="owed"]{order:6}
   .dsk,.who{display:none!important}
   .hero.xl{font-size:48px}
   [data-tab-active="summary"] .fnote{display:none}

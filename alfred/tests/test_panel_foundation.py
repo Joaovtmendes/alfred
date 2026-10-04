@@ -21,9 +21,8 @@ def test_token_defaults_follow_the_spec() -> None:
 
 
 @db
-async def test_new_member_has_flag_off_and_no_export_token(lab) -> None:
+async def test_new_member_has_no_export_token(lab) -> None:
     async with AsyncSessionLocal() as s:
         m = (await s.execute(select(Member).where(Member.id == lab.member_id))).scalar_one()
-        assert m.dashboard_v2 is False
         assert m.export_token is None and m.export_token_expires_at is None
     await engine.dispose()

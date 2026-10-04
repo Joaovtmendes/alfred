@@ -76,7 +76,7 @@ def _appt(lab, title, day, hour, minute=0, **kw) -> Appointment:
     ("tab", "ids"),
     [
         ("agenda", ["week", "tasks", "month_map", "reminders", "notes"]),
-        ("health", ["water", "workouts", "training", "goals"]),
+        ("health", ["goals", "workouts", "training", "water"]),
         ("trips", ["trip"]),
     ],
 )

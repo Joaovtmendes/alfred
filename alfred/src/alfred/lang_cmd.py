@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-__all__ = ["STRINGS", "parse_language_command"]
+__all__ = ["STRINGS", "parse_language_choice", "parse_language_command"]
 
 _LANG_WORDS = {
     "pt": {"portugues", "portuguese", "portugees", "portugais", "portugiesisch", "pt"},
@@ -169,11 +169,34 @@ def parse_language_command(body: str) -> str | None:
     return target
 
 
+_MENU_NUMBERS = {"1": "pt", "2": "nl", "3": "en", "4": "fr", "5": "de"}
+
+
+def parse_language_choice(body: str) -> str | None:
+    """The answer to "which language?": a number 1-5, a language name or a bare code ("de").
+
+    Used only while the member is answering that question, so short codes are safe here.
+    """
+    words = _plain(body).split()
+    if len(words) == 1:
+        return _MENU_NUMBERS.get(words[0]) or _WORD_TO_LANG.get(words[0])
+    return parse_language_command(body)
+
+
 def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str]:
     return {"pt": pt, "nl": nl, "en": en, "fr": fr, "de": de}
 
 
+_ASK = (
+    "Olá! Hello! Hallo! Bonjour! 👋\n"
+    "Qual idioma você prefere? · Welke taal? · Which language? · Quelle langue ? "
+    "· Welche Sprache?\n\n"
+    "1 · Português\n2 · Nederlands\n3 · English\n4 · Français\n5 · Deutsch\n\n"
+    "(1–5)"
+)
+
 STRINGS: dict[str, dict[str, str]] = {
+    "language_ask": _all(_ASK, _ASK, _ASK, _ASK, _ASK),
     "lang_changed": _all(
         "Pronto, agora falo português com você.",
         "Klaar, ik praat nu Nederlands met je.",

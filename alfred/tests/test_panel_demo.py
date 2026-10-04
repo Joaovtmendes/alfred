@@ -94,13 +94,14 @@ async def test_demo_fills_every_card_of_resumo_and_dinheiro(client, monkeypatch)
     _dashboard_limiter._hits.clear()
     token = await seed.run()
     await engine.dispose()
-    for tab, quiet in (("summary", {"blue_days"}), ("money", set())):
+    for tab, quiet in (("summary", set()), ("money", set())):
         cards = (await client.get(f"/api/d/{token}/{tab}?month=2026-10")).json()["cards"]
         await engine.dispose()
         empty = {c["id"] for c in cards if c["empty"]} - quiet
         assert not empty, (tab, empty)
     summary = (await client.get(f"/api/d/{token}/summary")).json()
-    by = {c["id"]: c for c in summary["cards"]}
+    money = (await client.get(f"/api/d/{token}/money")).json()
+    by = {c["id"]: c for c in summary["cards"] + money["cards"]}
     assert (
         by["budgets"]["items"][0]["category"] == "restaurant"
         and by["budgets"]["items"][0]["level"] == 100

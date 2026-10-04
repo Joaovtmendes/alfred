@@ -105,21 +105,48 @@ async def _page(lab, client, v2: bool, **extra) -> tuple[str, dict]:
 
 
 @db
-async def test_flag_off_keeps_v1_and_flag_on_serves_v2(lab, client) -> None:
-    v1, v1_headers = await _page(lab, client, False)
-    assert "Chart" in v1 and 'role="tablist"' not in v1
-    assert "cdnjs.cloudflare.com" in v1_headers["content-security-policy"]
-    v2, headers = await _page(lab, client, True)
-    assert 'role="tablist"' in v2 and 'data-theme="dark"' in v2
-    labels = re.findall(r'role="tab"[^>]*>([^<]+)<', v2)
-    assert labels == ["Resumo", "Dinheiro", "Agenda", "Hábitos", "Viagens"]
-    csp = headers["content-security-policy"]
-    assert "unsafe-inline" not in csp and "cdnjs" not in v2 and "cdnjs" not in csp
-    assert not re.search(r'<(script|link)[^>]+(src|href)="https?://', v2)
-    nonce = re.search(r"'nonce-([^']+)'", csp).group(1)
-    assert f'nonce="{nonce}"' in v2
-    assert not re.search(r"__[A-Z_]+__", v2)
-    assert 'style="' not in v2
+async def test_every_member_gets_the_v2_panel_whatever_the_old_flag_says(lab, client) -> None:
+    for old_flag in (False, True):
+        v2, headers = await _page(lab, client, old_flag)
+        assert 'role="tablist"' in v2 and 'data-theme="dark"' in v2, old_flag
+        assert "Chart" not in v2
+        labels = re.findall(r'role="tab"[^>]*>([^<]+)<', v2)
+        assert labels == ["Resumo", "Dinheiro", "Agenda", "Hábitos", "Viagens"]
+        csp = headers["content-security-policy"]
+        assert "unsafe-inline" not in csp and "cdnjs" not in v2 and "cdnjs" not in csp
+        assert not re.search(r'<(script|link)[^>]+(src|href)="https?://', v2)
+        nonce = re.search(r"'nonce-([^']+)'", csp).group(1)
+        assert f'nonce="{nonce}"' in v2
+        assert not re.search(r"__[A-Z_]+__", v2)
+        assert 'style="' not in v2
+
+
+@db
+async def test_the_v1_page_and_its_data_api_are_gone(lab, client) -> None:
+    from alfred import dashboard
+
+    assert not hasattr(dashboard, "_HTML_TEMPLATE") and not hasattr(dashboard, "dashboard_api")
+    _, _ = await _page(lab, client, False)
+    async with AsyncSessionLocal() as s:
+        token = str((await s.get(Member, lab.member_id)).dashboard_token)
+    await engine.dispose()
+    r = await client.get(f"/api/d/{token}")
+    await engine.dispose()
+    assert r.status_code in (404, 405)
+    assert "recent_transactions" not in r.text
+
+
+@db
+async def test_the_language_chosen_in_the_chat_is_the_language_of_the_panel(lab, client) -> None:
+    await lab.say("idioma inglês")
+    page, _ = await _page(lab, client, True)
+    assert '<html lang="en"' in page
+    assert re.findall(r'role="tab"[^>]*>([^<]+)<', page) == [
+        "Summary", "Money", "Agenda", "Habits", "Trips",
+    ]  # fmt: skip
+    await lab.say("language Dutch")
+    page, _ = await _page(lab, client, True)
+    assert '<html lang="nl"' in page
 
 
 @db
