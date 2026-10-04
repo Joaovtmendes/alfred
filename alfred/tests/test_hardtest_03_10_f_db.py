@@ -39,12 +39,13 @@ async def test_a_task_deadline_in_words_becomes_the_due_date(
     lab: Lab, text: str, title: str, weekday: int
 ):
     """Defect 22: "até sexta" stayed in the title and the task had no due date."""
-    await lab.say(text)
+    reply = await lab.say(text)
     row = (await lab.rows(select(Task.body, Task.due_date).where(Task.member_id == lab.member_id)))[
         0
     ]
     assert row[0].lower() == title
     assert row[1] is not None and row[1].weekday() == weekday and row[1] >= today_local()
+    assert row[1].strftime("%d/%m") in reply  # the confirmation shows the deadline it understood
 
 
 @db
@@ -55,3 +56,10 @@ async def test_until_something_that_is_not_a_date_stays_in_the_title(lab: Lab):
         0
     ]
     assert row[0].lower() == "ligar para o joão até logo" and row[1] is None
+
+
+@db
+@pytest.mark.asyncio
+async def test_a_task_without_a_deadline_confirms_without_one(lab: Lab):
+    reply = await lab.say("tarefa: ligar para o dentista")
+    assert "(" not in reply and "prazo" not in reply.lower()
