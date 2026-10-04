@@ -58,3 +58,43 @@ async def test_the_panel_names_reminders_by_what_they_are(lab, client):
     rent = items["pagar o aluguel"]
     assert rent["kind"] == "reminder" and rent["day_of_month"] == 5 and not rent["every_day"]
     assert items["pagar renda"]["day_of_month"] is None
+
+
+# ── group D — goals (defect 12) ──────────────────────────────────────────────
+
+
+def test_a_habit_verb_finds_its_goal_by_stem():
+    from alfred.conversation import _goal_for_activity
+
+    class G:
+        def __init__(self, title: str):
+            self.title = title
+
+    meditate, read, save = G("meditar todos os dias"), G("ler 20 páginas"), G("juntar 5000€")
+    goals = [save, read, meditate]
+    assert _goal_for_activity(goals, "meditei") is meditate
+    assert _goal_for_activity(goals, "meditated") is meditate  # same stem in English
+    assert _goal_for_activity(goals, "ler hoje") is read
+    assert _goal_for_activity(goals, "fiz yoga") is None
+    assert _goal_for_activity(goals, "") is None
+
+
+@db
+@pytest.mark.asyncio
+async def test_meditei_counts_for_the_goal_and_a_savings_goal_has_no_day_bar(lab, client):
+    from alfred.models import Goal
+
+    await lab.add(
+        Goal(member_id=lab.member_id, title="meditar todos os dias"),
+        Goal(
+            member_id=lab.member_id,
+            title="juntar 5000€",
+            target_value="5000",
+            target_unit="EUR",
+        ),
+    )
+    await lab.say("meditei hoje")
+    items = {i["title"]: i for i in (await _cards(client, lab, "health"))["goals"]["items"]}
+    assert items["meditar todos os dias"]["logs_7d"] == 1
+    assert items["meditar todos os dias"]["money"] is False
+    assert items["juntar 5000€"]["money"] is True

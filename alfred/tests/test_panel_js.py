@@ -959,3 +959,24 @@ async def test_the_day_filter_fits_a_phone_without_scrolling_the_page_sideways()
         assert box["height"] >= 40
     finally:
         await _close(pwm, browser)
+
+
+async def test_a_trip_in_progress_with_no_end_date_says_it_is_still_going() -> None:
+    """Defect 16: an open trip showed only its start date."""
+    import copy
+
+    fx = copy.deepcopy(_TABS_FX["trips"])
+    card = next(c for c in fx["cards"] if c["id"] == "trip")
+    card["trip"].update({"start": "2026-10-01", "end": None, "state": "active"})
+
+    async def trips():
+        return 200, fx
+
+    pwm, browser, page = await _open({**_tab_handlers(), "trips": trips})
+    try:
+        await page.click('[data-tab="trips"]')
+        await page.wait_for_selector("[data-card=trip]")
+        sub = await _text(page, "[data-card=trip] .sub")
+        assert "–" in sub and "hoje" in sub
+    finally:
+        await _close(pwm, browser)

@@ -409,6 +409,13 @@ SHELL.update(
             "Qui te doit",
             "Wer dir Geld schuldet",
         ),
+        "owing_title": _t(
+            "Você deve",
+            "Jij bent verschuldigd",
+            "You owe",
+            "Tu dois",
+            "Du schuldest",
+        ),
         "owed_days": _t(
             "há {n} dias", "{n} dagen geleden", "{n} days ago", "il y a {n} jours", "vor {n} Tagen"
         ),

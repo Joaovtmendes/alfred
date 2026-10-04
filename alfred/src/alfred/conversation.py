@@ -2526,6 +2526,32 @@ def _is_workout_text(body: str) -> bool:
     return any(strip_accents(w) in words for w in _WORKOUT_WORDS if " " not in w)
 
 
+def _goal_for_activity(goals, activity: str):
+    """The active goal a habit log belongs to: a shared word, or a shared stem of 5+ letters
+    ("meditei" × "meditar todos os dias")."""
+    words = [w for w in strip_accents((activity or "").lower()).split() if w]
+    for g in goals:
+        title = strip_accents(g.title.lower())
+        title_words = re.findall(r"[a-z]+", title)
+        for w in words:
+            if w in title_words or (len(w) >= 2 and w in title and len(w) > 3):
+                return g
+            if len(w) >= 5 and any(
+                len(t) >= 5 and t[:5] == w[:5] and _common_prefix(t, w) >= 5 for t in title_words
+            ):
+                return g
+    return None
+
+
+def _common_prefix(a: str, b: str) -> int:
+    n = 0
+    for x, y in zip(a, b, strict=False):
+        if x != y:
+            break
+        n += 1
+    return n
+
+
 def _is_bare_command(body: str, keywords: set[str]) -> bool:
     """True when body is *only* a command keyword (plus punctuation / a polite word).
 
@@ -4326,11 +4352,7 @@ async def handle_inbound(
             res_hg = await session.execute(
                 _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
             )
-            linked_goal = None
-            for g in res_hg.scalars().all():
-                if any(w in g.title.lower() for w in habit_activity.lower().split()):
-                    linked_goal = g
-                    break
+            linked_goal = _goal_for_activity(res_hg.scalars().all(), habit_activity)
             habit_log = HabitLog(
                 id=uuid.uuid4(),
                 member_id=member.id,
@@ -4383,11 +4405,7 @@ async def handle_inbound(
                 res_hg2 = await session.execute(
                     _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
                 )
-                linked_goal2 = None
-                for g in res_hg2.scalars().all():
-                    if any(w in g.title.lower() for w in h_activity.lower().split()):
-                        linked_goal2 = g
-                        break
+                linked_goal2 = _goal_for_activity(res_hg2.scalars().all(), h_activity)
                 hlog2 = HabitLog(
                     id=uuid.uuid4(),
                     member_id=member.id,

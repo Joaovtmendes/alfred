@@ -203,6 +203,12 @@ class _Ctx:
     async def owed(self):
         return await self.memo("owed", lambda: pc.owed_to_me(self.session, self.mid, self.today))
 
+    async def owing(self):
+        return await self.memo(
+            "owing",
+            lambda: pc.owed_to_me(self.session, self.mid, self.today, direction="i_owe"),
+        )
+
 
 # ── Resumo ────────────────────────────────────────────────────────────────────
 
@@ -477,31 +483,42 @@ async def budgets_card(ctx: _Ctx) -> dict[str, Any]:
     return card
 
 
+def _owed_items(rows) -> list[dict[str, Any]]:
+    return [
+        {
+            "person": r.person,
+            "amount": _m(r.remaining),
+            "note": r.note,
+            "since": r.since.isoformat(),
+            "days": r.days,
+        }
+        for r in rows
+    ]
+
+
 async def owed_card(ctx: _Ctx) -> dict[str, Any]:
+    """Who owes the member, plus (``owing``) what the member owes people ("Devo 40 pro Lucas")."""
     rows, total, n = await ctx.owed()
+    mine, mine_total, mine_n = await ctx.owing()
     card: dict[str, Any] = {
         "id": "owed",
-        "empty": n == 0,
+        "empty": n == 0 and mine_n == 0,
         "values": {"total": _m(total), "count": n},
-        "items": [
-            {
-                "person": r.person,
-                "amount": _m(r.remaining),
-                "note": r.note,
-                "since": r.since.isoformat(),
-                "days": r.days,
-            }
-            for r in rows
-        ],
+        "items": _owed_items(rows),
+        "owing": {
+            "values": {"total": _m(mine_total), "count": mine_n},
+            "items": _owed_items(mine),
+        },
         "phrase": None,
     }
-    if n == 0:
+    if n == 0 and mine_n == 0:
         card["hint"] = ctx.hint("owed")
         return card
-    oldest = rows[0]
-    card["phrase"] = _phrase(
-        pp.rule_owed(oldest.person, float(oldest.person_total), oldest.days, ctx.lang)
-    )
+    if n:
+        oldest = rows[0]
+        card["phrase"] = _phrase(
+            pp.rule_owed(oldest.person, float(oldest.person_total), oldest.days, ctx.lang)
+        )
     return card
 
 

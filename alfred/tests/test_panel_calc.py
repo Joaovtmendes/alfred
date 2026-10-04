@@ -398,7 +398,7 @@ async def test_fixed_variable_matches_expenses_to_fixed_items_by_name(lab) -> No
             next_due_date=date(2026, 11, 1), due_day=1,
         )
     )  # fmt: skip
-    await _add(lab, 1150, merchant="aluguel", cat="wonen")
+    await _add(lab, 1150, merchant="aluguel", cat="overig")  # matched by name, not category
     await _add(lab, 94.40, merchant="Albert Heijn", cat="supermarkt")
     async with AsyncSessionLocal() as s:
         names = await pc.recurring_names(s, lab.member_id)

@@ -77,6 +77,30 @@ _LIST_RECV = {
 }  # fmt: skip
 
 
+_HOUSING_WORDS = {
+    "luz", "energia", "eletricidade", "agua", "gas", "aluguel", "renda", "condominio", "stroom",
+    "water", "huur", "electricity", "rent", "hypotheek", "hipoteca", "mortgage", "loyer",
+    "electricite", "miete", "strom",
+}  # fmt: skip
+_SUBSCRIPTION_WORDS = {
+    "internet", "netflix", "spotify", "telefone", "telefoon", "phone", "mobile", "celular",
+    "assinatura", "abonnement", "streaming", "disney", "youtube", "icloud", "wifi",
+}  # fmt: skip
+
+
+def _bill_category(name: str) -> str:
+    """Category of a bill from its name: utilities and rent are housing, internet and phone are
+    subscriptions, anything else falls back to the generic resolver, then Other."""
+    from alfred.budgets import resolve_category
+
+    words = set(re.findall(r"[a-z]+", strip_accents(name.lower())))
+    if words & _HOUSING_WORDS:
+        return "wonen"
+    if words & _SUBSCRIPTION_WORDS:
+        return "abonnement"
+    return resolve_category(name) or "overig"
+
+
 def _dec(value) -> Decimal:
     return Decimal(str(value or 0)).quantize(Decimal("0.01"), ROUND_HALF_UP)
 
@@ -240,13 +264,12 @@ async def handle_ledger_command(
 
 
 async def _create(new: NewPending, member: Member, lang: str, session: AsyncSession) -> str:
-    from alfred.budgets import resolve_category
     from alfred.conversation import _t
 
     if len(await _pending(session, member.id)) >= MAX_PENDING:
         return _t("ledger_limit", lang, n=MAX_PENDING)
     income = new.kind == TO_RECEIVE
-    category = "inkomen" if income else (resolve_category(new.name) or "overig")
+    category = "inkomen" if income else _bill_category(new.name)
     session.add(
         Expense(
             id=uuid.uuid4(),

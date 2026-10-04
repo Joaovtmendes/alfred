@@ -436,6 +436,12 @@ async def workouts_card(ctx) -> dict[str, Any]:
     return card
 
 
+def _is_money_goal(goal: Goal) -> bool:
+    """A savings/amount goal ("juntar 5000€"): it is not measured in check-in days."""
+    unit = (goal.target_unit or "").lower()
+    return "€" in goal.title or "eur" in unit or "€" in unit or "euro" in unit
+
+
 async def goals_card(ctx) -> dict[str, Any]:
     goals = (
         (
@@ -473,6 +479,7 @@ async def goals_card(ctx) -> dict[str, Any]:
                 "title": g.title,
                 "target": target,
                 "deadline": g.deadline.isoformat() if g.deadline else None,
+                "money": _is_money_goal(g),
                 "logs_7d": sum(1 for d in days if d >= since7),
                 "logs_30d": len(days),
             }
