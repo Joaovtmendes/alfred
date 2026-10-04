@@ -21,7 +21,12 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from alfred.llm import extract_expense  # noqa: E402
+from alfred.llm import (  # noqa: E402
+    extract_analysis_spec,
+    extract_expense,
+    extract_expenses_multi,
+    extract_workout,
+)
 
 # (lang, text, expected) — expected None = must NOT be recorded as a transaction
 CASES: list[tuple[str, str, dict | None]] = [
@@ -125,6 +130,64 @@ CASES: list[tuple[str, str, dict | None]] = [
 ]
 
 
+# ── other parsers (suite = --suite multi|analysis|workout) ─────────────────────────────────
+# multi: (lang, text, amounts the batch must contain, in order)
+MULTI_CASES: list[tuple[str, str, list[float]]] = [
+    ("pt", "café 3,50 e padaria 8", [3.5, 8.0]),
+    ("pt", "uber 12, jantar 45 e cinema 24", [12.0, 45.0, 24.0]),
+    ("nl", "koffie 3,20 en lunch 9,50", [3.2, 9.5]),
+    ("en", "coffee 4 and sandwich 6.50 and taxi 15", [4.0, 6.5, 15.0]),
+    ("fr", "café 2,80 et croissant 1,50", [2.8, 1.5]),
+    ("de", "Kaffee 3 und Brötchen 2,40", [3.0, 2.4]),
+]
+# analysis: (lang, text, expected) — expected None = unsupported, else pinned spec fields
+ANALYSIS_CASES: list[tuple[str, str, dict | None]] = [
+    (
+        "pt",
+        "quanto gastei com restaurante nos últimos 3 meses?",
+        {"metric": "spent", "period": "last_3_months"},
+    ),
+    (
+        "pt",
+        "gasto por categoria este ano comparado ao ano passado",
+        {"group_by": "category", "period": "this_year", "compare_to": "same_period_last_year"},
+    ),
+    ("nl", "mijn grootste uitgaven bij Jumbo dit jaar", {"metric": "spent", "period": "this_year"}),
+    ("en", "average ticket last month", {"metric": "average", "period": "last_month"}),
+    ("en", "how much will I spend next year?", None),
+    ("pt", "gastei 45 no mercado", None),
+    ("fr", "combien j'ai dépensé en restaurants ce mois-ci ?", {"period": "this_month"}),
+    ("de", "Ausgaben pro Monat in den letzten 6 Monaten", {"group_by": "month"}),
+]
+# workout: (lang, text, expected) — expected None = not a workout (never an expense)
+WORKOUT_CASES: list[tuple[str, str, dict | None]] = [
+    ("pt", "fiz 50 minutos de musculação", {"duration_minutes": 50}),
+    ("pt", "fiz yoga durante 20 minutos", {"duration_minutes": 20, "activity_type": "yoga"}),
+    ("pt", "corri 5km em 30 minutos", {"duration_minutes": 30, "distance_km": 5.0}),
+    ("nl", "ik heb 40 minuten gezwommen", {"duration_minutes": 40}),
+    ("en", "did 45 minutes of pilates", {"duration_minutes": 45}),
+    ("en", "ran 10 km in 55 minutes", {"duration_minutes": 55, "distance_km": 10.0}),
+    ("fr", "j'ai fait 30 minutes de vélo", {"duration_minutes": 30}),
+    ("de", "ich bin 6 km gelaufen", {"distance_km": 6.0}),
+    ("pt", "Jumbo 23,40", None),
+]
+
+
+def check_subset(got: dict | None, expected: dict | None) -> str | None:
+    """Every pinned field must match; None expected = the parser must decline."""
+    if expected is None:
+        return None if not got or got.get("supported") is False else f"expected decline, got {got}"
+    if not got:
+        return "expected a result, got none"
+    flat = {**got, **(got.get("spec") or {})}
+    for key, want in expected.items():
+        have = flat.get(key)
+        same = abs(float(have) - want) < 0.005 if isinstance(want, float) and have else have == want
+        if not same:
+            return f"{key} {have!r} != {want!r}"
+    return None
+
+
 def check(got: dict | None, expected: dict | None) -> str | None:
     """Return None when ``got`` satisfies ``expected``, else a short reason."""
     if expected is None:
@@ -140,13 +203,44 @@ def check(got: dict | None, expected: dict | None) -> str | None:
     return None
 
 
+async def run_other(suite: str, lang: str | None) -> int:
+    failures = total = 0
+    if suite == "multi":
+        for lg, text, amounts in (c for c in MULTI_CASES if not lang or c[0] == lang):
+            total += 1
+            got = [
+                round(float(i["amount"]), 2) for i in await extract_expenses_multi(text, lang=lg)
+            ]
+            why = None if got == amounts else f"amounts {got} != {amounts}"
+            failures += bool(why)
+            print(f"{'FAIL' if why else 'ok  '} [{lg}] {text!r}" + (f"  → {why}" if why else ""))
+    else:
+        table, parser = (
+            (ANALYSIS_CASES, extract_analysis_spec)
+            if suite == "analysis"
+            else (WORKOUT_CASES, extract_workout)
+        )
+        for lg, text, expected in (c for c in table if not lang or c[0] == lang):
+            total += 1
+            why = check_subset(await parser(text, lang=lg), expected)
+            failures += bool(why)
+            print(f"{'FAIL' if why else 'ok  '} [{lg}] {text!r}" + (f"  → {why}" if why else ""))
+    print(f"\n{total - failures}/{total} passed")
+    return 1 if failures else 0
+
+
 async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--lang", help="only this language (pt|nl|en|fr|de)")
+    ap.add_argument(
+        "--suite", choices=("expense", "multi", "analysis", "workout"), default="expense"
+    )
     args = ap.parse_args()
     if not os.environ.get("LLM_API_KEY"):
         print("LLM_API_KEY is not set — nothing to evaluate.", file=sys.stderr)
         return 2
+    if args.suite != "expense":
+        return await run_other(args.suite, args.lang)
     cases = [c for c in CASES if not args.lang or c[0] == args.lang]
     failures = 0
     for lang, text, expected in cases:

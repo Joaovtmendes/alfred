@@ -413,7 +413,8 @@
       const c = cardShell(card, T.title_tx, span);
       // Daily view: a day filter on top (default today, else the latest day with entries).
       const dates = card.days.map((d) => d.date);
-      let selected = dates.includes(ctx.body.today) ? ctx.body.today : dates[0] || "all";
+      const upToToday = dates.filter((d) => d <= ctx.body.today); // a future bill is not "the latest day"
+      let selected = dates.includes(ctx.body.today) ? ctx.body.today : upToToday[0] || dates[0] || "all";
       const chipsBox = el("div", "daychips");
       chipsBox.setAttribute("role", "group");
       chipsBox.setAttribute("aria-label", T.day_filter);
@@ -743,6 +744,10 @@
         if (!it.money) h.append(el("span", "v", fmt(T.goal_days, { n: Math.min(it.logs_7d, 7) })));
         b.append(h);
         if (!it.money) b.append(track((Math.min(it.logs_7d, 7) / 7) * 100, ""));
+        else if (it.saved !== undefined) {
+          h.append(el("span", "v", fmt(T.goal_saved, { saved: money0(it.saved), target: money0(it.target_amount) })));
+          b.append(track(it.saved_pct, ""));
+        }
         const sub = [it.target, it.deadline ? fmt(T.goal_until, { date: dayShort(it.deadline) }) : null].filter(Boolean).join(" · ");
         if (sub) b.append(el("div", "cap", sub));
         rows.append(b);

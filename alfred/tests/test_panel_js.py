@@ -1044,3 +1044,25 @@ async def test_the_other_tabs_are_fetched_in_the_background_after_the_first_one(
         assert len(page.api_calls) == calls  # served from what was already fetched
     finally:
         await _close(pwm, browser)
+
+
+async def test_lancamentos_opens_on_the_latest_day_that_is_not_in_the_future() -> None:
+    """Production 04/10: a bill due on the 20th made Lançamentos open on the 20th."""
+    import copy
+
+    money = copy.deepcopy(fx.MONEY)
+    card = next(c for c in money["cards"] if c["id"] == "transactions")
+    future = copy.deepcopy(card["days"][0])
+    future["date"] = "2026-10-20"
+    card["days"].insert(0, future)
+    money["today"] = "2026-10-03"  # a day with no entries: the choice is the latest past day
+    pwm, browser, page = await _open(_handlers(money=money))
+    try:
+        await page.click('[data-tab="money"]')
+        await page.wait_for_selector("[data-card=transactions] .daychips")
+        pressed = await page.locator(
+            "[data-card=transactions] .daychips button[aria-pressed=true]"
+        ).inner_text()
+        assert "20" not in pressed and "2" in pressed
+    finally:
+        await _close(pwm, browser)

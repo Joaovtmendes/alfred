@@ -278,3 +278,36 @@ async def test_pending_batch_is_exported_and_erased(lab: Lab) -> None:
             .where(PendingBatch.member_id == lab.member_id)
         )
         assert left == 0
+
+
+# ── undo the whole batch (backlog) ────────────────────────────────────────────
+
+
+@db
+async def test_a_confirmed_batch_offers_to_undo_all_of_it_and_undo_removes_only_that_batch(
+    lab: Lab,
+) -> None:
+    other = _it(50, "Outro", "overig")
+    lab.expense.return_value = {**other, "is_expense": True}
+    await lab.say("outro 50")  # an unrelated, earlier entry
+    before = await _count(lab)
+    await _draft(lab)
+    (batch,) = await _batches(lab)
+    await lab.tap(f"batch_ok:{batch.id}")
+    assert await _count(lab) == before + 2
+    undo = [b for b in lab.buttons[-1] if b[0].startswith("batch_undo:")]
+    assert len(undo) == 1
+    reply = await lab.tap(undo[0][0])
+    assert await _count(lab) == before and "2" in reply
+    again = await lab.tap(undo[0][0])  # a second tap does nothing
+    assert await _count(lab) == before and again != reply
+
+
+@db
+async def test_undo_all_never_touches_another_members_entries(lab: Lab) -> None:
+    import uuid as _uuid
+
+    reply = await lab.tap(f"batch_undo:{_uuid.uuid4()},{_uuid.uuid4()}")
+    assert await _count(lab) == 0 and reply
+    reply = await lab.tap("batch_undo:not-a-uuid")
+    assert reply
