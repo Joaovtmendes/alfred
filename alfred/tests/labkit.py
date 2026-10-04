@@ -58,6 +58,41 @@ class Lab:
         with patch("alfred.statement.download_media", AsyncMock(return_value=payload)):
             return await self._run(make_message(body=None, raw=raw))
 
+    async def media(
+        self,
+        kind: str,
+        data: bytes | None,
+        reading: dict | None = None,
+        *,
+        mime: str | None = None,
+        filename: str = "treino.pdf",
+        too_big: bool = False,
+    ) -> str:
+        """Send a photo (kind="image") or a PDF; ``reading`` is what the model returns."""
+        if kind == "image":
+            raw = {"type": "image", "image": {"id": "media123", "mime_type": mime or "image/jpeg"}}
+        else:
+            raw = {
+                "type": "document",
+                "document": {
+                    "id": "media123",
+                    "filename": filename,
+                    "mime_type": mime or "application/pdf",
+                },
+            }
+        self.reading = AsyncMock(return_value=reading)
+        if too_big:
+            from alfred.whatsapp import MediaTooLarge
+
+            download = AsyncMock(side_effect=MediaTooLarge)
+        else:
+            download = AsyncMock(return_value=data)
+        with (
+            patch("alfred.media_input.download_media", download),
+            patch("alfred.media_input.read_member_file", self.reading),
+        ):
+            return await self._run(make_message(body=None, raw=raw))
+
     async def _run(self, message) -> str:
         before = len(self.sent)
 

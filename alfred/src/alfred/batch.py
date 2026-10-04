@@ -94,10 +94,11 @@ def _buttons(batch_id: uuid.UUID, lang: str) -> list[tuple[str, str]]:
     ]
 
 
-def _draft_text(items: list[dict], lang: str) -> str:
+def _draft_text(items: list[dict], lang: str, title: str | None = None) -> str:
     from alfred.conversation import _t
 
-    return f"{_t('batch_title', lang, n=len(items))}\n{_lines(items)}\n\n{_t('batch_ask', lang)}"
+    head = title or _t("batch_title", lang, n=len(items))
+    return f"{head}\n{_lines(items)}\n\n{_t('batch_ask', lang)}"
 
 
 # ── storage ───────────────────────────────────────────────────────────────────
@@ -118,11 +119,21 @@ def clean_items(items: list[dict]) -> list[dict]:
 
 
 async def create_draft(
-    session: AsyncSession, member: Member, items: list[dict], lang: str
+    session: AsyncSession,
+    member: Member,
+    items: list[dict],
+    lang: str,
+    *,
+    min_items: int = 2,
+    title: str | None = None,
 ) -> BatchReply | None:
-    """Store a draft and return the message to show; None when fewer than 2 usable items remain."""
+    """Store a draft and return the message to show; None when fewer than ``min_items`` remain.
+
+    A receipt read from a photo uses ``min_items=1`` and its own ``title``: one entry, but still
+    only written after the member confirms.
+    """
     clean = clean_items(items)
-    if len(clean) < 2:
+    if len(clean) < min_items:
         return None
     await session.execute(delete(PendingBatch).where(PendingBatch.member_id == member.id))
     batch = PendingBatch(
@@ -130,7 +141,7 @@ async def create_draft(
     )
     session.add(batch)
     await session.flush()
-    return BatchReply(_draft_text(clean, lang), _buttons(batch.id, lang))
+    return BatchReply(_draft_text(clean, lang, title), _buttons(batch.id, lang))
 
 
 async def _take(session: AsyncSession, member_id: uuid.UUID, batch_id: uuid.UUID | None):

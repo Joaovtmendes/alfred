@@ -279,7 +279,11 @@ async def test_help_command(lab: Lab) -> None:
 async def test_not_a_csv_is_refused_without_downloading(lab: Lab) -> None:
     raw = {
         "type": "document",
-        "document": {"id": "m1", "filename": "extrato.pdf", "mime_type": "application/pdf"},
+        "document": {
+            "id": "m1",
+            "filename": "extrato.xlsx",
+            "mime_type": "application/vnd.ms-excel",
+        },
     }
     from tests.conftest import make_message
 

@@ -2702,6 +2702,54 @@
 - **fr** — C'est noté : {name} à {kg}, comme avant.
 - **de** — Notiert: {name} mit {kg}, wie zuvor.
 
+## `media_bad_type`
+
+- **pt** — Só consigo ler foto (JPG, PNG ou WebP) ou PDF. Se preferir, escreva em texto.
+- **nl** — Ik kan alleen een foto (JPG, PNG of WebP) of pdf lezen. Je kunt het ook typen.
+- **en** — I can only read a photo (JPG, PNG or WebP) or a PDF. You can also type it.
+- **fr** — Je peux seulement lire une photo (JPG, PNG ou WebP) ou un PDF. Tu peux aussi l'écrire en texte.
+- **de** — Ich kann nur ein Foto (JPG, PNG oder WebP) oder eine PDF lesen. Du kannst es auch tippen.
+
+## `media_download_failed`
+
+- **pt** — Não consegui baixar o arquivo. Tente enviar de novo.
+- **nl** — Ik kon het bestand niet ophalen. Probeer het opnieuw te sturen.
+- **en** — I couldn't download the file. Please send it again.
+- **fr** — Je n'ai pas pu télécharger le fichier. Envoie-le encore une fois.
+- **de** — Ich konnte die Datei nicht laden. Sende sie bitte noch einmal.
+
+## `media_rate`
+
+- **pt** — Você já enviou muitos arquivos nesta hora. Tente de novo daqui a pouco.
+- **nl** — Je hebt in dit uur al veel bestanden gestuurd. Probeer het zo meteen opnieuw.
+- **en** — You've sent a lot of files this hour. Please try again in a little while.
+- **fr** — Tu as déjà envoyé beaucoup de fichiers cette heure-ci. Réessaie dans un moment.
+- **de** — Du hast in dieser Stunde schon viele Dateien geschickt. Versuche es gleich noch einmal.
+
+## `media_too_big`
+
+- **pt** — O arquivo é grande demais. Mande uma foto menor (até 5 MB) ou um PDF de até 10 MB.
+- **nl** — Het bestand is te groot. Stuur een kleinere foto (tot 5 MB) of een pdf tot 10 MB.
+- **en** — The file is too big. Send a smaller photo (up to 5 MB) or a PDF up to 10 MB.
+- **fr** — Le fichier est trop gros. Envoie une photo plus petite (jusqu'à 5 Mo) ou un PDF jusqu'à 10 Mo.
+- **de** — Die Datei ist zu groß. Sende ein kleineres Foto (bis 5 MB) oder eine PDF bis 10 MB.
+
+## `media_unavailable`
+
+- **pt** — Não consegui ler o arquivo agora. Tente de novo mais tarde ou escreva em texto ("45 mercado" ou "plano de treino: segunda - peito: supino 4x10 60kg").
+- **nl** — Ik kon het bestand nu niet lezen. Probeer het later opnieuw of typ het ("45 supermarkt" of "trainingsschema: maandag - borst: bankdrukken 4x10 60kg").
+- **en** — I couldn't read the file right now. Try again later or type it ("45 groceries" or "training plan: monday - chest: bench press 4x10 60kg").
+- **fr** — Je n'ai pas pu lire le fichier maintenant. Réessaie plus tard ou écris-le ("45 courses" ou "plan d'entrainement : lundi - pectoraux : développé couché 4x10 60kg").
+- **de** — Ich konnte die Datei gerade nicht lesen. Versuche es später noch einmal oder tippe es ("45 Supermarkt" oder "trainingsplan: montag - brust: bankdrücken 4x10 60kg").
+
+## `media_unknown`
+
+- **pt** — Não reconheci nesse arquivo um recibo nem um plano de treino. Mande uma foto nítida de um deles ou escreva em texto.
+- **nl** — Ik herken in dit bestand geen bon of trainingsschema. Stuur een scherpe foto van een van beide of typ het.
+- **en** — I couldn't recognise a receipt or a training plan in that file. Send a clear photo of one of them or type it.
+- **fr** — Je n'ai reconnu ni reçu ni plan d'entraînement dans ce fichier. Envoie une photo nette de l'un des deux ou écris-le.
+- **de** — Ich habe in dieser Datei weder einen Beleg noch einen Trainingsplan erkannt. Sende ein scharfes Foto von einem der beiden oder tippe es.
+
 ## `mom_empty`
 
 - **pt** — Ainda não há despesas neste mês para comparar.
@@ -3180,6 +3228,38 @@
 - **en** — Plan saved ({n} days). Say “workout today” to see it.
 - **fr** — Plan enregistré ({n} jours). Dis « entraînement du jour » pour le voir.
 - **de** — Plan gespeichert ({n} Tage). Sag „training heute“, um ihn zu sehen.
+
+## `planimg_assumed`
+
+- **pt** — O arquivo não mostra os dias da semana, então coloquei os treinos a partir de segunda, na ordem. Se não for isso, cancele e escreva o plano em texto.
+- **nl** — Het bestand toont geen weekdagen, dus ik heb de trainingen vanaf maandag op volgorde gezet. Klopt dat niet, annuleer dan en typ het schema.
+- **en** — The file doesn't show weekdays, so I placed the workouts from Monday on, in order. If that's wrong, cancel and type the plan.
+- **fr** — Le fichier n'indique pas les jours de la semaine, j'ai donc placé les séances à partir de lundi, dans l'ordre. Si ce n'est pas bon, annule et écris le plan.
+- **de** — Die Datei zeigt keine Wochentage, daher habe ich die Einheiten ab Montag der Reihe nach gelegt. Stimmt das nicht, brich ab und tippe den Plan.
+
+## `receipt_currency`
+
+- **pt** — Esse recibo não está em euros e, por enquanto, só registro em euros. Mande o valor em euros por texto, por exemplo "45 mercado".
+- **nl** — Deze bon is niet in euro's en ik registreer voorlopig alleen euro's. Stuur het bedrag in euro's als tekst, bijvoorbeeld "45 supermarkt".
+- **en** — That receipt isn't in euros and for now I only record euros. Send the amount in euros as text, for example "45 groceries".
+- **fr** — Ce reçu n'est pas en euros et pour l'instant je n'enregistre que des euros. Envoie le montant en euros par texte, par exemple "45 courses".
+- **de** — Dieser Beleg ist nicht in Euro und ich erfasse vorerst nur Euro. Sende den Betrag in Euro als Text, zum Beispiel "45 Supermarkt".
+
+## `receipt_no_total`
+
+- **pt** — Não consegui ler o total desse recibo. Mande uma foto mais nítida ou escreva o valor, por exemplo "45 mercado".
+- **nl** — Ik kon het totaal op deze bon niet lezen. Stuur een scherpere foto of typ het bedrag, bijvoorbeeld "45 supermarkt".
+- **en** — I couldn't read the total on that receipt. Send a sharper photo or type the amount, for example "45 groceries".
+- **fr** — Je n'ai pas pu lire le total de ce reçu. Envoie une photo plus nette ou écris le montant, par exemple "45 courses".
+- **de** — Ich konnte den Gesamtbetrag auf diesem Beleg nicht lesen. Sende ein schärferes Foto oder tippe den Betrag, zum Beispiel "45 Supermarkt".
+
+## `receipt_title`
+
+- **pt** — Li este recibo:
+- **nl** — Dit heb ik op de bon gelezen:
+- **en** — This is what I read on the receipt:
+- **fr** — Voici ce que j'ai lu sur le reçu :
+- **de** — Das habe ich auf dem Beleg gelesen:
 
 ## `recurring_ambiguous`
 
