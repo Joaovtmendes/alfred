@@ -84,6 +84,10 @@ _NOTE_CHARS = 200
 _TRIP_DAYS_SHOWN = 62
 _PAST_TRIPS = 6
 _ALL_DAYS = 127
+_MEDICATION_WORDS = (
+    "medic", "remedio", "remédio", "pil", "pill", "vitamin", "tablet", "comprimido", "pilule",
+    "tablette", "arznei",
+)  # fmt: skip
 _REMINDER_KINDS = ("medication_reminder", "goal_checkin", "workout_reminder", "weekly_summary")
 
 
@@ -259,13 +263,28 @@ async def reminders_card(ctx) -> dict[str, Any]:
     items = []
     for job in rows[:_REMINDER_ITEMS]:
         text = (job.payload or {}).get("text") if isinstance(job.payload, dict) else None
+        payload = job.payload if isinstance(job.payload, dict) else {}
+        day_of_month = payload.get("day_of_month")
+        day_of_month = (
+            day_of_month if isinstance(day_of_month, int) and 1 <= day_of_month <= 31 else None
+        )
+        kind = job.job_type
+        # "medication_reminder" is the default type of any free reminder: it is only a medication
+        # when the text says so (the cron still picks the template from the stored type).
+        if (
+            kind == "medication_reminder"
+            and text
+            and not any(w in str(text).lower() for w in _MEDICATION_WORDS)
+        ):
+            kind = "reminder"
         items.append(
             {
-                "kind": job.job_type,
+                "kind": kind,
                 "text": str(text).strip()[:120] if text else None,
                 "time": job.time_of_day,
                 "days": _days_of(job.days_mask),
-                "every_day": job.days_mask == _ALL_DAYS,
+                "every_day": job.days_mask == _ALL_DAYS and day_of_month is None,
+                "day_of_month": day_of_month,
             }
         )
     return _card("reminders", not rows, {"count": len(rows)}, ctx, "reminders", items=items)

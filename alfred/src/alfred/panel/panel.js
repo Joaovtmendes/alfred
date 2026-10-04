@@ -647,7 +647,7 @@
       for (const it of card.items) {
         const row = el("div", "item");
         const body = el("div");
-        const dayNames = it.every_day ? T.rem_every_day : it.days.map((i) => wd.format(new Date(Date.UTC(2024, 0, 1 + i)))).join(", ");
+        const dayNames = it.day_of_month ? T.rem_monthly.replace("{d}", it.day_of_month) : it.every_day ? T.rem_every_day : it.days.map((i) => wd.format(new Date(Date.UTC(2024, 0, 1 + i)))).join(", ");
         body.append(el("div", "t", it.text || T["rem_kind_" + it.kind] || it.kind), el("div", "s", (it.text ? (T["rem_kind_" + it.kind] || "") + " · " : "") + dayNames));
         row.append(body, el("div", "amt num", it.time));
         list.append(row);

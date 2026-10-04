@@ -51,7 +51,7 @@ _DAILY_RE = re.compile(
     r"|jeden\s+tag|diariamente|daily)\b",
 )
 _DAYS_RE = re.compile(
-    rf"\b(?:(?:toda|todo|todas\s+as|todos\s+os|aos|as|nas|nos|em|every|each|elke|on|chaque|le|"
+    rf"\b(?:(?:toda\s+a|toda|todo|todas\s+as|todos\s+os|aos|as|nas|nos|em|every|each|elke|on|chaque|le|"
     rf"jeden|am)\s+)?(?:{_DAY_ALT})s?(?:{_JOIN}(?:{_DAY_ALT})s?)*\b",
 )
 

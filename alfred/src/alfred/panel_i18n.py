@@ -655,6 +655,20 @@ SHELL.update(
             "Médicament",
             "Medikamente",
         ),
+        "rem_kind_reminder": _t(
+            "Lembrete",
+            "Herinnering",
+            "Reminder",
+            "Rappel",
+            "Erinnerung",
+        ),
+        "rem_monthly": _t(
+            "todo dia {d} do mês",
+            "elke maand op de {d}e",
+            "on the {d}th of every month",
+            "le {d} de chaque mois",
+            "jeden Monat am {d}.",
+        ),
         "rem_kind_goal_checkin": _t(
             "Meta",
             "Doel",
