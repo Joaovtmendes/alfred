@@ -34,6 +34,6 @@ def test_policy_1_3_covers_the_v2_data_categories_in_every_language() -> None:
     assert POLICY_VERSION == "1.3"
     for lang, policy in POLICY.items():
         text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
-        assert "90" in text, lang  # retention of the sent-message log
+        assert any(w in text for w in ("three months", "drie maanden", "três meses")), lang
         assert any(w in text for w in ("trip", "reis", "viage")), lang
         assert any(w in text for w in ("encrypted", "versleuteld", "criptografad")), lang

@@ -118,7 +118,7 @@ POLICY: dict[str, dict] = {
                 [
                     "Debts and loans: the name you give for the other person, the amount and a note. Please record only what concerns you; that person has the same rights over their name and can ask us to erase it. Training plans and the loads you lift, trip destinations, dates, itineraries, packing lists and trip budgets, monthly budgets, fixed bills and instalments, and analysis views you save are also kept. The dashboard shows all of this to anyone who has your link.",
                     "Questions you ask Alfred about your own numbers (for example 'how much did I spend on food in August?') are sent as text to the AI provider to understand the question; the figures themselves are calculated by us and are not sent to the AI provider.",
-                    "A log of the messages Alfred sent you, with their delivery status, is kept for 90 days and then erased.",
+                    "A log of the messages Alfred sent you, with their delivery status, is kept for about three months and then erased.",
                 ],
             ),
             (
@@ -223,7 +223,7 @@ POLICY: dict[str, dict] = {
                 [
                     "Schulden en leningen: de naam die je van de andere persoon opgeeft, het bedrag en een notitie. Leg alleen vast wat jou aangaat; die persoon heeft dezelfde rechten over zijn of haar naam en kan ons vragen die te wissen. Ook bewaren we trainingsschema's en de gewichten die je tilt, reisbestemmingen, data, routes, paklijsten en reisbudgetten, maandbudgetten, vaste lasten en termijnen, en analyseweergaven die je opslaat. Het dashboard toont dit alles aan iedereen die je link heeft.",
                     "Vragen die je Alfred stelt over je eigen cijfers (bijvoorbeeld 'hoeveel gaf ik in augustus uit aan eten?') worden als tekst naar de AI-aanbieder gestuurd om de vraag te begrijpen; de bedragen zelf rekenen wij uit en gaan niet naar de AI-aanbieder.",
-                    "Een logboek van de berichten die Alfred je stuurde, met de bezorgstatus, bewaren we 90 dagen en wissen we daarna.",
+                    "Een logboek van de berichten die Alfred je stuurde, met de bezorgstatus, bewaren we ongeveer drie maanden en wissen we daarna.",
                 ],
             ),
             (
@@ -327,7 +327,7 @@ POLICY: dict[str, dict] = {
                 [
                     "Dívidas e empréstimos: o nome que você informa da outra pessoa, o valor e uma nota. Registre apenas o que diz respeito a você; essa pessoa tem os mesmos direitos sobre o próprio nome e pode pedir que o apaguemos. Também guardamos planos de treino e as cargas que você usa, destinos, datas, roteiros, listas de mala e orçamentos de viagem, orçamentos mensais, contas fixas e parcelas, e as visões de análise que você salva. O painel mostra tudo isso a quem tiver o seu link.",
                     "As perguntas que você faz ao Alfred sobre os seus próprios números (por exemplo, 'quanto gastei com comida em agosto?') são enviadas como texto ao provedor de IA para entender a pergunta; os valores em si são calculados por nós e não vão para o provedor de IA.",
-                    "Um registro das mensagens que o Alfred enviou a você, com o estado de entrega, é guardado por 90 dias e depois apagado.",
+                    "Um registro das mensagens que o Alfred enviou a você, com o estado de entrega, é guardado por cerca de três meses e depois apagado.",
                 ],
             ),
             (
