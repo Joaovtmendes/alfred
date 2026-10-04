@@ -491,6 +491,13 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "fr": "Je n'enregistre que des euros pour l'instant — {cur} n'a pas été enregistré. Convertis en € et renvoie (ex. « Jumbo 23,50 »).",
         "de": "Ich erfasse vorerst nur Euro — {cur} wurde nicht gespeichert. Rechne in € um und sende es erneut (z. B. „Jumbo 23,50“).",
     },
+    "month_total_context": {
+        "pt": " No mês, você já gastou {total}.",
+        "nl": " Deze maand heb je al {total} uitgegeven.",
+        "en": " That's {total} spent so far this month.",
+        "fr": " Cela fait {total} dépensés ce mois-ci.",
+        "de": " Das sind {total} Ausgaben in diesem Monat.",
+    },
     "month_category_context": {
         "pt": (
             " Já são {total} em {category} este mês.",
@@ -1552,39 +1559,44 @@ def _pt_singular(text: str) -> str:
 async def _month_category_context(
     session: AsyncSession, member: Member, when: datetime, category: str | None, lang: str
 ) -> str:
-    """One-line month-to-date total for the category of a just-recorded expense.
+    """One-line month-to-date total after a just-recorded expense — always present (defect 21).
 
-    Empty when there is nothing useful to say: unknown category ("overig") or the expense is
-    the only one of its category this month. Expects the new row to be flushed already.
+    The category total when the category has two or more entries this month; otherwise (unknown
+    category "overig", or the first of its category) the total spent in the whole month, so every
+    expense confirmation carries a month figure. Expects the new row to be flushed already.
     """
     from sqlalchemy import func as sa_func
 
-    if not category or category == "overig":
-        return ""
     local = to_local(when)
     start = datetime.combine(month_start(local.date()), time.min, tzinfo=local.tzinfo)
     end = datetime.combine(
         month_start(month_start(local.date()) + timedelta(days=32)), time.min, tzinfo=local.tzinfo
     )
-    res = await session.execute(
-        select(sa_func.coalesce(sa_func.sum(Expense.amount), 0), sa_func.count(Expense.id)).where(
-            Expense.member_id == member.id,
-            Expense.transaction_type == "expense",
-            Expense.category == category,
-            Expense.status.in_(SETTLED),
-            Expense.expense_date >= start,
-            Expense.expense_date < end,
+    base = (
+        Expense.member_id == member.id,
+        Expense.transaction_type == "expense",
+        Expense.status.in_(SETTLED),
+        Expense.expense_date >= start,
+        Expense.expense_date < end,
+    )
+    if category and category != "overig":
+        res = await session.execute(
+            select(
+                sa_func.coalesce(sa_func.sum(Expense.amount), 0), sa_func.count(Expense.id)
+            ).where(*base, Expense.category == category)
         )
+        total, count = res.one()
+        if int(count) >= 2:
+            return _t(
+                "month_category_context",
+                lang,
+                total=_fmt_eur(float(total)),
+                category=category_label(category, lang),
+            )
+    month_total = await session.scalar(
+        select(sa_func.coalesce(sa_func.sum(Expense.amount), 0)).where(*base)
     )
-    total, count = res.one()
-    if int(count) < 2:
-        return ""
-    return _t(
-        "month_category_context",
-        lang,
-        total=_fmt_eur(float(total)),
-        category=category_label(category, lang),
-    )
+    return _t("month_total_context", lang, total=_fmt_eur(float(month_total or 0)))
 
 
 # Whole-word greetings the substring lists above miss ("oi" alone has no space around it).
@@ -3949,7 +3961,7 @@ async def handle_inbound(
             await _save_outbound(member, msum_reply, session)
             return
 
-        # 4e-0l. V2-15 — "dias no azul" / "mês contra mês por categoria" (before the generic comparison)
+        # 4e-0l. V2-15 — "dias no positivo / negativo" / "mês contra mês por categoria" (before the generic comparison)
         insight_reply = await handle_insight_command(body_plain, member, lang, session)
         if insight_reply is not None:
             await send_text(to, insight_reply)
