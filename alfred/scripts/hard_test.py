@@ -605,6 +605,32 @@ def bloco_n(run_id, delay):
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 
+
+def bloco_o(run_id, delay):
+    """04/10 — o que mudou depois do hard test de 03/10: total do mês em todo lançamento,
+    dias no positivo/negativo, última carga do dia, hábito repetido, treino por texto, tarefa com prazo."""
+    print("\n══ Bloco O — Ajustes de 04/10 ══")
+    send("O01 lançamento 1 (total do mês geral)", "padaria 7,50", run_id, delay)
+    send("O02 lançamento 2 (total da categoria)", "mercado 20", run_id, delay)
+    send("O03 sem categoria (ainda traz total do mês)", "cinema 24", run_id, delay)
+    send("O04 dias no positivo", "dias no positivo", run_id, delay)
+    send("O05 dias no negativo", "dias no negativo", run_id, delay)
+    send("O06 carga 1", "carga supino 60 kg", run_id, delay)
+    send("O07 carga 2 no mesmo dia (vale a última)", "carga supino 62,5 kg", run_id, delay)
+    send("O08 evolução (um ponto, 62,5)", "evolução do supino", run_id, delay)
+    send("O09 hábito", "meditei", run_id, delay)
+    send("O10 hábito repetido (não conta duas vezes)", "meditei", run_id, delay)
+    send("O11 treino por texto", "fiz 50 minutos de musculação", run_id, delay)
+    send("O12 tarefa com prazo", "tarefa: enviar relatório até sexta", run_id, delay)
+    send(
+        "O13 lembrete 'toda a segunda'",
+        "lembrete: pagar aluguel toda a segunda às 10:00",
+        run_id,
+        delay,
+    )
+    send("O14 mês contra mês", "mês contra mês por categoria", run_id, delay)
+
+
 BLOCOS = {
     "A": bloco_a,
     "B": bloco_b,
@@ -619,6 +645,7 @@ BLOCOS = {
     "K": bloco_k,
     "L": bloco_l,
     "N": bloco_n,
+    "O": bloco_o,
 }
 
 if __name__ == "__main__":

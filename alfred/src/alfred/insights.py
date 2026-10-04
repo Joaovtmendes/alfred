@@ -1,7 +1,7 @@
 # ruff: noqa: E501
-"""V2-15 — two small readings of the month, by rules: days in the black, and month vs month.
+"""V2-15 — two small readings of the month, by rules: positive/negative days, and month vs month.
 
-**Days in the black** (definition to confirm with J): a day of the current month counts when the
+**Positive and negative days** (J decided on 04/10 to rename "days in the black"): a day of the current month counts when the
 month's running balance (income minus expenses, from day 1 through that day) is zero or more.
 Days without any entry carry the balance forward. Also the longest run of such days.
 
@@ -92,7 +92,8 @@ async def blue_days(session: AsyncSession, member_id, today: date) -> BlueDays |
 # ── month vs month ────────────────────────────────────────────────────────────
 
 _DAYS = re.compile(
-    r"\b(dias? no azul|days? in the black|dagen in de plus|jours? dans le vert|tage im plus)\b"
+    r"\b(dias? no (azul|positivo|negativo)|days? (in the black|in the red|positive|negative)|dagen in de (plus|min)|"
+    r"jours? (dans le vert|dans le rouge|en positif|en negatif)|tage im (plus|minus))\b"
 )
 _MOM = re.compile(
     r"(mes contra mes|mes a mes|mes x mes|month over month|month vs month|month versus month|maand tegen maand|"
@@ -160,6 +161,7 @@ async def handle_insight_command(
             "blue_result",
             lang,
             blue=data.blue,
+            neg=data.elapsed - data.blue,
             elapsed=data.elapsed,
             longest=data.longest,
             balance=_fmt(data.balance),
@@ -175,18 +177,18 @@ def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str | tuple[s
 
 STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     "blue_result": _all(
-        "Este mês: {blue} de {elapsed} dias no azul (saldo acumulado a partir do dia 1 sem ficar negativo). Maior sequência: {longest} dias. Saldo até hoje: {balance}.",
-        "Deze maand: {blue} van {elapsed} dagen in de plus (lopend saldo vanaf dag 1 niet negatief). Langste reeks: {longest} dagen. Saldo tot nu: {balance}.",
-        "This month: {blue} of {elapsed} days in the black (running balance from day 1 not negative). Longest streak: {longest} days. Balance so far: {balance}.",
-        "Ce mois-ci : {blue} jours sur {elapsed} dans le vert (solde cumulé depuis le jour 1 non négatif). Plus longue série : {longest} jours. Solde à ce jour : {balance}.",
-        "Diesen Monat: {blue} von {elapsed} Tagen im Plus (laufender Saldo seit Tag 1 nicht negativ). Längste Serie: {longest} Tage. Saldo bisher: {balance}.",
+        "Este mês: {blue} dias no positivo e {neg} no negativo, de {elapsed} (saldo acumulado desde o dia 1). Maior sequência no positivo: {longest} dias. Saldo até hoje: {balance}.",
+        "Deze maand: {blue} dagen in de plus en {neg} in de min, van {elapsed} (lopend saldo vanaf dag 1). Langste reeks in de plus: {longest} dagen. Saldo tot nu: {balance}.",
+        "This month: {blue} days positive and {neg} negative, of {elapsed} (running balance from day 1). Longest positive streak: {longest} days. Balance so far: {balance}.",
+        "Ce mois-ci : {blue} jours en positif et {neg} en négatif sur {elapsed} (solde cumulé depuis le jour 1). Plus longue série en positif : {longest} jours. Solde à ce jour : {balance}.",
+        "Diesen Monat: {blue} Tage im Plus und {neg} im Minus von {elapsed} (laufender Saldo seit Tag 1). Längste Serie im Plus: {longest} Tage. Saldo bisher: {balance}.",
     ),
     "blue_none": _all(
-        "Ainda não há lançamentos neste mês para medir os dias no azul.",
-        "Er zijn deze maand nog geen boekingen om de dagen in de plus te meten.",
-        "There are no entries this month yet to measure days in the black.",
-        "Il n'y a pas encore d'opérations ce mois-ci pour mesurer les jours dans le vert.",
-        "Diesen Monat gibt es noch keine Buchungen, um die Tage im Plus zu messen.",
+        "Ainda não há lançamentos neste mês para medir os dias no positivo e no negativo.",
+        "Er zijn deze maand nog geen transacties om de dagen in de plus en de min te meten.",
+        "There are no entries this month yet to measure positive and negative days.",
+        "Il n'y a pas encore d'opérations ce mois-ci pour mesurer les jours en positif et en négatif.",
+        "Diesen Monat gibt es noch keine Buchungen, um die Tage im Plus und im Minus zu messen.",
     ),
     "mom_header": _all(
         "Este mês ({cur}) contra o mesmo período do mês anterior ({prev}):",

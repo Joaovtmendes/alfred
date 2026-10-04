@@ -90,7 +90,9 @@ async def test_blue_days_from_the_database(lab: Lab) -> None:
 async def test_blue_days_command(lab: Lab) -> None:
     assert "Ainda não há lançamentos" in await lab.say("dias no azul")
     await lab.add(_exp(lab, today_local(), 10))
-    assert "no azul" in await lab.say("quantos dias no azul")
+    reply = await lab.say("quantos dias no azul")
+    assert "dias no positivo e" in reply and "no negativo" in reply
+    assert "no negativo" in await lab.say("dias no negativo")
 
 
 @db

@@ -105,24 +105,24 @@ PHRASES: dict[str, dict[str, str]] = {
     },
     # ── Rule 7 · days in the black ────────────────────────────────────────────
     "blue_days": {
-        "pt": "{blue} de {elapsed} dias no azul; a maior sequência foi de {longest}.",
-        "nl": "{blue} van {elapsed} dagen in de plus; de langste reeks was {longest}.",
-        "en": "{blue} of {elapsed} days in the black; the longest streak was {longest}.",
-        "fr": "{blue} jours sur {elapsed} dans le vert ; la plus longue série a duré {longest}.",
-        "de": "{blue} von {elapsed} Tagen im Plus; die längste Serie dauerte {longest}.",
+        "pt": "{blue} dias no positivo e {neg} no negativo, de {elapsed}; a maior sequência no positivo foi de {longest}.",
+        "nl": "{blue} dagen in de plus en {neg} in de min, van {elapsed}; de langste reeks in de plus was {longest}.",
+        "en": "{blue} days positive and {neg} negative, of {elapsed}; the longest positive streak was {longest}.",
+        "fr": "{blue} jours en positif et {neg} en négatif sur {elapsed} ; la plus longue série en positif a duré {longest}.",
+        "de": "{blue} Tage im Plus und {neg} im Minus von {elapsed}; die längste Serie im Plus dauerte {longest}.",
     },
-    # exactly one day in the black: only French changes ("1 jour", not "1 jours")
+    # exactly one positive day: only French changes ("1 jour", not "1 jours")
     "blue_days_one": {
-        "pt": "{blue} de {elapsed} dias no azul; a maior sequência foi de {longest}.",
-        "nl": "{blue} van {elapsed} dagen in de plus; de langste reeks was {longest}.",
-        "en": "{blue} of {elapsed} days in the black; the longest streak was {longest}.",
-        "fr": "{blue} jour sur {elapsed} dans le vert ; la plus longue série a duré {longest}.",
-        "de": "{blue} von {elapsed} Tagen im Plus; die längste Serie dauerte {longest}.",
+        "pt": "{blue} dias no positivo e {neg} no negativo, de {elapsed}; a maior sequência no positivo foi de {longest}.",
+        "nl": "{blue} dagen in de plus en {neg} in de min, van {elapsed}; de langste reeks in de plus was {longest}.",
+        "en": "{blue} days positive and {neg} negative, of {elapsed}; the longest positive streak was {longest}.",
+        "fr": "{blue} jour en positif et {neg} en négatif sur {elapsed} ; la plus longue série en positif a duré {longest}.",
+        "de": "{blue} Tage im Plus und {neg} im Minus von {elapsed}; die längste Serie im Plus dauerte {longest}.",
     },
     # ── Rule 8 · the list ─────────────────────────────────────────────────────
     "largest_entry": {
         "pt": "{count} lançamentos {period}. O maior gasto foi {merchant}, {amount}.",
-        "nl": "{count} boekingen {period}. De grootste uitgave was {merchant}, {amount}.",
+        "nl": "{count} transacties {period}. De grootste uitgave was {merchant}, {amount}.",
         "en": "{count} entries {period}. The largest expense was {merchant}, {amount}.",
         "fr": "{count} opérations {period}. La plus grosse dépense était {merchant}, {amount}.",
         "de": "{count} Buchungen {period}. Die größte Ausgabe war {merchant}, {amount}.",
@@ -162,7 +162,7 @@ PHRASES: dict[str, dict[str, str]] = {
     # ── Empty states: they teach the chat sentence ────────────────────────────
     "empty_ledger": {
         "pt": "Ainda não há lançamentos neste período. Registre um gasto pelo chat e ele aparece aqui.",
-        "nl": "Er zijn nog geen boekingen in deze periode. Leg een uitgave vast in de chat en ze verschijnt hier.",
+        "nl": "Er zijn nog geen transacties in deze periode. Leg een uitgave vast in de chat en ze verschijnt hier.",
         "en": "There are no entries in this period yet. Record an expense in the chat and it shows up here.",
         "fr": "Il n'y a pas encore d'opérations sur cette période. Enregistre une dépense dans le chat et elle apparaît ici.",
         "de": "In diesem Zeitraum gibt es noch keine Buchungen. Erfasse eine Ausgabe im Chat, dann erscheint sie hier.",
@@ -261,7 +261,7 @@ PHRASES: dict[str, dict[str, str]] = {
     },
     "trips_history": {
         "pt": "Entre as {count} últimas viagens com orçamento, dentro do limite: {within}.",
-        "nl": "Van de laatste {count} reizen met budget, binnen de grens: {within}.",
+        "nl": "Van de laatste {count} reizen met budget, binnen budget gebleven: {within}.",
         "en": "Of the last {count} trips with a budget, within the limit: {within}.",
         "fr": "Sur les {count} derniers voyages avec budget, dans la limite : {within}.",
         "de": "Von den letzten {count} Reisen mit Budget im Rahmen geblieben: {within}.",
@@ -340,8 +340,8 @@ PHRASES: dict[str, dict[str, str]] = {
         "pt": "{cat} usou {pct}% do planejado: {spent} de {plan}.",
         "nl": "{cat} heeft {pct}% van het geplande gebruikt: {spent} van {plan}.",
         "en": "{cat} used {pct}% of the plan: {spent} of {plan}.",
-        "fr": "{cat} a utilisé {pct}% du prévu : {spent} sur {plan}.",
-        "de": "{cat} hat {pct}% des Plans genutzt: {spent} von {plan}.",
+        "fr": "{cat} a utilisé {pct} % du prévu : {spent} sur {plan}.",
+        "de": "{cat} hat {pct} % des Plans genutzt: {spent} von {plan}.",
     },
     "plan_budget_over": {
         "pt": "{cat} passou do planejado: {spent} de {plan}.",
@@ -419,11 +419,11 @@ CHAT: dict[str, dict[str, str]] = {
         "de": '"{person} hat mir {amount} bezahlt"',
     },
     "blue_days": {
-        "pt": '"dias no azul"',
-        "nl": '"dagen in de plus"',
-        "en": '"days in the black"',
-        "fr": '"jours dans le vert"',
-        "de": '"Tage im Plus"',
+        "pt": '"dias no positivo e dias no negativo"',
+        "nl": '"dagen in de plus en dagen in de min"',
+        "en": '"days positive and days negative"',
+        "fr": '"jours en positif et jours en négatif"',
+        "de": '"Tage im Plus und Tage im Minus"',
     },
     "entries": {
         "pt": '"últimas 10 despesas"',
@@ -981,6 +981,7 @@ def rule_blue_days(blue: int, elapsed: int, longest: int, lang: str) -> Phrase |
         lang,
         chat_key="blue_days",
         blue=blue,
+        neg=elapsed - blue,
         elapsed=elapsed,
         longest=unit("day", longest, lang),
     )

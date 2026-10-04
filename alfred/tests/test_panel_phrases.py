@@ -367,9 +367,17 @@ def test_largest_entry_phrase_names_an_expense_not_an_entry() -> None:
 
 def test_blue_days_phrase_is_singular_for_one_day_in_french() -> None:
     one = pp.rule_blue_days(1, 8, 1, "fr")
-    assert one and one.text.startswith("1 jour sur 8 ") and "1 jours" not in one.text
-    assert pp.rule_blue_days(1, 8, 1, "pt").text.startswith("1 de 8 dias no azul")
-    assert pp.rule_blue_days(3, 8, 2, "fr").text.startswith("3 jours sur 8 ")
+    assert (
+        one
+        and one.text.startswith("1 jour en positif et 7 en négatif sur 8")
+        and "1 jours" not in one.text
+    )
+    assert pp.rule_blue_days(1, 8, 1, "pt").text.startswith(
+        "1 dias no positivo e 7 no negativo, de 8"
+    )
+    assert pp.rule_blue_days(3, 8, 2, "fr").text.startswith(
+        "3 jours en positif et 5 en négatif sur 8"
+    )
 
 
 def test_a_phrase_built_from_a_lowercase_merchant_still_starts_with_a_capital() -> None:

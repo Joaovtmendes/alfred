@@ -80,3 +80,28 @@ async def test_the_streak_reply_uses_the_noun(lab: Lab):
     await lab.say("meditei")
     reply = await lab.say("quantos dias seguidos de meditação")
     assert "meditei" not in reply.lower() and "meditação" in reply.lower()
+
+
+@db
+@pytest.mark.asyncio
+async def test_every_expense_confirmation_carries_a_month_total(lab: Lab):
+    """Defect 21: some entries showed the month total and others did not."""
+    item = {
+        "amount": 12.0,
+        "currency": "EUR",
+        "merchant": "Jumbo",
+        "category": "boodschappen",
+        "description": None,
+        "type": "expense",
+        "is_expense": True,
+        "days_ago": 0,
+    }
+    lab.expense.return_value = item
+    first = await lab.say("jumbo 12")  # first of its category: month total of everything
+    assert "12,00" in first and "No mês" in first
+    lab.expense.return_value = {**item, "amount": 8.0, "merchant": "Albert Heijn"}
+    second = await lab.say("albert heijn 8")  # second of the category: category total
+    assert "20,00" in second
+    lab.expense.return_value = {**item, "amount": 5.0, "merchant": "Cinema", "category": "overig"}
+    third = await lab.say("cinema 5")  # unknown category: month total, not nothing
+    assert "25,00" in third and "No mês" in third

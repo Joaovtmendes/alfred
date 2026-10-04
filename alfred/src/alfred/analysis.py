@@ -446,11 +446,11 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     "analysis_metric_income": _all("Receitas", "Inkomsten", "Income", "Revenus", "Einnahmen"),
     "analysis_metric_net": _all("Saldo", "Saldo", "Balance", "Solde", "Saldo"),
     "analysis_metric_count": _all(
-        "Lançamentos", "Boekingen", "Transactions", "Opérations", "Buchungen"
+        "Lançamentos", "Transacties", "Transactions", "Opérations", "Buchungen"
     ),
     "analysis_metric_average": _all(
         "Média por lançamento",
-        "Gemiddeld per boeking",
+        "Gemiddeld per transactie",
         "Average per transaction",
         "Moyenne par opération",
         "Durchschnitt pro Buchung",
@@ -496,7 +496,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     ),
     "analysis_empty": _all(
         "Não achei lançamentos nesse recorte.",
-        "Ik vond geen boekingen voor deze selectie.",
+        "Ik vond geen transacties voor deze selectie.",
         "I found no transactions for that selection.",
         "Je n'ai trouvé aucune opération pour cette sélection.",
         "Ich habe für diese Auswahl keine Buchungen gefunden.",

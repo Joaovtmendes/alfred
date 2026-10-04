@@ -545,7 +545,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "nl": "Genoteerd: {name} in {n}x {amount}. Eerste termijn: {due}. Ik herinner je 3 dagen van tevoren.",
         "en": "Noted: {name} in {n}x of {amount}. First instalment: {due}. I'll remind you 3 days before each.",
         "fr": "C'est noté : {name} en {n}x de {amount}. Première échéance : {due}. Je te préviens 3 jours avant chacune.",
-        "de": "Notiert: {name} in {n}x {amount}. Erste Rate: {due}. Ich erinnere dich jeweils 3 Tage vorher.",
+        "de": "Notiert: {name} in {n} Raten à {amount}. Erste Rate: {due}. Ich erinnere dich jeweils 3 Tage vorher.",
     },
     "recurring_paid": {
         "pt": ("Anotei o pagamento: {name}, {amount}. Próximo vencimento: {due}.", "Pago: {name}, {amount}. Próximo vencimento: {due}."),
@@ -586,14 +586,14 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "pt": "Você já tem {n} contas fixas, que é o limite. Remova alguma para adicionar outra.",
         "nl": "Je hebt al {n} vaste lasten, dat is het maximum. Verwijder er eerst een.",
         "en": "You already have {n} recurring items, which is the limit. Remove one to add another.",
-        "fr": "Tu as déjà {n} charges fixes, c'est la limite. Supprime-en une pour en ajouter.",
+        "fr": "Tu as déjà {n} charges fixes, c'est la limite. Supprimes-en une pour en ajouter.",
         "de": "Du hast schon {n} Fixkosten, das ist das Maximum. Entferne eine, um eine neue anzulegen.",
     },
     "recurring_list_empty": {
         "pt": "Você ainda não tem contas fixas. Para criar, diga por exemplo “aluguel 1200 todo dia 1” ou “celular em 10x de 89,90”.",
         "nl": "Je hebt nog geen vaste lasten. Maak er een met bijvoorbeeld “huur 1200 elke maand op de 1e”.",
         "en": "You don't have any recurring items yet. Create one, for example “rent 1200 monthly on the 1st” or “phone in 10x of 89.90”.",
-        "fr": "Tu n'as pas encore de charges fixes. Crée-en une, par exemple « loyer 1200 chaque mois le 1 ».",
+        "fr": "Tu n'as pas encore de charges fixes. Crées-en une, par exemple « loyer 1200 chaque mois le 1 ».",
         "de": "Du hast noch keine Fixkosten. Lege eine an, zum Beispiel „Miete 1200 monatlich am 1.“.",
     },
     "recurring_list_header": {

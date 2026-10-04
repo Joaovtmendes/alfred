@@ -141,3 +141,19 @@ python scripts/panel_shots.py --base http://127.0.0.1:8000 --out /tmp/panel-shot
 `panel_shots.py` abre o Chromium do Playwright, captura Resumo e Dinheiro (claro/escuro, 1280 e 390) e falha se houver violação de CSP, erro de página,
 fonte que não carrega ou rolagem horizontal. Sem acesso ao cdnjs (sandbox), `--chartjs` serve um
 `chart.umd.js` local no lugar do CDN para provar que a v1 corre sob a CSP por nonce.
+
+
+## Segurança de dados em repouso (S1-06 e S1-09, 04/10)
+
+**Saúde cifrada no app (S1-06).** `health_log.value` e `.notes` são guardados como token Fernet com prefixo `enc1:` quando `DATA_ENCRYPTION_KEY` existe. Passos para ligar, nesta ordem:
+1. Gerar a chave: `python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+2. Guardar a chave num gerenciador de senhas **e** na variável `DATA_ENCRYPTION_KEY` do serviço `alfred` (e do `alfred-cron`, que lê o banco). Perder a chave = perder os dados de saúde.
+3. Depois do deploy (a migração `a1b2c3d4e5f6` só alarga a coluna), cifrar o que já existe: `railway run python -m alfred.crypto backfill` (idempotente).
+4. Rotação: `DATA_ENCRYPTION_KEY="nova,antiga"` (a primeira cifra, todas decifram); rodar o backfill de novo não reescreve o que já está cifrado, então para trocar de vez a chave é preciso ler e regravar as linhas (script a escrever quando houver a primeira rotação).
+Sem a chave o app grava texto puro e registra o aviso `crypto.no_key` no start; com valor cifrado e sem chave a leitura falha de forma explícita (nunca devolve o token como se fosse dado).
+
+**Backup cifrado (S1-09).** `scripts/backup_db.sh backup ARQUIVO` faz `pg_dump` e cifra com AES-256 (senha em `BACKUP_PASSPHRASE`, nunca em disco nem na linha de comando); `restore` faz o inverso. Testado em 04/10 (ida e volta e senha errada falha). O agendamento diário e o lugar de guardar o arquivo dependem do plano Hobby/região UE (V1-01, V1-15). A senha do backup vai no gerenciador de senhas, **diferente** da chave de dados.
+
+**2FA (S1-08).** Não existe login de administrador no app (só `/internal/metrics` com token). O que vale aqui é ligar 2FA nas contas que mandam no sistema: GitHub, Railway, Meta Business, Google (Gmail do projeto) e Sentry. Ação do J.
+
+**RLS (S1-02), decisão pendente.** O app usa um único papel de banco; RLS só protege se cada request definir `app.member_id` e o papel não for dono das tabelas (`FORCE ROW LEVEL SECURITY`). Isso toca webhook, cron, painel e exportação, e um erro derruba a produção. Proposta: fazer depois do staging (V1-13), tabela por tabela começando por `health_log`, com testes de isolamento entre membros.

@@ -10,6 +10,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from alfred.crypto import warn_if_unprotected
 from alfred.dashboard import router as dashboard_router
 from alfred.internal import router as internal_router
 from alfred.legal import router as legal_router
@@ -31,6 +32,7 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     logger.info(
         "alfred.startup", environment=settings.environment, base_url=settings.base_url or "<EMPTY>"
     )
+    warn_if_unprotected(settings.environment)
     # Safety net for the webhook's background processing (see alfred.webhook).
     recovery = asyncio.create_task(recovery_loop(), name="webhook-recovery")
     try:

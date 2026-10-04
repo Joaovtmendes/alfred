@@ -452,7 +452,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Você já tem {n} valores em aberto, que é o máximo. Quite alguns antes de anotar outros.",
         "Je hebt al {n} openstaande bedragen, dat is het maximum. Vereffen er eerst een paar.",
         "You already have {n} open amounts, which is the maximum. Settle a few first.",
-        "Tu as déjà {n} montants ouverts, c'est le maximum. Solde-en quelques-uns d'abord.",
+        "Tu as déjà {n} montants ouverts, c'est le maximum. Soldes-en quelques-uns d'abord.",
         "Du hast schon {n} offene Beträge, das ist das Maximum. Begleiche zuerst einige.",
     ),
     "iou_reminder": _all(

@@ -411,13 +411,13 @@ STRINGS: dict[str, dict[str, str]] = {
     "batch_btn_ok": _all("Confirmar", "Bevestigen", "Confirm", "Confirmer", "Bestätigen"),
     "batch_btn_edit": _all("Ajustar", "Aanpassen", "Adjust", "Ajuster", "Anpassen"),
     "batch_btn_undo_all": _all(
-        "Desfazer tudo", "Alles ongedaan", "Undo all", "Tout annuler", "Alles rückgängig"
+        "Desfazer tudo", "Alles ongedaan maken", "Undo all", "Tout annuler", "Alles rückgängig"
     ),
     "batch_undone": _all(
         "Desfeito: {n} lançamentos apagados.",
-        "Ongedaan gemaakt: {n} boekingen verwijderd.",
+        "Ongedaan gemaakt: {n} transacties verwijderd.",
         "Undone: {n} entries removed.",
-        "Annulé : {n} écritures supprimées.",
+        "Annulé : {n} opérations supprimées.",
         "Rückgängig: {n} Buchungen gelöscht.",
     ),
     "batch_btn_cancel": _all("Desfazer", "Ongedaan maken", "Undo", "Annuler", "Rückgängig"),

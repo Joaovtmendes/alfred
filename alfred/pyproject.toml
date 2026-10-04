@@ -26,6 +26,7 @@ dependencies = [
     "python-dateutil>=2.9",  # task due dates (conversation.py)
     "tzdata>=2024.1",        # Europe/Amsterdam on slim images
     "sentry-sdk>=2.0",       # error tracking, only active with SENTRY_DSN
+    "cryptography>=42",      # Fernet for health data at rest (DATA_ENCRYPTION_KEY)
 ]
 
 [project.optional-dependencies]

@@ -234,6 +234,16 @@ async def test_a_load_said_twice_on_one_day_corrects_instead_of_duplicating(lab:
 
 
 @db
+async def test_two_loads_on_one_day_show_only_the_last_in_the_evolution(lab: Lab) -> None:
+    # Decided by J (04/10): when the same exercise gets two loads on one day, the last one counts.
+    await lab.say("carga supino 60 kg")
+    await lab.say("carga supino 62,5 kg")
+    reply = await lab.say("evolução do supino")
+    assert "62,5 kg" in reply
+    assert "60 kg" not in reply
+
+
+@db
 @pytest.mark.parametrize("text", ["carga supino 0 kg", "carga supino 900 kg"])
 async def test_absurd_loads_are_refused(lab: Lab, text: str) -> None:
     assert await lab.say(text) == _t("load_bad", "pt")

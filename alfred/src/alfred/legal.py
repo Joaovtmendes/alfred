@@ -17,8 +17,8 @@ from alfred.settings import settings
 
 router = APIRouter(tags=["legal"])
 
-POLICY_VERSION = "1.2"
-POLICY_DATE = "2026-10-02"
+POLICY_VERSION = "1.3"
+POLICY_DATE = "2026-10-04"
 CONTROLLER = "JVM Solutions, Biesbosch 179, 1181 JB Amstelveen, Nederland"
 # Public contact for data requests — set PRIVACY_CONTACT_EMAIL in the environment.
 CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
@@ -113,6 +113,20 @@ POLICY: dict[str, dict] = {
                     "When enabled, an error-monitoring provider (Sentry) receives technical error reports to keep the service reliable. We configure it to avoid sending message contents.",
                 ],
             ),
+            (
+                "More of what you can record",
+                [
+                    "Debts and loans: the name you give for the other person, the amount and a note. Please record only what concerns you; that person has the same rights over their name and can ask us to erase it. Training plans and the loads you lift, trip destinations, dates, itineraries, packing lists and trip budgets, monthly budgets, fixed bills and instalments, and analysis views you save are also kept. The dashboard shows all of this to anyone who has your link.",
+                    "Questions you ask Alfred about your own numbers (for example 'how much did I spend on food in August?') are sent as text to the AI provider to understand the question; the figures themselves are calculated by us and are not sent to the AI provider.",
+                    "A log of the messages Alfred sent you, with their delivery status, is kept for about three months and then erased.",
+                ],
+            ),
+            (
+                "Security",
+                [
+                    "Data travels over encrypted connections. Health information (what you log about medication, mood, sleep and water) is additionally encrypted inside our database. Access to the systems is limited to the operator.",
+                ],
+            ),
         ],
     },
     "nl": {
@@ -204,6 +218,20 @@ POLICY: dict[str, dict] = {
                     "Indien ingeschakeld ontvangt een foutmonitoringdienst (Sentry) technische foutmeldingen om de dienst betrouwbaar te houden. We stellen die zo in dat berichtinhoud niet wordt meegestuurd.",
                 ],
             ),
+            (
+                "Meer gegevens die je kunt vastleggen",
+                [
+                    "Schulden en leningen: de naam die je van de andere persoon opgeeft, het bedrag en een notitie. Leg alleen vast wat jou aangaat; die persoon heeft dezelfde rechten over zijn of haar naam en kan ons vragen die te wissen. Ook bewaren we trainingsschema's en de gewichten die je tilt, reisbestemmingen, data, routes, paklijsten en reisbudgetten, maandbudgetten, vaste lasten en termijnen, en analyseweergaven die je opslaat. Het dashboard toont dit alles aan iedereen die je link heeft.",
+                    "Vragen die je Alfred stelt over je eigen cijfers (bijvoorbeeld 'hoeveel gaf ik in augustus uit aan eten?') worden als tekst naar de AI-aanbieder gestuurd om de vraag te begrijpen; de bedragen zelf rekenen wij uit en gaan niet naar de AI-aanbieder.",
+                    "Een logboek van de berichten die Alfred je stuurde, met de bezorgstatus, bewaren we ongeveer drie maanden en wissen we daarna.",
+                ],
+            ),
+            (
+                "Beveiliging",
+                [
+                    "Gegevens gaan via versleutelde verbindingen. Gezondheidsgegevens (wat je vastlegt over medicatie, stemming, slaap en water) worden bovendien versleuteld in onze database opgeslagen. Toegang tot de systemen is beperkt tot de beheerder.",
+                ],
+            ),
         ],
     },
     "pt": {
@@ -292,6 +320,20 @@ POLICY: dict[str, dict] = {
                 "Monitoramento de erros",
                 [
                     "Quando ativado, um provedor de monitoramento de erros (Sentry) recebe relatórios técnicos de falhas para manter o serviço confiável. Configuramos para não enviar o conteúdo das mensagens.",
+                ],
+            ),
+            (
+                "Mais dados que você pode registrar",
+                [
+                    "Dívidas e empréstimos: o nome que você informa da outra pessoa, o valor e uma nota. Registre apenas o que diz respeito a você; essa pessoa tem os mesmos direitos sobre o próprio nome e pode pedir que o apaguemos. Também guardamos planos de treino e as cargas que você usa, destinos, datas, roteiros, listas de mala e orçamentos de viagem, orçamentos mensais, contas fixas e parcelas, e as visões de análise que você salva. O painel mostra tudo isso a quem tiver o seu link.",
+                    "As perguntas que você faz ao Alfred sobre os seus próprios números (por exemplo, 'quanto gastei com comida em agosto?') são enviadas como texto ao provedor de IA para entender a pergunta; os valores em si são calculados por nós e não vão para o provedor de IA.",
+                    "Um registro das mensagens que o Alfred enviou a você, com o estado de entrega, é guardado por cerca de três meses e depois apagado.",
+                ],
+            ),
+            (
+                "Segurança",
+                [
+                    "Os dados trafegam por conexões criptografadas. As informações de saúde (o que você registra sobre medicação, humor, sono e água) ficam, além disso, criptografadas dentro do nosso banco de dados. O acesso aos sistemas é restrito ao operador.",
                 ],
             ),
         ],
