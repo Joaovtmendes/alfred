@@ -152,6 +152,45 @@ def _clean(text: str) -> str:
     return " ".join(text.split())
 
 
+_DAY_ONLY = re.compile(r"^\s*([A-Za-zÀ-ÿ]{2,12})\s*(?:[-–—:]\s*([^:]{1,40}?))?\s*:?\s*$")
+_BULLET = re.compile(r"^\s*[-•*·]\s*")
+
+
+def _starts_a_day(line: str) -> bool:
+    m = re.match(r"^\s*([A-Za-zÀ-ÿ]{2,12})\b", line)
+    return bool(m and WEEKDAYS.get(strip_accents(m.group(1).lower())) is not None)
+
+
+def _fold_lines(lines: list[str]) -> list[tuple[int, str]]:
+    """Fold the natural layout into one line per day: "Segunda: peito" followed by one exercise
+    per line becomes "Segunda - peito: supino 4x10 60kg, crucifixo 3x12" (numbered by its first
+    line, so an error still points at the line the member wrote)."""
+    folded: list[tuple[int, str]] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        j = i + 1
+        extra: list[str] = []
+        while j < len(lines) and not _starts_a_day(lines[j]) and not _DAY_LINE.match(lines[j]):
+            extra.append(_BULLET.sub("", lines[j]))
+            j += 1
+        title_only = not re.search(r"\d", line.partition(":")[2])
+        if extra and title_only and (m := _DAY_ONLY.match(line)) and _starts_a_day(line):
+            title = _clean(m.group(2) or "")
+            line = (
+                f"{m.group(1)} - {title}: " + ", ".join(extra)
+                if title
+                else (f"{m.group(1)}: " + ", ".join(extra))
+            )
+        elif extra and title_only:
+            line = line + ", " + ", ".join(extra)
+        elif extra:
+            j = i + 1  # the day line is complete: what follows is its own (maybe bad) line
+        folded.append((i + 1, line))
+        i = j
+    return folded
+
+
 def parse_plan(text: str) -> list[PlanDay] | int:
     """Days of the plan, or the 1-based number of the first line that does not parse."""
     days: list[PlanDay] = []
@@ -159,7 +198,7 @@ def parse_plan(text: str) -> list[PlanDay] | int:
     lines = [ln for ln in (_clean(x) for x in text.replace("\r", "").split("\n")) if ln]
     if not lines:
         return 1
-    for number, line in enumerate(lines, 1):
+    for number, line in _fold_lines(lines):
         m = _DAY_LINE.match(line)
         if not m:
             return number

@@ -2506,6 +2506,26 @@ def _is_command(body: str, keywords: set[str]) -> bool:
     return False
 
 
+_DID_LEAD_RE = re.compile(
+    r"^(?:eu\s+)?(?:fiz|fui|faço|facas|did|had|ik\s+deed|deed|j'ai\s+fait|ich\s+habe)\b"
+)
+
+
+_DURATION_RE = re.compile(r"\b\d+\s*(?:min\w*|h\b|hora\w*|hour\w*|uur|uren|heure\w*|stunde\w*)")
+
+
+def _is_workout_text(body: str) -> bool:
+    """A workout line: starts with an activity word ("corri 5 km") or with a "did" verb
+    followed by one ("fiz 50 minutos de musculação", "fiz yoga durante 20 minutos")."""
+    if _is_command(body, _WORKOUT_WORDS):
+        return True
+    plain = strip_accents(body)
+    if not _DID_LEAD_RE.match(plain):
+        return False
+    words = set(re.findall(r"[a-z']+", plain))
+    return any(strip_accents(w) in words for w in _WORKOUT_WORDS if " " not in w)
+
+
 def _is_bare_command(body: str, keywords: set[str]) -> bool:
     """True when body is *only* a command keyword (plus punctuation / a polite word).
 
@@ -2871,11 +2891,13 @@ def _num_str(value: str, lang: str) -> str:
 
 
 def _workout_dur(minutes: int | None, km: float | None, lang: str) -> str:
+    """ "30 min · 5 km": the distance is never dropped when the duration is known."""
+    parts = []
     if minutes:
-        return f"{minutes} min"
+        parts.append(f"{minutes} min")
     if km:
-        return f"{_num(km, lang)} km"
-    return ""
+        parts.append(f"{_num(km, lang)} km")
+    return " · ".join(parts)
 
 
 _ACTIVITY_TAIL_RE = re.compile(
@@ -4294,6 +4316,8 @@ async def handle_inbound(
 
         # 4e-8. M9 — log de hábito: "meditei hoje" (regex fast-path)
         m_habit = None if body.rstrip().endswith("?") else _HABIT_LOG_RE.search(body)
+        if m_habit and _is_workout_text(body) and _DURATION_RE.search(body_plain):
+            m_habit = None  # "fiz yoga durante 20 minutos" is a workout, not the habit "fiz yoga"
         if m_habit:
             habit_activity = m_habit.group("activity").strip()
             # Try to link to a matching active goal
@@ -4332,7 +4356,7 @@ async def handle_inbound(
             w in _body_lower
             for w in ("€", "$", "£", "gastei", "comprei", "paguei", "spent", "paid", "bought")
         )
-        _not_workout = not _is_command(body, _WORKOUT_WORDS)
+        _not_workout = not _is_workout_text(body)
         _is_health = _is_command(body, _HEALTH_WORDS) or bool(
             _HEALTH_HINT_RE.search(body_plain) and not body.rstrip().endswith("?")
         )
@@ -4535,8 +4559,8 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-        # 4e-10. M7 — treino: "corri 30 min"
-        if _is_command(body, _WORKOUT_WORDS):
+        # 4e-10. M7 — treino: "corri 30 min", "fiz yoga durante 20 minutos"
+        if _is_workout_text(body):
             today = today_local()
             workout_data = await extract_workout(body, lang=member.language or "en")
             if workout_data:
