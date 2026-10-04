@@ -49,7 +49,7 @@ from alfred.iou import handle_iou_command
 from alfred.labels import activity_label as activity_name
 from alfred.labels import category_label
 from alfred.lang_cmd import STRINGS as _LANG_STRINGS
-from alfred.lang_cmd import parse_language_command
+from alfred.lang_cmd import parse_language_choice, parse_language_command
 from alfred.ledger_status import STRINGS as _LEDGER_STRINGS
 from alfred.ledger_status import handle_ledger_command
 from alfred.llm import (
@@ -1580,9 +1580,22 @@ async def _month_category_context(
     )
 
 
-def _detect_language(text: str) -> str:
-    """Heuristic: detect language from first-message keywords."""
+# Whole-word greetings the substring lists above miss ("oi" alone has no space around it).
+_FIRST_WORDS = {
+    "pt": {"oi", "olá", "ola", "opa", "obrigado", "obrigada", "bomdia"},
+    "nl": {"hoi", "hallo", "goedemorgen", "dankjewel"},
+    "en": {"hi", "hello", "hey", "hiya", "thanks", "help"},
+}
+
+
+def _detect_language(text: str) -> str | None:
+    """Heuristic: detect the language from first-message keywords; None when nothing shows it
+    (the member is then asked, see ``pending_language``)."""
     t = unicodedata.normalize("NFC", text).lower()
+    words = set(re.findall(r"[a-zà-ÿ]+", t))
+    for lang, known in _FIRST_WORDS.items():  # whole words first: "hallo" contains "allo"
+        if words & known:
+            return lang
     if any(
         w in t
         for w in [
@@ -1655,7 +1668,7 @@ def _detect_language(text: str) -> str:
         ]
     ):
         return "nl"
-    return "en"
+    return None
 
 
 # ── Command keywords ──────────────────────────────────────────────────────────
@@ -3506,12 +3519,31 @@ async def handle_inbound(
     # ── 1. First contact: detect language, send disclosure ───────────────────
     if member.consent_state == "pending":
         lang = _detect_language(body)
+        if lang is None:  # nothing shows the language: ask, and let the answer rule chat and panel
+            member.consent_state = "pending_language"
+            session.add(member)
+            await send_text(to, _t("language_ask", "en"))
+            logger.info("conversation.language_asked", member_id=str(member.id))
+            return
         member.language = lang
         session.add(member)
         disclosure = _t("disclosure", lang)
         await send_text(to, disclosure)
         member.consent_state = "pending_response"
         logger.info("conversation.disclosure_sent", member_id=str(member.id), lang=lang)
+        return
+
+    # ── 1b. Answer to "which language?" ──────────────────────────────────────
+    if member.consent_state == "pending_language":
+        chosen = parse_language_choice(body)
+        if chosen is None:
+            await send_text(to, _t("language_ask", "en"))
+            return
+        member.language = chosen
+        member.consent_state = "pending_response"
+        session.add(member)
+        await send_text(to, _t("disclosure", chosen))
+        logger.info("conversation.language_chosen", member_id=str(member.id), lang=chosen)
         return
 
     lang = member.language or "en"

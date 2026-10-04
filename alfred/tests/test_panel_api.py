@@ -5,6 +5,8 @@ import statistics
 import time
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import func, select, text
@@ -226,9 +228,10 @@ async def test_summary_stays_under_300ms_with_20k_rows(lab, client) -> None:
 
 
 @db
-async def test_v2_balance_equals_v1_at_every_month_edge_and_dst_change(lab, client) -> None:
-    """Same member, same month: the v1 totals and the v2 balance card must be the same numbers,
-    including entries in the last/first local second of a month, a year, and a DST switch."""
+async def test_balance_follows_the_local_month_at_every_edge_and_dst_change(lab, client) -> None:
+    """The balance card sums by LOCAL month (Europe/Amsterdam), including entries in the last or
+    first local second of a month, a year, and a DST switch. Expected totals are computed here,
+    independently of the server (the v1 endpoint that used to serve as oracle is gone)."""
     instants = [
         datetime(2026, 2, 28, 22, 59, 59, tzinfo=UTC),  # 23:59:59 CET, still February
         datetime(2026, 2, 28, 23, 0, 0, tzinfo=UTC),  # 00:00 CET, March
@@ -256,10 +259,26 @@ async def test_v2_balance_equals_v1_at_every_month_edge_and_dst_change(lab, clie
         )
     token = await _token(lab.member_id)
     for month in ("2026-02", "2026-03", "2026-04", "2026-10", "2026-12", "2027-01"):
-        v1 = (await client.get(f"/api/d/{token}?month={month}")).json()
+        mine = [(i, at.astimezone(ZoneInfo("Europe/Amsterdam"))) for i, at in enumerate(instants)]
+        inc = sum(
+            (
+                Decimal(str(10.0 + i + 0.07))
+                for i, loc in mine
+                if i % 3 == 0 and f"{loc:%Y-%m}" == month
+            ),
+            Decimal(0),
+        )
+        exp = sum(
+            (
+                Decimal(str(10.0 + i + 0.07))
+                for i, loc in mine
+                if i % 3 != 0 and f"{loc:%Y-%m}" == month
+            ),
+            Decimal(0),
+        )
         card = _balance((await client.get(f"/api/d/{token}/summary?month={month}")).json())
         assert card["values"] == {
-            "income": v1["total_income"],
-            "expense": v1["total_expense"],
-            "balance": v1["balance"],
+            "income": float(inc),
+            "expense": float(exp),
+            "balance": float(inc - exp),
         }, month

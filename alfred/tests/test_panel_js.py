@@ -57,7 +57,7 @@ async def _open(handlers: dict, lang: str = "pt", query: str = "", size: dict | 
             await r.fulfill(
                 status=200,
                 content_type="text/html; charset=utf-8",
-                headers={"Content-Security-Policy": _dashboard_csp(nonce, v2=True)},
+                headers={"Content-Security-Policy": _dashboard_csp(nonce)},
                 body=panel.render_v2(nonce, lang, TOKEN),
             )
         elif path.startswith("/panel-assets/"):

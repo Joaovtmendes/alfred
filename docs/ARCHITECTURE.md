@@ -46,7 +46,9 @@ código (procura por esse prefixo; os números de linha mudam, a ordem não). `b
 em minúsculas; `body_plain` é o mesmo sem acentos e com o mesmo comprimento.
 
 **Antes de tudo:** resposta de WhatsApp Flow (onboarding M6) → consentimento: `pending` →
-disclosure; `pending_response` → sim/não; `rejected` → ignora, excepto `START`.
+disclosure (ou, se a primeira mensagem não mostra a língua, `pending_language`: menu 1–5 em
+português, nederlands, english, français, deutsch; a resposta grava `member.language`, que manda no
+chat e no painel); `pending_response` → sim/não; `rejected` → ignora, excepto `START`.
 
 **Já com consentimento (`accepted`), por esta ordem:**
 
@@ -116,14 +118,13 @@ extrato de mensagens).
 
 ## Painel v2
 
-O painel v1 (`/d/{token}`, Chart.js) continua o padrão. Um membro com `member.dashboard_v2 = true`
-recebe a casca v2: HTML/CSS/JS próprios (`src/alfred/panel/`), sem Chart.js (barras em CSS e SVG
+O painel v2 é o único (desde 04/10/2026; o v1 com Chart.js e o seu endpoint `/api/d/{token}` foram
+removidos). A coluna `member.dashboard_v2` ficou no banco, ignorada. A casca tem HTML/CSS/JS próprios (`src/alfred/panel/`), sem Chart.js (barras em CSS e SVG
 desenhados por `panel.js`) e sem nenhum host externo; as fontes (Hanken Grotesk, Bricolage
 Grotesque, licença OFL) são servidas pelo próprio serviço. Só leitura.
 
 ```
-GET  /d/{token}                 → v1 ou v2, conforme a flag do membro
-GET  /api/d/{token}             → JSON da v1 (inalterado)
+GET  /d/{token}                 → o painel v2 (língua = member.language)
 GET  /api/d/{token}/summary|money|health|agenda|trips
                                 → JSON de uma aba; só a aba aberta chama a sua rota
 GET  /api/d/{token}/export      → página de confirmação (links de prévia só fazem GET)
@@ -145,9 +146,7 @@ devolvem o mesmo link novo em vez de reemitir duas vezes. Link expirado ou desco
 link reaproveitado tem entre 3,5 e 7 dias de validade restante.
 
 **CSP por nonce.** `SecurityHeadersMiddleware` gera um nonce por pedido (`request.state.csp_nonce`);
-`script-src` e `style-src` só aceitam esse nonce (nunca `unsafe-inline`). A v1 mantém
-`https://cdnjs.cloudflare.com` para o Chart.js (com SRI); a v2 marca `request.state.panel_v2` e a
-CSP dela não nomeia host externo. Todo dado do utilizador entra no DOM por `textContent`
+`script-src` e `style-src` só aceitam esse nonce (nunca `unsafe-inline`). A CSP não nomeia host externo (sem Chart.js; as fontes são servidas pelo próprio serviço). Todo dado do utilizador entra no DOM por `textContent`
 (`panel.js` não pode conter `innerHTML`; há teste). O JSON de configuração da página escapa `<`, `>`
 e `&`.
 
@@ -176,8 +175,12 @@ states, trip}, "cards": [...]}`. Todo cartão tem `id` estável, `empty`, `phras
 
 | Aba | Cartões (em ordem) |
 |---|---|
-| `summary` | `balance` (com `compare` e `projection`), `upcoming`, `categories`, `budgets`, `blue_days`, `owed` |
-| `money` | `transactions` (50 por página, `?page=N`), `top_expenses`, `month_vs_month`, `fixed_variable`, `daily`, `categories`, `avg_ticket`, `recurring`, `owed` |
+| `summary` | `balance` (com `compare` e `projection`), `categories`, `goals`, `week`, `upcoming` |
+| `money` | `transactions` (50 por página, `?page=N`; visão por dia com filtro de dia no topo, no navegador), `month_vs_month`, `top_expenses`, `categories`, `budgets`, `fixed_variable`, `owed`, `daily`, `recurring` |
+| `health` | `goals`, `workouts`, `training`, `water` |
+
+A ordem é a da API em todas as telas (sem `order` em CSS; há teste de contrato). Nenhum cartão tem
+"ver como tabela".
 
 Definições que o front-end pode citar:
 
