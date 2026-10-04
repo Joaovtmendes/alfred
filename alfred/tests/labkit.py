@@ -48,6 +48,16 @@ class Lab:
         }
         return await self._run(make_message(body=None, raw=raw))
 
+    async def doc(self, filename: str, data: bytes | str | None, mime: str = "text/csv") -> str:
+        """Send a document (a statement file); ``data`` is what the media download returns."""
+        raw = {
+            "type": "document",
+            "document": {"id": "media123", "filename": filename, "mime_type": mime},
+        }
+        payload = data.encode() if isinstance(data, str) else data
+        with patch("alfred.statement.download_media", AsyncMock(return_value=payload)):
+            return await self._run(make_message(body=None, raw=raw))
+
     async def _run(self, message) -> str:
         before = len(self.sent)
 

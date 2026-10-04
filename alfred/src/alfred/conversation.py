@@ -110,6 +110,12 @@ from alfred.recurring import handle_recurring_command
 from alfred.score import STRINGS as _SCORE_STRINGS
 from alfred.score import handle_score_command
 from alfred.settings import settings
+from alfred.statement import STRINGS as _STATEMENT_STRINGS
+from alfred.statement import (
+    handle_document,
+    handle_statement_button,
+    handle_statement_command,
+)
 from alfred.training import STRINGS as _TRAINING_STRINGS
 from alfred.training import handle_training_button, handle_training_command
 from alfred.tripplan import STRINGS as _TRIPPLAN_STRINGS
@@ -1522,6 +1528,7 @@ _STRINGS.update(_ANALYSIS_STRINGS)  # V2-14
 _STRINGS.update(_INSIGHT_STRINGS)  # V2-15
 _STRINGS.update(_IOU_STRINGS)  # V2-15
 _STRINGS.update(_COUPLE_STRINGS)  # V2-10
+_STRINGS.update(_STATEMENT_STRINGS)  # V2-05
 _STRINGS.update(_TRAINING_STRINGS)  # V2-35
 _STRINGS.update(_TRIPPLAN_STRINGS)  # V2-35
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
@@ -3606,6 +3613,12 @@ async def _handle_button_reply(
         await _save_outbound(member, couple_btn.text, session)
         return True
 
+    if action in ("imp_ok", "imp_all", "imp_no"):  # V2-05 statement import preview
+        imp_btn = await handle_statement_button(action, raw_id, member, lang, session)
+        await send_text(to, imp_btn.text)
+        await _save_outbound(member, imp_btn.text, session)
+        return True
+
     if action in ("plan_ok", "plan_cancel"):  # V2-35 training plan preview
         plan_out = await handle_training_button(action, raw_id, member, lang, session)
         await send_text(to, plan_out.text)
@@ -3732,6 +3745,16 @@ async def handle_inbound(
     if member.consent_state == "accepted":
         # 4-0. Reply-button taps (Undo / Edit / It's right on a confirmation)
         if await _handle_button_reply(member, message, session, lang):
+            return
+
+        # 4-0a. V2-05 — a bank statement sent as a document
+        if (message.raw or {}).get("type") == "document":
+            doc_out = await handle_document(member, message, lang, session)
+            if doc_out.buttons:
+                await send_buttons(to, doc_out.text, doc_out.buttons)
+            else:
+                await send_text(to, doc_out.text)
+            await _save_outbound(member, doc_out.text, session)
             return
 
         # 4-0aa. V2-17 — answers to a draft of 2+ entries ("sim" / "cancela" / "tira o segundo")
@@ -4004,6 +4027,13 @@ async def handle_inbound(
             else:
                 await send_text(to, couple_out.text)
             await _save_outbound(member, couple_out.text, session)
+            return
+
+        # 4e-0r. V2-05 — "importar extrato" / "desfazer importação"
+        stmt_out = await handle_statement_command(body_plain, member, lang, session)
+        if stmt_out is not None:
+            await send_text(to, stmt_out.text)
+            await _save_outbound(member, stmt_out.text, session)
             return
 
         # 4e-0o. V2-18 — "o que você me enviou hoje" / "lembretes que mandou"

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+from urllib.parse import urlparse
+
 import httpx
 import structlog
 
@@ -237,3 +240,48 @@ async def send_cta_url(to: str, body: str, display_text: str, url: str) -> dict:
     logger.info("whatsapp.cta_sent", to=to, wa_message_id=data.get("messages", [{}])[0].get("id"))
     delivery.note_sent(_wamid(data))
     return data
+
+
+class MediaTooLarge(Exception):
+    """The file a member sent is bigger than the limit we accept."""
+
+
+_MEDIA_ID = re.compile(r"^[0-9A-Za-z_-]{1,64}$")
+_MEDIA_HOSTS = (".fbsbx.com", ".facebook.com", ".whatsapp.net", ".fbcdn.net")
+
+
+async def download_media(media_id: str, max_bytes: int = 1_000_000) -> bytes | None:
+    """Download a file a member sent (V2-05): Graph ``GET /{media_id}`` gives a short-lived URL.
+
+    Returns None when Meta refuses or the answer looks wrong; raises ``MediaTooLarge`` past
+    ``max_bytes``. The bearer token is only ever sent to Meta hosts (the URL comes from the API
+    answer, so it is checked), and the file is read in chunks so a huge one is cut off early.
+    """
+    if not _MEDIA_ID.fullmatch(media_id or ""):
+        return None
+    headers = {"Authorization": f"Bearer {settings.whatsapp_token.get_secret_value()}"}
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        meta = await client.get(f"{_GRAPH_URL}/{media_id}", headers=headers)
+        if not meta.is_success:
+            logger.error("whatsapp.media_meta_failed", status=meta.status_code)
+            return None
+        info = meta.json()
+        url = str(info.get("url") or "")
+        parsed = urlparse(url)
+        host = parsed.hostname or ""
+        if parsed.scheme != "https" or not host.endswith(_MEDIA_HOSTS):
+            logger.error("whatsapp.media_url_rejected", host=host)
+            return None
+        size = info.get("file_size")
+        if isinstance(size, int) and size > max_bytes:
+            raise MediaTooLarge
+        buf = bytearray()
+        async with client.stream("GET", url, headers=headers) as resp:
+            if not resp.is_success:
+                logger.error("whatsapp.media_download_failed", status=resp.status_code)
+                return None
+            async for chunk in resp.aiter_bytes():
+                buf.extend(chunk)
+                if len(buf) > max_bytes:
+                    raise MediaTooLarge
+    return bytes(buf)

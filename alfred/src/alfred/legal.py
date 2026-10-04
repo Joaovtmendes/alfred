@@ -17,8 +17,8 @@ from alfred.settings import settings
 
 router = APIRouter(tags=["legal"])
 
-POLICY_VERSION = "1.4"
-POLICY_DATE = "2026-10-05"
+POLICY_VERSION = "1.5"
+POLICY_DATE = "2026-10-06"
 CONTROLLER = "JVM Solutions, Biesbosch 179, 1181 JB Amstelveen, Nederland"
 # Public contact for data requests — set PRIVACY_CONTACT_EMAIL in the environment.
 CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
@@ -133,6 +133,12 @@ POLICY: dict[str, dict] = {
                     "If you invite a partner and they accept, you share the household finances. Nothing is shared by default: only the expenses that you or your partner mark as shared are visible to both (amount, category, shop, date and who paid), and Alfred uses them to work out who owes whom. Everything else stays private. Either of you can leave at any time with 'leave home'; the shared marks are then removed. If one of you erases their data, the other keeps only their own entries.",
                 ],
             ),
+            (
+                "Bank statements",
+                [
+                    "If you send a bank statement file (CSV), Alfred reads it only to create entries after your confirmation: date, amount, counterparty name and description of each line. Account numbers (IBAN) are masked and the file itself is not kept. The entries are stored like any other entry of yours, so they are covered by export and erasure, and 'undo import' removes the last import. Statements often contain details about other people (names of those who paid you); only send files you are entitled to use.",
+                ],
+            ),
         ],
     },
     "nl": {
@@ -244,6 +250,12 @@ POLICY: dict[str, dict] = {
                     "Als je een partner uitnodigt en die accepteert, delen jullie de huishoudfinanciën. Standaard wordt niets gedeeld: alleen de uitgaven die jij of je partner als gedeeld markeert zijn voor beiden zichtbaar (bedrag, categorie, winkel, datum en wie betaalde) en Alfred rekent daarmee uit wie wie iets schuldig is. Al het andere blijft privé. Je kunt altijd stoppen met 'verlaat het huis'; de markeringen worden dan verwijderd. Wist een van jullie de eigen gegevens, dan houdt de ander alleen de eigen boekingen.",
                 ],
             ),
+            (
+                "Bankafschriften",
+                [
+                    "Als je een bankafschrift (CSV) stuurt, leest Alfred het alleen om na jouw bevestiging boekingen aan te maken: datum, bedrag, naam van de tegenpartij en omschrijving van elke regel. Rekeningnummers (IBAN) worden afgeschermd en het bestand zelf wordt niet bewaard. De boekingen worden opgeslagen zoals al je andere boekingen, dus export en verwijdering gelden ook voor hen, en 'import ongedaan maken' verwijdert de laatste import. Afschriften bevatten vaak gegevens van anderen (namen van wie jou betaalde); stuur alleen bestanden die je mag gebruiken.",
+                ],
+            ),
         ],
     },
     "pt": {
@@ -352,6 +364,12 @@ POLICY: dict[str, dict] = {
                 "Compartilhar com seu par",
                 [
                     "Se você convidar uma pessoa e ela aceitar, vocês passam a dividir o financeiro da casa. Nada é compartilhado por padrão: só os gastos que você ou a outra pessoa marcarem como da casa ficam visíveis para os dois (valor, categoria, loja, data e quem pagou), e o Alfred usa isso para calcular quem deve a quem. Todo o resto continua privado. Qualquer um pode sair a qualquer momento com 'sair da casa'; as marcas de compartilhamento são então removidas. Se um dos dois apagar os próprios dados, o outro fica só com os próprios lançamentos.",
+                ],
+            ),
+            (
+                "Extratos bancários",
+                [
+                    "Se você enviar um extrato bancário (CSV), o Alfred o lê apenas para criar lançamentos depois da sua confirmação: data, valor, nome da outra parte e descrição de cada linha. Números de conta (IBAN) são ocultados e o arquivo em si não é guardado. Os lançamentos ficam armazenados como todos os seus outros, então a exportação e a exclusão também os cobrem, e 'desfazer importação' remove a última importação. Extratos costumam ter dados de outras pessoas (nomes de quem pagou você); envie só arquivos que você possa usar.",
                 ],
             ),
         ],

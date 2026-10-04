@@ -1708,6 +1708,232 @@
 - **fr** — De nouveau personnel : {name}, {amount}.
 - **de** — Wieder privat: {name}, {amount}.
 
+## `imp_bad_type`
+
+- **pt** — Esse arquivo não é um CSV. Exporte o extrato como *CSV* (ou TXT) no app do banco e envie de novo.
+- **nl** — Dit bestand is geen CSV. Exporteer het afschrift als *CSV* (of TXT) in de app van je bank en stuur het opnieuw.
+- **en** — That file is not a CSV. Export the statement as *CSV* (or TXT) from your bank's app and send it again.
+- **fr** — Ce fichier n'est pas un CSV. Exporte le relevé en *CSV* (ou TXT) depuis l'appli de ta banque et renvoie-le.
+- **de** — Diese Datei ist keine CSV. Exportiere den Auszug als *CSV* (oder TXT) in der App deiner Bank und sende ihn erneut.
+
+## `imp_btn_all`
+
+- **pt** — Importar tudo ({n})
+- **nl** — Alles ({n})
+- **en** — Import all ({n})
+- **fr** — Tout importer ({n})
+- **de** — Alle ({n})
+
+## `imp_btn_no`
+
+- **pt** — Cancelar
+- **nl** — Annuleren
+- **en** — Cancel
+- **fr** — Annuler
+- **de** — Abbrechen
+
+## `imp_btn_ok`
+
+- **pt** — Importar {n}
+- **nl** — Importeer {n}
+- **en** — Import {n}
+- **fr** — Importer {n}
+- **de** — {n} importieren
+
+## `imp_cancelled`
+
+- **pt** — Cancelado, não importei nada.
+- **nl** — Geannuleerd, ik heb niets geïmporteerd.
+- **en** — Cancelled, I imported nothing.
+- **fr** — Annulé, je n'ai rien importé.
+- **de** — Abgebrochen, ich habe nichts importiert.
+
+## `imp_done`
+
+- **pt** — Pronto: {n} lançamentos importados. Para desfazer: *desfazer importação*.
+- **nl** — Klaar: {n} transacties geïmporteerd. Ongedaan maken: *import ongedaan maken*.
+- **en** — Done: {n} entries imported. To undo: *undo import*.
+- **fr** — C'est fait : {n} écritures importées. Pour annuler : *annuler l'import*.
+- **de** — Fertig: {n} Buchungen importiert. Zum Rückgängigmachen: *import rückgängig*.
+
+## `imp_download_failed`
+
+- **pt** — Não consegui baixar o arquivo. Pode enviar de novo?
+- **nl** — Ik kon het bestand niet downloaden. Kun je het opnieuw sturen?
+- **en** — I could not download the file. Could you send it again?
+- **fr** — Je n'ai pas pu télécharger le fichier. Peux-tu le renvoyer ?
+- **de** — Ich konnte die Datei nicht herunterladen. Kannst du sie noch einmal senden?
+
+## `imp_empty`
+
+- **pt** — Não achei lançamentos nesse arquivo.
+- **nl** — Ik vond geen transacties in dit bestand.
+- **en** — I found no transactions in that file.
+- **fr** — Je n'ai trouvé aucune transaction dans ce fichier.
+- **de** — Ich habe in dieser Datei keine Buchungen gefunden.
+
+## `imp_expired`
+
+- **pt** — Esse resumo expirou. Envie o arquivo de novo.
+- **nl** — Deze samenvatting is verlopen. Stuur het bestand opnieuw.
+- **en** — That summary has expired. Please send the file again.
+- **fr** — Ce résumé a expiré. Renvoie le fichier.
+- **de** — Diese Zusammenfassung ist abgelaufen. Sende die Datei noch einmal.
+
+## `imp_format`
+
+- **pt** — Não reconheci o formato desse arquivo. Preciso de um CSV do banco com data, valor e descrição. Se puder, exporte de novo pelo app do banco.
+- **nl** — Ik herken het formaat van dit bestand niet. Ik heb een CSV van je bank nodig met datum, bedrag en omschrijving. Exporteer het zo nodig opnieuw via de app van je bank.
+- **en** — I did not recognise the format of that file. I need a CSV from your bank with date, amount and description. If you can, export it again from the bank's app.
+- **fr** — Je n'ai pas reconnu le format de ce fichier. Il me faut un CSV de ta banque avec date, montant et libellé. Si possible, exporte-le à nouveau depuis l'appli de ta banque.
+- **de** — Ich habe das Format dieser Datei nicht erkannt. Ich brauche eine CSV deiner Bank mit Datum, Betrag und Beschreibung. Exportiere sie wenn möglich noch einmal in der App deiner Bank.
+
+## `imp_generic_bank`
+
+- **pt** — extrato
+- **nl** — afschrift
+- **en** — statement
+- **fr** — relevé
+- **de** — Kontoauszug
+
+## `imp_gone`
+
+- **pt** — Essa importação não está mais aberta. Envie o arquivo de novo se quiser importar.
+- **nl** — Deze import staat niet meer open. Stuur het bestand opnieuw als je wilt importeren.
+- **en** — That import is no longer open. Send the file again if you want to import.
+- **fr** — Cet import n'est plus ouvert. Renvoie le fichier si tu veux importer.
+- **de** — Dieser Import ist nicht mehr offen. Sende die Datei erneut, wenn du importieren möchtest.
+
+## `imp_help`
+
+- **pt** — Para importar o extrato do banco, exporte o arquivo em *CSV* no app ou site do banco (ING, Rabobank, ABN AMRO, bunq…) e envie aqui como documento. Eu mostro um resumo e só importo depois do seu OK. Linhas já importadas ou que você já registrou à mão não duplicam. Para desfazer: *desfazer importação*.
+- **nl** — Om je bankafschrift te importeren, exporteer je het bestand als *CSV* in de app of site van je bank (ING, Rabobank, ABN AMRO, bunq…) en stuur je het hier als document. Ik laat eerst een samenvatting zien en importeer pas na je OK. Regels die al zijn geïmporteerd of die je zelf hebt ingevoerd worden niet dubbel. Ongedaan maken: *import ongedaan maken*.
+- **en** — To import your bank statement, export it as *CSV* from your bank's app or website (ING, Rabobank, ABN AMRO, bunq…) and send it here as a document. I show a summary first and only import after your OK. Lines already imported, or that you entered by hand, are not duplicated. To undo: *undo import*.
+- **fr** — Pour importer ton relevé bancaire, exporte-le en *CSV* depuis l'appli ou le site de ta banque (ING, Rabobank, ABN AMRO, bunq…) et envoie-le ici comme document. Je montre d'abord un résumé et je n'importe qu'après ton OK. Les lignes déjà importées ou saisies à la main ne sont pas dupliquées. Pour annuler : *annuler l'import*.
+- **de** — Um deinen Kontoauszug zu importieren, exportiere ihn als *CSV* in der App oder auf der Website deiner Bank (ING, Rabobank, ABN AMRO, bunq…) und sende ihn hier als Dokument. Ich zeige erst eine Zusammenfassung und importiere erst nach deinem OK. Bereits importierte oder von dir von Hand eingetragene Zeilen werden nicht doppelt angelegt. Zum Rückgängigmachen: *import rückgängig*.
+
+## `imp_maybe_line`
+
+- **pt** — 
+  > • Possíveis duplicados de lançamentos seus: {maybe}
+- **nl** — 
+  > • Mogelijk dubbel met je eigen invoer: {maybe}
+- **en** — 
+  > • Possible duplicates of your own entries: {maybe}
+- **fr** — 
+  > • Doublons possibles avec tes saisies : {maybe}
+- **de** — 
+  > • Mögliche Dubletten deiner eigenen Einträge: {maybe}
+
+## `imp_nothing_new`
+
+- **pt** — Tudo isso já estava importado ou registrado por você; não há nada novo.
+- **nl** — Dit stond al allemaal in je administratie; er is niets nieuws.
+- **en** — All of this was already imported or entered by you; there is nothing new.
+- **fr** — Tout cela était déjà importé ou saisi par toi ; il n'y a rien de nouveau.
+- **de** — Das war alles schon importiert oder von dir eingetragen; es gibt nichts Neues.
+
+## `imp_other_line`
+
+- **pt** — 
+  > {other} saídas ficaram sem categoria (*overig*); você pode ajustar depois.
+- **nl** — 
+  > {other} uitgaven hebben nog geen categorie (*overig*); je kunt dat later aanpassen.
+- **en** — 
+  > {other} expenses have no category yet (*overig*); you can adjust that later.
+- **fr** — 
+  > {other} dépenses n'ont pas encore de catégorie (*overig*) ; tu pourras ajuster ensuite.
+- **de** — 
+  > {other} Ausgaben haben noch keine Kategorie (*overig*); du kannst das später anpassen.
+
+## `imp_preview`
+
+- **pt** — Li seu extrato ({bank}): {total} linhas, de {d1} a {d2}.
+  > 
+  > • Novas: {new}
+  > • Já importadas antes: {dup}{maybe_line}
+  > 
+  > Saídas {out} · Entradas {inc}
+  > Maiores categorias: {cats}{other_line}
+  > 
+  > Importar agora?
+- **nl** — Ik heb je afschrift gelezen ({bank}): {total} regels, van {d1} tot {d2}.
+  > 
+  > • Nieuw: {new}
+  > • Al eerder geïmporteerd: {dup}{maybe_line}
+  > 
+  > Uitgaven {out} · Inkomsten {inc}
+  > Grootste categorieën: {cats}{other_line}
+  > 
+  > Nu importeren?
+- **en** — I read your statement ({bank}): {total} lines, from {d1} to {d2}.
+  > 
+  > • New: {new}
+  > • Already imported: {dup}{maybe_line}
+  > 
+  > Spending {out} · Income {inc}
+  > Biggest categories: {cats}{other_line}
+  > 
+  > Import now?
+- **fr** — J'ai lu ton relevé ({bank}) : {total} lignes, du {d1} au {d2}.
+  > 
+  > • Nouvelles : {new}
+  > • Déjà importées : {dup}{maybe_line}
+  > 
+  > Dépenses {out} · Revenus {inc}
+  > Principales catégories : {cats}{other_line}
+  > 
+  > Importer maintenant ?
+- **de** — Ich habe deinen Auszug gelesen ({bank}): {total} Zeilen, vom {d1} bis {d2}.
+  > 
+  > • Neu: {new}
+  > • Schon importiert: {dup}{maybe_line}
+  > 
+  > Ausgaben {out} · Einnahmen {inc}
+  > Größte Kategorien: {cats}{other_line}
+  > 
+  > Jetzt importieren?
+
+## `imp_rate`
+
+- **pt** — Você já enviou muitos arquivos nesta hora. Tente de novo daqui a pouco.
+- **nl** — Je hebt dit uur al veel bestanden gestuurd. Probeer het straks opnieuw.
+- **en** — You have already sent many files this hour. Please try again in a little while.
+- **fr** — Tu as déjà envoyé beaucoup de fichiers cette heure. Réessaie dans un moment.
+- **de** — Du hast in dieser Stunde schon viele Dateien gesendet. Versuche es gleich noch einmal.
+
+## `imp_too_big`
+
+- **pt** — O arquivo é grande demais (limite de 1 MB). Exporte um período menor, por exemplo um ano por vez.
+- **nl** — Het bestand is te groot (limiet 1 MB). Exporteer een kortere periode, bijvoorbeeld één jaar per keer.
+- **en** — The file is too big (1 MB limit). Export a shorter period, for example one year at a time.
+- **fr** — Le fichier est trop gros (limite de 1 Mo). Exporte une période plus courte, par exemple une année à la fois.
+- **de** — Die Datei ist zu groß (Limit 1 MB). Exportiere einen kürzeren Zeitraum, zum Beispiel ein Jahr auf einmal.
+
+## `imp_too_many`
+
+- **pt** — O arquivo tem linhas demais (limite de 2000). Exporte um período menor.
+- **nl** — Het bestand heeft te veel regels (limiet 2000). Exporteer een kortere periode.
+- **en** — The file has too many lines (limit 2000). Export a shorter period.
+- **fr** — Le fichier a trop de lignes (limite de 2000). Exporte une période plus courte.
+- **de** — Die Datei hat zu viele Zeilen (Limit 2000). Exportiere einen kürzeren Zeitraum.
+
+## `imp_undo_none`
+
+- **pt** — Não há importação para desfazer.
+- **nl** — Er is geen import om ongedaan te maken.
+- **en** — There is no import to undo.
+- **fr** — Il n'y a aucun import à annuler.
+- **de** — Es gibt keinen Import zum Rückgängigmachen.
+
+## `imp_undone`
+
+- **pt** — Desfeito: {n} lançamentos da última importação foram removidos.
+- **nl** — Ongedaan gemaakt: {n} transacties van de laatste import zijn verwijderd.
+- **en** — Undone: {n} entries from the last import were removed.
+- **fr** — Annulé : {n} écritures du dernier import ont été supprimées.
+- **de** — Rückgängig gemacht: {n} Buchungen des letzten Imports wurden entfernt.
+
 ## `income_line`
 
 - **pt** — Receitas: {amount}

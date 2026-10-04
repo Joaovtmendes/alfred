@@ -28,6 +28,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -163,6 +164,14 @@ class Expense(Base):
     __table_args__ = (
         # every summary/dashboard/saldo query filters by member and a date range
         Index("ix_expense_member_date", "member_id", "expense_date"),
+        # V2-05: a statement line is imported once per member
+        Index(
+            "uq_expense_member_external",
+            "member_id",
+            "external_id",
+            unique=True,
+            postgresql_where=text("external_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -204,6 +213,16 @@ class Expense(Base):
     # ``PartnerLink``. Personal (False) by default; nothing is shared unless the member says so.
     shared: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
+    )
+    # V2-05 — where the entry came from: manual (typed in the chat) | csv (a statement file).
+    # ``external_id`` is a stable hash of the statement line; one per member, so the same line
+    # can never be imported twice. ``import_batch_id`` lets "desfazer importação" find them.
+    source: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="manual", server_default="manual"
+    )
+    external_id: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
+    import_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("import_batch.id", ondelete="SET NULL"), nullable=True
     )
 
     member: Mapped[Member] = relationship(back_populates="expenses")
@@ -703,6 +722,36 @@ class PartnerSettlement(Base):
         UUID(as_uuid=True), ForeignKey("member.id", ondelete="CASCADE"), nullable=False
     )
     amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class ImportBatch(Base):
+    """V2-05 — one statement file a member sent. The raw file is never stored.
+
+    ``draft`` holds the normalised lines (JSON) until the member confirms or cancels; after
+    that ``items`` is emptied and only the counts stay, as history. One live draft per member.
+    """
+
+    __tablename__ = "import_batch"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("member.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    bank: Mapped[str] = mapped_column(String(12), nullable=False)
+    filename: Mapped[str | None] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="draft")
+    rows_total: Mapped[int] = mapped_column(nullable=False, default=0)
+    rows_new: Mapped[int] = mapped_column(nullable=False, default=0)
+    rows_duplicate: Mapped[int] = mapped_column(nullable=False, default=0)
+    rows_possible: Mapped[int] = mapped_column(nullable=False, default=0)
+    items: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
