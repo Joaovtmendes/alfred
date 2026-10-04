@@ -438,3 +438,39 @@ def empty_card(
         "phrase": None,
         "hint": {"key": "h", "text": hint_text, "chat": chat, "severity": "info"},
     }
+
+
+# ── Card order of the approved panel (the same in the API, the DOM and on every screen) ──
+# Resumo: balance, categories, goals, week, upcoming. Dinheiro: transactions, month_vs_month,
+# top_expenses, categories, budgets, fixed_variable, owed, daily, recurring.
+def _reshape() -> None:
+    import json
+    from pathlib import Path
+
+    tabs = json.loads((Path(__file__).parent / "panel_tabs_fixture.json").read_text())
+    by_summary = {c["id"]: c for c in SUMMARY["cards"]}
+    by_money = {c["id"]: c for c in MONEY["cards"]}
+    goals = next(c for c in tabs["health"]["cards"] if c["id"] == "goals")
+    week = next(c for c in tabs["agenda"]["cards"] if c["id"] == "week")
+    SUMMARY["cards"] = [
+        by_summary["balance"],
+        by_summary["categories"],
+        copy.deepcopy(goals),
+        copy.deepcopy(week),
+        by_summary["upcoming"],
+    ]
+    budgets = by_summary["budgets"]
+    MONEY["cards"] = [
+        by_money["transactions"],
+        by_money["month_vs_month"],
+        by_money["top_expenses"],
+        by_money["categories"],
+        budgets,
+        by_money["fixed_variable"],
+        by_money["owed"],
+        by_money["daily"],
+        by_money["recurring"],
+    ]
+
+
+_reshape()

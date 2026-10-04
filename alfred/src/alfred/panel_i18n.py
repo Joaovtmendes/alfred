@@ -50,13 +50,6 @@ SHELL = {
         "fr": "Demande dans le chat",
         "de": "Frag im Chat",
     },
-    "table_view": {
-        "pt": "Ver como tabela",
-        "nl": "Bekijk als tabel",
-        "en": "View as table",
-        "fr": "Voir en tableau",
-        "de": "Als Tabelle ansehen",
-    },
     "loading": {
         "pt": "Carregando…",
         "nl": "Laden…",
@@ -270,16 +263,6 @@ SHELL.update(
             "pas de données pour {month}",
             "keine Daten für {month}",
         ),
-        "th_item": _t("Item", "Onderdeel", "Item", "Élément", "Posten"),
-        "th_date": _t("Data", "Datum", "Date", "Date", "Datum"),
-        "th_amount": _t("Valor", "Bedrag", "Amount", "Montant", "Betrag"),
-        "th_share": _t(
-            "% do total", "% van het totaal", "% of total", "% du total", "% vom Gesamten"
-        ),
-        "th_change": _t("Variação", "Verschil", "Change", "Variation", "Veränderung"),
-        "th_limit": _t("Limite", "Limiet", "Limit", "Limite", "Limit"),
-        "th_spent": _t("Gasto", "Besteed", "Spent", "Dépensé", "Ausgegeben"),
-        "th_used": _t("Uso", "Gebruikt", "Used", "Utilisé", "Genutzt"),
         # Resumo
         "title_balance": _t(
             "Saldo do período",
@@ -419,31 +402,6 @@ SHELL.update(
             "Les repères sur la barre montrent 80% et 100% de la limite.",
             "Die Markierungen im Balken zeigen 80% und 100% des Limits.",
         ),
-        "title_blue": _t(
-            "Dias no azul",
-            "Dagen in de plus",
-            "Days in the black",
-            "Jours dans le vert",
-            "Tage im Plus",
-        ),
-        "blue_of": _t(
-            "de {n} dias", "van {n} dagen", "of {n} days", "sur {n} jours", "von {n} Tagen"
-        ),
-        "blue_of_one": _t("de {n} dia", "van {n} dag", "of {n} day", "sur {n} jour", "von {n} Tag"),
-        "blue_longest": _t(
-            "maior sequência: {n} dias",
-            "langste reeks: {n} dagen",
-            "longest streak: {n} days",
-            "plus longue série : {n} jours",
-            "längste Serie: {n} Tage",
-        ),
-        "blue_longest_one": _t(
-            "maior sequência: {n} dia",
-            "langste reeks: {n} dag",
-            "longest streak: {n} day",
-            "plus longue série : {n} jour",
-            "längste Serie: {n} Tag",
-        ),
         "title_owed": _t(
             "Quem te deve",
             "Wie jou iets schuldig is",
@@ -579,27 +537,6 @@ SHELL.update(
             "day with the highest spending",
             "jour de plus forte dépense",
             "Tag mit den höchsten Ausgaben",
-        ),
-        "title_avg": _t(
-            "Ticket médio",
-            "Gemiddeld bedrag",
-            "Average ticket",
-            "Ticket moyen",
-            "Durchschnittsbetrag",
-        ),
-        "avg_sub": _t(
-            "em {n} gastos",
-            "over {n} uitgaven",
-            "over {n} expenses",
-            "sur {n} dépenses",
-            "bei {n} Ausgaben",
-        ),
-        "avg_sub_one": _t(
-            "em {n} gasto",
-            "over {n} uitgave",
-            "over {n} expense",
-            "sur {n} dépense",
-            "bei {n} Ausgabe",
         ),
         "title_recurring": _t(
             "Recorrências",
@@ -961,13 +898,6 @@ SHELL.update(
             "au-dessus du budget",
             "über dem Budget",
         ),
-        "th_time": _t(
-            "Hora",
-            "Tijd",
-            "Time",
-            "Heure",
-            "Uhrzeit",
-        ),
         "title_training": _t(
             "Plano de treino",
             "Trainingsschema",
@@ -1004,8 +934,6 @@ SHELL.update(
             "desde {date}", "sinds {date}", "since {date}", "depuis le {date}", "seit {date}"
         ),
         "training_first": _t("1 registro", "1 registratie", "1 entry", "1 relevé", "1 Eintrag"),
-        "th_load": _t("Carga", "Gewicht", "Load", "Charge", "Last"),
-        "th_weekday": _t("Dia", "Dag", "Day", "Jour", "Tag"),
         "pack_count": _t(
             "{done} de {total} na mala",
             "{done} van {total} ingepakt",
@@ -1015,21 +943,12 @@ SHELL.update(
         ),
         "pack_yes": _t("na mala", "ingepakt", "packed", "dans la valise", "gepackt"),
         "pack_no": _t("falta", "nog te doen", "to pack", "à mettre", "offen"),
-        "th_status": _t("Situação", "Status", "Status", "Statut", "Status"),
         "planbudget_total": _t(
             "{spent} de {plan} planejados",
             "{spent} van {plan} gepland",
             "{spent} of {plan} planned",
             "{spent} sur {plan} prévus",
             "{spent} von {plan} geplant",
-        ),
-        "th_planned": _t("Planejado", "Gepland", "Planned", "Prévu", "Geplant"),
-        "th_count": _t(
-            "Quantidade",
-            "Aantal",
-            "Count",
-            "Nombre",
-            "Anzahl",
         ),
         "past_budget_of": _t(
             "orçamento {budget}",

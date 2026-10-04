@@ -128,11 +128,10 @@ async def test_summary_has_the_cards_in_order_with_stable_ids(lab, client, today
     body = await _get(client, await _token(lab.member_id), "summary")
     assert [c["id"] for c in body["cards"]] == [
         "balance",
-        "upcoming",
         "categories",
-        "budgets",
-        "blue_days",
-        "owed",
+        "goals",
+        "week",
+        "upcoming",
     ]
     assert body["today"] == "2026-10-14" and body["filter"]["start"] == "2026-10-01"
     for c in body["cards"]:
@@ -237,7 +236,7 @@ async def test_categories_card_numbers_trend_and_phrase(lab, client, today) -> N
 @db
 async def test_budgets_card(lab, client, today) -> None:
     await _mockup_data(lab)
-    c = _card(await _get(client, await _token(lab.member_id), "summary"), "budgets")
+    c = _card(await _get(client, await _token(lab.member_id), "money"), "budgets")
     assert [(i["category"], i["spent"], i["limit"], i["pct"], i["level"]) for i in c["items"]] == [
         ("restaurant", 148.0, 120.0, 123, 100),
         ("supermarkt", 312.0, 400.0, 78, 0),
@@ -255,7 +254,7 @@ async def test_budgets_card(lab, client, today) -> None:
     assert c["phrase"]["key"] == "budget_over" and c["phrase"]["severity"] == "attention"
     assert c["phrase"]["text"] == "Restaurante passou do orçamento: € 148,00 de € 120,00 (123%)."
     only = _card(
-        await _get(client, await _token(lab.member_id), "summary", "?categories=transport"),
+        await _get(client, await _token(lab.member_id), "money", "?categories=transport"),
         "budgets",
     )
     assert [i["category"] for i in only["items"]] == ["transport"] and only["phrase"] is None
@@ -267,7 +266,7 @@ async def test_budget_pace_phrase_when_nothing_is_over(lab, client, today) -> No
         Budget(member_id=lab.member_id, household_id=lab.household_id, category="supermarkt", monthly_limit=400),
         *[_exp(lab, 104, f"AH{i}", "supermarkt", date(2026, 10, 2 + 3 * i)) for i in range(3)],
     )  # fmt: skip
-    c = _card(await _get(client, await _token(lab.member_id), "summary"), "budgets")
+    c = _card(await _get(client, await _token(lab.member_id), "money"), "budgets")
     assert c["items"][0]["pct"] == 78 and c["phrase"]["key"] == "budget_pace"
     assert "1 dia" in c["phrase"]["text"]
 
@@ -320,16 +319,13 @@ async def test_upcoming_overdue_is_flagged_as_attention_and_receivables_are_list
 
 
 @db
-async def test_blue_days_and_owed_cards(lab, client, today) -> None:
+async def test_owed_card_lives_in_money_only(lab, client, today) -> None:
     await _mockup_data(lab, secret="alfa")
-    body = await _get(client, await _token(lab.member_id), "summary")
-    blue = _card(body, "blue_days")
-    assert (
-        blue["values"]["blue"] == 14
-        and blue["values"]["elapsed"] == 14
-        and blue["values"]["longest"] == 14
-    )
-    assert blue["phrase"]["text"] == "14 de 14 dias no azul; a maior sequência foi de 14 dias."
+    token = await _token(lab.member_id)
+    ids = [c["id"] for c in (await _get(client, token, "summary"))["cards"]]
+    assert "owed" not in ids and "blue_days" not in ids and "budgets" not in ids
+    body = await _get(client, token, "money")
+    assert "blue_days" not in [c["id"] for c in body["cards"]]
     owed = _card(body, "owed")
     assert owed["values"] == {"total": 34.5, "count": 1}
     assert owed["items"] == [
@@ -348,7 +344,7 @@ async def test_owed_phrase_names_what_the_person_owes_in_total(lab, client, toda
         Iou(member_id=lab.member_id, person="marta", amount=20, settled_amount=5, direction="owed_to_me", created_at=datetime(2026, 10, 1, 12, tzinfo=UTC)),
         Iou(member_id=lab.member_id, person="Joana", amount=7, direction="owed_to_me", created_at=datetime(2026, 10, 2, 12, tzinfo=UTC)),
     )  # fmt: skip
-    owed = _card(await _get(client, await _token(lab.member_id), "summary"), "owed")
+    owed = _card(await _get(client, await _token(lab.member_id), "money"), "owed")
     assert owed["values"] == {"total": 32.0, "count": 3}
     assert "Marta deve € 25,00 a você há 43 dias" in owed["phrase"]["text"]
     assert owed["phrase"]["chat"] == '"Marta pagou 25,00"'
@@ -362,8 +358,8 @@ async def test_money_has_the_cards_in_order(lab, client, today) -> None:
     await _mockup_data(lab)
     body = await _get(client, await _token(lab.member_id), "money")
     assert [c["id"] for c in body["cards"]] == [
-        "transactions", "top_expenses", "month_vs_month", "fixed_variable", "daily",
-        "categories", "avg_ticket", "recurring", "owed",
+        "transactions", "month_vs_month", "top_expenses", "categories", "budgets",
+        "fixed_variable", "owed", "daily", "recurring",
     ]  # fmt: skip
 
 
@@ -447,10 +443,6 @@ async def test_top_expenses_month_vs_month_fixed_variable_daily_ticket_recurring
     assert daily["values"]["elapsed_days"] == 14 and daily["values"]["quiet_days"] == 3
     assert daily["phrase"]["key"] == "busiest_day" and "01/10" in daily["phrase"]["text"]
 
-    tk = _card(body, "avg_ticket")
-    assert tk["values"]["count"] == 13 and tk["values"]["average"] == round(1803 / 13, 2)
-    assert tk["values"]["previous_average"] == round(1772 / 10, 2) and tk["phrase"] is None
-
     rec = _card(body, "recurring")
     assert (
         rec["values"]["count"] == 5
@@ -507,6 +499,8 @@ async def test_empty_member_gets_empty_cards_that_teach_the_chat_in_their_langua
                         "empty_upcoming": "add_recurring",
                         "empty_recurring": "add_recurring",
                         "empty_owed": "add_owed",
+                        "empty_goals": "add_goal",
+                        "empty_agenda": "add_appointment",
                     }[h["key"]]
                 ][lang]
             )
@@ -518,14 +512,16 @@ async def test_phrases_come_in_the_members_language(lab, client, today) -> None:
     async with AsyncSessionLocal() as s:
         (await s.get(Member, lab.member_id)).language = "nl"
         await s.commit()
-    body = await _get(client, await _token(lab.member_id), "summary")
+    token = await _token(lab.member_id)
+    body = await _get(client, token, "summary")
     cats = _card(body, "categories")
     assert (
         cats["items"][2]["label"] == "Restaurant"
         and "meer dan in september" in cats["phrase"]["text"]
     )
     assert _card(body, "upcoming")["items"][0]["due_text"] == "vervalt over 4 dagen"
-    assert _card(body, "budgets")["phrase"]["text"].startswith("Restaurant zit boven het budget")
+    budgets = _card(await _get(client, token, "money"), "budgets")
+    assert budgets["phrase"]["text"].startswith("Restaurant zit boven het budget")
 
 
 # ── one filter, one total: cards and list ────────────────────────────────────
@@ -582,8 +578,6 @@ async def test_every_card_and_the_list_agree_on_the_total(lab, client, today, qu
     assert _card(money, "month_vs_month")["values"]["expense"]["current"] == list_exp
     assert _card(money, "month_vs_month")["values"]["income"]["current"] == list_inc
     assert round(_card(money, "daily")["values"]["total"], 2) == list_exp
-    avg = _card(money, "avg_ticket")["values"]
-    assert avg["total"] == list_exp
     if day_net is not None:
         assert day_net == round(list_inc - list_exp, 2)
     if list_exp:
@@ -596,16 +590,6 @@ async def test_every_card_and_the_list_agree_on_the_total(lab, client, today, qu
             )
             == list_exp
         )
-
-
-@db
-async def test_average_ticket_rounds_half_up_like_every_other_amount(lab, client, today) -> None:
-    """10,05 over 2 entries is 5,025: 5,03 (half up), never 5,02 (the decimal default is half even)."""
-    await lab.add(
-        _exp(lab, 10, "A", "overig", date(2026, 10, 3)), _exp(lab, 0.05, "B", "overig", date(2026, 10, 4))
-    )  # fmt: skip
-    avg = _card(await _get(client, await _token(lab.member_id), "money"), "avg_ticket")
-    assert avg["values"]["total"] == 10.05 and avg["values"]["average"] == 5.03
 
 
 # ── security: IDOR, hostile input, XSS ───────────────────────────────────────
@@ -659,7 +643,6 @@ async def test_another_members_token_never_sees_my_cards(lab, client, today) -> 
             for c in body.json()["cards"]:
                 assert c["empty"] is True, (tab, query, c["id"])
         assert secret in (await client.get(f"/api/d/{mine}/money")).text  # the data is really there
-        assert secret in (await client.get(f"/api/d/{mine}/summary")).text
         # a token for another member, with my ids smuggled in the query, still shows nothing of mine
         trick = await client.get(
             f"/api/d/{theirs}/money?member_id={lab.member_id}&trip={uuid.uuid4()}"
@@ -688,7 +671,7 @@ async def test_hostile_query_strings_never_break_the_cards(lab, client, today, q
         r = await client.get(f"/api/d/{token}/{tab}{query}")
         assert r.status_code == 200, (tab, query, r.status_code)
         body = r.json()
-        assert len(body["cards"]) >= 6 and body["filter"]["start"] < body["filter"]["end"]
+        assert len(body["cards"]) >= 5 and body["filter"]["start"] < body["filter"]["end"]
         for c in body["cards"]:
             assert "id" in c and "empty" in c and "phrase" in c
 
@@ -772,7 +755,7 @@ async def test_hostile_text_in_cards_is_returned_as_inert_json(lab, client, toda
             and r.headers["x-content-type-options"] == "nosniff"
         )
         json.loads(r.text)
-    owed = _card(await _get(client, token, "summary"), "owed")
+    owed = _card(await _get(client, token, "money"), "owed")
     assert (
         owed["phrase"] is None or owed["phrase"]["chat"].count('"') == 2
     )  # quotes in a name cannot escape the command

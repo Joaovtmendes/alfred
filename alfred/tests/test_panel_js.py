@@ -277,10 +277,10 @@ async def test_projection_without_enough_history_shows_only_what_is_known() -> N
         await _close(pwm, browser)
 
 
-async def test_upcoming_categories_budgets_blue_days_and_owed() -> None:
+async def test_upcoming_categories_goals_and_week_in_resumo() -> None:
     pwm, browser, page = await _open(_handlers())
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         bills = page.locator("[data-card=upcoming] .bill")
         assert await bills.count() == 3
         assert "hot" in await bills.nth(0).locator(".date-tile").get_attribute("class")
@@ -296,58 +296,60 @@ async def test_upcoming_categories_budgets_blue_days_and_owed() -> None:
         )
         texts = await _all_texts(rows)
         assert "▲ 8%" in texts[0] and "▼ 11%" in texts[2] and "= igual" in texts[4]
-        budgets = page.locator("[data-card=budgets] .brow")
-        assert await budgets.count() == 3
-        assert "€ 148 de € 120 · 123%" in (await budgets.nth(0).inner_text()).replace("\u00a0", " ")
-        assert "74" in await _text(page, "[data-card=budgets] .hero")
-        assert (
-            await page.locator("[data-card=budgets] .track > u").count() == 6
-        )  # 80% and 100% marks
-        assert await page.locator("[data-card=budgets] .track > i.warm").count() == 1
-        assert "12" in await _text(page, "[data-card=blue_days] .hero")
-        assert "€ 34,50" in await _text(page, "[data-card=owed] .hero")
-        assert "Marta" in await _text(page, "[data-card=owed]") and "há 9 dias" in await _text(
-            page, "[data-card=owed]"
-        )
+        assert await page.locator("[data-card=goals] .item, [data-card=goals] .brow").count() >= 1
+        assert await page.locator("[data-card=week]").count() == 1
+        for gone in ("blue_days", "budgets", "owed"):
+            assert await page.locator(f"[data-card={gone}]").count() == 0, gone
     finally:
         await _close(pwm, browser)
 
 
-async def test_summary_card_order_follows_the_mockups_desktop_and_phone() -> None:
+async def test_card_order_is_the_same_on_desktop_and_phone() -> None:
+    """One order for every screen: the one the API sends (no CSS reordering on the phone)."""
+
     async def order(page):
         return await page.eval_on_selector_all(
             "#panel [data-card]",
             "els => els.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top || a.getBoundingClientRect().left - b.getBoundingClientRect().left).map(e => e.dataset.card)",
         )
 
+    want = ["balance", "categories", "goals", "week", "upcoming"]
     pwm, browser, page = await _open(_handlers())
     try:
-        await page.wait_for_selector("[data-card=owed]")
-        assert await order(page) == [
-            "balance",
-            "upcoming",
-            "categories",
-            "budgets",
-            "blue_days",
-            "owed",
-        ]
+        await page.wait_for_selector("[data-card=upcoming]")
+        assert await order(page) == want
         grid = await page.eval_on_selector_all(
             "#panel [data-card]", "els => els.map(e => Math.round(e.getBoundingClientRect().width))"
         )
         assert grid[0] > grid[1] > 0 and abs(grid[0] / grid[1] - 7 / 5) < 0.1  # 7 + 5 of 12 columns
         await page.set_viewport_size({"width": 390, "height": 844})
-        assert await order(page) == [
-            "balance",
-            "categories",
-            "budgets",
-            "blue_days",
-            "upcoming",
-            "owed",
-        ]
+        assert await order(page) == want
         lefts = await page.eval_on_selector_all(
             "#panel [data-card]", "els => els.map(e => Math.round(e.getBoundingClientRect().left))"
         )
         assert len(set(lefts)) == 1  # one column
+        dom = await page.eval_on_selector_all(
+            "#panel [data-card]", "els => els.map(e => e.dataset.card)"
+        )
+        assert dom == want  # the DOM order is the visual order too
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_money_and_habits_card_order_is_the_approved_one() -> None:
+    pwm, browser, page = await _open(_handlers(), query="")
+    try:
+        await page.click('[data-tab="money"]')
+        await page.wait_for_selector("[data-card=recurring]")
+        for width in (1280, 390):
+            await page.set_viewport_size({"width": width, "height": 900})
+            dom = await page.eval_on_selector_all(
+                "#panel [data-card]", "els => els.map(e => e.dataset.card)"
+            )
+            assert dom == [
+                "transactions", "month_vs_month", "top_expenses", "categories", "budgets",
+                "fixed_variable", "owed", "daily", "recurring",
+            ]  # fmt: skip
     finally:
         await _close(pwm, browser)
 
@@ -382,7 +384,17 @@ async def test_money_cards() -> None:
         assert await page.locator("[data-card=daily] .daily > i.peak").count() == 1
         cats = page.locator("[data-card=categories] .cat")
         assert await cats.count() == 7  # six items + "outras categorias"
-        assert "€ 86,90" in await _text(page, "[data-card=avg_ticket] .hero")
+        assert await page.locator("[data-card=avg_ticket]").count() == 0
+        budgets = page.locator("[data-card=budgets] .brow")
+        assert await budgets.count() == 3
+        assert "€ 148 de € 120 · 123%" in (await budgets.nth(0).inner_text()).replace("\u00a0", " ")
+        assert "74" in await _text(page, "[data-card=budgets] .hero")
+        assert (
+            await page.locator("[data-card=budgets] .track > u").count() == 6
+        )  # 80% and 100% marks
+        assert await page.locator("[data-card=budgets] .track > i.warm").count() == 1
+        assert "€ 34,50" in await _text(page, "[data-card=owed] .hero")
+        assert "há 9 dias" in await _text(page, "[data-card=owed]")
         rec = await _text(page, "[data-card=recurring]")
         assert "parcela 1 de 13" in rec and "€ 218,00 por mês · 2 itens" in rec
         assert "Marta" in await _text(page, "[data-card=owed]")
@@ -390,26 +402,17 @@ async def test_money_cards() -> None:
         await _close(pwm, browser)
 
 
-async def test_every_chart_has_a_view_as_table() -> None:
-    pwm, browser, page = await _open(_handlers())
+async def test_no_card_offers_a_view_as_table() -> None:
+    """The "view as table" twin was removed from every card of every tab."""
+    pwm, browser, page = await _open(_handlers(), query="")
     try:
-        await page.wait_for_selector("[data-card=owed]")
-        for card in ("balance", "upcoming", "categories", "budgets"):
-            assert (
-                await page.locator(f"[data-card={card}] details.table summary").inner_text()
-                == "Ver como tabela"
-            ), card
+        await page.wait_for_selector("[data-card=upcoming]")
+        assert await page.locator("details.table").count() == 0
+        assert "Ver como tabela" not in await _text(page, "#panel")
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=recurring]")
-        for card in ("top_expenses", "month_vs_month", "fixed_variable", "daily", "categories"):
-            assert await page.locator(f"[data-card={card}] details.table").count() == 1, card
-        # the table is real, with column headers, and opens from the keyboard
-        await page.focus("[data-card=daily] details.table summary")
-        await page.keyboard.press("Enter")
-        assert (
-            await page.locator("[data-card=daily] details.table[open] th[scope=col]").count() == 2
-        )
-        assert await page.locator("[data-card=daily] details.table tbody tr").count() == 31
+        assert await page.locator("details.table").count() == 0
+        assert "Ver como tabela" not in await _text(page, "#panel")
     finally:
         await _close(pwm, browser)
 
@@ -440,7 +443,7 @@ async def test_texts_from_the_member_are_never_html() -> None:
             c["items"] = [{**c["items"][0], "name": XSS}]
     pwm, browser, page = await _open(_handlers(summary, money))
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=recurring]")
         assert await page.locator("#panel img").count() == 0
@@ -456,8 +459,8 @@ async def test_empty_cards_say_what_to_type_in_the_chat() -> None:
     money = {**fx.MONEY, "cards": [fx.empty_card(c["id"]) for c in fx.MONEY["cards"]]}
     pwm, browser, page = await _open(_handlers(summary, money))
     try:
-        await page.wait_for_selector("[data-card=owed]")
-        assert await page.locator("#panel [data-card]").count() == 6
+        await page.wait_for_selector("[data-card=upcoming]")
+        assert await page.locator("#panel [data-card]").count() == 5
         for text in await _all_texts(page.locator("#panel [data-card]")):
             assert "Registre pelo chat" in text and "Peça no chat: “gastei 25 no mercado”" in text
         assert await page.locator("#panel .hero").count() == 0  # no zeros dressed up as data
@@ -471,7 +474,7 @@ async def test_empty_cards_say_what_to_type_in_the_chat() -> None:
 async def test_filters_only_change_the_address_and_use_closed_lists() -> None:
     pwm, browser, page = await _open(_handlers())
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         await page.select_option('select[aria-label="Categoria"]', "restaurant")
         await _poll(page, "location.search.includes('categories=restaurant')")
         await page.select_option('select[aria-label="Tipo"]', "expense")
@@ -499,7 +502,7 @@ async def test_a_tampered_address_is_dropped_before_it_reaches_the_server() -> N
     q = "?month=<script>&categories=x%27%20OR%201=1,restaurant&kind=bogus&state=paid,zzz&merchant=Albert&page=9"
     pwm, browser, page = await _open(_handlers(), query=q)
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         url = page.api_calls[0][1]
         assert url.endswith("/summary?categories=restaurant&state=paid")  # only closed-list values
         assert "merchant" not in url and "script" not in url and "page" not in url
@@ -513,7 +516,7 @@ async def test_a_month_the_server_would_ignore_is_not_shown_as_selected(month) -
     numbers under another month's title, so the address is dropped before it is read."""
     pwm, browser, page = await _open(_handlers(), query=f"?month={month}")
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         assert page.api_calls[0][1].endswith("/summary")
         await page.wait_for_selector(".pill.month .cur:has-text('Outubro de 2026')")
     finally:
@@ -528,11 +531,11 @@ _PLURAL_WRONG = {
     "de": r"\b1 (Tagen|Tage|Buchungen|Ausgaben)\b",
 }
 _ONE = {
-    "pt": ["há 1 dia", "de 1 dia", "maior sequência: 1 dia", "Saldo de 1 lançamento", "em 1 gasto", "1 item"],
-    "nl": ["1 dag geleden", "van 1 dag", "langste reeks: 1 dag", "Saldo van 1 boeking", "over 1 uitgave", "1 post"],
-    "en": ["1 day ago", "of 1 day", "longest streak: 1 day", "Balance of 1 entry", "over 1 expense", "1 item"],
-    "fr": ["il y a 1 jour", "sur 1 jour", "plus longue série : 1 jour", "Solde de 1 écriture", "sur 1 dépense", "1 élément"],
-    "de": ["vor 1 Tag", "von 1 Tag", "längste Serie: 1 Tag", "Saldo von 1 Buchung", "bei 1 Ausgabe", "1 Posten"],
+    "pt": ["há 1 dia", "Saldo de 1 lançamento", "1 item"],
+    "nl": ["1 dag geleden", "Saldo van 1 boeking", "1 post"],
+    "en": ["1 day ago", "Balance of 1 entry", "1 item"],
+    "fr": ["il y a 1 jour", "Solde de 1 écriture", "1 élément"],
+    "de": ["vor 1 Tag", "Saldo von 1 Buchung", "1 Posten"],
 }  # fmt: skip
 
 
@@ -543,15 +546,13 @@ async def test_a_count_of_one_reads_in_the_singular_in_every_language(lang) -> N
         for c in body["cards"]:
             if c["id"] == "owed":
                 c["items"][0]["days"] = 1
-            if c["id"] == "blue_days":
-                c["values"].update(blue=1, elapsed=1, longest=1)
-            if c["id"] in ("transactions", "avg_ticket", "recurring"):
+            if c["id"] in ("transactions", "recurring"):
                 c["values"]["count"] = 1
                 if c["id"] == "recurring":
                     c["items"] = c["items"][:1]
     pwm, browser, page = await _open(_handlers(summary, money), lang=lang)
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         text = await _text(page, "#panel")
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=recurring]")
@@ -566,7 +567,7 @@ async def test_a_count_of_one_reads_in_the_singular_in_every_language(lang) -> N
 async def test_month_arrows_stop_at_the_current_month() -> None:
     pwm, browser, page = await _open(_handlers())
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         assert await page.locator('button[aria-label="Próximo mês"]').is_disabled()
         await page.click('button[aria-label="Mês anterior"]')
         await page.wait_for_selector(".pill.month .cur:has-text('Setembro de 2026')")
@@ -616,7 +617,7 @@ async def test_money_pagination_changes_only_the_page_number() -> None:
 async def test_theme_switch_toggles_and_remembers_the_choice() -> None:
     pwm, browser, page = await _open(_handlers())
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         before = await page.get_attribute("#theme-toggle", "aria-label")
         await page.click("#theme-toggle")
         after = await page.get_attribute("#theme-toggle", "aria-label")
@@ -628,7 +629,7 @@ async def test_theme_switch_toggles_and_remembers_the_choice() -> None:
         bg = await page.evaluate("getComputedStyle(document.body).backgroundColor")
         assert bg == {"light": "rgb(243, 245, 248)", "dark": "rgb(13, 17, 23)"}[theme]
         await page.reload()
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         assert await page.evaluate("document.documentElement.dataset.theme") == theme  # remembered
         assert await page.evaluate("getComputedStyle(document.body).backgroundColor") == bg
     finally:
@@ -638,7 +639,7 @@ async def test_theme_switch_toggles_and_remembers_the_choice() -> None:
 async def test_tab_bar_on_a_phone_scrolls_with_a_fade_and_keeps_the_selected_tab_visible() -> None:
     pwm, browser, page = await _open(_handlers(), size={"width": 390, "height": 844})
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         assert await page.eval_on_selector(".tabs-wrap", "e => e.classList.contains('fade-r')")
         assert not await page.eval_on_selector(".tabs-wrap", "e => e.classList.contains('fade-l')")
         await page.click('[data-tab="trips"]')
@@ -657,7 +658,7 @@ async def test_tab_bar_on_a_phone_scrolls_with_a_fade_and_keeps_the_selected_tab
 async def test_tabs_work_from_the_keyboard_and_focus_is_visible() -> None:
     pwm, browser, page = await _open(_handlers())
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         await page.focus('[data-tab="summary"]')
         await page.keyboard.press("ArrowRight")
         assert await page.get_attribute('[data-tab="money"]', "aria-selected") == "true"
@@ -675,7 +676,7 @@ async def test_tabs_work_from_the_keyboard_and_focus_is_visible() -> None:
 async def test_no_horizontal_overflow_and_no_csp_violation_with_real_looking_data(size) -> None:
     pwm, browser, page = await _open(_handlers(), size=size)
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=recurring]")
         for tab in ("summary", "money"):
@@ -695,7 +696,7 @@ async def test_no_horizontal_overflow_and_no_csp_violation_with_real_looking_dat
 async def test_the_panel_is_read_only() -> None:
     pwm, browser, page = await _open(_handlers())
     try:
-        await page.wait_for_selector("[data-card=owed]")
+        await page.wait_for_selector("[data-card=upcoming]")
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=recurring]")
         assert await page.locator("form, input[type=submit], button[type=submit]").count() == 0
@@ -730,7 +731,6 @@ async def test_days_without_settled_entries_show_no_zero_total_and_a_running_mon
         assert await page.locator("[data-card=daily] .daily > i").count() == 31
         box = await page.locator("[data-card=daily] .daily > i").first.bounding_box()
         assert box["width"] < 40
-        assert await page.locator("[data-card=daily] details.table tbody tr").count() == 3
     finally:
         await _close(pwm, browser)
 
@@ -772,7 +772,7 @@ def _tab_handlers():
     ("tab", "cards"),
     [
         ("agenda", ["week", "tasks", "month_map", "reminders", "notes"]),
-        ("health", ["water", "workouts", "training", "goals"]),
+        ("health", ["goals", "workouts", "training", "water"]),
         ("trips", ["trip", "packing", "itinerary", "plan_budget", "trips_past"]),
     ],
 )
@@ -785,7 +785,7 @@ async def test_the_three_new_tabs_draw_every_card_without_breaking_the_page(tab,
             "#panel [data-card]", "els => els.map(e => e.dataset.card)"
         )
         assert ids == cards
-        for c in cards:  # each one is a table view away from its numbers
+        for c in cards:
             assert await page.locator(f"[data-card={c}]").count() == 1
         assert await page.evaluate(
             "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
@@ -846,7 +846,7 @@ async def test_training_plan_shows_today_first_and_no_arrow_before_two_points() 
             == 1
         )
         assert "↑" not in await _text(page, f"{card} .item:has-text('Puxada frontal')")
-        assert await page.locator(f"{card} details.table").count() == 1
+        assert await page.locator(f"{card} details.table").count() == 0
     finally:
         await _close(pwm, browser)
 
@@ -866,3 +866,11 @@ async def test_trip_plan_cards_show_itinerary_packing_and_planned_against_spent(
         )
     finally:
         await _close(pwm, browser)
+
+
+def test_the_assets_carry_no_css_reordering_and_no_table_twin() -> None:
+    """Contract: the card order is the API order. No `order:` rule per card, no table helper."""
+    root = pathlib.Path(__file__).parent.parent / "src" / "alfred" / "panel"
+    css, js = (root / "panel.css").read_text(), (root / "panel.js").read_text()
+    assert not re.search(r"\[data-card=[^\]]*\]\s*\{[^}]*\border\s*:", css)
+    assert "tableView" not in js and "table_view" not in js and "details.table" not in css
