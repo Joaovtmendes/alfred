@@ -21,6 +21,8 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred.accounting import STRINGS as _ACCT_STRINGS
+from alfred.accounting import default_scope, handle_accounting_command
 from alfred.agenda import STRINGS as _AGENDA_STRINGS
 from alfred.agenda import handle_agenda_command
 from alfred.agenda import handle_button as handle_agenda_button
@@ -1529,6 +1531,7 @@ _STRINGS.update(_INSIGHT_STRINGS)  # V2-15
 _STRINGS.update(_IOU_STRINGS)  # V2-15
 _STRINGS.update(_COUPLE_STRINGS)  # V2-10
 _STRINGS.update(_STATEMENT_STRINGS)  # V2-05
+_STRINGS.update(_ACCT_STRINGS)  # V2-12
 _STRINGS.update(_TRAINING_STRINGS)  # V2-35
 _STRINGS.update(_TRIPPLAN_STRINGS)  # V2-35
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
@@ -4036,6 +4039,13 @@ async def handle_inbound(
             await _save_outbound(member, stmt_out.text, session)
             return
 
+        # 4e-0s. V2-12 — contabilidade: "modo empresa" / "foi da empresa" / "btw 21" / "contabilidade"
+        acct_out = await handle_accounting_command(body_plain, member, lang, session, today_local())
+        if acct_out is not None:
+            await send_text(to, acct_out.text)
+            await _save_outbound(member, acct_out.text, session)
+            return
+
         # 4e-0o. V2-18 — "o que você me enviou hoje" / "lembretes que mandou"
         outbox_reply = await handle_outbox_command(body_plain, member, lang, session)
         if outbox_reply is not None:
@@ -5109,6 +5119,7 @@ async def handle_inbound(
                 expense_date=expense_date,
                 trip_id=active_trip.id if active_trip else None,
                 shared=shared_now,
+                scope=default_scope(member, expense_data["category"], txn_type),
             )
             session.add(expense)
 

@@ -95,6 +95,20 @@ class Member(Base):
     # V2-10 — categories that are "da casa" by default for this member (canonical identifiers)
     home_categories: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True, default=None)
 
+    # V2-12 — accounting tab. ``acct_mode``: personal (default) | business (ZZP: adds the business
+    # cards). ``business_categories``: categories that are business by default. ``tax_reserve_pct``
+    # and ``savings_amount`` are numbers the member gave; nothing is assumed when they are unset.
+    acct_mode: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="personal", server_default="personal"
+    )
+    business_categories: Mapped[list[str] | None] = mapped_column(
+        JSONB, nullable=True, default=None
+    )
+    tax_reserve_pct: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    savings_amount: Mapped[float | None] = mapped_column(
+        Numeric(12, 2, asdecimal=False), nullable=True, default=None
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -221,6 +235,15 @@ class Expense(Base):
         String(10), nullable=False, default="manual", server_default="manual"
     )
     external_id: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
+    # V2-12 — personal | business; ``btw_rate`` is the VAT percentage inside the amount (0, 9 or 21)
+    # when the member gave it; ``deductible`` only matters for business spending.
+    scope: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="personal", server_default="personal"
+    )
+    btw_rate: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    deductible: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
     import_batch_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("import_batch.id", ondelete="SET NULL"), nullable=True
     )

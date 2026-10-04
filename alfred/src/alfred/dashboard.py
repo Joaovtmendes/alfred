@@ -110,6 +110,61 @@ async def dashboard_export(
     )
 
 
+def _books_year(raw: str | None) -> int:
+    from alfred.clock import today_local
+
+    today = today_local().year
+    if raw is None or not raw.isascii() or not raw.isdigit() or len(raw) != 4:
+        return today
+    return min(max(int(raw), 2000), today)
+
+
+@router.get(
+    "/api/d/{token}/books-export", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
+)
+async def books_export_page(
+    token: str, year: str | None = None, session: AsyncSession = Depends(get_session)
+) -> HTMLResponse:
+    """V2-12 — confirmation page of the accountant CSV (a GET never spends the single-use link)."""
+    member = await peek_export_token(session, token)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Link not found")
+    lang = normalize_lang(member.language)
+    t = ui(lang)
+    body = (
+        f'<!doctype html><html lang="{lang}"><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"<title>{t['books_export_title']}</title>"
+        "<body>"
+        f"<h1>{t['books_export_title']}</h1><p>{t['books_export_text']}</p>"
+        f'<form method="post" action="?year={_books_year(year)}"><button type="submit">'
+        f"{t['books_export_button']}</button></form></body></html>"
+    )
+    return HTMLResponse(body)
+
+
+@router.post(
+    "/api/d/{token}/books-export", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
+)
+async def books_export(
+    token: str, year: str | None = None, session: AsyncSession = Depends(get_session)
+) -> Response:
+    """The year's entries as CSV (business entries only in business mode), once."""
+    from alfred import accounting
+
+    member = await consume_export_token(session, token)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Link not found")
+    y = _books_year(year)
+    audit(session, "accounting_exported", member.id, year=y)
+    body = await accounting.export_csv(session, member, y)
+    return Response(
+        "\ufeff" + body,  # the byte-order mark makes Excel read the accents right
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="alfred-accounting-{y}.csv"'},
+    )
+
+
 # ── HTML page ─────────────────────────────────────────────────────────────────
 
 

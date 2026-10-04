@@ -880,3 +880,33 @@ async def home(
         session, member, normalize_lang(member.language), today_local()
     )
     return _envelope("home", member, f, cards, today_local())
+
+
+def _parse_year(raw: str | None, today: date) -> int:
+    """``?year=YYYY``: four digits between 2000 and this year; anything else is this year."""
+    if raw is None or not raw.isascii() or not raw.isdigit() or len(raw) != 4:
+        return today.year
+    return min(max(int(raw), 2000), today.year)
+
+
+@router.get(
+    "/api/d/{token}/books", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
+)
+async def books(
+    token: str, request: Request, session: AsyncSession = Depends(get_session)
+) -> JSONResponse:
+    """V2-12 — the Accounting tab: personal analyses for everyone, business cards in business mode.
+
+    Own endpoint, loaded when the tab opens; every opening is audited (no content).
+    """
+    from alfred import accounting
+
+    member, f = await _open(token, request, session)
+    audit(session, "panel_books_opened", member.id)
+    await session.commit()
+    today = today_local()
+    year = _parse_year(request.query_params.get("year"), today)
+    cards = await accounting.panel_cards(
+        session, member, normalize_lang(member.language), today, year
+    )
+    return _envelope("books", member, f, cards, today)

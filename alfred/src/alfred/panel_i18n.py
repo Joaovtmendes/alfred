@@ -26,6 +26,16 @@ _TABS = (
         },
     ),
     ("trips", {"pt": "Viagens", "nl": "Reizen", "en": "Trips", "fr": "Voyages", "de": "Reisen"}),
+    (
+        "books",
+        {
+            "pt": "Contabilidade",
+            "nl": "Boekhouding",
+            "en": "Accounting",
+            "fr": "Comptabilité",
+            "de": "Buchhaltung",
+        },
+    ),
 )
 
 SHELL = {
@@ -1050,6 +1060,158 @@ SHELL.update(
             "Alles ausgeglichen",
         ),
         "home_by_me": _t("você", "jij", "you", "toi", "du"),
+    }
+)
+
+
+# V2-12 — Accounting tab
+SHELL.update(
+    {
+        "title_books_year": _t(
+            "Balanço do ano", "Jaaroverzicht", "Year balance", "Bilan de l'année", "Jahresbilanz"
+        ),
+        "title_books_categories": _t(
+            "Para onde foi o dinheiro",
+            "Waar het geld naartoe ging",
+            "Where the money went",
+            "Où est parti l'argent",
+            "Wohin das Geld ging",
+        ),
+        "title_books_fixed": _t(
+            "Fixos e variáveis no ano",
+            "Vast en variabel dit jaar",
+            "Fixed and variable this year",
+            "Fixes et variables cette année",
+            "Fix und variabel in diesem Jahr",
+        ),
+        "title_books_emergency": _t(
+            "Reserva de emergência",
+            "Noodfonds",
+            "Emergency fund",
+            "Fonds d'urgence",
+            "Notgroschen",
+        ),
+        "title_books_pl": _t(
+            "Empresa: receita e lucro",
+            "Bedrijf: omzet en winst",
+            "Business: income and profit",
+            "Entreprise : revenus et bénéfice",
+            "Betrieb: Einnahmen und Gewinn",
+        ),
+        "title_books_btw": _t(
+            "BTW por trimestre",
+            "Btw per kwartaal",
+            "BTW per quarter",
+            "TVA par trimestre",
+            "MwSt pro Quartal",
+        ),
+        "title_books_deductible": _t(
+            "Despesas dedutíveis",
+            "Aftrekbare kosten",
+            "Deductible costs",
+            "Charges déductibles",
+            "Absetzbare Kosten",
+        ),
+        "title_books_reserve": _t(
+            "Reserva de imposto",
+            "Belastingreserve",
+            "Tax reserve",
+            "Réserve d'impôt",
+            "Steuerrücklage",
+        ),
+        "books_income": _t("Entradas", "Inkomsten", "Income", "Revenus", "Einnahmen"),
+        "books_expense": _t("Saídas", "Uitgaven", "Spending", "Dépenses", "Ausgaben"),
+        "books_balance": _t("Saldo", "Saldo", "Balance", "Solde", "Saldo"),
+        "books_saving_rate": _t(
+            "Você guardou {pct}% do que entrou",
+            "Je hield {pct}% van je inkomsten over",
+            "You kept {pct}% of what came in",
+            "Tu as gardé {pct}% de tes revenus",
+            "Du hast {pct}% der Einnahmen behalten",
+        ),
+        "books_fixed_label": _t("Fixos", "Vast", "Fixed", "Fixes", "Fix"),
+        "books_variable_label": _t("Variáveis", "Variabel", "Variable", "Variables", "Variabel"),
+        "books_fixed_pct": _t(
+            "{pct}% do gasto é fixo",
+            "{pct}% van de uitgaven is vast",
+            "{pct}% of spending is fixed",
+            "{pct}% des dépenses sont fixes",
+            "{pct}% der Ausgaben sind fix",
+        ),
+        "books_savings": _t("Guardado", "Gespaard", "Saved", "Épargné", "Gespart"),
+        "books_avg_monthly": _t(
+            "Gasto médio por mês (3 meses)",
+            "Gemiddelde uitgaven per maand (3 maanden)",
+            "Average monthly spending (3 months)",
+            "Dépense moyenne par mois (3 mois)",
+            "Durchschnittliche Ausgaben pro Monat (3 Monate)",
+        ),
+        "books_months_covered": _t(
+            "{n} meses cobertos",
+            "{n} maanden gedekt",
+            "{n} months covered",
+            "{n} mois couverts",
+            "{n} Monate abgedeckt",
+        ),
+        "books_net_income": _t(
+            "Receita sem BTW",
+            "Omzet excl. btw",
+            "Income excl. VAT",
+            "Revenus hors TVA",
+            "Einnahmen ohne MwSt",
+        ),
+        "books_net_expense": _t(
+            "Despesas sem BTW",
+            "Kosten excl. btw",
+            "Costs excl. VAT",
+            "Charges hors TVA",
+            "Kosten ohne MwSt",
+        ),
+        "books_profit": _t("Lucro", "Winst", "Profit", "Bénéfice", "Gewinn"),
+        "books_unrated": _t(
+            "{n} lançamentos sem BTW informado, contados pelo valor total",
+            "{n} boekingen zonder btw-percentage, voor het volle bedrag meegeteld",
+            "{n} entries without a BTW rate, counted at the full amount",
+            "{n} écritures sans taux de TVA, comptées au montant total",
+            "{n} Buchungen ohne MwSt-Satz, mit vollem Betrag gezählt",
+        ),
+        "books_non_deductible": _t(
+            "Não dedutível, fora do lucro: {amount}",
+            "Niet aftrekbaar, buiten de winst: {amount}",
+            "Not deductible, left out of the profit: {amount}",
+            "Non déductible, hors du bénéfice : {amount}",
+            "Nicht absetzbar, nicht im Gewinn: {amount}",
+        ),
+        "books_btw_owed": _t(
+            "BTW das vendas",
+            "Btw over omzet",
+            "BTW on income",
+            "TVA sur les ventes",
+            "MwSt auf Einnahmen",
+        ),
+        "books_btw_input": _t(
+            "BTW das compras", "Voorbelasting", "Input BTW", "TVA déductible", "Vorsteuer"
+        ),
+        "books_btw_net": _t("A pagar", "Te betalen", "To pay", "À payer", "Zu zahlen"),
+        "books_btw_refund": _t(
+            "A receber", "Terug te krijgen", "To receive", "À recevoir", "Zu erhalten"
+        ),
+        "books_quarter": _t("T{q}", "K{q}", "Q{q}", "T{q}", "Q{q}"),
+        "books_current": _t("atual", "huidig", "current", "en cours", "aktuell"),
+        "books_reserve_line": _t(
+            "{pct}% do lucro do ano",
+            "{pct}% van de winst dit jaar",
+            "{pct}% of this year's profit",
+            "{pct}% du bénéfice de l'année",
+            "{pct}% des Gewinns dieses Jahres",
+        ),
+        "books_estimate": _t(
+            "Estimativa para organizar suas contas; não é declaração de imposto.",
+            "Schatting om je administratie te ordenen; geen belastingaangifte.",
+            "An estimate to organise your records; not a tax return.",
+            "Estimation pour organiser tes comptes ; pas une déclaration d'impôts.",
+            "Schätzung zur Ordnung deiner Unterlagen; keine Steuererklärung.",
+        ),
     }
 )
 
