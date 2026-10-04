@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     # Observability / ops
     sentry_dsn: str = ""  # empty → error tracking off
     internal_metrics_token: SecretStr = SecretStr("")  # empty → /internal/metrics is a 404
+    # S1-06: Fernet key(s), comma-separated (first encrypts); empty → health data in clear
+    data_encryption_key: SecretStr = SecretStr("")
 
     # Expenses at or above this amount get an explicit "is this right?" hint (undo via
     # "apaga" / "errei foram X"). Nothing is blocked: a hint costs no state and no round trip.

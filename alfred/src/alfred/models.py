@@ -33,6 +33,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
+from alfred.crypto import EncryptedText
 from alfred.db import Base
 
 
@@ -316,9 +317,11 @@ class HealthLog(Base):
     log_type: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # medication | mood | sleep | water
-    value: Mapped[str] = mapped_column(String(255), nullable=False)  # "omeprazol", "7", "6.5"
+    value: Mapped[str] = mapped_column(
+        EncryptedText, nullable=False
+    )  # "omeprazol", "7", "6.5" — encrypted at rest when DATA_ENCRYPTION_KEY is set (S1-06)
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)  # "/10", "hours", "mg", "L"
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     log_date: Mapped[date] = mapped_column(Date, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
