@@ -28,8 +28,9 @@ from alfred.validation import MAX_AMOUNT
 # Income is not budgeted; the other nine canonical categories are.
 BUDGET_CATEGORIES: tuple[str, ...] = tuple(c for c in _LABELS if c != "inkomen")
 
-# Fewer than this many days into the month a projection is noise ("3 days → ×10").
-MIN_PROJECTION_DAY = 3
+# Fewer than this many days into the month a projection is noise ("3 days → ×10"); the panel
+# applies the same 10-day history rule (panel_calc.PROJ_MIN_HISTORY_DAYS).
+MIN_PROJECTION_DAY = 10
 ALERT_LEVELS = (80, 100)
 
 
@@ -151,7 +152,7 @@ async def month_spent(
 
 
 def project_month_end(spent: Decimal, today: date) -> Decimal | None:
-    """Linear projection (spent ÷ days elapsed × days in month); None before day 3."""
+    """Linear projection (spent ÷ days elapsed × days in month); None before day 10."""
     if today.day < MIN_PROJECTION_DAY:
         return None
     days = calendar.monthrange(today.year, today.month)[1]

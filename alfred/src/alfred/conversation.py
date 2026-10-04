@@ -3999,15 +3999,23 @@ async def handle_inbound(
             task_body = raw_task
             due_date_val = None
             if due_m:
-                try:
-                    from dateutil import parser as _dp
+                from alfred.agenda import parse_when
 
-                    due_date_val = _dp.parse(
-                        due_m.group(1), default=datetime.combine(today_local(), datetime.min.time())
-                    ).date()
+                # words first ("sexta", "amanhã", "dia 20", "15/10"), then dateutil ("Oct 15")
+                when = parse_when(strip_accents(due_m.group(1).lower()), now_local())
+                due_date_val = when.day
+                if due_date_val is None:
+                    try:
+                        from dateutil import parser as _dp
+
+                        due_date_val = _dp.parse(
+                            due_m.group(1),
+                            default=datetime.combine(today_local(), datetime.min.time()),
+                        ).date()
+                    except Exception:
+                        due_date_val = None  # not a date ("até logo"): keep the full text
+                if due_date_val is not None:
                     task_body = raw_task[: due_m.start()].strip() or raw_task
-                except Exception:
-                    due_date_val = None  # not a date ("até logo"): keep the full text
             task = Task(
                 id=uuid.uuid4(),
                 member_id=member.id,
