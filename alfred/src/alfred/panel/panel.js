@@ -396,6 +396,23 @@
 
     transactions(card, span, ctx) {
       const c = cardShell(card, T.title_tx, span);
+      // Daily view: a day filter on top (default today, else the latest day with entries).
+      const dates = card.days.map((d) => d.date);
+      let selected = dates.includes(ctx.body.today) ? ctx.body.today : dates[0] || "all";
+      const chipsBox = el("div", "daychips");
+      chipsBox.setAttribute("role", "group");
+      chipsBox.setAttribute("aria-label", T.day_filter);
+      const chips = [];
+      const addChip = (value, text) => {
+        const b = el("button", "", text);
+        b.type = "button";
+        b.addEventListener("click", () => { selected = value; apply(); });
+        chips.push([b, value]);
+        chipsBox.append(b);
+      };
+      addChip("all", T.all_days);
+      for (const d of card.days) addChip(d.date, d.date === ctx.body.today ? T.today_word : dayShort(d.date));
+      c.append(chipsBox);
       // Free text stays in the browser: it is never read into the address or sent anywhere.
       const box = el("div", "search");
       const input = el("input");
@@ -411,7 +428,7 @@
         const g = el("div", "daygrp");
         const head = el("div", "day");
         head.append(el("span", "", (d.date === ctx.body.today ? T.today_word + ", " : "") + dayShort(d.date)));
-        if (d.income || d.expense) head.append(el("span", "num", signed(d.net)));
+        if (d.income || d.expense) head.append(el("span", "num " + (d.net > 0 ? "pos" : d.net < 0 ? "neg" : ""), signed(d.net)));
         g.append(head);
         const list = el("div", "list");
         for (const e of d.entries) {
@@ -420,32 +437,36 @@
           const body = el("div");
           body.append(el("div", "t", e.merchant || T.no_merchant));
           body.append(el("div", "s", [e.label, lc(T["st_" + e.status] || e.status)].filter(Boolean).join(" · ")));
-          row.append(body, el("div", "amt" + (e.settled ? "" : " pending"), e.kind === "income" ? "+ " + money(e.amount) : money(-e.amount)));
+          row.append(body, el("div", "amt " + (e.kind === "income" ? "pos" : "neg") + (e.settled ? "" : " pending"), e.kind === "income" ? "+ " + money(e.amount) : money(-e.amount)));
           list.append(row);
         }
         g.append(list);
-        groups.push([g, list]);
+        groups.push([g, list, d.date]);
         wrap.append(g);
       }
       c.append(wrap);
       const none = el("div", "empty", T.search_none);
       none.hidden = true;
       c.append(none);
-      input.addEventListener("input", () => {
+      function apply() {
         const q = input.value.trim().toLowerCase();
         let shown = 0;
-        for (const [g, list] of groups) {
+        for (const [g, list, date] of groups) {
           let any = 0;
           for (const row of list.children) {
             const hit = !q || row.dataset.search.includes(q);
             row.hidden = !hit;
             if (hit) any++;
           }
-          g.hidden = !any;
+          // a search looks through every day; otherwise only the selected day (or all of them)
+          g.hidden = !any || !(q || selected === "all" || selected === date);
           shown += any;
         }
+        for (const [b, value] of chips) b.setAttribute("aria-pressed", String(value === selected));
         none.hidden = shown > 0 || !q;
-      });
+      }
+      input.addEventListener("input", apply);
+      apply();
       const tot = el("div", "total");
       tot.append(el("span", "", fmtN("tx_total", card.values.count)), el("span", "num", signed(card.values.balance)));
       c.append(tot);

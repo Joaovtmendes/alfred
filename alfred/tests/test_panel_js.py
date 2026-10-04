@@ -360,6 +360,7 @@ async def test_money_cards() -> None:
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=recurring]")
         tx = "[data-card=transactions]"
+        await page.click(f"{tx} .daychips button:has-text('Todos')")
         days = await _all_texts(page.locator(f"{tx} .day"))
         assert "Hoje, 2 out" in days[0] and "+ € 3.797,82" in days[0]  # the day's total
         assert "1 out" in days[1] and "30 set" in days[2]
@@ -373,7 +374,7 @@ async def test_money_cards() -> None:
         assert "a pagar" in rows[-1]
         assert "mostre meus gastos de outubro" in await _text(page, tx)
         assert "exportar meus dados" in await _text(page, tx)  # the copy comes through the chat
-        assert await page.locator(f"{tx} button").count() == 0  # single page: no pager
+        assert await page.locator(f"{tx} .pager button").count() == 0  # single page: no pager
         assert await page.locator("[data-card=top_expenses] .brow").count() == 5
         mom = await _text(page, "[data-card=month_vs_month]")
         assert "€ 1.997" in mom and "▲ 9% contra setembro" in mom and "igual a setembro" in mom
@@ -590,6 +591,8 @@ async def test_merchant_search_filters_in_the_browser_and_never_leaves_it() -> N
         await page.fill("[data-card=transactions] input[type=search]", "zzz")
         assert await page.locator("[data-card=transactions] .empty:visible").count() == 1
         await page.fill("[data-card=transactions] input[type=search]", "")
+        assert await page.locator("[data-card=transactions] .entry:visible").count() == 2  # today
+        await page.click("[data-card=transactions] .daychips button:has-text('Todos')")
         assert await page.locator("[data-card=transactions] .entry:visible").count() == 6
         assert await page.evaluate("location.search") == ""  # nothing in the address
         assert len(page.api_calls) == calls  # and nothing sent
@@ -874,3 +877,85 @@ def test_the_assets_carry_no_css_reordering_and_no_table_twin() -> None:
     css, js = (root / "panel.css").read_text(), (root / "panel.js").read_text()
     assert not re.search(r"\[data-card=[^\]]*\]\s*\{[^}]*\border\s*:", css)
     assert "tableView" not in js and "table_view" not in js and "details.table" not in css
+
+
+async def test_transactions_show_one_day_at_a_time_with_the_day_filter_on_top() -> None:
+    pwm, browser, page = await _open(_handlers(), query="")
+    try:
+        await page.click('[data-tab="money"]')
+        await page.wait_for_selector("[data-card=recurring]")
+        tx = "[data-card=transactions]"
+        chips = await _all_texts(page.locator(f"{tx} .daychips button"))
+        assert chips == ["Todos", "Hoje", "1 out", "30 set"]
+        # the filter sits above the search box and the list
+        order = await page.eval_on_selector(
+            tx,
+            "c => [...c.children].map(e => e.className).filter(x => /daychips|search|list-days/.test(x))",
+        )
+        assert order[0].startswith("daychips") and order.index("list-days") > 0
+        assert (
+            await page.locator(f"{tx} .daychips button[aria-pressed=true]").inner_text() == "Hoje"
+        )
+        # daily view: only today's entries are on screen
+        assert await page.locator(f"{tx} .daygrp:visible").count() == 1
+        assert "Hoje, 2 out" in await _text(page, f"{tx} .daygrp:visible .day")
+        await page.click(f"{tx} .daychips button:has-text('1 out')")
+        assert await page.locator(f"{tx} .daygrp:visible").count() == 1
+        assert "1 out" in await _text(page, f"{tx} .daygrp:visible .day")
+        assert (
+            await page.locator(f"{tx} .daychips button[aria-pressed=true]").inner_text() == "1 out"
+        )
+        await page.click(f"{tx} .daychips button:has-text('Todos')")
+        assert await page.locator(f"{tx} .daygrp:visible").count() == 3
+        # a search looks through every day, whatever day is selected
+        await page.click(f"{tx} .daychips button:has-text('1 out')")
+        await page.fill(f"{tx} input[type=search]", "albert")
+        assert await page.locator(f"{tx} .entry:visible").count() >= 1
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_transactions_amounts_are_red_when_negative_and_green_when_positive() -> None:
+    pwm, browser, page = await _open(_handlers(), query="")
+    try:
+        await page.click('[data-tab="money"]')
+        await page.wait_for_selector("[data-card=recurring]")
+        tx = "[data-card=transactions]"
+        await page.click(f"{tx} .daychips button:has-text('Todos')")
+
+        async def color(selector):
+            return await page.eval_on_selector(selector, "e => getComputedStyle(e).color")
+
+        async def token(name):
+            return await page.evaluate(
+                "n => { const p = document.createElement('i'); p.style.color = `var(${n})`; document.body.append(p); const c = getComputedStyle(p).color; p.remove(); return c; }",
+                name,
+            )
+
+        red, green = await token("--warm-text"), await token("--good")
+        assert red != green
+        expense = f"{tx} .entry:has(.amt.neg) .amt"
+        income = f"{tx} .entry:has(.amt.pos) .amt"
+        assert await color(expense) == red and await color(income) == green
+        assert await page.locator(f"{tx} .entry .amt.neg").count() >= 1
+        # no expense is green and no income is red
+        assert await page.locator(f"{tx} .entry .amt.neg:has-text('+')").count() == 0
+        assert await page.locator(f"{tx} .entry .amt.pos:has-text('−')").count() == 0
+        # the day total follows the same rule
+        assert await color(f"{tx} .day .num.pos") == green
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_the_day_filter_fits_a_phone_without_scrolling_the_page_sideways() -> None:
+    pwm, browser, page = await _open(_handlers(), query="", size={"width": 375, "height": 812})
+    try:
+        await page.click('[data-tab="money"]')
+        await page.wait_for_selector("[data-card=transactions] .daychips")
+        assert await page.evaluate(
+            "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
+        )
+        box = await page.locator("[data-card=transactions] .daychips button").first.bounding_box()
+        assert box["height"] >= 40
+    finally:
+        await _close(pwm, browser)

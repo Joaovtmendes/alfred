@@ -419,6 +419,8 @@ SHELL.update(
         # Dinheiro
         "title_tx": _t("Lançamentos", "Boekingen", "Entries", "Écritures", "Buchungen"),
         "today_word": _t("Hoje", "Vandaag", "Today", "Aujourd'hui", "Heute"),
+        "all_days": _t("Todos", "Alle", "All", "Tous", "Alle"),
+        "day_filter": _t("Dia", "Dag", "Day", "Jour", "Tag"),
         "no_merchant": _t(
             "Sem descrição",
             "Zonder omschrijving",
