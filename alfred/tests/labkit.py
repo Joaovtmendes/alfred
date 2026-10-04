@@ -100,19 +100,19 @@ class Lab:
             await s.commit()
 
 
-@pytest.fixture
-async def lab():
-    await engine.dispose()  # each test runs in its own event loop
+async def _make_lab(language: str = "pt") -> Lab:
     phone = "3160" + uuid.uuid4().hex[:7]
     async with AsyncSessionLocal() as s:
         hh = Household(name="bugs")
         s.add(hh)
         await s.flush()
-        m = Member(household_id=hh.id, wa_phone=phone, consent_state="accepted", language="pt")
+        m = Member(household_id=hh.id, wa_phone=phone, consent_state="accepted", language=language)
         s.add(m)
         await s.commit()
-        lab = Lab(m.id, hh.id, phone)
-    yield lab
+        return Lab(m.id, hh.id, phone)
+
+
+async def _drop_lab(lab: Lab) -> None:
     async with AsyncSessionLocal() as s:
         # every table that hangs off the member, children first
         for table in reversed(Base.metadata.sorted_tables):
@@ -122,4 +122,20 @@ async def lab():
         await s.execute(delete(Member).where(Member.id == lab.member_id))
         await s.execute(delete(Household).where(Household.id == lab.household_id))
         await s.commit()
+
+
+@pytest.fixture
+async def lab():
+    await engine.dispose()  # each test runs in its own event loop
+    lab = await _make_lab()
+    yield lab
+    await _drop_lab(lab)
     await engine.dispose()  # leave no pooled connection bound to this test's loop
+
+
+@pytest.fixture
+async def lab2(lab):
+    """A second member (the partner), in the same test loop as ``lab``."""
+    other = await _make_lab()
+    yield other
+    await _drop_lab(other)

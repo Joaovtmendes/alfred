@@ -431,6 +431,14 @@
 - **fr** — Modifier
 - **de** — Ändern
 
+## `btn_home`
+
+- **pt** — Da casa
+- **nl** — Gedeeld
+- **en** — Shared
+- **fr** — Commun
+- **de** — Gemeinsam
+
 ## `btn_ok`
 
 - **pt** — Está certo
@@ -725,6 +733,328 @@
 - **en** — I couldn't find a recent expense to correct. Please re-enter it.
 - **fr** — Je n'ai pas trouvé de dépense récente à corriger. Peux-tu la re-saisir ?
 - **de** — Ich konnte keine aktuelle Ausgabe zum Korrigieren finden. Bitte gib sie erneut ein.
+
+## `couple_accepted`
+
+- **pt** — Pronto! Agora você e {name} dividem o financeiro da casa. Marque um gasto com o botão *Da casa* ou escreva *foi da casa*, e veja tudo em *gastos da casa*. A divisão padrão é 50/50 (mude com *divisão 60/40*).
+- **nl** — Klaar! Jij en {name} delen nu de huishoudfinanciën. Markeer een uitgave met de knop *Gedeeld* of schrijf *gedeeld*, en bekijk alles met *gedeelde uitgaven*. De verdeling is standaard 50/50 (wijzig met *verdeling 60/40*).
+- **en** — Done! You and {name} now share the household finances. Mark an expense with the *Shared* button or write *shared*, and see everything with *shared expenses*. The default split is 50/50 (change it with *split 60/40*).
+- **fr** — C'est fait ! Toi et {name} partagez maintenant les finances du foyer. Marque une dépense avec le bouton *Commun* ou écris *commun*, et vois tout avec *dépenses communes*. La répartition par défaut est 50/50 (change-la avec *répartition 60/40*).
+- **de** — Fertig! Du und {name} teilt jetzt die Haushaltsfinanzen. Markiere eine Ausgabe mit dem Knopf *Gemeinsam* oder schreib *gemeinsam*, und sieh alles unter *gemeinsame Ausgaben*. Die Aufteilung ist standardmäßig 50/50 (ändern mit *aufteilung 60/40*).
+
+## `couple_already`
+
+- **pt** — Você já divide o financeiro com {name}. Para encerrar, escreva *sair da casa*.
+- **nl** — Je deelt de financiën al met {name}. Schrijf *verlaat het huis* om te stoppen.
+- **en** — You already share the finances with {name}. To stop, write *leave home*.
+- **fr** — Tu partages déjà les finances avec {name}. Pour arrêter, écris *quitter le foyer*.
+- **de** — Du teilst die Finanzen schon mit {name}. Zum Beenden schreib *haushalt verlassen*.
+
+## `couple_always_cleared`
+
+- **pt** — Pronto: nenhuma categoria é da casa por padrão agora.
+- **nl** — Klaar: geen enkele categorie is nu standaard gedeeld.
+- **en** — Done: no category is shared by default now.
+- **fr** — C'est fait : aucune catégorie n'est commune par défaut.
+- **de** — Fertig: keine Kategorie ist jetzt standardmäßig gemeinsam.
+
+## `couple_always_line`
+
+- **pt** — Sempre da casa: {cats}.
+- **nl** — Altijd gedeeld: {cats}.
+- **en** — Always shared: {cats}.
+- **fr** — Toujours commun : {cats}.
+- **de** — Immer gemeinsam: {cats}.
+
+## `couple_always_none`
+
+- **pt** — Não reconheci essas categorias. Exemplos: supermercado, habitação, lazer.
+- **nl** — Ik herken die categorieën niet. Voorbeelden: supermarkt, wonen, entertainment.
+- **en** — I did not recognise those categories. Examples: groceries, housing, entertainment.
+- **fr** — Je n'ai pas reconnu ces catégories. Exemples : supermarché, logement, loisirs.
+- **de** — Ich habe diese Kategorien nicht erkannt. Beispiele: Supermarkt, Wohnen, Freizeit.
+
+## `couple_always_set`
+
+- **pt** — Combinado: {cats} ficam como da casa sempre que você lançar. Para desfazer: *nada sempre da casa*.
+- **nl** — Afgesproken: {cats} zijn voortaan gedeeld als je ze boekt. Ongedaan maken: *niets altijd gedeeld*.
+- **en** — Agreed: {cats} will be shared whenever you record them. To undo: *nothing always shared*.
+- **fr** — Convenu : {cats} seront communs chaque fois que tu les enregistres. Pour annuler : *rien de toujours commun*.
+- **de** — Abgemacht: {cats} sind künftig gemeinsam, wenn du sie buchst. Zum Rückgängigmachen: *nichts immer gemeinsam*.
+
+## `couple_btn_keep`
+
+- **pt** — Ficar
+- **nl** — Blijven
+- **en** — Stay
+- **fr** — Rester
+- **de** — Bleiben
+
+## `couple_btn_leave`
+
+- **pt** — Sair da casa
+- **nl** — Verlaten
+- **en** — Leave
+- **fr** — Quitter
+- **de** — Verlassen
+
+## `couple_btn_no`
+
+- **pt** — Recusar
+- **nl** — Weigeren
+- **en** — Decline
+- **fr** — Refuser
+- **de** — Ablehnen
+
+## `couple_btn_yes`
+
+- **pt** — Aceitar
+- **nl** — Accepteren
+- **en** — Accept
+- **fr** — Accepter
+- **de** — Annehmen
+
+## `couple_declined`
+
+- **pt** — Tudo bem, não compartilhei nada.
+- **nl** — Prima, ik heb niets gedeeld.
+- **en** — No problem, I shared nothing.
+- **fr** — Pas de souci, je n'ai rien partagé.
+- **de** — Kein Problem, ich habe nichts geteilt.
+
+## `couple_even`
+
+- **pt** — Vocês já estão em dia, não há nada para acertar.
+- **nl** — Jullie staan al quitte, er valt niets af te rekenen.
+- **en** — You are already even, there is nothing to settle.
+- **fr** — Les comptes sont déjà équilibrés, il n'y a rien à régler.
+- **de** — Alles schon ausgeglichen, es gibt nichts abzurechnen.
+
+## `couple_even_line`
+
+- **pt** — Vocês estão em dia.
+- **nl** — Jullie staan quitte.
+- **en** — You are even.
+- **fr** — Les comptes sont équilibrés.
+- **de** — Alles ausgeglichen.
+
+## `couple_gone`
+
+- **pt** — Esse convite não vale mais.
+- **nl** — Deze uitnodiging geldt niet meer.
+- **en** — That invitation is no longer valid.
+- **fr** — Cette invitation n'est plus valable.
+- **de** — Diese Einladung gilt nicht mehr.
+
+## `couple_i_owe`
+
+- **pt** — Você deve {amount} a {name}.
+- **nl** — Jij bent {name} {amount} schuldig.
+- **en** — You owe {name} {amount}.
+- **fr** — Tu dois {amount} à {name}.
+- **de** — Du schuldest {name} {amount}.
+
+## `couple_invite`
+
+- **pt** — Para dividir o financeiro, peça para a outra pessoa abrir o WhatsApp do Alfred, aceitar os termos e mandar:
+  > 
+  > *entrar casa {code}*
+  > {tap}
+  > O código vale {days} dias. Só o que cada um marcar como *da casa* fica visível para os dois; o resto continua privado.
+- **nl** — Om de financiën te delen, vraag de ander om WhatsApp van Alfred te openen, de voorwaarden te accepteren en te sturen:
+  > 
+  > *entrar casa {code}*
+  > {tap}
+  > De code is {days} dagen geldig. Alleen wat jullie als *gedeeld* markeren is voor beiden zichtbaar; de rest blijft privé.
+- **en** — To share the household finances, ask the other person to open Alfred on WhatsApp, accept the terms and send:
+  > 
+  > *join home {code}*
+  > {tap}
+  > The code is valid for {days} days. Only what each of you marks as *shared* is visible to both; everything else stays private.
+- **fr** — Pour partager les finances, demande à l'autre personne d'ouvrir Alfred sur WhatsApp, d'accepter les conditions et d'envoyer :
+  > 
+  > *rejoindre foyer {code}*
+  > {tap}
+  > Le code est valable {days} jours. Seul ce que chacun marque comme *commun* est visible par les deux ; le reste reste privé.
+- **de** — Um die Finanzen zu teilen, bitte die andere Person, Alfred auf WhatsApp zu öffnen, die Bedingungen zu akzeptieren und zu senden:
+  > 
+  > *haushalt beitreten {code}*
+  > {tap}
+  > Der Code gilt {days} Tage. Nur was ihr jeweils als *gemeinsam* markiert, sehen beide; alles andere bleibt privat.
+
+## `couple_invite_pending`
+
+- **pt** — Já existe um convite em andamento: a outra pessoa só precisa aceitar.
+- **nl** — Er loopt al een uitnodiging: de ander hoeft alleen nog te accepteren.
+- **en** — An invitation is already under way: the other person just needs to accept.
+- **fr** — Une invitation est déjà en cours : l'autre personne n'a plus qu'à accepter.
+- **de** — Es läuft schon eine Einladung: die andere Person muss nur noch annehmen.
+
+## `couple_invite_tap`
+
+- **pt** — Ou toque aqui: {url}
+  > 
+- **nl** — Of tik hier: {url}
+  > 
+- **en** — Or tap here: {url}
+  > 
+- **fr** — Ou touche ici : {url}
+  > 
+- **de** — Oder tippe hier: {url}
+  > 
+
+## `couple_join_ask`
+
+- **pt** — {name} convidou você para dividir o financeiro da casa. Funciona assim: cada um continua com seus lançamentos privados; só o que for marcado como *da casa* aparece para os dois (valor, categoria, loja e quem pagou) e o Alfred calcula quem deve a quem. Você pode sair quando quiser. Aceita?
+- **nl** — {name} nodigt je uit om de huishoudfinanciën te delen. Zo werkt het: ieder houdt eigen boekingen privé; alleen wat als *gedeeld* is gemarkeerd, zien jullie allebei (bedrag, categorie, winkel en wie betaalde) en Alfred rekent uit wie wie iets schuldig is. Je kunt altijd stoppen. Accepteer je?
+- **en** — {name} invited you to share the household finances. Here is how it works: each of you keeps your own entries private; only what is marked as *shared* shows for both (amount, category, shop and who paid) and Alfred works out who owes whom. You can leave any time. Do you accept?
+- **fr** — {name} t'invite à partager les finances du foyer. Voici comment ça marche : chacun garde ses opérations privées ; seul ce qui est marqué *commun* apparaît pour les deux (montant, catégorie, magasin et qui a payé) et Alfred calcule qui doit quoi à qui. Tu peux partir quand tu veux. Tu acceptes ?
+- **de** — {name} lädt dich ein, die Haushaltsfinanzen zu teilen. So funktioniert es: Jeder behält seine Buchungen privat; nur was als *gemeinsam* markiert ist, sehen beide (Betrag, Kategorie, Geschäft und wer bezahlt hat) und Alfred rechnet aus, wer wem wie viel schuldet. Du kannst jederzeit aussteigen. Nimmst du an?
+
+## `couple_join_bad`
+
+- **pt** — Esse código não vale: pode estar errado ou ter expirado. Peça um novo com *convidar parceiro*.
+- **nl** — Deze code werkt niet: hij is fout of verlopen. Vraag een nieuwe met *nodig partner uit*.
+- **en** — That code does not work: it may be wrong or expired. Ask for a new one with *invite partner*.
+- **fr** — Ce code ne marche pas : il est faux ou expiré. Demande-en un nouveau avec *inviter partenaire*.
+- **de** — Dieser Code gilt nicht: er ist falsch oder abgelaufen. Frag einen neuen mit *partner einladen* an.
+
+## `couple_join_has_home`
+
+- **pt** — Você já divide o financeiro com alguém. Escreva *sair da casa* antes de entrar em outra.
+- **nl** — Je deelt de financiën al met iemand. Schrijf *verlaat het huis* voordat je bij een andere aansluit.
+- **en** — You already share the finances with someone. Write *leave home* before joining another.
+- **fr** — Tu partages déjà les finances avec quelqu'un. Écris *quitter le foyer* avant d'en rejoindre un autre.
+- **de** — Du teilst die Finanzen schon mit jemandem. Schreib *haushalt verlassen*, bevor du einem anderen beitrittst.
+
+## `couple_join_self`
+
+- **pt** — Esse código é seu. Quem precisa usá-lo é a outra pessoa.
+- **nl** — Dit is jouw code. De ander moet hem gebruiken.
+- **en** — That code is yours. The other person has to use it.
+- **fr** — Ce code est le tien. C'est l'autre personne qui doit l'utiliser.
+- **de** — Das ist dein Code. Die andere Person muss ihn verwenden.
+
+## `couple_join_toomany`
+
+- **pt** — Muitas tentativas com código errado. Tente de novo em uma hora.
+- **nl** — Te veel pogingen met een foute code. Probeer het over een uur opnieuw.
+- **en** — Too many attempts with a wrong code. Try again in an hour.
+- **fr** — Trop d'essais avec un mauvais code. Réessaie dans une heure.
+- **de** — Zu viele Versuche mit falschem Code. Versuch es in einer Stunde erneut.
+
+## `couple_leave_ask`
+
+- **pt** — Quer mesmo sair da casa de {name}? Os lançamentos voltam a ser só seus e o acerto em aberto deixa de ser acompanhado. Agora: {balance} Se quiser, acerte antes com *acertamos*.
+- **nl** — Wil je echt het huis met {name} verlaten? Je boekingen zijn weer alleen van jou en het openstaande saldo wordt niet meer bijgehouden. Nu: {balance} Reken desnoods eerst af met *afgerekend*.
+- **en** — Do you really want to leave the home with {name}? Your entries become yours alone again and the open balance is no longer tracked. Now: {balance} If you like, settle first with *settled up*.
+- **fr** — Veux-tu vraiment quitter le foyer avec {name} ? Tes opérations redeviennent les tiennes et le solde ouvert n'est plus suivi. Maintenant : {balance} Si tu veux, règle d'abord avec *on a réglé*.
+- **de** — Willst du den Haushalt mit {name} wirklich verlassen? Deine Buchungen gehören wieder nur dir und der offene Saldo wird nicht mehr verfolgt. Jetzt: {balance} Rechne vorher ggf. mit *abgerechnet* ab.
+
+## `couple_left`
+
+- **pt** — Pronto, você saiu. Seus lançamentos voltaram a ser só seus. Vale avisar a outra pessoa.
+- **nl** — Klaar, je bent eruit. Je boekingen zijn weer alleen van jou. Laat het de ander weten.
+- **en** — Done, you left. Your entries are yours alone again. Worth letting the other person know.
+- **fr** — C'est fait, tu as quitté le foyer. Tes opérations redeviennent les tiennes. Pense à prévenir l'autre personne.
+- **de** — Fertig, du bist raus. Deine Buchungen gehören wieder nur dir. Sag es der anderen Person.
+
+## `couple_none`
+
+- **pt** — Você ainda não divide o financeiro com ninguém. Escreva *convidar parceiro* para começar.
+- **nl** — Je deelt de financiën nog met niemand. Schrijf *nodig partner uit* om te beginnen.
+- **en** — You do not share the finances with anyone yet. Write *invite partner* to start.
+- **fr** — Tu ne partages pas encore les finances avec quelqu'un. Écris *inviter partenaire* pour commencer.
+- **de** — Du teilst die Finanzen noch mit niemandem. Schreib *partner einladen*, um zu starten.
+
+## `couple_owes_me`
+
+- **pt** — {name} te deve {amount}.
+- **nl** — {name} is jou {amount} schuldig.
+- **en** — {name} owes you {amount}.
+- **fr** — {name} te doit {amount}.
+- **de** — {name} schuldet dir {amount}.
+
+## `couple_partner_word`
+
+- **pt** — seu par
+- **nl** — je partner
+- **en** — your partner
+- **fr** — ton partenaire
+- **de** — dein Partner
+
+## `couple_settled_me`
+
+- **pt** — Anotei o acerto: você pagou {amount} a {name}. Agora vocês estão em dia.
+- **nl** — Afrekening genoteerd: jij betaalde {name} {amount}. Jullie staan nu quitte.
+- **en** — Settlement noted: you paid {name} {amount}. You are even now.
+- **fr** — Règlement noté : tu as payé {amount} à {name}. Les comptes sont équilibrés.
+- **de** — Abrechnung notiert: du hast {name} {amount} bezahlt. Jetzt ist alles ausgeglichen.
+
+## `couple_settled_other`
+
+- **pt** — Anotei o acerto: {name} pagou {amount} a você. Agora vocês estão em dia.
+- **nl** — Afrekening genoteerd: {name} betaalde jou {amount}. Jullie staan nu quitte.
+- **en** — Settlement noted: {name} paid you {amount}. You are even now.
+- **fr** — Règlement noté : {name} t'a payé {amount}. Les comptes sont équilibrés.
+- **de** — Abrechnung notiert: {name} hat dir {amount} bezahlt. Jetzt ist alles ausgeglichen.
+
+## `couple_split_bad`
+
+- **pt** — Use dois números que somem 100, com a sua parte primeiro. Exemplo: *divisão 60/40*.
+- **nl** — Gebruik twee getallen die samen 100 zijn, jouw deel eerst. Voorbeeld: *verdeling 60/40*.
+- **en** — Use two numbers that add up to 100, your share first. Example: *split 60/40*.
+- **fr** — Utilise deux nombres dont la somme fait 100, ta part d'abord. Exemple : *répartition 60/40*.
+- **de** — Nimm zwei Zahlen, die zusammen 100 ergeben, dein Anteil zuerst. Beispiel: *aufteilung 60/40*.
+
+## `couple_split_set`
+
+- **pt** — Divisão atualizada: você {mine}% e {name} {theirs}%. Vale para o saldo todo, do passado e do futuro.
+- **nl** — Verdeling aangepast: jij {mine}% en {name} {theirs}%. Geldt voor het hele saldo, verleden en toekomst.
+- **en** — Split updated: you {mine}% and {name} {theirs}%. It applies to the whole balance, past and future.
+- **fr** — Répartition mise à jour : toi {mine}% et {name} {theirs}%. Elle vaut pour tout le solde, passé et futur.
+- **de** — Aufteilung geändert: du {mine}% und {name} {theirs}%. Die Aufteilung gilt für den ganzen Saldo, Vergangenheit und Zukunft.
+
+## `couple_stay`
+
+- **pt** — Ok, continuo com a casa de vocês.
+- **nl** — Oké, ik blijf bij jullie huis.
+- **en** — OK, I stay with your shared home.
+- **fr** — D'accord, je garde le foyer commun.
+- **de** — OK, ich bleibe bei eurem gemeinsamen Haushalt.
+
+## `couple_summary`
+
+- **pt** — Casa de vocês, {month}:
+  > Total da casa: {total}
+  > • Você pagou {mine}
+  > • {name_c} pagou {theirs}
+  > Divisão: você {pct}% e {name} {pct2}%.
+  > {balance}
+- **nl** — Jullie huis, {month}:
+  > Totaal gedeeld: {total}
+  > • Jij betaalde {mine}
+  > • {name_c} betaalde {theirs}
+  > Verdeling: jij {pct}% en {name} {pct2}%.
+  > {balance}
+- **en** — Your home, {month}:
+  > Shared total: {total}
+  > • You paid {mine}
+  > • {name_c} paid {theirs}
+  > Split: you {pct}% and {name} {pct2}%.
+  > {balance}
+- **fr** — Foyer commun, {month} :
+  > Total commun : {total}
+  > • Tu as payé {mine}
+  > • {name_c} a payé {theirs}
+  > Répartition : toi {pct}% et {name} {pct2}%.
+  > {balance}
+- **de** — Euer Haushalt, {month}:
+  > Gemeinsam gesamt: {total}
+  > • Du hast {mine} bezahlt
+  > • {name_c} hat {theirs} bezahlt
+  > Aufteilung: du {pct}% und {name} {pct2}%.
+  > {balance}
 
 ## `currency_unsupported`
 
@@ -1329,6 +1659,54 @@
   > Montant élevé — es-tu sûr du montant ?
 - **de** — 
   > Hoher Betrag — bist du dir beim Betrag sicher?
+
+## `home_auto_suffix`
+
+- **pt** —  (da casa)
+- **nl** —  (gedeeld)
+- **en** —  (shared)
+- **fr** —  (commun)
+- **de** —  (gemeinsam)
+
+## `home_entries_hint`
+
+- **pt** — Ainda não há gastos da casa neste mês. Marque um lançamento com o botão Da casa.
+- **nl** — Er zijn deze maand nog geen gedeelde uitgaven. Markeer een boeking met de knop Gedeeld.
+- **en** — No shared expenses this month yet. Mark an entry with the Shared button.
+- **fr** — Pas encore de dépenses communes ce mois-ci. Marque une opération avec le bouton Commun.
+- **de** — Diesen Monat gibt es noch keine gemeinsamen Ausgaben. Markiere eine Buchung mit dem Knopf Gemeinsam.
+
+## `home_marked`
+
+- **pt** — Marquei como da casa: {name}, {amount}. {partner} já vê esse lançamento.
+- **nl** — Gemarkeerd als gedeeld: {name}, {amount}. {partner} ziet deze boeking nu.
+- **en** — Marked as shared: {name}, {amount}. {partner} can now see this entry.
+- **fr** — Marqué comme commun : {name}, {amount}. {partner} voit maintenant cette opération.
+- **de** — Als gemeinsam markiert: {name}, {amount}. {partner} sieht diese Buchung jetzt.
+
+## `home_no_expense`
+
+- **pt** — Não achei um lançamento seu para marcar.
+- **nl** — Ik vond geen boeking van jou om te markeren.
+- **en** — I could not find an entry of yours to mark.
+- **fr** — Je n'ai trouvé aucune opération de toi à marquer.
+- **de** — Ich habe keine Buchung von dir zum Markieren gefunden.
+
+## `home_only_expense`
+
+- **pt** — Só gastos podem ser da casa, receitas não.
+- **nl** — Alleen uitgaven kunnen gedeeld zijn, inkomsten niet.
+- **en** — Only expenses can be shared, not income.
+- **fr** — Seules les dépenses peuvent être communes, pas les revenus.
+- **de** — Nur Ausgaben können gemeinsam sein, Einnahmen nicht.
+
+## `home_unmarked`
+
+- **pt** — Voltou a ser pessoal: {name}, {amount}.
+- **nl** — Weer persoonlijk: {name}, {amount}.
+- **en** — Back to personal: {name}, {amount}.
+- **fr** — De nouveau personnel : {name}, {amount}.
+- **de** — Wieder privat: {name}, {amount}.
 
 ## `income_line`
 
@@ -2589,6 +2967,14 @@
 - **fr** — C’est fait, tâche terminée.
 - **de** — Aufgabe erledigt.
 - **de** — Erledigt, Aufgabe abgeschlossen.
+
+## `task_due_suffix`
+
+- **pt** —  (prazo: {when})
+- **nl** —  (deadline: {when})
+- **en** —  (due {when})
+- **fr** —  (échéance : {when})
+- **de** —  (fällig: {when})
 
 ## `task_not_found`
 

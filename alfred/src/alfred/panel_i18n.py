@@ -991,6 +991,69 @@ SHELL.update(
 )
 
 
+# V2-10 — Casa tab (only members with a partner)
+SHELL.update(
+    {
+        "title_home_balance": _t(
+            "Casa de vocês", "Jullie huis", "Your home", "Foyer commun", "Euer Haushalt"
+        ),
+        "title_home_entries": _t(
+            "Gastos da casa no mês",
+            "Gedeelde uitgaven deze maand",
+            "Shared expenses this month",
+            "Dépenses communes ce mois-ci",
+            "Gemeinsame Ausgaben diesen Monat",
+        ),
+        "home_month_total": _t(
+            "gasto da casa no mês",
+            "gedeeld deze maand",
+            "shared this month",
+            "commun ce mois-ci",
+            "gemeinsam diesen Monat",
+        ),
+        "home_paid_me": _t(
+            "Você pagou", "Jij betaalde", "You paid", "Tu as payé", "Du hast bezahlt"
+        ),
+        "home_paid_partner": _t(
+            "{name} pagou",
+            "{name} betaalde",
+            "{name} paid",
+            "{name} a payé",
+            "{name} hat bezahlt",
+        ),
+        "home_split": _t(
+            "Divisão: você {me}% e {name} {other}%",
+            "Verdeling: jij {me}% en {name} {other}%",
+            "Split: you {me}% and {name} {other}%",
+            "Répartition : toi {me}% et {name} {other}%",
+            "Aufteilung: du {me}% und {name} {other}%",
+        ),
+        "home_owes_me": _t(
+            "{name} te deve {amount}",
+            "{name} is jou {amount} schuldig",
+            "{name} owes you {amount}",
+            "{name} te doit {amount}",
+            "{name} schuldet dir {amount}",
+        ),
+        "home_i_owe": _t(
+            "Você deve {amount} a {name}",
+            "Jij bent {name} {amount} schuldig",
+            "You owe {name} {amount}",
+            "Tu dois {amount} à {name}",
+            "Du schuldest {name} {amount}",
+        ),
+        "home_even": _t(
+            "Vocês estão em dia",
+            "Jullie staan quitte",
+            "You are even",
+            "Les comptes sont équilibrés",
+            "Alles ausgeglichen",
+        ),
+        "home_by_me": _t("você", "jij", "you", "toi", "du"),
+    }
+)
+
+
 def categories(lang: str | None) -> list[dict[str, str]]:
     """The closed list of categories for the filter (id is what the URL carries)."""
     from alfred.labels import _LABELS, category_label
@@ -999,9 +1062,17 @@ def categories(lang: str | None) -> list[dict[str, str]]:
     return [{"id": c, "label": category_label(c, lang)} for c in _LABELS]
 
 
-def tabs(lang: str | None) -> list[dict[str, str]]:
+# V2-10: the sixth tab exists only for a member with a partner (a phone fits five tabs)
+_HOME_TAB = (
+    "home",
+    {"pt": "Casa", "nl": "Huis", "en": "Home", "fr": "Foyer", "de": "Haushalt"},
+)
+
+
+def tabs(lang: str | None, home: bool = False) -> list[dict[str, str]]:
     lang = normalize_lang(lang)
-    return [{"id": i, "label": names[lang], "path": f"/api/d/{{token}}/{i}"} for i, names in _TABS]
+    items = (*_TABS, _HOME_TAB) if home else _TABS
+    return [{"id": i, "label": names[lang], "path": f"/api/d/{{token}}/{i}"} for i, names in items]
 
 
 def shell(lang: str | None) -> dict[str, str]:

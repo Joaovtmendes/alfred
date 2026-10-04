@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import Table, delete, func, select
+from sqlalchemy import Table, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.audit import audit
@@ -29,6 +29,17 @@ def _person_column(table: Table):
     return None
 
 
+def _person_condition(table: Table, member_id):
+    """WHERE clause selecting the rows that belong to a person, or None for tables that never do.
+
+    ``partner_link`` points at two people (inviter and partner): either side owns the row.
+    """
+    if "inviter_id" in table.c and "partner_id" in table.c:
+        return or_(table.c.inviter_id == member_id, table.c.partner_id == member_id)
+    col = _person_column(table)
+    return None if col is None else col == member_id
+
+
 async def erase_member(session: AsyncSession, member: Member) -> None:
     """Delete everything stored about ``member`` (and the household if nobody else is in it).
 
@@ -41,10 +52,13 @@ async def erase_member(session: AsyncSession, member: Member) -> None:
         .where(Member.household_id == household_id, Member.id != member_id)
     )
     tables = [t for t in reversed(Base.metadata.sorted_tables) if t.name not in _SKIP_ERASE]
+    from alfred.couple import release
+
+    await release(session, member_id)  # the partner's rows go back to private; links go away
     for table in tables:
-        col = _person_column(table)
-        if col is not None:
-            await session.execute(delete(table).where(col == member_id))
+        cond = _person_condition(table, member_id)
+        if cond is not None:
+            await session.execute(delete(table).where(cond))
     if not others:
         for table in tables:
             if "household_id" in table.c:
@@ -66,10 +80,9 @@ async def export_member_data(session: AsyncSession, member: Member) -> dict[str,
         if table.name == "member":
             cond = table.c.id == member.id
         else:
-            col = _person_column(table)
-            if col is None:
+            cond = _person_condition(table, member.id)
+            if cond is None:
                 continue
-            cond = col == member.id
         rows = (await session.execute(select(table).where(cond))).mappings().all()
         out["tables"][table.name] = [
             {k: v for k, v in dict(r).items() if k not in _SECRET_COLUMNS} for r in rows

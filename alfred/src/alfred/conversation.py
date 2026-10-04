@@ -42,6 +42,13 @@ from alfred.clock import (
     week_start,
     weekday_abbr,
 )
+from alfred.couple import STRINGS as _COUPLE_STRINGS
+from alfred.couple import (
+    active_link,
+    handle_couple_button,
+    handle_couple_command,
+    is_home_by_default,
+)
 from alfred.insights import STRINGS as _INSIGHT_STRINGS
 from alfred.insights import handle_insight_command
 from alfred.iou import STRINGS as _IOU_STRINGS
@@ -1514,6 +1521,7 @@ _STRINGS.update(_SCORE_STRINGS)  # V2-09
 _STRINGS.update(_ANALYSIS_STRINGS)  # V2-14
 _STRINGS.update(_INSIGHT_STRINGS)  # V2-15
 _STRINGS.update(_IOU_STRINGS)  # V2-15
+_STRINGS.update(_COUPLE_STRINGS)  # V2-10
 _STRINGS.update(_TRAINING_STRINGS)  # V2-35
 _STRINGS.update(_TRIPPLAN_STRINGS)  # V2-35
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
@@ -3592,6 +3600,12 @@ async def _handle_button_reply(
         await _save_outbound(member, undo_text, session)
         return True
 
+    if action in ("couple_yes", "couple_no", "couple_end", "couple_keep", "home"):  # V2-10
+        couple_btn = await handle_couple_button(action, raw_id, member, lang, session)
+        await send_text(to, couple_btn.text)
+        await _save_outbound(member, couple_btn.text, session)
+        return True
+
     if action in ("plan_ok", "plan_cancel"):  # V2-35 training plan preview
         plan_out = await handle_training_button(action, raw_id, member, lang, session)
         await send_text(to, plan_out.text)
@@ -3980,6 +3994,16 @@ async def handle_inbound(
         if iou_reply is not None:
             await send_text(to, iou_reply)
             await _save_outbound(member, iou_reply, session)
+            return
+
+        # 4e-0q. V2-10 — casal: "convidar parceiro" / "entrar casa ABC123" / "gastos da casa" / "foi da casa" / "acertamos"
+        couple_out = await handle_couple_command(body_plain, member, lang, session)
+        if couple_out is not None:
+            if couple_out.buttons:
+                await send_buttons(to, couple_out.text, couple_out.buttons)
+            else:
+                await send_text(to, couple_out.text)
+            await _save_outbound(member, couple_out.text, session)
             return
 
         # 4e-0o. V2-18 — "o que você me enviou hoje" / "lembretes que mandou"
@@ -5038,6 +5062,10 @@ async def handle_inbound(
             active_trip = await session.scalar(
                 select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
             )
+            couple_link = await active_link(session, member.id) if txn_type == "expense" else None
+            shared_now = couple_link is not None and await is_home_by_default(
+                session, member, expense_data["category"]
+            )
             expense = Expense(
                 id=uuid.uuid4(),
                 member_id=member.id,
@@ -5050,6 +5078,7 @@ async def handle_inbound(
                 description=expense_data["description"],
                 expense_date=expense_date,
                 trip_id=active_trip.id if active_trip else None,
+                shared=shared_now,
             )
             session.add(expense)
 
@@ -5059,6 +5088,8 @@ async def handle_inbound(
             amt_fmt = _fmt_eur(expense_data["amount"])
             key = "income_recorded" if txn_type == "income" else "expense_recorded"
             reply = _t(key, lang, amount=amt_fmt, name=name)
+            if shared_now:
+                reply += _t("home_auto_suffix", lang)
             if days_ago > 0:
                 reply += _t("days_ago_suffix", lang, n=days_ago)
             if txn_type == "expense":
@@ -5109,14 +5140,15 @@ async def handle_inbound(
                 reply += _t("high_value_hint", lang)
             # Reply buttons carry the expense id: no pending state needed to undo/edit.
             first = ("ok" if high_value else "edit", "btn_ok" if high_value else "btn_edit")
-            await send_buttons(
-                to,
-                reply,
-                [
-                    (f"{first[0]}:{expense.id}", _t(first[1], lang)),
-                    (f"undo:{expense.id}", _t("btn_undo", lang)),
-                ],
-            )
+            expense_buttons = [
+                (f"{first[0]}:{expense.id}", _t(first[1], lang)),
+                (f"undo:{expense.id}", _t("btn_undo", lang)),
+            ]
+            if (
+                couple_link is not None and not shared_now
+            ):  # V2-10: a third button, only for couples
+                expense_buttons.append((f"home:{expense.id}", _t("btn_home", lang)))
+            await send_buttons(to, reply, expense_buttons)
             await _save_outbound(member, reply, session)
             logger.info(
                 "conversation.expense_recorded",

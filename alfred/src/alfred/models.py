@@ -91,6 +91,9 @@ class Member(Base):
     )
     export_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # V2-10 — categories that are "da casa" by default for this member (canonical identifiers)
+    home_categories: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True, default=None)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -196,6 +199,11 @@ class Expense(Base):
     # settled states (``SETTLED``); the pending ones are shown apart as "forecast".
     status: Mapped[str] = mapped_column(
         String(12), nullable=False, default=_default_status, server_default="paid"
+    )
+    # V2-10 — "da casa": counted in the couple's shared balance while the member has an active
+    # ``PartnerLink``. Personal (False) by default; nothing is shared unless the member says so.
+    shared: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
     )
 
     member: Mapped[Member] = relationship(back_populates="expenses")
@@ -639,6 +647,62 @@ class Iou(Base):
     direction: Mapped[str] = mapped_column(String(12), nullable=False)
     note: Mapped[str | None] = mapped_column(String(120))
     settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class PartnerLink(Base):
+    """V2-10 — two members who share the household finances (a couple).
+
+    ``status``: ``invited`` (a code was issued, nobody used it yet) → ``pending`` (the partner
+    typed the code and has to accept) → ``active`` → ``ended``. ``inviter_pct`` is the share of
+    the shared expenses the inviter pays (the partner pays the rest); 50 by default.
+    Deleting either member deletes the link (and its settlements).
+    """
+
+    __tablename__ = "partner_link"
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_partner_link_code"),
+        Index("ix_partner_link_inviter", "inviter_id"),
+        Index("ix_partner_link_partner", "partner_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    inviter_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id", ondelete="CASCADE"), nullable=False
+    )
+    partner_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id", ondelete="CASCADE"), nullable=True
+    )
+    code: Mapped[str] = mapped_column(String(8), nullable=False)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="invited")
+    inviter_pct: Mapped[int] = mapped_column(nullable=False, default=50, server_default="50")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class PartnerSettlement(Base):
+    """V2-10 — money one partner handed to the other to settle the shared balance."""
+
+    __tablename__ = "partner_settlement"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    link_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("partner_link.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # the member who paid (the debtor at that moment)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id", ondelete="CASCADE"), nullable=False
+    )
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -202,12 +202,14 @@
     water: "title_water", workouts: "title_workouts",
     goals: "title_goals", trip: "title_trip",
     training: "title_training", itinerary: "title_itinerary", packing: "title_packing", plan_budget: "title_planbudget",
+    home_balance: "title_home_balance", home_entries: "title_home_entries",
   };
   const SPANS = {
     summary: { balance: "s7", categories: "s5", goals: "s5", week: "s7", upcoming: "s12" },
     agenda: { week: "s7", tasks: "s5", month_map: "s7", reminders: "s5", notes: "s12" },
     health: { goals: "s7", workouts: "s5", training: "s12", water: "s12" },
     trips: { trip: "s7", packing: "s5", itinerary: "s7", plan_budget: "s5", trips_past: "s12" },
+    home: { home_balance: "s5", home_entries: "s7" },
     money: { transactions: "s7", month_vs_month: "s5", top_expenses: "s5", categories: "s7", budgets: "s7", fixed_variable: "s5", owed: "s5", daily: "s7", recurring: "s12" },
   };
 
@@ -406,6 +408,42 @@
         c.append(head, mine);
       }
       phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    home_balance(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_home_balance, span);
+      heroMoney(c, v.month_total, true);
+      c.append(el("div", "sub", T.home_month_total));
+      const tiles = el("div", "tiles");
+      for (const [k, val] of [[T.home_paid_me, v.paid_me], [fmt(T.home_paid_partner, { name: v.partner }), v.paid_partner]]) {
+        const t = el("div", "tile");
+        t.append(el("div", "k", k), el("div", "big-num", money(val)));
+        tiles.append(t);
+      }
+      c.append(tiles);
+      c.append(el("div", "cap", fmt(T.home_split, { me: v.my_pct, other: v.partner_pct, name: v.partner })));
+      const line = v.balance > 0 ? fmt(T.home_owes_me, { name: v.partner, amount: money(v.balance) })
+        : (v.balance < 0 ? fmt(T.home_i_owe, { name: v.partner, amount: money(-v.balance) }) : T.home_even);
+      phraseBlock(c, { text: line, severity: "info", chat: v.balance !== 0 ? "acertamos" : null });
+      return c;
+    },
+
+    home_entries(card, span) {
+      const c = cardShell(card, T.title_home_entries, span);
+      const list = el("div", "list");
+      for (const it of card.items) {
+        const row = el("div", "item person");
+        const title = it.merchant || it.label;
+        row.append(el("div", "avatar", (Array.from(title)[0] || "?").toUpperCase()));
+        const body = el("div");
+        body.append(el("div", "t", title));
+        body.append(el("div", "s", dayShort(it.date) + " · " + (it.who === "me" ? T.home_by_me : card.values.partner)));
+        row.append(body, el("div", "amt", money(it.amount)));
+        list.append(row);
+      }
+      c.append(list);
       return c;
     },
 
