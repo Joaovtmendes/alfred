@@ -232,6 +232,23 @@ FILE_CASES: list[tuple[str, list[str], str, dict]] = [
         },
     ),
     (
+        "home-contract-energy",
+        [
+            "ENECO - Bevestiging energiecontract",
+            "Product: Vast stroom en gas 1 jaar",
+            "Maandbedrag voorschot: EUR 142,00",
+            "Looptijd tot: 2027-09-30",
+        ],
+        "image",
+        {
+            "kind": "home_contract",
+            "contract_type": "energy",
+            "monthly_amount": 142.0,
+            "end_date": "2027-09-30",
+            "contains": ["eneco"],
+        },
+    ),
+    (
         "plan-weekdays",
         [
             "PLANO DE TREINO",
@@ -317,6 +334,14 @@ def check_file(got: dict | None, expected: dict) -> str | None:
             return f"total {got.get('total')!r} unreadable"
         if got.get("warranty_months") != expected["warranty_months"]:
             return f"warranty {got.get('warranty_months')!r} != {expected['warranty_months']}"
+        provider = str(got.get("provider") or "").lower()
+        if any(word not in provider for word in expected.get("contains", [])):
+            return f"provider {provider!r} lacks {expected['contains']}"
+    if expected["kind"] == "home_contract":
+        if got.get("end_date") != expected["end_date"]:
+            return f"end_date {got.get('end_date')!r} != {expected['end_date']!r}"
+        if got.get("contract_type") != expected["contract_type"]:
+            return f"type {got.get('contract_type')!r} != {expected['contract_type']!r}"
         provider = str(got.get("provider") or "").lower()
         if any(word not in provider for word in expected.get("contains", [])):
             return f"provider {provider!r} lacks {expected['contains']}"

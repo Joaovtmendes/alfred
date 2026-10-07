@@ -566,6 +566,7 @@ First decide the kind:
 - "receipt": a shop receipt, restaurant bill or invoice for one purchase of goods or food.
 - "service_invoice": an invoice or bill for a SERVICE that was carried out (repair, plumber,
   installation, cleaning, painting, maintenance...), as opposed to goods bought in a shop.
+- "home_contract": a supply contract or contract confirmation for energy, gas or internet.
 - "other": anything else (selfie, screenshot, document...).
 For a workout plan return:
 {"kind": "workout_plan", "days": [{"weekday": "monday".."sunday" or null, "title": string or "",
@@ -588,6 +589,12 @@ For a service invoice return:
  "service_date": "YYYY-MM-DD" or null, "warranty_months": integer or null}
 - warranty_months only when a warranty period is printed on the document (convert years to
   months); never guess one. service_date is the date of the work or of the invoice, only if printed.
+For a contract of the home (electricity, gas or internet supply contract) return:
+{"kind": "home_contract", "contract_type": "energy" | "gas" | "internet",
+ "provider": supplier name, "monthly_amount": number or null, "currency": ISO code or null,
+ "end_date": "YYYY-MM-DD" or null}
+- end_date is the end of the current contract term, only if printed; never guess it.
+- monthly_amount is the monthly payment (advance) only if printed.
 For anything else return {"kind": "other"}.
 """
 
