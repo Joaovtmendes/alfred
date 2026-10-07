@@ -207,6 +207,7 @@
     books_year: "title_books_year", books_categories: "title_books_categories", books_fixed: "title_books_fixed",
     books_emergency: "title_books_emergency", books_pl: "title_books_pl", books_btw: "title_books_btw",
     books_deductible: "title_books_deductible", books_reserve: "title_books_reserve",
+    books_receivables: "title_books_receivables",
   };
   const SPANS = {
     summary: { balance: "s7", categories: "s5", goals: "s5", week: "s7", upcoming: "s12" },
@@ -214,7 +215,7 @@
     health: { goals: "s7", workouts: "s5", training: "s12", water: "s12" },
     trips: { trip: "s7", packing: "s5", itinerary: "s7", plan_budget: "s5", trips_past: "s12" },
     home: { home_balance: "s5", home_entries: "s7" },
-    books: { books_year: "s7", books_categories: "s5", books_fixed: "s5", books_emergency: "s7", books_pl: "s7", books_btw: "s5", books_deductible: "s5", books_reserve: "s7" },
+    books: { books_year: "s7", books_categories: "s5", books_fixed: "s5", books_emergency: "s7", books_pl: "s7", books_btw: "s5", books_deductible: "s5", books_reserve: "s7", books_receivables: "s12" },
     money: { transactions: "s7", month_vs_month: "s5", top_expenses: "s5", categories: "s7", budgets: "s7", fixed_variable: "s5", owed: "s5", daily: "s7", recurring: "s12" },
   };
 
@@ -580,6 +581,26 @@
       for (const it of card.items) {
         const r = el("div", "cat");
         r.append(el("span", "n", it.label), track((it.amount / top) * 100, "", true), el("span", "v", money0(it.amount)));
+        rows.append(r);
+      }
+      c.append(rows);
+      return c;
+    },
+
+    books_receivables(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_books_receivables, span);
+      heroMoney(c, v.open, false);
+      c.append(el("div", "sub", fmt(T.books_recv_open, { n: v.count })));
+      if (v.overdue_count > 0) c.append(el("div", "cap", fmt(T.books_recv_late, { amount: money0(v.overdue) })));
+      const rows = el("div", "rows");
+      for (const it of card.items) {
+        const d = it.due.slice(8, 10) + "/" + it.due.slice(5, 7);
+        const r = el("div", "cat");
+        r.append(
+          el("span", "n", it.label + " · " + fmt(it.overdue ? T.books_recv_overdue : T.books_recv_due, { date: d })),
+          el("span", "v", money0(it.amount))
+        );
         rows.append(r);
       }
       c.append(rows);

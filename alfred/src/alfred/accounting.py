@@ -465,7 +465,56 @@ async def panel_cards(
                 "books_reserve", _t("books_reserve_hint", lang), _t("books_reserve_cmd", lang)
             )
         cards.append(reserve_card)
+    cards.extend(await _receivables_card(session, member, today))
     return cards
+
+
+async def _receivables_card(
+    session: AsyncSession, member: Member, today: date
+) -> list[dict[str, object]]:
+    """V2-12 part 2 — what clients still owe (only when there is an open invoice)."""
+    from sqlalchemy import select as _select
+
+    from alfred.invoices import _label, open_totals
+    from alfred.models import ClientInvoice
+
+    totals = await open_totals(session, member.id, today)
+    if not totals["count"]:
+        return []
+    rows = (
+        (
+            await session.execute(
+                _select(ClientInvoice)
+                .where(ClientInvoice.member_id == member.id, ClientInvoice.paid_on.is_(None))
+                .order_by(ClientInvoice.due_on)
+                .limit(8)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        {
+            "id": "books_receivables",
+            "empty": False,
+            "values": {
+                "open": _f(totals["open"]),
+                "count": totals["count"],
+                "overdue": _f(totals["overdue"]),
+                "overdue_count": totals["overdue_count"],
+            },
+            "items": [
+                {
+                    "label": _label(r),
+                    "amount": _f(_dec(r.amount)),
+                    "due": r.due_on.isoformat(),
+                    "overdue": r.due_on < today,
+                }
+                for r in rows
+            ],
+            "phrase": None,
+        }
+    ]
 
 
 # ── export for the accountant ─────────────────────────────────────────────────
@@ -754,6 +803,18 @@ async def _summary(member: Member, lang: str, session: AsyncSession, today: date
             text += _t("acct_summary_unrated", lang, n=bs["unrated"])
         if res is not None:
             text += _t("acct_summary_reserve", lang, pct=member.tax_reserve_pct, reserve=_fmt(res))
+    from alfred.invoices import open_totals
+
+    owed = await open_totals(session, member.id, today)
+    if owed["count"]:
+        late = (
+            _t("acct_summary_invoices_late", lang, late=_fmt(owed["overdue"]))
+            if owed["overdue_count"]
+            else ""
+        )
+        text += _t(
+            "acct_summary_invoices", lang, open=_fmt(owed["open"]), n=owed["count"], late=late
+        )
     text += _t("acct_summary_tail", lang)
     audit(session, "accounting_summary", member.id)
     return Reply(text, [])

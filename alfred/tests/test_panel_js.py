@@ -585,6 +585,11 @@ async def test_merchant_search_filters_in_the_browser_and_never_leaves_it() -> N
     try:
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=transactions] input[type=search]")
+        every_tab = {"summary", "money", "agenda", "health", "trips", "books"}
+        for _ in range(200):  # the background fetch of the other tabs may still be running
+            if every_tab <= {u.split("/")[-1].split("?")[0] for _, u in page.api_calls}:
+                break
+            await page.wait_for_timeout(50)
         calls = len(page.api_calls)
         await page.fill("[data-card=transactions] input[type=search]", "alb")
         assert await page.locator("[data-card=transactions] .entry:visible").count() == 1

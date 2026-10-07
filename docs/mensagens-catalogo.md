@@ -237,6 +237,27 @@
 - **fr** — Il n'y a pas encore d'écritures cette année pour la comptabilité.
 - **de** — In diesem Jahr gibt es noch keine Buchungen für die Buchhaltung.
 
+## `acct_summary_invoices`
+
+- **pt** — 
+  > A receber de clientes: {open} ({n} faturas){late}
+- **nl** — 
+  > Te ontvangen van klanten: {open} ({n} facturen){late}
+- **en** — 
+  > Owed by clients: {open} ({n} invoices){late}
+- **fr** — 
+  > À recevoir des clients : {open} ({n} factures){late}
+- **de** — 
+  > Offen bei Kunden: {open} ({n} Rechnungen){late}
+
+## `acct_summary_invoices_late`
+
+- **pt** — , {late} em atraso
+- **nl** — , {late} te laat
+- **en** — , {late} overdue
+- **fr** — , dont {late} en retard
+- **de** — , davon {late} überfällig
+
 ## `acct_summary_reserve`
 
 - **pt** — 
@@ -837,6 +858,14 @@
 - **en** — Shared
 - **fr** — Commun
 - **de** — Gemeinsam
+
+## `btn_inv_undo`
+
+- **pt** — Desfazer
+- **nl** — Ongedaan maken
+- **en** — Undo
+- **fr** — Annuler
+- **de** — Rückgängig
 
 ## `btn_ok`
 
@@ -2422,6 +2451,166 @@
 - **de** — Schön, {amount} von *{name}* sind eingegangen.
 - **de** — Einnahme notiert: {amount} von *{name}*.
 - **de** — Eingetragen: {amount} von *{name}*.
+
+## `inv_already_paid`
+
+- **pt** — Essa fatura já está paga.
+- **nl** — Die factuur is al betaald.
+- **en** — That invoice is already paid.
+- **fr** — Cette facture est déjà payée.
+- **de** — Diese Rechnung ist schon bezahlt.
+
+## `inv_ambiguous`
+
+- **pt** — Achei mais de uma: {names}. Diga o número da fatura.
+- **nl** — Ik vond er meer dan één: {names}. Geef het factuurnummer.
+- **en** — I found more than one: {names}. Tell me the invoice number.
+- **fr** — J'en ai trouvé plusieurs : {names}. Donne le numéro de la facture.
+- **de** — Ich habe mehrere gefunden: {names}. Nenne die Rechnungsnummer.
+
+## `inv_bad_amount`
+
+- **pt** — Não consegui ler o valor. Exemplo: *fatura nº 2026-014 para Acme 1210 btw 21 vence em 30 dias*.
+- **nl** — Ik kon het bedrag niet lezen. Voorbeeld: *factuur nr 2026-014 voor Acme 1210 btw 21 vervalt over 30 dagen*.
+- **en** — I couldn't read the amount. Example: *invoice no 2026-014 to Acme 1210 btw 21 due in 30 days*.
+- **fr** — Je n'ai pas pu lire le montant. Exemple : *facture n° 2026-014 pour Acme 1210 btw 21 échéance dans 30 jours*.
+- **de** — Ich konnte den Betrag nicht lesen. Beispiel: *rechnung nr 2026-014 an Acme 1210 btw 21 fällig in 30 tagen*.
+
+## `inv_bad_btw`
+
+- **pt** — O BTW pode ser 0, 9 ou 21.
+- **nl** — De btw kan 0, 9 of 21 zijn.
+- **en** — VAT can be 0, 9 or 21.
+- **fr** — La TVA peut être 0, 9 ou 21.
+- **de** — Die MwSt. kann 0, 9 oder 21 sein.
+
+## `inv_bad_due`
+
+- **pt** — Não entendi o vencimento. Use *vence em 30 dias* ou *vence 15/11*. Sem vencimento, uso 30 dias.
+- **nl** — Ik begreep de vervaldatum niet. Gebruik *vervalt over 30 dagen* of *vervalt 15/11*. Zonder datum gebruik ik 30 dagen.
+- **en** — I didn't understand the due date. Use *due in 30 days* or *due 15/11*. Without one I use 30 days.
+- **fr** — Je n'ai pas compris l'échéance. Utilise *échéance dans 30 jours* ou *échéance 15/11*. Sans échéance, j'utilise 30 jours.
+- **de** — Ich habe das Fälligkeitsdatum nicht verstanden. Nutze *fällig in 30 tagen* oder *fällig 15/11*. Ohne Angabe nehme ich 30 Tage.
+
+## `inv_created`
+
+- **pt** — Fatura registrada: {who}, {amount}, vence em {due}. Quando receber, escreva *fatura {ref} paga*.
+- **nl** — Factuur geregistreerd: {who}, {amount}, vervalt op {due}. Zodra je betaald bent, schrijf je *factuur {ref} betaald*.
+- **en** — Invoice registered: {who}, {amount}, due {due}. When you get paid, write *invoice {ref} paid*.
+- **fr** — Facture enregistrée : {who}, {amount}, échéance le {due}. Quand tu es payé, écris *facture {ref} payée*.
+- **de** — Rechnung erfasst: {who}, {amount}, fällig am {due}. Sobald du bezahlt wirst, schreib *rechnung {ref} bezahlt*.
+
+## `inv_deleted`
+
+- **pt** — Fatura de {who} apagada.
+- **nl** — Factuur van {who} verwijderd.
+- **en** — Invoice from {who} deleted.
+- **fr** — Facture de {who} supprimée.
+- **de** — Rechnung von {who} gelöscht.
+
+## `inv_due_on`
+
+- **pt** — vence {date}
+- **nl** — vervalt {date}
+- **en** — due {date}
+- **fr** — échéance {date}
+- **de** — fällig {date}
+
+## `inv_limit`
+
+- **pt** — Você já tem {n} faturas abertas, o máximo. Marque algumas como pagas ou apague antes de registrar outra.
+- **nl** — Je hebt al {n} openstaande facturen, het maximum. Markeer er eerst een paar als betaald of verwijder ze.
+- **en** — You already have {n} open invoices, the maximum. Mark some as paid or delete a few first.
+- **fr** — Tu as déjà {n} factures ouvertes, le maximum. Marque-en quelques-unes comme payées ou supprime-les d'abord.
+- **de** — Du hast bereits {n} offene Rechnungen, das Maximum. Markiere einige als bezahlt oder lösche sie zuerst.
+
+## `inv_list_empty`
+
+- **pt** — Você não tem faturas abertas. Para registrar: *fatura para Acme 1210 btw 21 vence em 30 dias*.
+- **nl** — Je hebt geen openstaande facturen. Registreren kan zo: *factuur voor Acme 1210 btw 21 vervalt over 30 dagen*.
+- **en** — You have no open invoices. To register one: *invoice to Acme 1210 btw 21 due in 30 days*.
+- **fr** — Tu n'as aucune facture ouverte. Pour en enregistrer une : *facture pour Acme 1210 btw 21 échéance dans 30 jours*.
+- **de** — Du hast keine offenen Rechnungen. Zum Erfassen: *rechnung an Acme 1210 btw 21 fällig in 30 tagen*.
+
+## `inv_list_more`
+
+- **pt** — … e mais {n}.
+- **nl** — … en nog {n}.
+- **en** — … and {n} more.
+- **fr** — … et {n} de plus.
+- **de** — … und {n} weitere.
+
+## `inv_list_overdue`
+
+- **pt** — Em atraso: {amount} ({n}).
+- **nl** — Te laat: {amount} ({n}).
+- **en** — Overdue: {amount} ({n}).
+- **fr** — En retard : {amount} ({n}).
+- **de** — Überfällig: {amount} ({n}).
+
+## `inv_list_title`
+
+- **pt** — Faturas abertas:
+- **nl** — Openstaande facturen:
+- **en** — Open invoices:
+- **fr** — Factures ouvertes :
+- **de** — Offene Rechnungen:
+
+## `inv_list_total`
+
+- **pt** — Em aberto: {amount} ({n}).
+- **nl** — Openstaand: {amount} ({n}).
+- **en** — Outstanding: {amount} ({n}).
+- **fr** — En attente : {amount} ({n}).
+- **de** — Offen: {amount} ({n}).
+
+## `inv_no_btw`
+
+- **pt** —  Sem BTW informado: o valor conta como total. Para informar, escreva por exemplo *fatura para Acme 1210 btw 21*.
+- **nl** —  Geen btw opgegeven: het bedrag telt als totaal. Voeg bijvoorbeeld *btw 21* toe.
+- **en** —  No VAT given: the amount counts as the total. Add for example *btw 21* next time.
+- **fr** —  TVA non indiquée : le montant compte comme total. Ajoute par exemple *btw 21* la prochaine fois.
+- **de** —  Keine MwSt. angegeben: der Betrag gilt als Gesamtbetrag. Ergänze beim nächsten Mal zum Beispiel *btw 21*.
+
+## `inv_not_found`
+
+- **pt** — Não achei essa fatura. Escreva *faturas* para ver as abertas.
+- **nl** — Ik vond die factuur niet. Schrijf *facturen* om de openstaande te zien.
+- **en** — I couldn't find that invoice. Write *invoices* to see the open ones.
+- **fr** — Je n'ai pas trouvé cette facture. Écris *factures* pour voir les ouvertes.
+- **de** — Ich habe diese Rechnung nicht gefunden. Schreib *rechnungen*, um die offenen zu sehen.
+
+## `inv_number_taken`
+
+- **pt** — Você já tem uma fatura com o número {number}.
+- **nl** — Je hebt al een factuur met nummer {number}.
+- **en** — You already have an invoice numbered {number}.
+- **fr** — Tu as déjà une facture numéro {number}.
+- **de** — Du hast bereits eine Rechnung mit der Nummer {number}.
+
+## `inv_overdue_on`
+
+- **pt** — venceu {date}
+- **nl** — vervallen {date}
+- **en** — overdue since {date}
+- **fr** — échue depuis {date}
+- **de** — überfällig seit {date}
+
+## `inv_paid`
+
+- **pt** — Fatura de {who} marcada como paga: {amount}. Entrou como receita da empresa.
+- **nl** — Factuur van {who} als betaald gemarkeerd: {amount}. Verwerkt als zakelijke inkomsten.
+- **en** — Invoice from {who} marked as paid: {amount}. Booked as business income.
+- **fr** — Facture de {who} marquée comme payée : {amount}. Enregistrée comme revenu professionnel.
+- **de** — Rechnung von {who} als bezahlt markiert: {amount}. Als betriebliche Einnahme gebucht.
+
+## `inv_reopened`
+
+- **pt** — Fatura de {who} reaberta e a receita removida.
+- **nl** — Factuur van {who} heropend en de inkomsten verwijderd.
+- **en** — Invoice from {who} reopened and the income removed.
+- **fr** — Facture de {who} rouverte et le revenu supprimé.
+- **de** — Rechnung von {who} wieder geöffnet und die Einnahme entfernt.
 
 ## `invalid_amount_check`
 

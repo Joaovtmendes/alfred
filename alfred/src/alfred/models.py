@@ -979,3 +979,36 @@ class ReplyFeedback(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class ClientInvoice(Base):
+    """V2-12 part 2 — an invoice the member issued to a client, tracked until it is paid.
+
+    The app does not issue invoices: the member registers what they already sent. ``amount`` is
+    the total including VAT. Paying one books a business income entry (``income_id``), so the
+    accounting tab and the VAT quarter see it; undoing the payment removes that entry again.
+    """
+
+    __tablename__ = "client_invoice"
+    __table_args__ = (UniqueConstraint("member_id", "number", name="uq_client_invoice_number"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("member.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    client: Mapped[str] = mapped_column(String(60), nullable=False)
+    number: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
+    btw_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    issued_on: Mapped[date] = mapped_column(Date, nullable=False)
+    due_on: Mapped[date] = mapped_column(Date, nullable=False)
+    paid_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    income_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("expense.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

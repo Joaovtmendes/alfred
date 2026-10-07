@@ -63,6 +63,8 @@ from alfred.followup import (
 )
 from alfred.insights import STRINGS as _INSIGHT_STRINGS
 from alfred.insights import handle_insight_command
+from alfred.invoices import STRINGS as _INVOICE_STRINGS
+from alfred.invoices import handle_invoice_button, handle_invoice_command
 from alfred.iou import STRINGS as _IOU_STRINGS
 from alfred.iou import handle_iou_command
 from alfred.labels import activity_label as activity_name
@@ -1554,6 +1556,7 @@ _STRINGS.update(_TRIPPLAN_STRINGS)  # V2-35
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
 _STRINGS.update(_BATCH_STRINGS)  # V2-17
 _STRINGS.update(_FOLLOWUP_STRINGS)  # V2-20 / V2-23
+_STRINGS.update(_INVOICE_STRINGS)  # V2-12 part 2
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
 
@@ -3621,6 +3624,12 @@ async def _handle_button_reply(
         await _save_outbound(member, deeper_text, session)
         return True
 
+    if action in ("inv_undo", "inv_unpay"):  # V2-12 part 2 undo of an invoice step
+        inv_text = await handle_invoice_button(action, raw_id, member, lang, session)
+        await send_text(to, inv_text)
+        await _save_outbound(member, inv_text, session)
+        return True
+
     if action in ("fb_up", "fb_down", "fb_r"):  # V2-23 thumbs up/down and the reason
         fb = await handle_feedback_button(action, raw_id, member, lang, session)
         if fb.buttons:
@@ -4101,6 +4110,18 @@ async def handle_inbound(
         if acct_out is not None:
             await send_text(to, acct_out.text)
             await _save_outbound(member, acct_out.text, session)
+            return
+
+        # 4e-0s2. V2-12 part 2 — client invoices: "fatura para Acme 1210 btw 21" / "faturas" / "fatura X paga"
+        inv_out = await handle_invoice_command(
+            message.body or "", body_plain, member, lang, session, today_local()
+        )
+        if inv_out is not None:
+            if inv_out.buttons:
+                await send_buttons(to, inv_out.text, inv_out.buttons)
+            else:
+                await send_text(to, inv_out.text)
+            await _save_outbound(member, inv_out.text, session)
             return
 
         # 4e-0o. V2-18 — "o que você me enviou hoje" / "lembretes que mandou"
