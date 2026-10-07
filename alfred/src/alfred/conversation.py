@@ -3698,9 +3698,12 @@ async def _handle_button_reply(
         await _save_outbound(member, imp_btn.text, session)
         return True
 
-    if action in ("plan_ok", "plan_cancel"):  # V2-35 training plan preview
+    if action in ("plan_ok", "plan_cancel", "plan_adjust"):  # V2-35 training plan preview
         plan_out = await handle_training_button(action, raw_id, member, lang, session)
-        await send_text(to, plan_out.text)
+        if plan_out.buttons:
+            await send_buttons(to, plan_out.text, plan_out.buttons)
+        else:
+            await send_text(to, plan_out.text)
         await _save_outbound(member, plan_out.text, session)
         return True
 

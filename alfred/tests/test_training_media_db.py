@@ -119,7 +119,7 @@ async def test_a_photo_or_pdf_gives_a_preview_and_saves_only_on_confirm(
     assert "Supino reto 4x10 · 60 kg" in out and "Costas" in out
     assert "Nada foi salvo" in out
     (btn,) = lab.buttons[-1:]
-    assert [b[0].split(":")[0] for b in btn] == ["plan_ok", "plan_cancel"]
+    assert [b[0].split(":")[0] for b in btn] == ["plan_ok", "plan_adjust", "plan_cancel"]
     assert await _count(lab, WorkoutPlan) == 0
     # the model got the bytes and the type, nothing else
     args = lab.reading.await_args
