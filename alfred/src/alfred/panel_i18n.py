@@ -1119,6 +1119,37 @@ SHELL.update(
             "Réserve d'impôt",
             "Steuerrücklage",
         ),
+        "title_books_receivables": _t(
+            "A receber de clientes",
+            "Te ontvangen van klanten",
+            "Owed by clients",
+            "À recevoir des clients",
+            "Offen bei Kunden",
+        ),
+        "books_recv_open": _t(
+            "Em aberto ({n})",
+            "Openstaand ({n})",
+            "Outstanding ({n})",
+            "En attente ({n})",
+            "Offen ({n})",
+        ),
+        "books_recv_late": _t(
+            "Em atraso: {amount}",
+            "Te laat: {amount}",
+            "Overdue: {amount}",
+            "En retard : {amount}",
+            "Überfällig: {amount}",
+        ),
+        "books_recv_due": _t(
+            "vence {date}", "vervalt {date}", "due {date}", "échéance {date}", "fällig {date}"
+        ),
+        "books_recv_overdue": _t(
+            "venceu {date}",
+            "vervallen {date}",
+            "overdue since {date}",
+            "échue depuis {date}",
+            "überfällig seit {date}",
+        ),
         "books_income": _t("Entradas", "Inkomsten", "Income", "Revenus", "Einnahmen"),
         "books_expense": _t("Saídas", "Uitgaven", "Spending", "Dépenses", "Ausgaben"),
         "books_balance": _t("Saldo", "Saldo", "Balance", "Solde", "Saldo"),
