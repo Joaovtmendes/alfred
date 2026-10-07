@@ -40,6 +40,7 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
     "sqlalchemy[mypy]>=2.0",
+    "pillow>=10.0",  # renders the sample photos/PDFs of scripts/eval_llm.py --suite file
 ]
 
 [tool.setuptools.packages.find]

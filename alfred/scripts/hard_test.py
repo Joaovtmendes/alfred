@@ -631,6 +631,34 @@ def bloco_o(run_id, delay):
     send("O14 mês contra mês", "mês contra mês por categoria", run_id, delay)
 
 
+def bloco_p(run_id, delay):
+    """06/10 — casal, importar extrato, contabilidade (V2-10, V2-05, V2-12).
+    Foto e PDF (recibo e treino) não dá para simular por aqui: o arquivo é baixado da Meta com
+    um id real. Esses testes são feitos à mão no WhatsApp (ver docs/OPERATIONS.md)."""
+    print("\n══ Bloco P — Casal, extrato e contabilidade ══")
+    send("P01 casal sem parceiro", "gastos da casa", run_id, delay)
+    send("P02 convidar parceiro (gera código)", "convidar parceiro", run_id, delay)
+    send("P03 despesa", "mercado 42,30", run_id, delay)
+    send("P04 marcar como da casa", "foi da casa", run_id, delay)
+    send("P05 categoria sempre da casa", "sempre da casa: aluguel", run_id, delay)
+    send("P06 gastos da casa", "gastos da casa", run_id, delay)
+    send("P07 sair da casa (pede confirmação)", "sair da casa", run_id, delay)
+    send("P08 ajuda do extrato", "importar extrato", run_id, delay)
+    send("P09 desfazer importação sem nada", "desfazer importação", run_id, delay)
+    send("P10 contabilidade (modo pessoal)", "contabilidade", run_id, delay)
+    send("P11 modo empresa", "modo empresa", run_id, delay)
+    send("P12 receita da empresa", "recebi 1210 do cliente Acme", run_id, delay)
+    send("P13 despesa da empresa", "hospedagem do site 121", run_id, delay)
+    send("P14 foi da empresa", "foi da empresa", run_id, delay)
+    send("P15 BTW", "btw 21", run_id, delay)
+    send("P16 reserva de imposto", "reserva de imposto 30%", run_id, delay)
+    send("P17 reserva de emergência", "reserva de emergência 6000", run_id, delay)
+    send("P18 contabilidade (modo empresa)", "contabilidade", run_id, delay)
+    send("P19 exportar contabilidade (link)", "exportar contabilidade", run_id, delay)
+    send("P20 modo pessoal", "modo pessoal", run_id, delay)
+    send("P21 arquivo não suportado: só texto", "importar extrato csv", run_id, delay)
+
+
 BLOCOS = {
     "A": bloco_a,
     "B": bloco_b,
@@ -646,6 +674,7 @@ BLOCOS = {
     "L": bloco_l,
     "N": bloco_n,
     "O": bloco_o,
+    "P": bloco_p,
 }
 
 if __name__ == "__main__":

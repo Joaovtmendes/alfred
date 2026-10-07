@@ -1038,10 +1038,10 @@ async def test_the_other_tabs_are_fetched_in_the_background_after_the_first_one(
         await page.wait_for_selector("[data-card=upcoming]")
         for _ in range(40):
             tabs = {u.split("/")[-1].split("?")[0] for _, u in page.api_calls}
-            if {"summary", "money", "agenda", "health", "trips"} <= tabs:
+            if {"summary", "money", "agenda", "health", "trips", "books"} <= tabs:
                 break
             await page.wait_for_timeout(100)
-        assert {"money", "agenda", "health", "trips"} <= tabs
+        assert {"money", "agenda", "health", "trips", "books"} <= tabs
         calls = len(page.api_calls)
         await page.click('[data-tab="health"]')
         await page.wait_for_selector("[data-card=water]")
