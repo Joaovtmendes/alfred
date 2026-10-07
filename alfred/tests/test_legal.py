@@ -31,7 +31,7 @@ def test_every_language_has_the_same_sections() -> None:
 def test_policy_1_6_covers_the_v2_data_categories_couple_and_statements_in_every_language() -> None:
     from alfred.legal import POLICY_VERSION
 
-    assert POLICY_VERSION == "1.8"
+    assert POLICY_VERSION == "1.9"
     for lang, policy in POLICY.items():
         text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
         assert any(w in text for w in ("bank statement", "bankafschrift", "extrato banc")), lang
@@ -70,3 +70,12 @@ def test_policy_1_8_covers_home_contracts_in_every_language() -> None:
             for w in ("contracts of your home", "contracten van je huis", "contratos da casa")
         ), lang
         assert "60" in text, lang
+
+
+def test_policy_1_9_covers_deadline_reminders_in_every_language() -> None:
+    for lang, policy in POLICY.items():
+        text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
+        assert any(
+            w in text for w in ("deadline reminders", "deadline-herinneringen", "avisos de prazos")
+        ), lang
+        assert any(w in text for w in ("quarterly btw", "kwartaal-btw", "btw trimestral")), lang
