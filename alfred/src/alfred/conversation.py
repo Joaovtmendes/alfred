@@ -126,6 +126,8 @@ from alfred.recurring import STRINGS as _RECURRING_STRINGS
 from alfred.recurring import handle_recurring_command
 from alfred.score import STRINGS as _SCORE_STRINGS
 from alfred.score import handle_score_command
+from alfred.services import STRINGS as _SERVICE_STRINGS
+from alfred.services import handle_service_button, handle_service_command
 from alfred.settings import settings
 from alfred.statement import STRINGS as _STATEMENT_STRINGS
 from alfred.statement import (
@@ -1557,6 +1559,7 @@ _STRINGS.update(_LEDGER_STRINGS)  # V2-16
 _STRINGS.update(_BATCH_STRINGS)  # V2-17
 _STRINGS.update(_FOLLOWUP_STRINGS)  # V2-20 / V2-23
 _STRINGS.update(_INVOICE_STRINGS)  # V2-12 part 2
+_STRINGS.update(_SERVICE_STRINGS)  # V2-36
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
 
@@ -3630,6 +3633,15 @@ async def _handle_button_reply(
         await _save_outbound(member, inv_text, session)
         return True
 
+    if action in ("svc_ok", "svc_exp", "svc_no", "svc_wd_yes", "svc_wd_no"):  # V2-36
+        svc = await handle_service_button(action, raw_id, member, lang, session, today_local())
+        if svc.buttons:
+            await send_buttons(to, svc.text, svc.buttons)
+        else:
+            await send_text(to, svc.text)
+        await _save_outbound(member, svc.text, session)
+        return True
+
     if action in ("fb_up", "fb_down", "fb_r"):  # V2-23 thumbs up/down and the reason
         fb = await handle_feedback_button(action, raw_id, member, lang, session)
         if fb.buttons:
@@ -4122,6 +4134,18 @@ async def handle_inbound(
             else:
                 await send_text(to, inv_out.text)
             await _save_outbound(member, inv_out.text, session)
+            return
+
+        # 4e-0s3. V2-36 — services and deadlines: "guarda serviço: encanador, 180 €, garantia 12 meses" / "garantias"
+        svc_out = await handle_service_command(
+            message.body or "", body_plain, member, lang, session, today_local()
+        )
+        if svc_out is not None:
+            if svc_out.buttons:
+                await send_buttons(to, svc_out.text, svc_out.buttons)
+            else:
+                await send_text(to, svc_out.text)
+            await _save_outbound(member, svc_out.text, session)
             return
 
         # 4e-0o. V2-18 — "o que você me enviou hoje" / "lembretes que mandou"

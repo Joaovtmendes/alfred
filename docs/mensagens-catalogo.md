@@ -883,6 +883,46 @@
 - **fr** — Ouvrir mon tableau
 - **de** — Dashboard öffnen
 
+## `btn_svc_exp`
+
+- **pt** — Confirmar + gasto
+- **nl** — Bevestig + uitgave
+- **en** — Confirm + expense
+- **fr** — Confirmer + dépense
+- **de** — Bestät. + Ausgabe
+
+## `btn_svc_no`
+
+- **pt** — Cancelar
+- **nl** — Annuleren
+- **en** — Cancel
+- **fr** — Annuler
+- **de** — Abbrechen
+
+## `btn_svc_ok`
+
+- **pt** — Confirmar
+- **nl** — Bevestigen
+- **en** — Confirm
+- **fr** — Confirmer
+- **de** — Bestätigen
+
+## `btn_svc_wd_no`
+
+- **pt** — Não
+- **nl** — Nee
+- **en** — No
+- **fr** — Non
+- **de** — Nein
+
+## `btn_svc_wd_yes`
+
+- **pt** — Sim, online/fora
+- **nl** — Ja, online/buiten
+- **en** — Yes, online/away
+- **fr** — Oui, en ligne/hors
+- **de** — Ja, online/extern
+
 ## `btn_undo`
 
 - **pt** — Desfazer
@@ -3061,11 +3101,11 @@
 
 ## `media_unknown`
 
-- **pt** — Não reconheci nesse arquivo um recibo nem um plano de treino. Mande uma foto nítida de um deles ou escreva em texto.
-- **nl** — Ik herken in dit bestand geen bon of trainingsschema. Stuur een scherpe foto van een van beide of typ het.
-- **en** — I couldn't recognise a receipt or a training plan in that file. Send a clear photo of one of them or type it.
-- **fr** — Je n'ai reconnu ni reçu ni plan d'entraînement dans ce fichier. Envoie une photo nette de l'un des deux ou écris-le.
-- **de** — Ich habe in dieser Datei weder einen Beleg noch einen Trainingsplan erkannt. Sende ein scharfes Foto von einem der beiden oder tippe es.
+- **pt** — Não reconheci nesse arquivo um recibo, uma nota de serviço nem um plano de treino. Mande uma foto nítida de um deles ou escreva em texto.
+- **nl** — Ik herken in dit bestand geen bon, dienstfactuur of trainingsschema. Stuur een scherpe foto van een ervan of typ het.
+- **en** — I couldn't recognise a receipt, a service invoice or a training plan in that file. Send a clear photo of one of them or type it.
+- **fr** — Je n'ai reconnu ni reçu, ni facture de service, ni plan d'entraînement dans ce fichier. Envoie une photo nette de l'un d'eux ou écris-le.
+- **de** — Ich habe in dieser Datei weder einen Beleg, eine Dienstleistungsrechnung noch einen Trainingsplan erkannt. Sende ein scharfes Foto von einem davon oder tippe es.
 
 ## `mom_empty`
 
@@ -3896,6 +3936,230 @@
 - **en** — *Expenses — {period_label}*
 - **fr** — *Dépenses — {period_label}*
 - **de** — *Ausgaben — {period_label}*
+
+## `svc_ambiguous`
+
+- **pt** — Achei mais de um: {names}. Diga o nome completo.
+- **nl** — Ik vond er meer dan één: {names}. Geef de volledige naam.
+- **en** — I found more than one: {names}. Tell me the full name.
+- **fr** — J'en ai trouvé plusieurs : {names}. Donne le nom complet.
+- **de** — Ich habe mehrere gefunden: {names}. Nenne den vollständigen Namen.
+
+## `svc_bad`
+
+- **pt** — Não entendi. Exemplo: *guarda serviço: encanador, 180 €, garantia 12 meses* (a data é hoje; para outra, acrescente *10/09*).
+- **nl** — Dat begreep ik niet. Voorbeeld: *bewaar dienst: loodgieter, 180 €, garantie 12 maanden* (datum is vandaag; voeg anders *10/09* toe).
+- **en** — I didn't get that. Example: *save service: plumber, 180 €, warranty 12 months* (date is today; add *10/09* for another).
+- **fr** — Je n'ai pas compris. Exemple : *garde service : plombier, 180 €, garantie 12 mois* (la date est aujourd'hui ; ajoute *10/09* pour une autre).
+- **de** — Das habe ich nicht verstanden. Beispiel: *speichere service: Klempner, 180 €, garantie 12 monate* (Datum ist heute; für ein anderes *10/09* ergänzen).
+
+## `svc_cancelled`
+
+- **pt** — Cancelado, nada foi guardado.
+- **nl** — Geannuleerd, niets opgeslagen.
+- **en** — Cancelled, nothing was saved.
+- **fr** — Annulé, rien n'a été enregistré.
+- **de** — Abgebrochen, nichts gespeichert.
+
+## `svc_deleted`
+
+- **pt** — Apaguei: {what}.
+- **nl** — Verwijderd: {what}.
+- **en** — Deleted: {what}.
+- **fr** — Supprimé : {what}.
+- **de** — Gelöscht: {what}.
+
+## `svc_expired`
+
+- **pt** — Esse rascunho expirou. Mande o serviço de novo.
+- **nl** — Dit concept is verlopen. Stuur de dienst opnieuw.
+- **en** — That draft expired. Please send the service again.
+- **fr** — Ce brouillon a expiré. Renvoie le service.
+- **de** — Dieser Entwurf ist abgelaufen. Sende den Service bitte neu.
+
+## `svc_foot`
+
+- **pt** — Ainda não gravei nada. Para corrigir algo, mande de novo com os dados certos.
+- **nl** — Ik heb nog niets opgeslagen. Om iets te corrigeren, stuur het opnieuw met de juiste gegevens.
+- **en** — Nothing is saved yet. To correct something, send it again with the right details.
+- **fr** — Rien n'est encore enregistré. Pour corriger, renvoie-le avec les bonnes informations.
+- **de** — Noch nichts gespeichert. Zum Korrigieren sende es einfach neu mit den richtigen Angaben.
+
+## `svc_l_amount`
+
+- **pt** — Valor: {a}
+- **nl** — Bedrag: {a}
+- **en** — Amount: {a}
+- **fr** — Montant : {a}
+- **de** — Betrag: {a}
+
+## `svc_l_date`
+
+- **pt** — Data: {d}
+- **nl** — Datum: {d}
+- **en** — Date: {d}
+- **fr** — Date : {d}
+- **de** — Datum: {d}
+
+## `svc_l_left`
+
+- **pt** — — faltam {n} dias
+- **nl** — — nog {n} dagen
+- **en** — — {n} days left
+- **fr** — — encore {n} jours
+- **de** — — noch {n} Tage
+
+## `svc_l_nowarranty`
+
+- **pt** — Sem garantia informada
+- **nl** — Geen garantie opgegeven
+- **en** — No warranty given
+- **fr** — Aucune garantie indiquée
+- **de** — Keine Garantie angegeben
+
+## `svc_l_over`
+
+- **pt** — — já terminou
+- **nl** — — is verlopen
+- **en** — — has ended
+- **fr** — — est terminée
+- **de** — — ist abgelaufen
+
+## `svc_l_warranty`
+
+- **pt** — Garantia prometida até {d} ({n} meses)
+- **nl** — Beloofde garantie tot {d} ({n} maanden)
+- **en** — Promised warranty until {d} ({n} months)
+- **fr** — Garantie promise jusqu'au {d} ({n} mois)
+- **de** — Zugesagte Garantie bis {d} ({n} Monate)
+
+## `svc_l_wd`
+
+- **pt** — Prazo de arrependimento de 14 dias até {d}
+- **nl** — Bedenktijd van 14 dagen tot {d}
+- **en** — 14-day cooling-off period until {d}
+- **fr** — Délai de rétractation de 14 jours jusqu'au {d}
+- **de** — 14 Tage Widerrufsfrist bis {d}
+
+## `svc_limit`
+
+- **pt** — Você já tem {n} serviços guardados, o máximo. Apague algum antes de guardar outro.
+- **nl** — Je hebt al {n} diensten opgeslagen, het maximum. Verwijder er eerst een.
+- **en** — You already have {n} services saved, the maximum. Delete one first.
+- **fr** — Tu as déjà {n} services enregistrés, le maximum. Supprime-en un d'abord.
+- **de** — Du hast bereits {n} Services gespeichert, das Maximum. Lösche zuerst einen.
+
+## `svc_list_empty`
+
+- **pt** — Você não tem serviços guardados. Para guardar: *guarda serviço: encanador, 180 €, garantia 12 meses* ou mande uma foto da nota.
+- **nl** — Je hebt geen opgeslagen diensten. Opslaan: *bewaar dienst: loodgieter, 180 €, garantie 12 maanden* of stuur een foto van de factuur.
+- **en** — You have no saved services. To save one: *save service: plumber, 180 €, warranty 12 months* or send a photo of the invoice.
+- **fr** — Tu n'as aucun service enregistré. Pour en ajouter : *garde service : plombier, 180 €, garantie 12 mois* ou envoie une photo de la facture.
+- **de** — Du hast keine gespeicherten Services. Zum Speichern: *speichere service: Klempner, 180 €, garantie 12 monate* oder sende ein Foto der Rechnung.
+
+## `svc_list_hint`
+
+- **pt** — Para ver o detalhe: *garantia encanador*. Para apagar: *apaga garantia encanador*.
+- **nl** — Detail bekijken: *garantie loodgieter*. Verwijderen: *verwijder garantie loodgieter*.
+- **en** — For details: *warranty plumber*. To delete: *delete warranty plumber*.
+- **fr** — Pour le détail : *garantie plombier*. Pour supprimer : *supprime garantie plombier*.
+- **de** — Details: *garantie Klempner*. Löschen: *lösche garantie Klempner*.
+
+## `svc_list_title`
+
+- **pt** — Seus serviços e garantias:
+- **nl** — Je diensten en garanties:
+- **en** — Your services and warranties:
+- **fr** — Tes services et garanties :
+- **de** — Deine Services und Garantien:
+
+## `svc_list_until`
+
+- **pt** — garantia até {d} ({n} dias)
+- **nl** — garantie tot {d} ({n} dagen)
+- **en** — warranty until {d} ({n} days)
+- **fr** — garantie jusqu'au {d} ({n} jours)
+- **de** — Garantie bis {d} ({n} Tage)
+
+## `svc_no_provider`
+
+- **pt** — Não consegui ver quem prestou o serviço nesse arquivo. Mande uma foto mais nítida ou escreva, por exemplo *guarda serviço: encanador, 180 €, garantia 12 meses*.
+- **nl** — Ik kon niet zien wie de dienst leverde. Stuur een scherpere foto of typ bijvoorbeeld *bewaar dienst: loodgieter, 180 €, garantie 12 maanden*.
+- **en** — I couldn't see who provided the service in that file. Send a sharper photo or type, for example, *save service: plumber, 180 €, warranty 12 months*.
+- **fr** — Je n'ai pas vu qui a fourni le service. Envoie une photo plus nette ou écris par exemple *garde service : plombier, 180 €, garantie 12 mois*.
+- **de** — Ich konnte nicht erkennen, wer die Leistung erbracht hat. Sende ein schärferes Foto oder tippe zum Beispiel *speichere service: Klempner, 180 €, garantie 12 monate*.
+
+## `svc_not_found`
+
+- **pt** — Não achei esse serviço. Escreva *garantias* para ver a lista.
+- **nl** — Ik vond die dienst niet. Schrijf *garanties* voor de lijst.
+- **en** — I couldn't find that service. Write *warranties* for the list.
+- **fr** — Je n'ai pas trouvé ce service. Écris *garanties* pour la liste.
+- **de** — Ich habe diesen Service nicht gefunden. Schreib *garantien* für die Liste.
+
+## `svc_note`
+
+- **pt** — Se algo der errado, avise a empresa logo que perceber o problema e guarde a nota original. Informação geral, não é aconselhamento jurídico.
+- **nl** — Gaat er iets mis, meld het dan zo snel mogelijk bij het bedrijf en bewaar de originele factuur. Algemene informatie, geen juridisch advies.
+- **en** — If something goes wrong, tell the company as soon as you notice the problem and keep the original invoice. General information, not legal advice.
+- **fr** — Si quelque chose ne va pas, préviens l'entreprise dès que tu le remarques et garde la facture originale. Information générale, pas un conseil juridique.
+- **de** — Wenn etwas schiefgeht, melde es dem Unternehmen, sobald du das Problem bemerkst, und bewahre die Originalrechnung auf. Allgemeine Information, keine Rechtsberatung.
+
+## `svc_rem_warranty`
+
+- **pt** — Aviso: a garantia prometida de {what} termina em {d} (faltam {n} dias). Se houver algum problema, é a hora de falar com a empresa. Guarde a nota original.
+- **nl** — Let op: de beloofde garantie van {what} loopt af op {d} (nog {n} dagen). Is er een probleem, neem dan nu contact op met het bedrijf. Bewaar de originele factuur.
+- **en** — Heads up: the promised warranty on {what} ends on {d} ({n} days left). If there is a problem, now is the time to contact the company. Keep the original invoice.
+- **fr** — Attention : la garantie promise pour {what} se termine le {d} (encore {n} jours). En cas de problème, c'est le moment de contacter l'entreprise. Garde la facture originale.
+- **de** — Achtung: die zugesagte Garantie für {what} endet am {d} (noch {n} Tage). Bei einem Problem melde dich jetzt beim Unternehmen. Bewahre die Originalrechnung auf.
+
+## `svc_rem_withdrawal`
+
+- **pt** — Aviso: o prazo de 14 dias para desistir de {what} termina em {d} (faltam {n} dias). Se quiser desistir, é agora. Confira as condições do seu contrato.
+- **nl** — Let op: de bedenktijd van 14 dagen voor {what} eindigt op {d} (nog {n} dagen). Wil je annuleren, dan is dat nu. Controleer de voorwaarden van je contract.
+- **en** — Heads up: the 14-day cooling-off period for {what} ends on {d} ({n} days left). If you want to cancel, now is the time. Check your contract's terms.
+- **fr** — Attention : le délai de rétractation de 14 jours pour {what} se termine le {d} (encore {n} jours). Si tu veux te rétracter, c'est maintenant. Vérifie les conditions de ton contrat.
+- **de** — Achtung: die 14-tägige Widerrufsfrist für {what} endet am {d} (noch {n} Tage). Wenn du widerrufen willst, ist jetzt der Zeitpunkt. Prüfe die Bedingungen deines Vertrags.
+
+## `svc_saved`
+
+- **pt** — Guardado: {what}.
+- **nl** — Opgeslagen: {what}.
+- **en** — Saved: {what}.
+- **fr** — Enregistré : {what}.
+- **de** — Gespeichert: {what}.
+
+## `svc_title`
+
+- **pt** — Entendi este serviço:
+- **nl** — Dit heb ik begrepen:
+- **en** — Here is the service I understood:
+- **fr** — Voici le service compris :
+- **de** — Das habe ich verstanden:
+
+## `svc_wd_ask`
+
+- **pt** — Você contratou online ou fora de uma loja? Nesses casos costuma haver 14 dias para desistir, e eu aviso 3 dias antes de acabar. Confira as condições do seu contrato.
+- **nl** — Heb je dit online of buiten een winkel afgesloten? Dan is er meestal 14 dagen bedenktijd en ik waarschuw je 3 dagen voor het einde. Controleer de voorwaarden van je contract.
+- **en** — Did you book this online or outside a shop? Then there is usually a 14-day cooling-off period, and I'll remind you 3 days before it ends. Check your contract's terms.
+- **fr** — As-tu souscrit en ligne ou hors d'un magasin ? Il y a alors en général 14 jours pour se rétracter et je te préviens 3 jours avant la fin. Vérifie les conditions de ton contrat.
+- **de** — Hast du das online oder außerhalb eines Geschäfts abgeschlossen? Dann gibt es meist 14 Tage Widerrufsfrist, und ich erinnere dich 3 Tage vor dem Ende. Prüfe die Bedingungen deines Vertrags.
+
+## `svc_wd_set`
+
+- **pt** — Combinado. Aviso 3 dias antes de {d}.
+- **nl** — Afgesproken. Ik waarschuw je 3 dagen voor {d}.
+- **en** — Done. I'll remind you 3 days before {d}.
+- **fr** — C'est noté. Je te préviens 3 jours avant le {d}.
+- **de** — Alles klar. Ich erinnere dich 3 Tage vor dem {d}.
+
+## `svc_wd_skip`
+
+- **pt** — Certo, sem prazo de arrependimento.
+- **nl** — Oké, zonder bedenktijd.
+- **en** — OK, no cooling-off period tracked.
+- **fr** — D'accord, sans délai de rétractation.
+- **de** — Okay, ohne Widerrufsfrist.
 
 ## `task_delete_not_found`
 

@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     monthly_summary_template_enabled: bool = False
     # V2-06: appointment reminders outside the 24 h window (template alfred_appointment_reminder).
     appointment_reminder_template_enabled: bool = False
+    # V2-36: warranty reminders outside the 24 h window (template alfred_warranty_reminder).
+    warranty_reminder_template_enabled: bool = False
 
 
 settings = Settings()
