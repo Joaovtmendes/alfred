@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.db import get_session
+from alfred.followup import counts as feedback_counts
 from alfred.models import Expense, LlmUsage, Member, Message
 from alfred.settings import settings
 
@@ -117,6 +118,7 @@ async def metrics(session: AsyncSession = Depends(get_session)) -> dict:
             .select_from(Message)
             .where(Message.direction == "inbound", Message.created_at >= d1)
         ),
+        "feedback_30d": await feedback_counts(session, d30),
         "unprocessed_inbound": await count(
             select(func.count())
             .select_from(Message)

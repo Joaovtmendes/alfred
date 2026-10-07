@@ -51,6 +51,16 @@ from alfred.couple import (
     handle_couple_command,
     is_home_by_default,
 )
+from alfred.followup import (
+    MIN_CHAT_LEN,
+    deeper_buttons,
+    feedback_buttons,
+    handle_deeper_button,
+    handle_feedback_button,
+)
+from alfred.followup import (
+    STRINGS as _FOLLOWUP_STRINGS,
+)
 from alfred.insights import STRINGS as _INSIGHT_STRINGS
 from alfred.insights import handle_insight_command
 from alfred.iou import STRINGS as _IOU_STRINGS
@@ -1543,6 +1553,7 @@ _STRINGS.update(_RECEIPT_STRINGS)  # V2-07 receipt photo
 _STRINGS.update(_TRIPPLAN_STRINGS)  # V2-35
 _STRINGS.update(_LEDGER_STRINGS)  # V2-16
 _STRINGS.update(_BATCH_STRINGS)  # V2-17
+_STRINGS.update(_FOLLOWUP_STRINGS)  # V2-20 / V2-23
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
 
@@ -3132,10 +3143,18 @@ async def _build_summary(
     category: str | None = None,
     window=None,
     top: bool = False,
+    bounds: tuple | None = None,
+    buttons_out: list | None = None,
 ) -> str:
-    """Query expenses/income for a period (optionally filtered by category)."""
+    """Query expenses/income for a period (optionally filtered by category).
+
+    ``bounds`` is ``(start, end_exclusive, label)`` from a button tap. When ``buttons_out`` is a
+    list it receives the "go deeper" buttons (V2-20) if there is something to go deeper into.
+    """
     lang = member.language or "en"
-    if window is not None:
+    if bounds is not None:
+        start, end_excl, period_label = bounds
+    elif window is not None:
         start, end_excl, period_label = _window_range(window, lang)
     else:
         start, end_excl, period_label = _period_range(period, lang)
@@ -3167,6 +3186,8 @@ async def _build_summary(
 
     outflows = [e for e in records if e.transaction_type != "income"]
     inflows = [e for e in records if e.transaction_type == "income"]
+    if buttons_out is not None and outflows and not top:
+        buttons_out.extend(deeper_buttons(start, end_excl, category, lang))
     total_out = _cents(sum(e.amount for e in outflows))
     total_in = _cents(sum(e.amount for e in inflows))
 
@@ -3594,6 +3615,21 @@ async def _handle_button_reply(
         await send_text(to, _t("wipe_done", lang))  # nothing to save: the member is gone
         return True
 
+    if action in ("dd_cat", "dd_top", "dd_bud"):  # V2-20 go deeper after a spending answer
+        deeper_text = await handle_deeper_button(action, raw_id, member, lang, session)
+        await send_text(to, deeper_text)
+        await _save_outbound(member, deeper_text, session)
+        return True
+
+    if action in ("fb_up", "fb_down", "fb_r"):  # V2-23 thumbs up/down and the reason
+        fb = await handle_feedback_button(action, raw_id, member, lang, session)
+        if fb.buttons:
+            await send_buttons(to, fb.text, fb.buttons)
+        else:
+            await send_text(to, fb.text)
+        await _save_outbound(member, fb.text, session)
+        return True
+
     if action in ("appt_ok", "appt_undo"):  # V2-06 agenda confirmation buttons
         reply = await handle_agenda_button(action, raw_id, member, lang, session)
         await send_text(to, reply)
@@ -3857,8 +3893,12 @@ async def handle_inbound(
 
         # 4d. Summary command — skip if message has a time qualifier (let classify_query handle it)
         if _is_bare_command(body, _SUMMARY_WORDS):
-            summary = await _build_summary(member, session)
-            await send_text(to, summary)
+            deeper: list = []
+            summary = await _build_summary(member, session, buttons_out=deeper)
+            if deeper:
+                await send_buttons(to, summary, deeper)
+            else:
+                await send_text(to, summary)
             await _save_outbound(member, summary, session)
             return
 
@@ -5232,22 +5272,33 @@ async def handle_inbound(
             category = query.get("category")
             # Dates are parsed exactly here; the LLM only guesses today/week/month.
             window = parse_period(body_plain, today_local())
+            deeper = []  # V2-20 buttons, filled by the spending answers
 
             if qtype == "balance":
                 reply = await _build_saldo(member, session)
             elif qtype == "category" and category:
                 reply = await _build_summary(
-                    member, session, period=period, category=category, window=window
+                    member,
+                    session,
+                    period=period,
+                    category=category,
+                    window=window,
+                    buttons_out=deeper,
                 )
             elif qtype == "period":
-                reply = await _build_summary(member, session, period=period, window=window)
+                reply = await _build_summary(
+                    member, session, period=period, window=window, buttons_out=deeper
+                )
             elif qtype == "comparison":
                 reply = await _build_comparison(member, session)
             else:
                 reply = None
 
             if reply:
-                await send_text(to, reply)
+                if deeper:
+                    await send_buttons(to, reply, deeper)
+                else:
+                    await send_text(to, reply)
                 await _save_outbound(member, reply, session)
                 logger.info(
                     "conversation.query_replied", member_id=str(member.id), query_type=qtype
@@ -5259,7 +5310,10 @@ async def handle_inbound(
             message.body or "", body_plain, member, lang, session
         )
         if analysis_reply is not None:
-            await send_text(to, analysis_reply)
+            if len(analysis_reply) <= 900:
+                await send_buttons(to, analysis_reply, feedback_buttons("analysis", lang))
+            else:
+                await send_text(to, analysis_reply)
             await _save_outbound(member, analysis_reply, session)
             return
 
@@ -5279,20 +5333,26 @@ async def handle_inbound(
             return
         history = await _load_history(member, session, exclude_id=message.id)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
+        llm_answer = True  # stays True only while the model's own words are sent (V2-23)
         if _claims_recorded(reply):
             # Nothing was written on this path: never let the model confirm a phantom record.
             alert("conversation.llm_false_record_claim", member_id=str(member.id))
+            llm_answer = False
             reply = _t(_fallback_key(body), lang)
         elif _FAKE_CONFIRM_RE.search(reply):
             # There is no pending-confirmation state: replace the invented flow with a real ask.
             alert("conversation.llm_fake_confirmation", member_id=str(member.id))
+            llm_answer = False
             reply = _t(
                 "invalid_amount_check"
                 if _has_zero_or_negative_amount(body)
                 else _fallback_key(body),
                 lang,
             )
-        await send_text(to, reply)
+        if llm_answer and len(reply) >= MIN_CHAT_LEN and len(reply) <= 900:
+            await send_buttons(to, reply, feedback_buttons("chat", lang))  # V2-23
+        else:
+            await send_text(to, reply)
         await _save_outbound(member, reply, session)
         logger.info("conversation.reply_sent", member_id=str(member.id))
         return

@@ -758,6 +758,30 @@
 - **fr** — Annuler
 - **de** — Abbrechen
 
+## `btn_dd_bud`
+
+- **pt** — Ajustar orçamento
+- **nl** — Budget aanpassen
+- **en** — Adjust budget
+- **fr** — Ajuster budget
+- **de** — Budget anpassen
+
+## `btn_dd_cat`
+
+- **pt** — Por categoria
+- **nl** — Per categorie
+- **en** — By category
+- **fr** — Par catégorie
+- **de** — Nach Kategorie
+
+## `btn_dd_top`
+
+- **pt** — Maiores gastos
+- **nl** — Grootste uitgaven
+- **en** — Biggest expenses
+- **fr** — Grosses dépenses
+- **de** — Größte Ausgaben
+
 ## `btn_edit`
 
 - **pt** — Editar
@@ -765,6 +789,46 @@
 - **en** — Edit
 - **fr** — Modifier
 - **de** — Ändern
+
+## `btn_fb_down`
+
+- **pt** — 👎 Não ajudou
+- **nl** — 👎 Niet handig
+- **en** — 👎 Not helpful
+- **fr** — 👎 Pas utile
+- **de** — 👎 Nicht hilfreich
+
+## `btn_fb_missing`
+
+- **pt** — Faltou algo
+- **nl** — Iets ontbreekt
+- **en** — Missing info
+- **fr** — Il manque qqch
+- **de** — Etwas fehlt
+
+## `btn_fb_unclear`
+
+- **pt** — Não entendi
+- **nl** — Onduidelijk
+- **en** — Unclear
+- **fr** — Pas clair
+- **de** — Unklar
+
+## `btn_fb_up`
+
+- **pt** — 👍 Útil
+- **nl** — 👍 Handig
+- **en** — 👍 Helpful
+- **fr** — 👍 Utile
+- **de** — 👍 Hilfreich
+
+## `btn_fb_wrong`
+
+- **pt** — Errado
+- **nl** — Onjuist
+- **en** — Wrong
+- **fr** — Incorrect
+- **de** — Falsch
 
 ## `btn_home`
 
@@ -1436,6 +1500,54 @@
 - **fr** —  _(il y a {n}j)_
 - **de** —  _(vor {n}T)_
 
+## `dd_bud_has`
+
+- **pt** — Orçamento de *{cat}*: {spent} de {limit} ({pct}%) neste mês. Para mudar, escreva por exemplo *orçamento {cat} 450*.
+- **nl** — Budget voor *{cat}*: {spent} van {limit} ({pct}%) deze maand. Wijzigen kan met bijvoorbeeld *budget {cat} 450*.
+- **en** — Budget for *{cat}*: {spent} of {limit} ({pct}%) this month. To change it, write for example *budget {cat} 450*.
+- **fr** — Budget pour *{cat}* : {spent} sur {limit} ({pct} %) ce mois-ci. Pour le changer, écris par exemple *budget {cat} 450*.
+- **de** — Budget für *{cat}*: {spent} von {limit} ({pct} %) in diesem Monat. Zum Ändern schreib zum Beispiel *budget {cat} 450*.
+
+## `dd_bud_hint`
+
+- **pt** — Para criar ou mudar um orçamento mensal, escreva por exemplo *orçamento mercado 400*. Para ver os seus, escreva *meus orçamentos*.
+- **nl** — Om een maandbudget te maken of te wijzigen, schrijf bijvoorbeeld *budget supermarkt 400*. Je ziet ze met *mijn budgetten*.
+- **en** — To create or change a monthly budget, write for example *budget groceries 400*. To see yours, write *my budgets*.
+- **fr** — Pour créer ou changer un budget mensuel, écris par exemple *budget courses 400*. Pour voir les tiens, écris *mes budgets*.
+- **de** — Um ein Monatsbudget anzulegen oder zu ändern, schreib zum Beispiel *budget lebensmittel 400*. Deine siehst du mit *meine budgets*.
+
+## `dd_bud_none`
+
+- **pt** — Você ainda não tem orçamento para *{cat}*. Para criar, escreva por exemplo *orçamento {cat} 400*.
+- **nl** — Je hebt nog geen budget voor *{cat}*. Maak er een met bijvoorbeeld *budget {cat} 400*.
+- **en** — You don't have a budget for *{cat}* yet. To create one, write for example *budget {cat} 400*.
+- **fr** — Tu n'as pas encore de budget pour *{cat}*. Pour en créer un, écris par exemple *budget {cat} 400*.
+- **de** — Du hast noch kein Budget für *{cat}*. Zum Anlegen schreib zum Beispiel *budget {cat} 400*.
+
+## `dd_top_none`
+
+- **pt** — Não encontrei gastos em {period_label}.
+- **nl** — Ik vond geen uitgaven in {period_label}.
+- **en** — I found no expenses in {period_label}.
+- **fr** — Je n'ai trouvé aucune dépense pour {period_label}.
+- **de** — Ich habe keine Ausgaben für {period_label} gefunden.
+
+## `dd_top_title`
+
+- **pt** — Maiores gastos — {period_label}:
+- **nl** — Grootste uitgaven — {period_label}:
+- **en** — Biggest expenses — {period_label}:
+- **fr** — Plus grosses dépenses — {period_label} :
+- **de** — Größte Ausgaben — {period_label}:
+
+## `dd_top_title_cat`
+
+- **pt** — Maiores gastos em {category} — {period_label}:
+- **nl** — Grootste uitgaven in {category} — {period_label}:
+- **en** — Biggest expenses in {category} — {period_label}:
+- **fr** — Plus grosses dépenses en {category} — {period_label} :
+- **de** — Größte Ausgaben bei {category} — {period_label}:
+
 ## `disclosure`
 
 - **pt** — *Alfred* — assistente pessoal pelo WhatsApp.
@@ -1586,6 +1698,22 @@
 - **fr** — Je n’ai pas compris. Essaie par exemple : « Courses 20 », « couru 5 km » ou « dormi 7 h ».
 - **de** — Das ist mir entgangen. Kannst du es anders sagen? Zum Beispiel: „Einkauf 20“, „5 km gelaufen“ oder „7 Std. geschlafen“.
 - **de** — Das habe ich nicht verstanden. Versuch es mit „Einkauf 20“, „5 km gelaufen“ oder „7 Std. geschlafen“.
+
+## `fb_ask_reason`
+
+- **pt** — Sinto muito. O que não funcionou? Se preferir, ignore esta pergunta.
+- **nl** — Jammer. Wat werkte er niet? Je mag deze vraag ook negeren.
+- **en** — Sorry about that. What didn't work? You can also ignore this question.
+- **fr** — Désolé. Qu'est-ce qui n'a pas marché ? Tu peux aussi ignorer cette question.
+- **de** — Das tut mir leid. Was hat nicht funktioniert? Du kannst die Frage auch ignorieren.
+
+## `fb_thanks`
+
+- **pt** — Obrigado, isso me ajuda a melhorar.
+- **nl** — Bedankt, dat helpt me beter te worden.
+- **en** — Thanks, that helps me improve.
+- **fr** — Merci, ça m'aide à m'améliorer.
+- **de** — Danke, das hilft mir, besser zu werden.
 
 ## `freq_period_month`
 

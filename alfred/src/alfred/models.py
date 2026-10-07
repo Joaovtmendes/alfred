@@ -959,3 +959,23 @@ class PendingAction(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class ReplyFeedback(Base):
+    """V2-23 — one 👍/👎 on a reply. Counts and a closed-list reason only: never the reply text."""
+
+    __tablename__ = "reply_feedback"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("member.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    source: Mapped[str] = mapped_column(String(12), nullable=False)  # analysis | chat
+    rating: Mapped[str] = mapped_column(String(4), nullable=False)  # up | down
+    reason: Mapped[str | None] = mapped_column(String(12), nullable=True)  # wrong|unclear|missing
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
