@@ -112,7 +112,7 @@ async def test_a_plan_is_previewed_and_nothing_is_saved_until_confirmed(lab: Lab
     assert "Supino" in reply and "Crucifixo" in reply and "Remada" in reply
     assert await _count(lab, WorkoutPlan) == 0 and await _count(lab, PendingAction) == 1
     ids = [b[0].split(":")[0] for b in lab.buttons[-1]]
-    assert ids == ["plan_ok", "plan_cancel"]
+    assert ids == ["plan_ok", "plan_adjust", "plan_cancel"]
 
 
 @db

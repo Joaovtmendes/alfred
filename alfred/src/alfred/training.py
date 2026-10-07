@@ -13,6 +13,7 @@ Rule-based, no LLM. What is understood:
 
 from __future__ import annotations
 
+import copy
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -89,6 +90,18 @@ _EVOLUTION = [
     re.compile(r"^evolution\s+(?:du\s+|de\s+la\s+|de\s+l\s*|des\s+|de\s+)?(.+)$"),
     re.compile(r"^(?:fortschritt|entwicklung)\s+(?:bei\s+|beim\s+|von\s+|im\s+)?(.+)$"),
 ]
+_DAYS_RX = "|".join(sorted(WEEKDAYS, key=len, reverse=True))
+_EDIT = re.compile(
+    r"^(?:troca|trocar|muda|mudar|altera|alterar|ajusta|ajustar|change|set|update|adjust|wijzig|"
+    r"verander|pas aan|modifie|modifier|change|aendere|andere|passe an)\s+"
+    r"(?:o |a |os |as |the |de |het |le |la |l|les |den |die |das |dem )?"
+    rf"(?P<name>.+?)\s+(?:de|da|do|on|op|le|am|em|no|na|du|von|vom|an|at|for|voor|pour|fur|auf)\s+"
+    rf"(?P<day>{_DAYS_RX})\s+(?:para|pra|to|naar|en|zu|auf|a)\s+(?P<spec>.+)$"
+)
+_EDIT_SPEC = re.compile(
+    r"^(?:(?P<sets>\d{1,2})\s*[x×]\s*(?P<reps>\d{1,3}(?:\s*-\s*\d{1,3})?))?"
+    r"\s*(?:(?:@|com|with|met|avec|mit)?\s*(?P<kg>\d{1,3}(?:[.,]\d{1,2})?)\s*kg)?$"
+)
 _ITEM = re.compile(
     r"^(?P<name>.+?)\s+(?P<sets>\d{1,2})\s*[x×]\s*(?P<reps>\d{1,3}(?:\s*-\s*\d{1,3})?)"
     rf"(?:\s*(?:@|com|with|met|avec|mit)?\s*{_KG})?$",
@@ -270,6 +283,7 @@ def _buttons(draft_id: uuid.UUID, lang: str) -> list[tuple[str, str]]:
 
     return [
         (f"plan_ok:{draft_id}", _t("plan_btn_ok", lang)),
+        (f"plan_adjust:{draft_id}", _t("plan_btn_adjust", lang)),
         (f"plan_cancel:{draft_id}", _t("plan_btn_cancel", lang)),
     ]
 
@@ -370,6 +384,19 @@ async def handle_training_command(
             return await _show_plan(member, lang, session)
         return await _draft(rest, member, lang, session)
 
+    if m := _EDIT.match(flat):
+        spec = _EDIT_SPEC.match(m.group("spec").strip())
+        if spec is None or not any(spec.groupdict().values()):
+            return Reply(_t("plan_edit_bad", lang))
+        return await _edit_plan(
+            _display_name(body, flat, m, "name"),
+            WEEKDAYS[m.group("day")],
+            spec,
+            member,
+            lang,
+            session,
+        )
+
     for pattern, ex_g, kg_g in _LOAD:
         if m := pattern.match(flat):
             kg = _kg(m.group(kg_g))
@@ -383,7 +410,7 @@ async def handle_training_command(
     return None
 
 
-def _display_name(body: str, flat: str, m: re.Match[str], group: int) -> str:
+def _display_name(body: str, flat: str, m: re.Match[str], group: int | str) -> str:
     start, end = m.span(group)
     raw = " ".join(body.split())
     original = raw[start:end] if len(raw) == len(flat) else m.group(group)
@@ -449,6 +476,20 @@ async def handle_training_button(
         draft_id = uuid.UUID(raw_id)
     except ValueError:
         return Reply(_t("plan_gone", lang))
+    if action == "plan_adjust":  # keep the draft; tell how to change it
+        row = await session.scalar(
+            select(PendingAction).where(
+                PendingAction.id == draft_id,
+                PendingAction.member_id == member.id,
+                PendingAction.kind == KIND,
+            )
+        )
+        if row is None:
+            return Reply(_t("plan_gone", lang))
+        if row.expires_at < now_local():
+            await session.delete(row)
+            return Reply(_t("plan_expired", lang))
+        return Reply(_t("plan_adjust_help", lang), _buttons(draft_id, lang)[::2])
     # atomic take: a second tap finds nothing
     taken = (
         await session.execute(
@@ -643,6 +684,121 @@ async def _evolution(name: str, member: Member, lang: str, session: AsyncSession
     return f"{head}\n{lines}\n{_t('evo_delta', lang, delta=sign + fmt_kg(abs(diff), lang), since=_date(rows[0].day))}"
 
 
+def _spec(item: PlanItem, lang: str) -> str:
+    """Sets x reps and load without the exercise name ("4x10 · 62 kg")."""
+    return _item_text(PlanItem("", item.sets, item.reps, item.load_kg), lang).strip(" ·") or "-"
+
+
+def _pick(names: list[str], typed: str) -> list[str]:
+    """Exercises of a day that match the typed name: exact first, else every partial match."""
+    key = key_of(typed)
+    exact = [n for n in names if key_of(n) == key]
+    if exact or not key:
+        return exact
+    return [n for n in names if key in key_of(n) or key_of(n) in key]
+
+
+async def _edit_plan(
+    typed: str, weekday: int, spec: re.Match[str], member: Member, lang: str, session: AsyncSession
+) -> Reply:
+    """Change sets x reps and/or the planned load of one exercise: in the pending draft when
+    there is one (the member is still adjusting the preview), otherwise in the active plan."""
+    from alfred.conversation import _t
+
+    new_kg = _kg(spec.group("kg")) if spec.group("kg") else None
+    if spec.group("kg") and new_kg is None:
+        return Reply(_t("plan_edit_bad", lang))
+    new_sets = int(spec.group("sets")) if spec.group("sets") else None
+    new_reps = re.sub(r"\s+", "", spec.group("reps")) if spec.group("reps") else None
+    day_name = weekday_name(weekday, lang)
+
+    draft = await session.scalar(
+        select(PendingAction)
+        .where(PendingAction.member_id == member.id, PendingAction.kind == KIND)
+        .order_by(PendingAction.created_at.desc())
+    )
+    if draft is not None and draft.expires_at < now_local():
+        await session.delete(draft)
+        return Reply(_t("plan_expired", lang))
+
+    if draft is not None:
+        days = copy.deepcopy(draft.payload["days"])  # a new object, so the JSONB change is flushed
+        day = next((d for d in days if d["weekday"] == weekday), None)
+        items = day["items"] if day else []
+        names = [i["exercise"] for i in items]
+    else:
+        plan = await _active_plan(session, member.id)
+        if plan is None:
+            return Reply(_t("plan_none", lang))
+        plan_days = await _plan_days(session, plan)
+        day_rows = next(((d, its) for d, its in plan_days if d.weekday == weekday), None)
+        names = [i.exercise for i in day_rows[1]] if day_rows else []
+        if day_rows is None:
+            return Reply(_t("plan_edit_noday", lang, day=day_name))
+    if draft is not None and day is None:
+        return Reply(_t("plan_edit_noday", lang, day=day_name))
+
+    found = _pick(names, typed)
+    if not found:
+        return Reply(_t("plan_edit_noex", lang, name=typed, day=day_name, names=", ".join(names)))
+    if len(found) > 1:
+        return Reply(_t("plan_edit_ambig", lang, name=typed, names=", ".join(found[:5])))
+    target = found[0]
+
+    def merged(sets: int | None, reps: str | None, kg: float | None) -> tuple:
+        return (
+            new_sets if new_sets is not None else sets,
+            new_reps if new_reps is not None else reps,
+            new_kg if new_kg is not None else kg,
+        )
+
+    if draft is not None:
+        item = next(i for i in items if i["exercise"] == target)
+        before = PlanItem(target, item["sets"], item["reps"], item["load_kg"])
+        item["sets"], item["reps"], item["load_kg"] = merged(
+            item["sets"], item["reps"], item["load_kg"]
+        )
+        draft.payload = {"days": days}
+        draft.expires_at = now_local() + timedelta(minutes=DRAFT_MINUTES)
+        await session.flush()
+        parsed = [
+            PlanDay(
+                d["weekday"],
+                d["title"],
+                [PlanItem(i["exercise"], i["sets"], i["reps"], i["load_kg"]) for i in d["items"]],
+            )
+            for d in days
+        ]
+        note = _t(
+            "plan_edit_done",
+            lang,
+            name=target,
+            day=day_name,
+            new=_item_text(
+                PlanItem(target, *merged(before.sets, before.reps, before.load_kg)), lang
+            ),
+            old=_spec(before, lang),
+        )
+        return Reply(_preview(parsed, lang, note), _buttons(draft.id, lang))
+
+    row = next(i for i in day_rows[1] if i.exercise == target)
+    before = PlanItem(target, row.sets, row.reps, row.load_kg)
+    row.sets, row.reps, row.load_kg = merged(row.sets, row.reps, row.load_kg)
+    session.add(row)
+    await session.flush()
+    audit(session, "workout_plan_edited", member.id)
+    return Reply(
+        _t(
+            "plan_edit_done",
+            lang,
+            name=target,
+            day=day_name,
+            new=_spec(PlanItem(target, row.sets, row.reps, row.load_kg), lang),
+            old=_spec(before, lang),
+        )
+    )
+
+
 STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     "plan_preview": _all(
         "Este é o plano que entendi:",
@@ -659,6 +815,49 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Bestätige, dann speichere ich ihn. Noch ist nichts gespeichert.",
     ),
     "plan_btn_ok": _all("Confirmar", "Bevestigen", "Confirm", "Confirmer", "Bestätigen"),
+    "plan_btn_adjust": _all("Ajustar", "Aanpassen", "Adjust", "Ajuster", "Anpassen"),
+    "plan_adjust_help": _all(
+        "Diga o que mudar, por exemplo: “troca o supino de segunda para 62 kg” ou “troca o supino de segunda para 4x10 62 kg”. Depois confirme. O rascunho vale por 15 minutos.",
+        "Zeg wat je wilt wijzigen, bijvoorbeeld: “wijzig bankdrukken op maandag naar 62 kg” of “… naar 4x10 62 kg”. Bevestig daarna. Het concept blijft 15 minuten geldig.",
+        "Say what to change, for example: “change bench press on monday to 62 kg” or “… to 4x10 62 kg”. Then confirm. The draft is valid for 15 minutes.",
+        "Dis ce qu'il faut changer, par exemple : « change développé du lundi à 62 kg » ou « … à 4x10 62 kg ». Puis confirme. Le brouillon est valable 15 minutes.",
+        "Sag, was sich ändern soll, zum Beispiel: „ändere bankdrücken am montag auf 62 kg“ oder „… auf 4x10 62 kg“. Dann bestätige. Der Entwurf gilt 15 Minuten.",
+    ),
+    "plan_edit_done": _all(
+        "Pronto: {name} de {day} agora é {new} (antes: {old}).",
+        "Klaar: {name} op {day} is nu {new} (eerder: {old}).",
+        "Done: {name} on {day} is now {new} (before: {old}).",
+        "C'est fait : {name} du {day} est maintenant {new} (avant : {old}).",
+        "Erledigt: {name} am {day} ist jetzt {new} (vorher: {old}).",
+    ),
+    "plan_edit_noday": _all(
+        "Não há treino de {day} no seu plano.",
+        "Er staat geen training op {day} in je schema.",
+        "There's no workout on {day} in your plan.",
+        "Il n'y a pas d'entraînement le {day} dans ton plan.",
+        "Für {day} gibt es kein Training in deinem Plan.",
+    ),
+    "plan_edit_noex": _all(
+        "Não achei “{name}” em {day}. Exercícios do dia: {names}.",
+        "Ik vind “{name}” niet op {day}. Oefeningen die dag: {names}.",
+        "I can't find “{name}” on {day}. Exercises that day: {names}.",
+        "Je ne trouve pas « {name} » le {day}. Exercices du jour : {names}.",
+        "Ich finde „{name}“ am {day} nicht. Übungen an dem Tag: {names}.",
+    ),
+    "plan_edit_ambig": _all(
+        "Mais de um exercício combina com “{name}”: {names}. Diga o nome completo.",
+        "Meer dan één oefening past bij “{name}”: {names}. Noem de volledige naam.",
+        "More than one exercise matches “{name}”: {names}. Say the full name.",
+        "Plusieurs exercices correspondent à « {name} » : {names}. Donne le nom complet.",
+        "Mehrere Übungen passen zu „{name}“: {names}. Nenne den vollständigen Namen.",
+    ),
+    "plan_edit_bad": _all(
+        "Não entendi a mudança. Exemplo: “troca o supino de segunda para 62 kg” ou “… para 4x10 62 kg”.",
+        "Ik begrijp de wijziging niet. Voorbeeld: “wijzig bankdrukken op maandag naar 62 kg”.",
+        "I didn't understand the change. Example: “change bench press on monday to 62 kg” or “… to 4x10 62 kg”.",
+        "Je n'ai pas compris le changement. Exemple : « change développé du lundi à 62 kg ».",
+        "Ich habe die Änderung nicht verstanden. Beispiel: „ändere bankdrücken am montag auf 62 kg“.",
+    ),
     "plan_btn_cancel": _all("Cancelar", "Annuleren", "Cancel", "Annuler", "Abbrechen"),
     "plan_saved": _all(
         "Plano salvo ({n} dias). Diga “treino de hoje” quando quiser vê-lo.",

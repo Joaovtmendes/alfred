@@ -3802,6 +3802,14 @@
 - **fr** — hier
 - **de** — gestern
 
+## `plan_adjust_help`
+
+- **pt** — Diga o que mudar, por exemplo: “troca o supino de segunda para 62 kg” ou “troca o supino de segunda para 4x10 62 kg”. Depois confirme. O rascunho vale por 15 minutos.
+- **nl** — Zeg wat je wilt wijzigen, bijvoorbeeld: “wijzig bankdrukken op maandag naar 62 kg” of “… naar 4x10 62 kg”. Bevestig daarna. Het concept blijft 15 minuten geldig.
+- **en** — Say what to change, for example: “change bench press on monday to 62 kg” or “… to 4x10 62 kg”. Then confirm. The draft is valid for 15 minutes.
+- **fr** — Dis ce qu'il faut changer, par exemple : « change développé du lundi à 62 kg » ou « … à 4x10 62 kg ». Puis confirme. Le brouillon est valable 15 minutes.
+- **de** — Sag, was sich ändern soll, zum Beispiel: „ändere bankdrücken am montag auf 62 kg“ oder „… auf 4x10 62 kg“. Dann bestätige. Der Entwurf gilt 15 Minuten.
+
 ## `plan_ask`
 
 - **pt** — Confirma para eu guardar. Nada foi salvo ainda.
@@ -3817,6 +3825,14 @@
 - **en** — I didn't understand line {n}. Use one day per line, for example: “Monday - Chest: Bench press 4x10 60kg, Flyes 3x12”.
 - **fr** — Je n'ai pas compris la ligne {n}. Un jour par ligne, par exemple : « Lundi - Pectoraux : Développé couché 4x10 60kg, Écartés 3x12 ».
 - **de** — Ich habe Zeile {n} nicht verstanden. Ein Tag pro Zeile, zum Beispiel: „Montag - Brust: Bankdrücken 4x10 60kg, Fliegende 3x12“.
+
+## `plan_btn_adjust`
+
+- **pt** — Ajustar
+- **nl** — Aanpassen
+- **en** — Adjust
+- **fr** — Ajuster
+- **de** — Anpassen
 
 ## `plan_btn_cancel`
 
@@ -3841,6 +3857,46 @@
 - **en** — Cancelled. Your plan stays as it was.
 - **fr** — Annulé. Ton plan reste comme avant.
 - **de** — Abgebrochen. Dein Plan bleibt, wie er war.
+
+## `plan_edit_ambig`
+
+- **pt** — Mais de um exercício combina com “{name}”: {names}. Diga o nome completo.
+- **nl** — Meer dan één oefening past bij “{name}”: {names}. Noem de volledige naam.
+- **en** — More than one exercise matches “{name}”: {names}. Say the full name.
+- **fr** — Plusieurs exercices correspondent à « {name} » : {names}. Donne le nom complet.
+- **de** — Mehrere Übungen passen zu „{name}“: {names}. Nenne den vollständigen Namen.
+
+## `plan_edit_bad`
+
+- **pt** — Não entendi a mudança. Exemplo: “troca o supino de segunda para 62 kg” ou “… para 4x10 62 kg”.
+- **nl** — Ik begrijp de wijziging niet. Voorbeeld: “wijzig bankdrukken op maandag naar 62 kg”.
+- **en** — I didn't understand the change. Example: “change bench press on monday to 62 kg” or “… to 4x10 62 kg”.
+- **fr** — Je n'ai pas compris le changement. Exemple : « change développé du lundi à 62 kg ».
+- **de** — Ich habe die Änderung nicht verstanden. Beispiel: „ändere bankdrücken am montag auf 62 kg“.
+
+## `plan_edit_done`
+
+- **pt** — Pronto: {name} de {day} agora é {new} (antes: {old}).
+- **nl** — Klaar: {name} op {day} is nu {new} (eerder: {old}).
+- **en** — Done: {name} on {day} is now {new} (before: {old}).
+- **fr** — C'est fait : {name} du {day} est maintenant {new} (avant : {old}).
+- **de** — Erledigt: {name} am {day} ist jetzt {new} (vorher: {old}).
+
+## `plan_edit_noday`
+
+- **pt** — Não há treino de {day} no seu plano.
+- **nl** — Er staat geen training op {day} in je schema.
+- **en** — There's no workout on {day} in your plan.
+- **fr** — Il n'y a pas d'entraînement le {day} dans ton plan.
+- **de** — Für {day} gibt es kein Training in deinem Plan.
+
+## `plan_edit_noex`
+
+- **pt** — Não achei “{name}” em {day}. Exercícios do dia: {names}.
+- **nl** — Ik vind “{name}” niet op {day}. Oefeningen die dag: {names}.
+- **en** — I can't find “{name}” on {day}. Exercises that day: {names}.
+- **fr** — Je ne trouve pas « {name} » le {day}. Exercices du jour : {names}.
+- **de** — Ich finde „{name}“ am {day} nicht. Übungen an dem Tag: {names}.
 
 ## `plan_expired`
 
