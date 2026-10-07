@@ -1012,3 +1012,38 @@ class ClientInvoice(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class ServiceRecord(Base):
+    """V2-36 — a service (or later a product) the member paid for, with the dates worth tracking.
+
+    ``status`` is ``draft`` until the member confirms (a draft expires after 15 minutes and one
+    member has at most one). The invoice image is never stored. ``warranty_until`` is what the
+    provider promised (computed by code); ``withdrawal_until`` exists only if the member said the
+    contract was made online or outside a shop.
+    """
+
+    __tablename__ = "service_record"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("member.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    kind: Mapped[str] = mapped_column(String(8), nullable=False, default="service")
+    status: Mapped[str] = mapped_column(String(8), nullable=False, default="draft")
+    provider: Mapped[str] = mapped_column(String(60), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    service_date: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[float | None] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=True)
+    warranty_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    warranty_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    withdrawal_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    sent_w30: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sent_w7: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sent_wd: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

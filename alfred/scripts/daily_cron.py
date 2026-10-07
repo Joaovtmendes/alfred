@@ -297,6 +297,55 @@ async def send_appointment_reminders(now_local: datetime) -> tuple[int, int]:
     return sent, errors
 
 
+async def send_service_reminders(now_local: datetime) -> tuple[int, int]:
+    """V2-36 — warranty ends in 30 / 7 days, cooling-off ends in 3. Returns (sent, errors).
+
+    Plain text inside the 24 h window; outside it the approved template
+    ``alfred_warranty_reminder`` (flag ``WARRANTY_REMINDER_TEMPLATE_ENABLED``). Each reminder is
+    marked sent only after it went out, so a failed send is retried on the next run.
+    """
+    from alfred.db import AsyncSessionLocal
+    from alfred.services import due_reminders, mark_sent
+    from alfred.settings import settings
+    from alfred.whatsapp import send_template, send_text
+
+    async with AsyncSessionLocal() as session:
+        due = await due_reminders(session, now_local.date(), now_local)
+
+    sent = errors = 0
+    for r in due:
+        try:
+            tname = None
+            if r.in_window:
+                resp = await send_text(r.wa_phone, r.text)
+            elif settings.warranty_reminder_template_enabled:
+                tname = "alfred_warranty_reminder"
+                resp = await send_template(
+                    to=r.wa_phone,
+                    template_name=tname,
+                    lang_code=LANG_CODE_MAP.get(r.lang, "en"),
+                    components=[
+                        {
+                            "type": "body",
+                            "parameters": [{"type": "text", "text": _one_line(r.text)}],
+                        }
+                    ],
+                )
+            else:
+                logger.info("cron.service_reminder_waiting_for_window", id=str(r.record_id))
+                continue
+        except Exception as exc:
+            logger.error("cron.service_reminder_failed", id=str(r.record_id), error=str(exc))
+            errors += 1
+            continue
+        sent += 1
+        await _log_out(r.wa_phone, resp, r.text, "reminder", tname)
+        async with AsyncSessionLocal() as session:
+            await mark_sent(session, r.record_id, r.which)
+            await session.commit()
+    return sent, errors
+
+
 async def run_cron() -> int:
     """Send due notifications. Returns the number of failed sends."""
     from sqlalchemy import select, update
@@ -399,7 +448,12 @@ async def run_cron() -> int:
             logger.error("cron.weekly_summary_failed", member_id=str(m.id), error=str(exc))
             errors += 1
 
-    for extra in (send_payment_reminders, send_monthly_summaries, send_appointment_reminders):
+    for extra in (
+        send_payment_reminders,
+        send_monthly_summaries,
+        send_appointment_reminders,
+        send_service_reminders,
+    ):
         x_sent, x_errors = await extra(now_local)
         sent += x_sent
         errors += x_errors

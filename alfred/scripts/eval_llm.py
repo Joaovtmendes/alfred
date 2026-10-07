@@ -212,6 +212,26 @@ FILE_CASES: list[tuple[str, list[str], str, dict]] = [
         {"kind": "receipt", "total": 12.5, "currency": "USD"},
     ),
     (
+        "service-plumber",
+        [
+            "LOODGIETERSBEDRIJF JANSEN",
+            "Factuur 2026-118   Datum: 2026-09-20",
+            "Vervanging mengkraan keuken",
+            "Arbeid 2 uur   110,00",
+            "Materiaal       45,00",
+            "TOTAAL EUR 155,00",
+            "Garantie op werkzaamheden: 12 maanden",
+        ],
+        "image",
+        {
+            "kind": "service_invoice",
+            "total": 155.0,
+            "currency": "EUR",
+            "warranty_months": 12,
+            "contains": ["jansen"],
+        },
+    ),
+    (
         "plan-weekdays",
         [
             "PLANO DE TREINO",
@@ -289,6 +309,17 @@ def check_file(got: dict | None, expected: dict) -> str | None:
         merchant = str(got.get("merchant") or "").lower()
         if any(word not in merchant for word in expected.get("contains", [])):
             return f"merchant {merchant!r} lacks {expected['contains']}"
+    if expected["kind"] == "service_invoice":
+        try:
+            if abs(float(str(got.get("total")).replace(",", ".")) - expected["total"]) > 0.005:
+                return f"total {got.get('total')!r} != {expected['total']}"
+        except (TypeError, ValueError):
+            return f"total {got.get('total')!r} unreadable"
+        if got.get("warranty_months") != expected["warranty_months"]:
+            return f"warranty {got.get('warranty_months')!r} != {expected['warranty_months']}"
+        provider = str(got.get("provider") or "").lower()
+        if any(word not in provider for word in expected.get("contains", [])):
+            return f"provider {provider!r} lacks {expected['contains']}"
     if expected["kind"] == "workout_plan":
         days = got.get("days") or []
         if len(days) != expected["days"]:

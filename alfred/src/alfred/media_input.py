@@ -14,10 +14,12 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred import clock
 from alfred.audit import audit
 from alfred.llm import read_member_file
 from alfred.models import AuditLog, Member
 from alfred.receipt import receipt_reply
+from alfred.services import service_reply
 from alfred.training import Reply
 from alfred.training_media import plan_reply
 from alfred.whatsapp import MediaTooLarge, download_media
@@ -93,6 +95,8 @@ async def handle_media_file(
             return plan
     elif kind == "receipt":
         return await receipt_reply(reading, member, lang, session)
+    elif kind == "service_invoice":
+        return await service_reply(reading, member, lang, session, clock.today_local())
     return Reply(_t("media_unknown", lang))
 
 
@@ -130,11 +134,11 @@ STRINGS: dict[str, dict[str, str]] = {
         'Ich konnte die Datei gerade nicht lesen. Versuche es später noch einmal oder tippe es ("45 Supermarkt" oder "trainingsplan: montag - brust: bankdrücken 4x10 60kg").',
     ),
     "media_unknown": _all(
-        "Não reconheci nesse arquivo um recibo nem um plano de treino. Mande uma foto nítida de um deles ou escreva em texto.",
-        "Ik herken in dit bestand geen bon of trainingsschema. Stuur een scherpe foto van een van beide of typ het.",
-        "I couldn't recognise a receipt or a training plan in that file. Send a clear photo of one of them or type it.",
-        "Je n'ai reconnu ni reçu ni plan d'entraînement dans ce fichier. Envoie une photo nette de l'un des deux ou écris-le.",
-        "Ich habe in dieser Datei weder einen Beleg noch einen Trainingsplan erkannt. Sende ein scharfes Foto von einem der beiden oder tippe es.",
+        "Não reconheci nesse arquivo um recibo, uma nota de serviço nem um plano de treino. Mande uma foto nítida de um deles ou escreva em texto.",
+        "Ik herken in dit bestand geen bon, dienstfactuur of trainingsschema. Stuur een scherpe foto van een ervan of typ het.",
+        "I couldn't recognise a receipt, a service invoice or a training plan in that file. Send a clear photo of one of them or type it.",
+        "Je n'ai reconnu ni reçu, ni facture de service, ni plan d'entraînement dans ce fichier. Envoie une photo nette de l'un d'eux ou écris-le.",
+        "Ich habe in dieser Datei weder einen Beleg, eine Dienstleistungsrechnung noch einen Trainingsplan erkannt. Sende ein scharfes Foto von einem davon oder tippe es.",
     ),
     "media_rate": _all(
         "Você já enviou muitos arquivos nesta hora. Tente de novo daqui a pouco.",

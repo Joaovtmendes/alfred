@@ -31,7 +31,7 @@ def test_every_language_has_the_same_sections() -> None:
 def test_policy_1_6_covers_the_v2_data_categories_couple_and_statements_in_every_language() -> None:
     from alfred.legal import POLICY_VERSION
 
-    assert POLICY_VERSION == "1.6"
+    assert POLICY_VERSION == "1.7"
     for lang, policy in POLICY.items():
         text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
         assert any(w in text for w in ("bank statement", "bankafschrift", "extrato banc")), lang
@@ -50,3 +50,13 @@ def test_policy_says_training_files_go_to_the_ai_provider_and_are_not_kept() -> 
         text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
         assert any(w in text for w in ("photo", "foto")), lang
         assert any(w in text for w in ("not kept", "niet bewaard", "não é guardado")), lang
+
+
+def test_policy_1_7_covers_service_records_in_every_language() -> None:
+    for lang, policy in POLICY.items():
+        text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
+        assert any(
+            w in text
+            for w in ("invoice for a service", "factuur voor een dienst", "nota de serviço")
+        ), lang
+        assert "15 " in text, lang
