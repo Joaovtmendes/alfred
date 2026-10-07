@@ -419,34 +419,33 @@ async def _token(member_id) -> str:
 
 
 @db
-async def test_home_tab_only_for_couples_and_only_shared_rows(
+async def test_home_tab_adds_the_couple_cards_only_with_a_partner_and_only_shared_rows(
     lab: Lab, lab2: Lab, client, today
 ) -> None:
     tok, tok2 = await _token(lab.member_id), await _token(lab2.member_id)
     page = await client.get(f"/d/{tok}")
-    assert 'data-tab="home"' not in page.text
-    empty = (await client.get(f"/api/d/{tok}/home")).json()
-    assert empty["tab"] == "home" and empty["cards"] == []
+    assert 'data-tab="home"' in page.text  # V2-27: the tab is for everyone
+    alone = (await client.get(f"/api/d/{tok}/home")).json()
+    assert alone["tab"] == "home" and [c["id"] for c in alone["cards"]] == ["home_contracts"]
 
     await _link(lab, lab2)
     await lab.add(_exp(lab, 100, shared=True, merchant="Jumbo"), _exp(lab, 77, merchant="SEGREDO"))
     await lab2.add(_exp(lab2, 40, shared=True, merchant="Etos"))
-    assert 'data-tab="home"' in (await client.get(f"/d/{tok}")).text
     body = (await client.get(f"/api/d/{tok}/home")).json()
-    assert [c["id"] for c in body["cards"]] == ["home_balance", "home_entries"]
-    v = body["cards"][0]["values"]
+    assert [c["id"] for c in body["cards"]] == ["home_contracts", "home_balance", "home_entries"]
+    v = body["cards"][1]["values"]
     assert (v["month_total"], v["paid_me"], v["paid_partner"], v["balance"]) == (
         140.0,
         100.0,
         40.0,
         30.0,
     )
-    items = body["cards"][1]["items"]
+    items = body["cards"][2]["items"]
     assert {i["merchant"] for i in items} == {"Jumbo", "Etos"}
     assert {i["who"] for i in items} == {"me", "partner"}
     assert "SEGREDO" not in str(body)
     other = (await client.get(f"/api/d/{tok2}/home")).json()
-    assert other["cards"][0]["values"]["balance"] == -30.0
+    assert other["cards"][1]["values"]["balance"] == -30.0
     assert "SEGREDO" not in str(other)
 
 

@@ -190,14 +190,11 @@ async def dashboard_page(
     if member is None or token_expired(member):
         return _link_gone(member.language if member else None)
     lang = normalize_lang(member.language)
-    from alfred.couple import has_home
-
     return HTMLResponse(
         panel.render_v2(
             request.state.csp_nonce,
             lang,
             token,
             member.display_name,
-            has_home=await has_home(session, member.id),
         )
     )

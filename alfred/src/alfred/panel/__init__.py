@@ -54,14 +54,13 @@ def render_v2(
     lang: str | None,
     token: str,
     name: str | None = None,
-    has_home: bool = False,
 ) -> str:
     """The v2 shell. Only fixed, escaped texts, the member's display name (escaped) and the
     already-validated token go in."""
     lang = normalize_lang(lang)
     t = panel_i18n.shell(lang)
     e = html.escape
-    tab_list = panel_i18n.tabs(lang, home=has_home)
+    tab_list = panel_i18n.tabs(lang)
     tabs_html = "".join(
         f'<button role="tab" id="tab-{e(x["id"])}" aria-controls="panel" data-tab="{e(x["id"])}" '
         f'aria-selected="{"true" if i == 0 else "false"}" '
