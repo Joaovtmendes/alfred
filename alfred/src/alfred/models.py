@@ -1076,3 +1076,24 @@ class HomeContract(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class CalendarOptIn(Base):
+    """V2-21 — a member who asked for Dutch-deadline reminders (row exists = on).
+
+    ``sent_keys``: reminders already sent (comma separated, last 12), so each goes out once.
+    """
+
+    __tablename__ = "calendar_optin"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("member.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    sent_keys: Mapped[str] = mapped_column(String(400), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
