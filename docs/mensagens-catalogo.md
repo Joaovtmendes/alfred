@@ -859,6 +859,22 @@
 - **fr** — Commun
 - **de** — Gemeinsam
 
+## `btn_home_no`
+
+- **pt** — Cancelar
+- **nl** — Annuleren
+- **en** — Cancel
+- **fr** — Annuler
+- **de** — Abbrechen
+
+## `btn_home_ok`
+
+- **pt** — Confirmar
+- **nl** — Bevestigen
+- **en** — Confirm
+- **fr** — Confirmer
+- **de** — Bestätigen
+
 ## `btn_inv_undo`
 
 - **pt** — Desfazer
@@ -2192,6 +2208,14 @@
 - **de** — 
   > Hoher Betrag — bist du dir beim Betrag sicher?
 
+## `home_ambiguous`
+
+- **pt** — Achei mais de um: {names}. Diga o tipo, por exemplo energia, gás ou internet.
+- **nl** — Ik vond er meer dan één: {names}. Noem het type, bijvoorbeeld energie, gas of internet.
+- **en** — I found more than one: {names}. Tell me the type, for example energy, gas or internet.
+- **fr** — J'en ai trouvé plusieurs : {names}. Précise le type, par exemple énergie, gaz ou internet.
+- **de** — Ich habe mehrere gefunden: {names}. Nenne die Art, zum Beispiel Strom, Gas oder Internet.
+
 ## `home_auto_suffix`
 
 - **pt** —  (da casa)
@@ -2200,6 +2224,38 @@
 - **fr** —  (commun)
 - **de** —  (gemeinsam)
 
+## `home_bad`
+
+- **pt** — Não entendi. Preciso do tipo (energia, gás ou internet), do fornecedor e da data de fim, por exemplo *contrato energia Vattenfall 120 por mês até 31/12/2027*.
+- **nl** — Dat begreep ik niet. Ik heb het type (energie, gas of internet), de leverancier en de einddatum nodig, bijvoorbeeld *contract energie Vattenfall 120 per maand tot 31/12/2027*.
+- **en** — I didn't get that. I need the type (energy, gas or internet), the provider and the end date, for example *contract energy Vattenfall 120 a month until 31/12/2027*.
+- **fr** — Je n'ai pas compris. Il me faut le type (énergie, gaz ou internet), le fournisseur et la date de fin, par exemple *contrat énergie Vattenfall 120 par mois jusqu'au 31/12/2027*.
+- **de** — Das habe ich nicht verstanden. Ich brauche die Art (Strom, Gas oder Internet), den Anbieter und das Enddatum, zum Beispiel *vertrag strom Vattenfall 120 im Monat bis 31/12/2027*.
+
+## `home_cancelled`
+
+- **pt** — Cancelado, nada foi guardado.
+- **nl** — Geannuleerd, niets opgeslagen.
+- **en** — Cancelled, nothing was saved.
+- **fr** — Annulé, rien n'a été enregistré.
+- **de** — Abgebrochen, nichts gespeichert.
+
+## `home_deleted`
+
+- **pt** — Apaguei: {what}.
+- **nl** — Verwijderd: {what}.
+- **en** — Deleted: {what}.
+- **fr** — Supprimé : {what}.
+- **de** — Gelöscht: {what}.
+
+## `home_ends`
+
+- **pt** — termina em {d} (faltam {n} dias)
+- **nl** — eindigt op {d} (nog {n} dagen)
+- **en** — ends {d} ({n} days left)
+- **fr** — se termine le {d} (encore {n} jours)
+- **de** — endet am {d} (noch {n} Tage)
+
 ## `home_entries_hint`
 
 - **pt** — Ainda não há gastos da casa neste mês. Marque um lançamento com o botão Da casa.
@@ -2207,6 +2263,78 @@
 - **en** — No shared expenses this month yet. Mark an entry with the Shared button.
 - **fr** — Pas encore de dépenses communes ce mois-ci. Marque une opération avec le bouton Commun.
 - **de** — Diesen Monat gibt es noch keine gemeinsamen Ausgaben. Markiere eine Buchung mit dem Knopf Gemeinsam.
+
+## `home_expired`
+
+- **pt** — Esse rascunho expirou. Mande o contrato de novo.
+- **nl** — Dit concept is verlopen. Stuur het contract opnieuw.
+- **en** — That draft expired. Please send the contract again.
+- **fr** — Ce brouillon a expiré. Renvoie le contrat.
+- **de** — Dieser Entwurf ist abgelaufen. Sende den Vertrag bitte neu.
+
+## `home_foot`
+
+- **pt** — Ainda não gravei nada. Se existir outro contrato do mesmo tipo, este o substitui. Para corrigir, mande de novo.
+- **nl** — Ik heb nog niets opgeslagen. Een bestaand contract van hetzelfde type wordt vervangen. Om te corrigeren, stuur het opnieuw.
+- **en** — Nothing is saved yet. An existing contract of the same type is replaced. To correct something, send it again.
+- **fr** — Rien n'est encore enregistré. Un contrat existant du même type est remplacé. Pour corriger, renvoie-le.
+- **de** — Noch nichts gespeichert. Ein bestehender Vertrag derselben Art wird ersetzt. Zum Korrigieren sende es neu.
+
+## `home_kind_energy`
+
+- **pt** — Energia
+- **nl** — Energie
+- **en** — Energy
+- **fr** — Énergie
+- **de** — Strom
+
+## `home_kind_gas`
+
+- **pt** — Gás
+- **nl** — Gas
+- **en** — Gas
+- **fr** — Gaz
+- **de** — Gas
+
+## `home_kind_internet`
+
+- **pt** — Internet
+- **nl** — Internet
+- **en** — Internet
+- **fr** — Internet
+- **de** — Internet
+
+## `home_limit`
+
+- **pt** — Você já tem {n} contratos guardados, o máximo. Apague algum antes de guardar outro.
+- **nl** — Je hebt al {n} contracten opgeslagen, het maximum. Verwijder er eerst een.
+- **en** — You already have {n} contracts saved, the maximum. Delete one first.
+- **fr** — Tu as déjà {n} contrats enregistrés, le maximum. Supprime-en un d'abord.
+- **de** — Du hast bereits {n} Verträge gespeichert, das Maximum. Lösche zuerst einen.
+
+## `home_list_empty`
+
+- **pt** — Você não tem contratos guardados. Para guardar: *contrato energia Vattenfall 120 por mês até 31/12/2027* ou mande uma foto do contrato.
+- **nl** — Je hebt geen opgeslagen contracten. Opslaan: *contract energie Vattenfall 120 per maand tot 31/12/2027* of stuur een foto van het contract.
+- **en** — You have no saved contracts. To save one: *contract energy Vattenfall 120 a month until 31/12/2027* or send a photo of the contract.
+- **fr** — Tu n'as aucun contrat enregistré. Pour en ajouter : *contrat énergie Vattenfall 120 par mois jusqu'au 31/12/2027* ou envoie une photo du contrat.
+- **de** — Du hast keine gespeicherten Verträge. Zum Speichern: *vertrag strom Vattenfall 120 im Monat bis 31/12/2027* oder sende ein Foto des Vertrags.
+
+## `home_list_hint`
+
+- **pt** — Para renovar: *renovei contrato energia até 31/12/2028*. Para apagar: *apaga contrato energia*.
+- **nl** — Verlengen: *verlengd contract energie tot 31/12/2028*. Verwijderen: *verwijder contract energie*.
+- **en** — To renew: *renewed contract energy until 31/12/2028*. To delete: *delete contract energy*.
+- **fr** — Pour renouveler : *renouvelé contrat énergie jusqu'au 31/12/2028*. Pour supprimer : *supprime contrat énergie*.
+- **de** — Verlängern: *verlängert vertrag strom bis 31/12/2028*. Löschen: *lösche vertrag strom*.
+
+## `home_list_title`
+
+- **pt** — Contratos da casa:
+- **nl** — Contracten van het huis:
+- **en** — Home contracts:
+- **fr** — Contrats de la maison :
+- **de** — Verträge des Hauses:
 
 ## `home_marked`
 
@@ -2224,6 +2352,14 @@
 - **fr** — Je n'ai trouvé aucune opération de toi à marquer.
 - **de** — Ich habe keine Buchung von dir zum Markieren gefunden.
 
+## `home_not_found`
+
+- **pt** — Não achei esse contrato. Escreva *contratos* para ver a lista.
+- **nl** — Ik vond dat contract niet. Schrijf *contracten* voor de lijst.
+- **en** — I couldn't find that contract. Write *contracts* for the list.
+- **fr** — Je n'ai pas trouvé ce contrat. Écris *contrats* pour la liste.
+- **de** — Ich habe diesen Vertrag nicht gefunden. Schreib *verträge* für die Liste.
+
 ## `home_only_expense`
 
 - **pt** — Só gastos podem ser da casa, receitas não.
@@ -2231,6 +2367,54 @@
 - **en** — Only expenses can be shared, not income.
 - **fr** — Seules les dépenses peuvent être communes, pas les revenus.
 - **de** — Nur Ausgaben können gemeinsam sein, Einnahmen nicht.
+
+## `home_per_month`
+
+- **pt** — {a} por mês
+- **nl** — {a} per maand
+- **en** — {a} a month
+- **fr** — {a} par mois
+- **de** — {a} im Monat
+
+## `home_photo_bad`
+
+- **pt** — Não consegui ler nesse arquivo o tipo, o fornecedor e a data de fim do contrato. Mande uma foto mais nítida ou escreva, por exemplo *contrato energia Vattenfall 120 por mês até 31/12/2027*.
+- **nl** — Ik kon in dit bestand het type, de leverancier en de einddatum van het contract niet lezen. Stuur een scherpere foto of typ bijvoorbeeld *contract energie Vattenfall 120 per maand tot 31/12/2027*.
+- **en** — I couldn't read the type, provider and end date of the contract in that file. Send a sharper photo or type, for example, *contract energy Vattenfall 120 a month until 31/12/2027*.
+- **fr** — Je n'ai pas pu lire le type, le fournisseur et la date de fin du contrat. Envoie une photo plus nette ou écris par exemple *contrat énergie Vattenfall 120 par mois jusqu'au 31/12/2027*.
+- **de** — Ich konnte Art, Anbieter und Enddatum des Vertrags nicht lesen. Sende ein schärferes Foto oder tippe zum Beispiel *vertrag strom Vattenfall 120 im Monat bis 31/12/2027*.
+
+## `home_rem`
+
+- **pt** — Aviso: o contrato de {kind} com {provider} termina em {d} (faltam {n} dias). É um bom momento para comparar ofertas ou renegociar. Confira no seu contrato o prazo de aviso.
+- **nl** — Let op: het contract voor {kind} bij {provider} eindigt op {d} (nog {n} dagen). Een goed moment om aanbiedingen te vergelijken of te heronderhandelen. Controleer de opzegtermijn in je contract.
+- **en** — Heads up: your {kind} contract with {provider} ends on {d} ({n} days left). A good time to compare offers or renegotiate. Check the notice period in your contract.
+- **fr** — Attention : ton contrat {kind} chez {provider} se termine le {d} (encore {n} jours). Bon moment pour comparer les offres ou renégocier. Vérifie le préavis dans ton contrat.
+- **de** — Achtung: dein {kind}-Vertrag bei {provider} endet am {d} (noch {n} Tage). Ein guter Zeitpunkt, Angebote zu vergleichen oder neu zu verhandeln. Prüfe die Kündigungsfrist in deinem Vertrag.
+
+## `home_renewed`
+
+- **pt** — Renovado: {line}. Os avisos recomeçam para a nova data.
+- **nl** — Verlengd: {line}. De herinneringen starten opnieuw voor de nieuwe datum.
+- **en** — Renewed: {line}. Reminders restart for the new date.
+- **fr** — Renouvelé : {line}. Les rappels repartent pour la nouvelle date.
+- **de** — Verlängert: {line}. Die Erinnerungen starten für das neue Datum neu.
+
+## `home_saved`
+
+- **pt** — Guardado: {line}. Aviso 60 e 30 dias antes do fim, para você comparar ofertas.
+- **nl** — Opgeslagen: {line}. Ik waarschuw je 60 en 30 dagen voor het einde, zodat je aanbiedingen kunt vergelijken.
+- **en** — Saved: {line}. I'll remind you 60 and 30 days before the end so you can compare offers.
+- **fr** — Enregistré : {line}. Je te préviens 60 et 30 jours avant la fin pour comparer les offres.
+- **de** — Gespeichert: {line}. Ich erinnere dich 60 und 30 Tage vor dem Ende, damit du Angebote vergleichen kannst.
+
+## `home_title`
+
+- **pt** — Entendi este contrato:
+- **nl** — Dit contract heb ik begrepen:
+- **en** — Here is the contract I understood:
+- **fr** — Voici le contrat compris :
+- **de** — Das habe ich verstanden:
 
 ## `home_unmarked`
 
@@ -3101,11 +3285,11 @@
 
 ## `media_unknown`
 
-- **pt** — Não reconheci nesse arquivo um recibo, uma nota de serviço nem um plano de treino. Mande uma foto nítida de um deles ou escreva em texto.
-- **nl** — Ik herken in dit bestand geen bon, dienstfactuur of trainingsschema. Stuur een scherpe foto van een ervan of typ het.
-- **en** — I couldn't recognise a receipt, a service invoice or a training plan in that file. Send a clear photo of one of them or type it.
-- **fr** — Je n'ai reconnu ni reçu, ni facture de service, ni plan d'entraînement dans ce fichier. Envoie une photo nette de l'un d'eux ou écris-le.
-- **de** — Ich habe in dieser Datei weder einen Beleg, eine Dienstleistungsrechnung noch einen Trainingsplan erkannt. Sende ein scharfes Foto von einem davon oder tippe es.
+- **pt** — Não reconheci nesse arquivo um recibo, uma nota de serviço, um contrato da casa nem um plano de treino. Mande uma foto nítida de um deles ou escreva em texto.
+- **nl** — Ik herken in dit bestand geen bon, dienstfactuur, huiscontract of trainingsschema. Stuur een scherpe foto van een ervan of typ het.
+- **en** — I couldn't recognise a receipt, a service invoice, a home contract or a training plan in that file. Send a clear photo of one of them or type it.
+- **fr** — Je n'ai reconnu ni reçu, ni facture de service, ni contrat de la maison, ni plan d'entraînement dans ce fichier. Envoie une photo nette de l'un d'eux ou écris-le.
+- **de** — Ich habe in dieser Datei weder einen Beleg, eine Dienstleistungsrechnung, einen Hausvertrag noch einen Trainingsplan erkannt. Sende ein scharfes Foto von einem davon oder tippe es.
 
 ## `mom_empty`
 

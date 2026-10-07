@@ -1047,3 +1047,32 @@ class ServiceRecord(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class HomeContract(Base):
+    """V2-27 — an energy, gas or internet contract of the home, tracked to its end date.
+
+    ``status`` is ``draft`` until the member confirms (15 minutes, one draft per member). One
+    active contract per kind: confirming a new one replaces the old. ``sent_60`` / ``sent_30``
+    mark the reminders already sent for the current ``ends_on`` (renewing resets them).
+    """
+
+    __tablename__ = "home_contract"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("member.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)  # energy | gas | internet
+    status: Mapped[str] = mapped_column(String(8), nullable=False, default="draft")
+    provider: Mapped[str] = mapped_column(String(60), nullable=False)
+    amount: Mapped[float | None] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=True)
+    ends_on: Mapped[date] = mapped_column(Date, nullable=False)
+    sent_60: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sent_30: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

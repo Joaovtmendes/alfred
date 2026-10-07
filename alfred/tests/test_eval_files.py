@@ -25,14 +25,20 @@ def test_every_case_renders_a_real_image_or_pdf(name, lines, form, expected) -> 
         assert mime == "application/pdf" and data.startswith(b"%PDF")
     else:
         assert mime == "image/jpeg" and data.startswith(b"\xff\xd8\xff")
-    assert expected["kind"] in ("receipt", "service_invoice", "workout_plan", "other")
+    assert expected["kind"] in (
+        "receipt",
+        "service_invoice",
+        "home_contract",
+        "workout_plan",
+        "other",
+    )
 
 
 def test_the_cases_cover_both_kinds_both_formats_and_the_traps() -> None:
     kinds = {c[3]["kind"] for c in ev.FILE_CASES}
     forms = {c[2] for c in ev.FILE_CASES}
     names = " ".join(c[0] for c in ev.FILE_CASES)
-    assert kinds == {"receipt", "service_invoice", "workout_plan", "other"}
+    assert kinds == {"receipt", "service_invoice", "home_contract", "workout_plan", "other"}
     assert forms == {"image", "pdf"}
     assert "usd" in names and "injection" in names and "no-weekdays" in names
 

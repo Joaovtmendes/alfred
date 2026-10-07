@@ -61,6 +61,8 @@ from alfred.followup import (
 from alfred.followup import (
     STRINGS as _FOLLOWUP_STRINGS,
 )
+from alfred.home import STRINGS as _HOME_STRINGS
+from alfred.home import handle_home_button, handle_home_command
 from alfred.insights import STRINGS as _INSIGHT_STRINGS
 from alfred.insights import handle_insight_command
 from alfred.invoices import STRINGS as _INVOICE_STRINGS
@@ -1560,6 +1562,7 @@ _STRINGS.update(_BATCH_STRINGS)  # V2-17
 _STRINGS.update(_FOLLOWUP_STRINGS)  # V2-20 / V2-23
 _STRINGS.update(_INVOICE_STRINGS)  # V2-12 part 2
 _STRINGS.update(_SERVICE_STRINGS)  # V2-36
+_STRINGS.update(_HOME_STRINGS)  # V2-27
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
 
@@ -3642,6 +3645,12 @@ async def _handle_button_reply(
         await _save_outbound(member, svc.text, session)
         return True
 
+    if action in ("home_ok", "home_no"):  # V2-27 confirm / cancel a home contract draft
+        home = await handle_home_button(action, raw_id, member, lang, session, today_local())
+        await send_text(to, home.text)
+        await _save_outbound(member, home.text, session)
+        return True
+
     if action in ("fb_up", "fb_down", "fb_r"):  # V2-23 thumbs up/down and the reason
         fb = await handle_feedback_button(action, raw_id, member, lang, session)
         if fb.buttons:
@@ -4146,6 +4155,18 @@ async def handle_inbound(
             else:
                 await send_text(to, svc_out.text)
             await _save_outbound(member, svc_out.text, session)
+            return
+
+        # 4e-0s4. V2-27 — home contracts: "contrato energia Vattenfall 120 até 31/12/2027" / "contratos"
+        home_out = await handle_home_command(
+            message.body or "", body_plain, member, lang, session, today_local()
+        )
+        if home_out is not None:
+            if home_out.buttons:
+                await send_buttons(to, home_out.text, home_out.buttons)
+            else:
+                await send_text(to, home_out.text)
+            await _save_outbound(member, home_out.text, session)
             return
 
         # 4e-0o. V2-18 — "o que você me enviou hoje" / "lembretes que mandou"
