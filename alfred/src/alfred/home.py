@@ -511,6 +511,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "J'en ai trouvé plusieurs : {names}. Précise le type, par exemple énergie, gaz ou internet.",
         "Ich habe mehrere gefunden: {names}. Nenne die Art, zum Beispiel Strom, Gas oder Internet.",
     ),
+    "home_panel_hint": _all5(
+        "Nenhum contrato guardado ainda. No chat, escreva: contrato energia Vattenfall 120 por mês até 31/12/2027.",
+        "Nog geen contracten opgeslagen. Schrijf in de chat: contract energie Vattenfall 120 per maand tot 31/12/2027.",
+        "No contracts saved yet. In the chat write: contract energy Vattenfall 120 a month until 31/12/2027.",
+        "Aucun contrat enregistré. Dans le chat, écris : contrat énergie Vattenfall 120 par mois jusqu'au 31/12/2027.",
+        "Noch keine Verträge gespeichert. Schreibe im Chat: vertrag strom Vattenfall 120 im Monat bis 31/12/2027.",
+    ),
     "home_deleted": _all5(
         "Apaguei: {what}.",
         "Verwijderd: {what}.",
@@ -526,3 +533,55 @@ STRINGS: dict[str, dict[str, str]] = {
         "Achtung: dein {kind}-Vertrag bei {provider} endet am {d} (noch {n} Tage). Ein guter Zeitpunkt, Angebote zu vergleichen oder neu zu verhandeln. Prüfe die Kündigungsfrist in deinem Vertrag.",
     ),
 }
+
+
+# ── panel (the "Casa" tab) ───────────────────────────────────────────────────
+
+
+async def panel_cards(
+    session: AsyncSession, member: Member, lang: str, today: date
+) -> list[dict[str, object]]:
+    """Contracts of the home and their monthly cost; for everyone, with or without a partner."""
+    rows = await _active(session, member)
+    items = [
+        {
+            "kind": r.kind,
+            "label": _kind_label(r.kind, lang),
+            "provider": r.provider,
+            "amount": float(r.amount) if r.amount is not None else None,
+            "ends_on": r.ends_on.isoformat(),
+            "days": (r.ends_on - today).days,
+        }
+        for r in rows
+    ]
+    contracts: dict[str, object] = {
+        "id": "home_contracts",
+        "empty": not items,
+        "values": {"count": len(items)},
+        "items": items,
+        "phrase": None,
+    }
+    if not items:
+        contracts["hint"] = {
+            "key": "home_contracts",
+            "text": _t("home_panel_hint", lang),
+            "chat": None,
+            "severity": "info",
+        }
+    cards = [contracts]
+    priced = [i for i in items if i["amount"] is not None]
+    if priced:
+        total = sum(float(i["amount"]) for i in priced)  # type: ignore[arg-type]
+        cards.append(
+            {
+                "id": "home_cost",
+                "empty": False,
+                "values": {"monthly": round(total, 2), "yearly": round(total * 12, 2)},
+                "items": [
+                    {"label": i["label"], "provider": i["provider"], "amount": i["amount"]}
+                    for i in priced
+                ],
+                "phrase": None,
+            }
+        )
+    return cards

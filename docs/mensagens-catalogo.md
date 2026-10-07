@@ -2368,6 +2368,14 @@
 - **fr** — Seules les dépenses peuvent être communes, pas les revenus.
 - **de** — Nur Ausgaben können gemeinsam sein, Einnahmen nicht.
 
+## `home_panel_hint`
+
+- **pt** — Nenhum contrato guardado ainda. No chat, escreva: contrato energia Vattenfall 120 por mês até 31/12/2027.
+- **nl** — Nog geen contracten opgeslagen. Schrijf in de chat: contract energie Vattenfall 120 per maand tot 31/12/2027.
+- **en** — No contracts saved yet. In the chat write: contract energy Vattenfall 120 a month until 31/12/2027.
+- **fr** — Aucun contrat enregistré. Dans le chat, écris : contrat énergie Vattenfall 120 par mois jusqu'au 31/12/2027.
+- **de** — Noch keine Verträge gespeichert. Schreibe im Chat: vertrag strom Vattenfall 120 im Monat bis 31/12/2027.
+
 ## `home_per_month`
 
 - **pt** — {a} por mês

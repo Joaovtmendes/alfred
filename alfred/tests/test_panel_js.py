@@ -585,7 +585,7 @@ async def test_merchant_search_filters_in_the_browser_and_never_leaves_it() -> N
     try:
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=transactions] input[type=search]")
-        every_tab = {"summary", "money", "agenda", "health", "trips", "books"}
+        every_tab = {"summary", "money", "agenda", "health", "trips", "books", "home"}
         for _ in range(200):  # the background fetch of the other tabs may still be running
             if every_tab <= {u.split("/")[-1].split("?")[0] for _, u in page.api_calls}:
                 break
@@ -674,7 +674,7 @@ async def test_tabs_work_from_the_keyboard_and_focus_is_visible() -> None:
         await page.keyboard.press("ArrowRight")
         assert await page.get_attribute('[data-tab="money"]', "aria-selected") == "true"
         await page.keyboard.press("End")
-        assert await page.get_attribute('[data-tab="books"]', "aria-selected") == "true"
+        assert await page.get_attribute('[data-tab="home"]', "aria-selected") == "true"
         await page.keyboard.press("Home")
         await page.keyboard.press("Tab")  # leaves the tab list for the filters
         outline = await page.evaluate("getComputedStyle(document.activeElement).outlineStyle")
@@ -1043,10 +1043,10 @@ async def test_the_other_tabs_are_fetched_in_the_background_after_the_first_one(
         await page.wait_for_selector("[data-card=upcoming]")
         for _ in range(40):
             tabs = {u.split("/")[-1].split("?")[0] for _, u in page.api_calls}
-            if {"summary", "money", "agenda", "health", "trips", "books"} <= tabs:
+            if {"summary", "money", "agenda", "health", "trips", "books", "home"} <= tabs:
                 break
             await page.wait_for_timeout(100)
-        assert {"money", "agenda", "health", "trips", "books"} <= tabs
+        assert {"money", "agenda", "health", "trips", "books", "home"} <= tabs
         calls = len(page.api_calls)
         await page.click('[data-tab="health"]')
         await page.wait_for_selector("[data-card=water]")
@@ -1073,5 +1073,56 @@ async def test_lancamentos_opens_on_the_latest_day_that_is_not_in_the_future() -
             "[data-card=transactions] .daychips button[aria-pressed=true]"
         ).inner_text()
         assert "20" not in pressed and "2" in pressed
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_the_home_tab_draws_contracts_and_cost_and_never_runs_a_provider_name() -> None:
+    contracts = {
+        "id": "home_contracts",
+        "empty": False,
+        "values": {"count": 2},
+        "items": [
+            {
+                "kind": "internet",
+                "label": "Internet",
+                "provider": "Ziggo",
+                "amount": 55.5,
+                "ends_on": "2027-01-05",
+                "days": 83,
+            },
+            {
+                "kind": "energy",
+                "label": "Energia",
+                "provider": "<img src=x onerror=window.__pwned=1>",
+                "amount": None,
+                "ends_on": "2027-12-31",
+                "days": 443,
+            },
+        ],
+        "phrase": None,
+    }
+    cost = {
+        "id": "home_cost",
+        "empty": False,
+        "values": {"monthly": 55.5, "yearly": 666.0},
+        "items": [{"label": "Internet", "provider": "Ziggo", "amount": 55.5}],
+        "phrase": None,
+    }
+
+    async def home():
+        return await _ok([contracts, cost])
+
+    pwm, browser, page = await _open({**_handlers(), "home": home})
+    try:
+        await page.click('[data-tab="home"]')
+        await page.wait_for_selector("[data-card=home_contracts]")
+        text = await _text(page, "[data-card=home_contracts]")
+        assert "Internet · Ziggo" in text and "termina em 05/01/2027 · 83 dias" in text
+        assert "€ 55,50 por mês" in text and "<img" in text  # shown as text
+        assert await page.locator("[data-card=home_contracts] img").count() == 0
+        assert not await page.evaluate("window.__pwned")
+        cost_text = await _text(page, "[data-card=home_cost]")
+        assert "€ 55" in cost_text and "≈ € 666 por ano" in cost_text
     finally:
         await _close(pwm, browser)

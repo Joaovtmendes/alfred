@@ -204,6 +204,7 @@
     goals: "title_goals", trip: "title_trip",
     training: "title_training", itinerary: "title_itinerary", packing: "title_packing", plan_budget: "title_planbudget",
     home_balance: "title_home_balance", home_entries: "title_home_entries",
+    home_contracts: "title_home_contracts", home_cost: "title_home_cost",
     books_year: "title_books_year", books_categories: "title_books_categories", books_fixed: "title_books_fixed",
     books_emergency: "title_books_emergency", books_pl: "title_books_pl", books_btw: "title_books_btw",
     books_deductible: "title_books_deductible", books_reserve: "title_books_reserve",
@@ -214,7 +215,7 @@
     agenda: { week: "s7", tasks: "s5", month_map: "s7", reminders: "s5", notes: "s12" },
     health: { goals: "s7", workouts: "s5", training: "s12", water: "s12" },
     trips: { trip: "s7", packing: "s5", itinerary: "s7", plan_budget: "s5", trips_past: "s12" },
-    home: { home_balance: "s5", home_entries: "s7" },
+    home: { home_contracts: "s7", home_cost: "s5", home_balance: "s5", home_entries: "s7" },
     books: { books_year: "s7", books_categories: "s5", books_fixed: "s5", books_emergency: "s7", books_pl: "s7", books_btw: "s5", books_deductible: "s5", books_reserve: "s7", books_receivables: "s12" },
     money: { transactions: "s7", month_vs_month: "s5", top_expenses: "s5", categories: "s7", budgets: "s7", fixed_variable: "s5", owed: "s5", daily: "s7", recurring: "s12" },
   };
@@ -584,6 +585,38 @@
         rows.append(r);
       }
       c.append(rows);
+      return c;
+    },
+
+    home_contracts(card, span) {
+      const c = cardShell(card, T.title_home_contracts, span);
+      const list = el("div", "list");
+      for (const it of card.items) {
+        const row = el("div", "item");
+        const body = el("div");
+        body.append(el("div", "t", it.label + " · " + it.provider));
+        const d = it.ends_on.slice(8, 10) + "/" + it.ends_on.slice(5, 7) + "/" + it.ends_on.slice(0, 4);
+        body.append(el("div", "s", fmt(T.home_c_ends, { date: d, n: it.days })));
+        row.append(body, el("div", "amt", it.amount === null ? "" : money(it.amount) + " " + T.home_c_per_month));
+        list.append(row);
+      }
+      c.append(list);
+      return c;
+    },
+
+    home_cost(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_home_cost, span);
+      heroMoney(c, v.monthly, false);
+      c.append(el("div", "sub", T.home_c_per_month));
+      const rows = el("div", "rows");
+      for (const it of card.items) {
+        const r = el("div", "cat");
+        r.append(el("span", "n", it.label + " · " + it.provider), el("span", "v", money0(it.amount)));
+        rows.append(r);
+      }
+      c.append(rows);
+      c.append(el("div", "cap", fmt(T.home_c_year, { amount: money0(v.yearly) })));
       return c;
     },
 

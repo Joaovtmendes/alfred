@@ -1007,6 +1007,35 @@ SHELL.update(
         "title_home_balance": _t(
             "Casa de vocês", "Jullie huis", "Your home", "Foyer commun", "Euer Haushalt"
         ),
+        "title_home_contracts": _t(
+            "Contratos da casa",
+            "Contracten van het huis",
+            "Home contracts",
+            "Contrats de la maison",
+            "Verträge des Hauses",
+        ),
+        "title_home_cost": _t(
+            "Custo mensal da casa",
+            "Maandelijkse woonkosten",
+            "Monthly home cost",
+            "Coût mensuel de la maison",
+            "Monatliche Hauskosten",
+        ),
+        "home_c_ends": _t(
+            "termina em {date} · {n} dias",
+            "eindigt op {date} · {n} dagen",
+            "ends {date} · {n} days",
+            "se termine le {date} · {n} jours",
+            "endet am {date} · {n} Tage",
+        ),
+        "home_c_per_month": _t("por mês", "per maand", "a month", "par mois", "im Monat"),
+        "home_c_year": _t(
+            "≈ {amount} por ano",
+            "≈ {amount} per jaar",
+            "≈ {amount} a year",
+            "≈ {amount} par an",
+            "≈ {amount} im Jahr",
+        ),
         "title_home_entries": _t(
             "Gastos da casa no mês",
             "Gedeelde uitgaven deze maand",
@@ -1255,16 +1284,17 @@ def categories(lang: str | None) -> list[dict[str, str]]:
     return [{"id": c, "label": category_label(c, lang)} for c in _LABELS]
 
 
-# V2-10: the sixth tab exists only for a member with a partner (a phone fits five tabs)
+# V2-27: the "Casa" tab is for everyone (contracts and monthly cost); with a partner (V2-10) it
+# also shows the shared total and who owes whom.
 _HOME_TAB = (
     "home",
     {"pt": "Casa", "nl": "Huis", "en": "Home", "fr": "Foyer", "de": "Haushalt"},
 )
 
 
-def tabs(lang: str | None, home: bool = False) -> list[dict[str, str]]:
+def tabs(lang: str | None) -> list[dict[str, str]]:
     lang = normalize_lang(lang)
-    items = (*_TABS, _HOME_TAB) if home else _TABS
+    items = (*_TABS, _HOME_TAB)
     return [{"id": i, "label": names[lang], "path": f"/api/d/{{token}}/{i}"} for i, names in items]
 
 

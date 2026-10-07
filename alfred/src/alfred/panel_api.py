@@ -866,19 +866,20 @@ async def trips(
 async def home(
     token: str, request: Request, session: AsyncSession = Depends(get_session)
 ) -> JSONResponse:
-    """V2-10 — the couple's tab: this month's shared total, who paid, the split and who owes whom.
+    """The "Casa" tab: home contracts and their monthly cost (V2-27) for everyone; with an active
+    partner link also this month's shared total, who paid, the split and who owes whom (V2-10).
 
-    Only the member's own token opens it, and only with an active link; without one the cards
-    are empty (the tab is not even listed). Rows are the ones marked "da casa" by either side.
+    Only the member's own token opens it. Rows are the ones marked "da casa" by either side.
     """
     from alfred import couple
+    from alfred import home as home_contracts
 
     member, f = await _open(token, request, session)
     audit(session, "panel_home_opened", member.id)
     await session.commit()
-    cards = await couple.panel_cards(
-        session, member, normalize_lang(member.language), today_local()
-    )
+    lang = normalize_lang(member.language)
+    cards = await home_contracts.panel_cards(session, member, lang, today_local())
+    cards += await couple.panel_cards(session, member, lang, today_local())
     return _envelope("home", member, f, cards, today_local())
 
 
