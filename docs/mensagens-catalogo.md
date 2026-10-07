@@ -1092,6 +1092,118 @@
 - **de** — Alles klar, ich lasse es so.
 - **de** — Verstanden, es bleibt eingetragen.
 
+## `cal_btw`
+
+- **pt** — BTW trimestral (para quem tem empresa): declaração e pagamento até o fim do mês seguinte ao trimestre. Próximo prazo: {d} (faltam {n} dias). Quem declara por mês tem o fim de cada mês seguinte.
+- **nl** — Kwartaal-btw (voor ondernemers): aangifte en betaling uiterlijk aan het einde van de maand na het kwartaal. Volgende datum: {d} (nog {n} dagen). Wie per maand aangifte doet, heeft het einde van de volgende maand.
+- **en** — Quarterly BTW (for business owners): return and payment by the end of the month after the quarter. Next deadline: {d} ({n} days left). Monthly filers have the end of each following month.
+- **fr** — TVA (BTW) trimestrielle (pour les entrepreneurs) : déclaration et paiement avant la fin du mois suivant le trimestre. Prochaine échéance : {d} (encore {n} jours). Les déclarants mensuels ont la fin de chaque mois suivant.
+- **de** — Quartals-BTW (für Unternehmer): Erklärung und Zahlung bis zum Ende des Monats nach dem Quartal. Nächste Frist: {d} (noch {n} Tage). Monatliche Melder haben das Ende des jeweils folgenden Monats.
+
+## `cal_health`
+
+- **pt** — Seguro-saúde: para valer em 1º de janeiro, contrate o novo até {d} (faltam {n} dias); o novo seguro cancela o antigo sozinho. Quem ficar sem seguro ainda pode contratar até 1º de fevereiro, com cobertura desde 1º de janeiro (confira no site do governo).
+- **nl** — Zorgverzekering: sluit uiterlijk op {d} een nieuwe af (nog {n} dagen) om per 1 januari over te stappen; de nieuwe verzekeraar zegt de oude zelf op. Wie zonder verzekering blijft, kan tot 1 februari nog een polis nemen, met dekking vanaf 1 januari (controleer op rijksoverheid.nl).
+- **en** — Health insurance: to switch from 1 January, sign the new policy by {d} ({n} days left); the new insurer cancels the old one for you. If you end up uninsured you can still take a policy until 1 February, covered from 1 January (check the government site).
+- **fr** — Assurance maladie : pour changer au 1er janvier, souscris la nouvelle au plus tard le {d} (encore {n} jours) ; le nouvel assureur résilie l'ancienne pour toi. Sans assurance, on peut encore en prendre une jusqu'au 1er février, avec couverture depuis le 1er janvier (vérifie sur le site du gouvernement).
+- **de** — Krankenversicherung: Für einen Wechsel zum 1. Januar schließt du die neue bis spätestens {d} ab (noch {n} Tage); der neue Versicherer kündigt die alte für dich. Wer ohne Versicherung bleibt, kann bis 1. Februar noch eine abschließen, mit Schutz ab 1. Januar (bitte auf der Regierungsseite prüfen).
+
+## `cal_hint`
+
+- **pt** — Quer receber avisos? Diga 'ligar avisos de prazos'. São datas de fontes oficiais; confira na fonte antes de decidir. Não é aconselhamento.
+- **nl** — Wil je herinneringen? Zeg 'zet herinneringen deadlines aan'. Dit zijn data uit officiële bronnen; controleer ze bij de bron. Geen advies.
+- **en** — Want reminders? Say 'turn on deadline reminders'. These are dates from official sources; check the source before deciding. Not advice.
+- **fr** — Des rappels ? Dis 'activer rappels échéances'. Ce sont des dates de sources officielles ; vérifie à la source. Ce n'est pas un conseil.
+- **de** — Erinnerungen? Sag 'Erinnerungen Fristen einschalten'. Das sind Daten aus offiziellen Quellen; bitte an der Quelle prüfen. Keine Beratung.
+
+## `cal_off`
+
+- **pt** — Combinado, não vou mais enviar avisos de prazos. Você ainda pode perguntar 'prazos' quando quiser.
+- **nl** — Prima, ik stuur geen deadline-herinneringen meer. Je kunt altijd 'deadlines' vragen.
+- **en** — Done, no more deadline reminders. You can still ask 'deadlines' any time.
+- **fr** — C'est noté, plus de rappels d'échéances. Tu peux toujours demander 'échéances'.
+- **de** — Erledigt, keine Fristen-Erinnerungen mehr. Du kannst jederzeit 'Fristen' fragen.
+
+## `cal_on`
+
+- **pt** — Pronto: vou avisar sobre seguro-saúde (novembro e dezembro), declaração de imposto (fim de abril) e BTW trimestral (10 dias antes). Para desligar, diga 'desligar avisos de prazos'.
+- **nl** — Klaar: ik waarschuw voor de zorgverzekering (november en december), de belastingaangifte (eind april) en kwartaal-btw (10 dagen vooraf). Uitzetten: 'zet herinneringen deadlines uit'.
+- **en** — Done: I will remind you about health insurance (November and December), the tax return (end of April) and quarterly BTW (10 days before). To stop, say 'turn off deadline reminders'.
+- **fr** — C'est fait : je te préviendrai pour l'assurance maladie (novembre et décembre), la déclaration d'impôt (fin avril) et la TVA trimestrielle (10 jours avant). Pour arrêter : 'désactiver rappels échéances'.
+- **de** — Erledigt: Ich erinnere dich an die Krankenversicherung (November und Dezember), die Steuererklärung (Ende April) und die Quartals-BTW (10 Tage vorher). Zum Beenden: 'Erinnerungen Fristen ausschalten'.
+
+## `cal_rem_btw`
+
+- **pt** — Aviso: o BTW trimestral vence em {d} (faltam {n} dias), declaração e pagamento. Vale para quem declara por trimestre.
+- **nl** — Herinnering: de kwartaal-btw moet uiterlijk {d} binnen zijn (nog {n} dagen), aangifte en betaling. Geldt voor wie per kwartaal aangifte doet.
+- **en** — Reminder: the quarterly BTW is due on {d} ({n} days left), return and payment. It applies if you file per quarter.
+- **fr** — Rappel : la TVA (BTW) trimestrielle est due le {d} (encore {n} jours), déclaration et paiement. Valable si tu déclares par trimestre.
+- **de** — Erinnerung: die Quartals-BTW ist am {d} fällig (noch {n} Tage), Erklärung und Zahlung. Gilt, wenn du vierteljährlich meldest.
+
+## `cal_rem_dec`
+
+- **pt** — Aviso: faltam {n} dias ({d}) para contratar um novo seguro-saúde que valha a partir de 1º de janeiro. Se não quer trocar, não precisa fazer nada. Confira no site do governo.
+- **nl** — Herinnering: nog {n} dagen ({d}) om een nieuwe zorgverzekering af te sluiten die per 1 januari ingaat. Wil je niet overstappen, dan hoef je niets te doen. Controleer op rijksoverheid.nl.
+- **en** — Reminder: {n} days left ({d}) to sign a new health insurance that starts on 1 January. If you do not want to switch, you do not need to do anything. Check the government site.
+- **fr** — Rappel : encore {n} jours ({d}) pour souscrire une nouvelle assurance maladie valable au 1er janvier. Si tu ne veux pas changer, rien à faire. Vérifie sur le site du gouvernement.
+- **de** — Erinnerung: noch {n} Tage ({d}), um eine neue Krankenversicherung ab 1. Januar abzuschließen. Wenn du nicht wechseln willst, musst du nichts tun. Bitte auf der Regierungsseite prüfen.
+
+## `cal_rem_nov`
+
+- **pt** — Aviso: é época de revisar o seguro-saúde. Para trocar em 1º de janeiro, contrate o novo até {d}. As datas vêm do site do governo; confira lá. Para parar: 'desligar avisos de prazos'.
+- **nl** — Herinnering: tijd om je zorgverzekering te bekijken. Wil je per 1 januari overstappen, sluit dan uiterlijk op {d} een nieuwe af. Data van de overheid; controleer ze daar. Stoppen: 'zet herinneringen deadlines uit'.
+- **en** — Reminder: time to review your health insurance. To switch from 1 January, sign the new policy by {d}. Dates come from the government site; check there. To stop: 'turn off deadline reminders'.
+- **fr** — Rappel : il est temps de revoir ton assurance maladie. Pour changer au 1er janvier, souscris la nouvelle avant le {d}. Dates du site du gouvernement ; vérifie-les là-bas. Pour arrêter : 'désactiver rappels échéances'.
+- **de** — Erinnerung: Zeit, die Krankenversicherung zu prüfen. Für einen Wechsel zum 1. Januar schließt du die neue bis {d} ab. Die Daten stammen von der Regierungsseite; bitte dort prüfen. Beenden: 'Erinnerungen Fristen ausschalten'.
+
+## `cal_rem_tax`
+
+- **pt** — Aviso: a declaração de imposto de renda costuma vencer em 1º de maio. Veja a data na carta da Belastingdienst; quem precisar de mais tempo pede adiamento antes do prazo.
+- **nl** — Herinnering: de aangifte inkomstenbelasting moet vaak vóór 1 mei binnen zijn. Kijk naar de datum in je brief van de Belastingdienst; uitstel vraag je vóór de datum aan.
+- **en** — Reminder: the income tax return is often due on 1 May. Check the date in your Belastingdienst letter; if you need more time, request an extension before the deadline.
+- **fr** — Rappel : la déclaration d'impôt est souvent due le 1er mai. Vérifie la date dans ta lettre de la Belastingdienst ; pour plus de temps, demande un report avant l'échéance.
+- **de** — Erinnerung: Die Einkommensteuererklärung ist oft bis 1. Mai fällig. Prüf das Datum in deinem Brief der Belastingdienst; für mehr Zeit beantragst du Aufschub vor der Frist.
+
+## `cal_status_off`
+
+- **pt** — Os avisos de prazos estão desligados. Para ligar, diga 'ligar avisos de prazos'.
+- **nl** — De deadline-herinneringen staan uit. Aanzetten: 'zet herinneringen deadlines aan'.
+- **en** — Deadline reminders are off. To start, say 'turn on deadline reminders'.
+- **fr** — Les rappels d'échéances sont désactivés. Pour les activer : 'activer rappels échéances'.
+- **de** — Die Fristen-Erinnerungen sind ausgeschaltet. Zum Einschalten: 'Erinnerungen Fristen einschalten'.
+
+## `cal_status_on`
+
+- **pt** — Os avisos de prazos estão ligados. Para desligar, diga 'desligar avisos de prazos'.
+- **nl** — De deadline-herinneringen staan aan. Uitzetten: 'zet herinneringen deadlines uit'.
+- **en** — Deadline reminders are on. To stop, say 'turn off deadline reminders'.
+- **fr** — Les rappels d'échéances sont activés. Pour arrêter : 'désactiver rappels échéances'.
+- **de** — Die Fristen-Erinnerungen sind eingeschaltet. Zum Beenden: 'Erinnerungen Fristen ausschalten'.
+
+## `cal_tax`
+
+- **pt** — Declaração de imposto de renda: o prazo costuma ser 1º de maio ({d}, faltam {n} dias), mas vale a data da carta da Belastingdienst. Dá para pedir adiamento antes do prazo (costuma dar 4 meses a mais).
+- **nl** — Aangifte inkomstenbelasting: de datum is vaak 1 mei ({d}, nog {n} dagen), maar de datum in je brief van de Belastingdienst geldt. Uitstel vraag je aan vóór die datum (meestal 4 maanden extra).
+- **en** — Income tax return: the deadline is often 1 May ({d}, {n} days left), but the date in your Belastingdienst letter is the one that counts. An extension has to be requested before it (usually 4 extra months).
+- **fr** — Déclaration d'impôt sur le revenu : l'échéance est souvent le 1er mai ({d}, encore {n} jours), mais c'est la date de ta lettre de la Belastingdienst qui compte. Un report se demande avant cette date (en général 4 mois de plus).
+- **de** — Einkommensteuererklärung: Die Frist ist oft der 1. Mai ({d}, noch {n} Tage); maßgeblich ist aber das Datum in deinem Brief der Belastingdienst. Aufschub muss vor diesem Datum beantragt werden (meist 4 Monate mehr).
+
+## `cal_tikkie`
+
+- **pt** — Tikkie: não há prazo oficial; o app só lembra quem pediu depois de 1 semana sem resposta. Diga 'quem me deve' e eu preparo o texto para você copiar.
+- **nl** — Tikkie: er is geen officiële termijn; de app geeft de afzender pas na 1 week een seintje als niemand heeft betaald. Zeg 'wie moet mij nog betalen' en ik maak de tekst om te kopiëren.
+- **en** — Tikkie: there is no official deadline; the app only nudges the sender after 1 week without a response. Say 'who owes me' and I will prepare the text for you to copy.
+- **fr** — Tikkie : il n'y a pas de délai officiel ; l'appli ne relance l'expéditeur qu'après 1 semaine sans réponse. Dis 'qui me doit' et je prépare le texte à copier.
+- **de** — Tikkie: Es gibt keine offizielle Frist; die App erinnert den Absender erst nach 1 Woche ohne Antwort. Sag 'wer schuldet mir', dann bereite ich den Text zum Kopieren vor.
+
+## `cal_title`
+
+- **pt** — Prazos que costumam importar nos Países Baixos:
+- **nl** — Deadlines die in Nederland vaak tellen:
+- **en** — Deadlines that often matter in the Netherlands:
+- **fr** — Échéances qui comptent souvent aux Pays-Bas :
+- **de** — Fristen, die in den Niederlanden oft wichtig sind:
+
 ## `category_corrected`
 
 - **pt** — Combinado, a partir de agora *{merchant}* fica em *{category}*.

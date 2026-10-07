@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     warranty_reminder_template_enabled: bool = False
     # V2-27: contract-end reminders outside the 24 h window (template alfred_contract_reminder).
     contract_reminder_template_enabled: bool = False
+    # V2-21: Dutch-deadline reminders outside the 24 h window (template alfred_calendar_reminder).
+    calendar_reminder_template_enabled: bool = False
 
 
 settings = Settings()

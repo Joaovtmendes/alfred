@@ -102,6 +102,8 @@ from alfred.models import (
 )
 from alfred.monthly_summary import STRINGS as _MSUM_STRINGS
 from alfred.monthly_summary import handle_monthly_summary_command
+from alfred.nl_calendar import STRINGS as _CAL_STRINGS
+from alfred.nl_calendar import handle_calendar_command
 from alfred.observability import alert
 from alfred.outbox import STRINGS as _OUTBOX_STRINGS
 from alfred.outbox import handle_outbox_command
@@ -1563,6 +1565,7 @@ _STRINGS.update(_FOLLOWUP_STRINGS)  # V2-20 / V2-23
 _STRINGS.update(_INVOICE_STRINGS)  # V2-12 part 2
 _STRINGS.update(_SERVICE_STRINGS)  # V2-36
 _STRINGS.update(_HOME_STRINGS)  # V2-27
+_STRINGS.update(_CAL_STRINGS)  # V2-21
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
 
@@ -4167,6 +4170,13 @@ async def handle_inbound(
             else:
                 await send_text(to, home_out.text)
             await _save_outbound(member, home_out.text, session)
+            return
+
+        # 4e-0s5. V2-21 — Dutch deadlines: "prazos" / "prazo btw" / "ligar avisos de prazos"
+        cal_out = await handle_calendar_command(body_plain, member, lang, session, today_local())
+        if cal_out is not None:
+            await send_text(to, cal_out.text)
+            await _save_outbound(member, cal_out.text, session)
             return
 
         # 4e-0o. V2-18 — "o que você me enviou hoje" / "lembretes que mandou"
