@@ -36,7 +36,7 @@ WINDOW_HOURS = 24
 BTW_LEAD_DAYS = 10
 KEEP_KEYS = 12
 
-_INTENT = r"(?:prazo|prazos|quando|ate quando|deadline|deadlines|when|until when|termijn|wanneer|tot wanneer|echeance|quand|jusqu'a quand|frist|wann|bis wann|trocar|mudar|switch|change|overstap\w*|wissel\w*|changer|wechsel\w*|data|date|datum)"
+_INTENT = r"\b(?:prazo|prazos|quando|ate quando|deadline|deadlines|when|until when|termijn|wanneer|tot wanneer|echeance|quand|jusqu'a quand|frist|wann|bis wann|trocar|mudar|switch|change|overstap\w*|wissel\w*|changer|wechsel\w*|data|date|datum)\b"
 _TOPIC = {
     "health": re.compile(
         r"seguro[- ]saude|zorgverzekering|health insurance|assurance maladie|krankenversicherung|zorgverzekeraar"
@@ -61,6 +61,9 @@ _ON = re.compile(
 )
 _OFF = re.compile(
     r"\b(?:desligar|desliga|desativar|desativa|desactivar|turn off|disable|deactivate|zet uit|uitzetten|deactiveer|desactiver|desactive|ausschalten|deaktiviere|schalte aus)\b"
+)
+_MONEY = re.compile(
+    r"€|\beur\b|\b(?:paguei|gastei|comprei|pago|paid|spent|bought|betaald|uitgegeven|paye|depense|bezahlt|ausgegeben)\b"
 )
 _TIKKIE = re.compile(r"\btikkie\b")
 
@@ -174,6 +177,8 @@ async def handle_calendar_command(
     """None unless the message is clearly about Dutch deadlines (cheap exit first)."""
     plain = " ".join(body_plain.split()).strip(" .!?")
     if not plain or len(plain) > 120:
+        return None
+    if _MONEY.search(plain):  # "paguei 130 de seguro saude, data 05/10" is an expense
         return None
     if _REM.search(plain):
         row = await _optin(session, member)

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from typing import Any
 
 CATEGORIES = frozenset(
@@ -82,9 +83,9 @@ def sanitize_expense(data: dict) -> dict | None:
     txn_type = str(data.get("type") or "expense").lower()
     if txn_type not in TXN_TYPES:
         txn_type = "expense"
-    currency = str(data.get("currency") or "EUR").upper()
-    if currency not in CURRENCIES:
-        currency = "EUR"
+    currency = str(data.get("currency") or "EUR").upper().strip()
+    if currency not in CURRENCIES and not re.fullmatch(r"[A-Z]{3}", currency):
+        currency = "EUR"  # garbage: assume euro; a real ISO code (BRL, CHF...) is kept and refused
     category = str(data.get("category") or "").lower().strip()
     if category not in CATEGORIES:
         category = "overig"

@@ -803,6 +803,14 @@
 - **fr** — Grosses dépenses
 - **de** — Größte Ausgaben
 
+## `btn_delete`
+
+- **pt** — Apagar
+- **nl** — Verwijderen
+- **en** — Delete
+- **fr** — Supprimer
+- **de** — Löschen
+
 ## `btn_edit`
 
 - **pt** — Editar
@@ -851,6 +859,22 @@
 - **fr** — Incorrect
 - **de** — Falsch
 
+## `btn_hc_no`
+
+- **pt** — Não autorizo
+- **nl** — Nee
+- **en** — No
+- **fr** — Non
+- **de** — Nein
+
+## `btn_hc_yes`
+
+- **pt** — Autorizo
+- **nl** — Ik geef toestemming
+- **en** — I agree
+- **fr** — J'accepte
+- **de** — Ich stimme zu
+
 ## `btn_home`
 
 - **pt** — Da casa
@@ -882,6 +906,14 @@
 - **en** — Undo
 - **fr** — Annuler
 - **de** — Rückgängig
+
+## `btn_keep`
+
+- **pt** — Manter
+- **nl** — Behouden
+- **en** — Keep
+- **fr** — Garder
+- **de** — Behalten
 
 ## `btn_ok`
 
@@ -1813,6 +1845,14 @@
 - **fr** — Corrigé — {name} : {old} → {amount}
 - **de** — Korrigiert — {name}: {old} → {amount}
 
+## `expense_delete_ask`
+
+- **pt** — Apagar {amount} em *{name}* ({date})?
+- **nl** — {amount} bij *{name}* ({date}) verwijderen?
+- **en** — Delete {amount} at *{name}* ({date})?
+- **fr** — Supprimer {amount} chez *{name}* ({date}) ?
+- **de** — {amount} bei *{name}* ({date}) löschen?
+
 ## `expense_delete_none`
 
 - **pt** — Não tenho nenhuma despesa para apagar.
@@ -2045,6 +2085,38 @@
 - **fr** — Ta série pour *{activity}* : *1 jour* ! Continue ! 🔥
 - **de** — Deine Serie für *{activity}*: *1 Tag*! Weiter so! 🔥
 
+## `health_consent_ask`
+
+- **pt** — Antes de guardar dados de saúde (sono, humor, remédios, água), preciso da sua autorização. Eles ficam só para você ver aqui e no painel, e você pode retirar quando quiser com *retirar consentimento de saúde*.
+- **nl** — Voordat ik gezondheidsgegevens bewaar (slaap, stemming, medicijnen, water), heb ik je toestemming nodig. Alleen jij ziet ze, hier en in het dashboard, en je trekt ze in met *toestemming gezondheid intrekken*.
+- **en** — Before I keep health data (sleep, mood, medication, water), I need your permission. Only you see it, here and in the dashboard, and you can withdraw it any time with *withdraw health consent*.
+- **fr** — Avant de garder des données de santé (sommeil, humeur, médicaments, eau), j'ai besoin de ton accord. Toi seul les vois, ici et dans le tableau de bord, et tu peux le retirer avec *retirer consentement santé*.
+- **de** — Bevor ich Gesundheitsdaten speichere (Schlaf, Stimmung, Medikamente, Wasser), brauche ich deine Zustimmung. Nur du siehst sie, hier und im Dashboard, und du kannst sie mit *Gesundheitszustimmung widerrufen* zurückziehen.
+
+## `health_consent_given`
+
+- **pt** — Obrigado, autorização registrada. Agora mande de novo o que quer registrar.
+- **nl** — Dank je, toestemming genoteerd. Stuur nu opnieuw wat je wilt bijhouden.
+- **en** — Thanks, permission recorded. Now send again what you want to log.
+- **fr** — Merci, accord enregistré. Renvoie maintenant ce que tu veux noter.
+- **de** — Danke, Zustimmung gespeichert. Schick jetzt noch einmal, was du festhalten willst.
+
+## `health_consent_refused`
+
+- **pt** — Combinado, não guardo dados de saúde. Se mudar de ideia, é só registrar de novo.
+- **nl** — Prima, ik bewaar geen gezondheidsgegevens. Verander je van gedachten, stuur het dan opnieuw.
+- **en** — Fine, I won't keep health data. If you change your mind, just log it again.
+- **fr** — D'accord, je ne garde pas de données de santé. Si tu changes d'avis, renvoie-le.
+- **de** — In Ordnung, ich speichere keine Gesundheitsdaten. Wenn du es dir anders überlegst, schick es einfach noch einmal.
+
+## `health_consent_withdrawn`
+
+- **pt** — Pronto: retirei a autorização e apaguei os seus dados de saúde ({n}). Não guardo mais esse tipo de informação.
+- **nl** — Klaar: toestemming ingetrokken en je gezondheidsgegevens verwijderd ({n}). Ik bewaar dit soort informatie niet meer.
+- **en** — Done: permission withdrawn and your health data deleted ({n}). I won't keep this kind of information any more.
+- **fr** — C'est fait : accord retiré et données de santé supprimées ({n}). Je ne garde plus ce type d'information.
+- **de** — Erledigt: Zustimmung widerrufen und deine Gesundheitsdaten gelöscht ({n}). Ich speichere diese Art von Informationen nicht mehr.
+
 ## `health_medication_adherence`
 
 - **pt** — Medicação: você tomou em {n} de {total} dias esta semana.
@@ -2147,11 +2219,11 @@
 
 ## `health_unsupported`
 
-- **pt** — Ainda não acompanho peso nem pressão, só medicação, humor, sono e água. Se quiser, guardo como nota: “nota: peso 75 kg”.
-- **nl** — Gewicht en bloeddruk volg ik nog niet, alleen medicatie, stemming, slaap en water. Wil je het als notitie bewaren: “notitie: gewicht 75 kg”?
-- **en** — I don't track weight or blood pressure yet, only medication, mood, sleep and water. I can save it as a note: “note: weight 75 kg”.
-- **fr** — Je ne suis pas encore le poids ni la tension, seulement médicaments, humeur, sommeil et eau. Je peux l'enregistrer en note : « note : poids 75 kg ».
-- **de** — Gewicht und Blutdruck verfolge ich noch nicht, nur Medikamente, Stimmung, Schlaf und Wasser. Ich kann es als Notiz speichern: „Notiz: Gewicht 75 kg“.
+- **pt** — Ainda não acompanho peso nem pressão, só medicação, humor, sono e água.
+- **nl** — Gewicht en bloeddruk volg ik nog niet, alleen medicatie, stemming, slaap en water.
+- **en** — I don't track weight or blood pressure yet, only medication, mood, sleep and water.
+- **fr** — Je ne suis pas encore le poids ni la tension, seulement médicaments, humeur, sommeil et eau.
+- **de** — Gewicht und Blutdruck verfolge ich noch nicht, nur Medikamente, Stimmung, Schlaf und Wasser.
 
 ## `health_water_empty`
 
@@ -3584,6 +3656,14 @@
 - **fr** — Non enregistré ({cur}, euros uniquement) : {name}.
 - **de** — Nicht gespeichert ({cur}, nur Euro): {name}.
 
+## `multi_truncated`
+
+- **pt** — Li só os {n} primeiros. Mande o resto em outra mensagem.
+- **nl** — Ik heb alleen de eerste {n} gelezen. Stuur de rest in een ander bericht.
+- **en** — I only read the first {n}. Send the rest in another message.
+- **fr** — J'ai lu seulement les {n} premiers. Envoie le reste dans un autre message.
+- **de** — Ich habe nur die ersten {n} gelesen. Schick den Rest in einer weiteren Nachricht.
+
 ## `no_records_month`
 
 - **pt** — Ainda não tenho nada este mês. Envie a primeira despesa quando quiser.
@@ -4006,6 +4086,14 @@
 - **en** — Noted: {name} in {n}x of {amount}. First instalment: {due}. I'll remind you 3 days before each.
 - **fr** — C'est noté : {name} en {n}x de {amount}. Première échéance : {due}. Je te préviens 3 jours avant chacune.
 - **de** — Notiert: {name} in {n} Raten à {amount}. Erste Rate: {due}. Ich erinnere dich jeweils 3 Tage vorher.
+
+## `recurring_exists`
+
+- **pt** — Você já tem *{name}* nas contas fixas. Para trocar o valor, apague com *cancela {name}* e cadastre de novo.
+- **nl** — *{name}* staat al bij je vaste lasten. Wil je het bedrag wijzigen, verwijder het met *stop {name}* en voeg het opnieuw toe.
+- **en** — You already have *{name}* in your fixed bills. To change the amount, remove it with *cancel {name}* and add it again.
+- **fr** — Tu as déjà *{name}* dans tes charges fixes. Pour changer le montant, supprime-la avec *annule {name}* et ajoute-la à nouveau.
+- **de** — *{name}* steht schon bei deinen Fixkosten. Um den Betrag zu ändern, lösche es mit *stop {name}* und lege es neu an.
 
 ## `recurring_freq_monthly`
 

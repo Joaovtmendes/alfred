@@ -84,7 +84,10 @@ class EncryptedText(TypeDecorator):
 def warn_if_unprotected(environment: str) -> None:
     """Called at startup: production without a key stores health data unencrypted."""
     if environment == "production" and not enabled():
-        logger.warning("crypto.no_key", detail="health data is stored without app-level encryption")
+        # An alert, not only a log line: the privacy policy promises encrypted health data.
+        from alfred.observability import alert
+
+        alert("crypto.no_key_in_production")
 
 
 async def backfill_health(session: AsyncSession) -> int:

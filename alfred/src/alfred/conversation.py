@@ -18,7 +18,7 @@ import uuid
 from datetime import UTC, date, datetime, time, timedelta
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.accounting import STRINGS as _ACCT_STRINGS
@@ -96,6 +96,7 @@ from alfred.models import (
     MerchantCategoryOverride,
     Message,
     Note,
+    PendingAction,
     Task,
     Trip,
     WorkoutSession,
@@ -123,6 +124,7 @@ from alfred.parsing import (
     parse_period,
     parse_trip_start_date,
     strip_accents,
+    to_amount,
 )
 from alfred.receipt import STRINGS as _RECEIPT_STRINGS
 from alfred.recurrence import cadence_label, parse_recurrence
@@ -558,11 +560,69 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         ),
     },
     "health_unsupported": {
-        "pt": "Ainda não acompanho peso nem pressão, só medicação, humor, sono e água. Se quiser, guardo como nota: “nota: peso 75 kg”.",
-        "nl": "Gewicht en bloeddruk volg ik nog niet, alleen medicatie, stemming, slaap en water. Wil je het als notitie bewaren: “notitie: gewicht 75 kg”?",
-        "en": "I don't track weight or blood pressure yet, only medication, mood, sleep and water. I can save it as a note: “note: weight 75 kg”.",
-        "fr": "Je ne suis pas encore le poids ni la tension, seulement médicaments, humeur, sommeil et eau. Je peux l'enregistrer en note : « note : poids 75 kg ».",
-        "de": "Gewicht und Blutdruck verfolge ich noch nicht, nur Medikamente, Stimmung, Schlaf und Wasser. Ich kann es als Notiz speichern: „Notiz: Gewicht 75 kg“.",
+        "pt": "Ainda não acompanho peso nem pressão, só medicação, humor, sono e água.",
+        "nl": "Gewicht en bloeddruk volg ik nog niet, alleen medicatie, stemming, slaap en water.",
+        "en": "I don't track weight or blood pressure yet, only medication, mood, sleep and water.",
+        "fr": "Je ne suis pas encore le poids ni la tension, seulement médicaments, humeur, sommeil et eau.",
+        "de": "Gewicht und Blutdruck verfolge ich noch nicht, nur Medikamente, Stimmung, Schlaf und Wasser.",
+    },
+    "health_consent_ask": {
+        "pt": "Antes de guardar dados de saúde (sono, humor, remédios, água), preciso da sua autorização. Eles ficam só para você ver aqui e no painel, e você pode retirar quando quiser com *retirar consentimento de saúde*.",
+        "nl": "Voordat ik gezondheidsgegevens bewaar (slaap, stemming, medicijnen, water), heb ik je toestemming nodig. Alleen jij ziet ze, hier en in het dashboard, en je trekt ze in met *toestemming gezondheid intrekken*.",
+        "en": "Before I keep health data (sleep, mood, medication, water), I need your permission. Only you see it, here and in the dashboard, and you can withdraw it any time with *withdraw health consent*.",
+        "fr": "Avant de garder des données de santé (sommeil, humeur, médicaments, eau), j'ai besoin de ton accord. Toi seul les vois, ici et dans le tableau de bord, et tu peux le retirer avec *retirer consentement santé*.",
+        "de": "Bevor ich Gesundheitsdaten speichere (Schlaf, Stimmung, Medikamente, Wasser), brauche ich deine Zustimmung. Nur du siehst sie, hier und im Dashboard, und du kannst sie mit *Gesundheitszustimmung widerrufen* zurückziehen.",
+    },
+    "btn_hc_yes": {
+        "pt": "Autorizo",
+        "nl": "Ik geef toestemming",
+        "en": "I agree",
+        "fr": "J'accepte",
+        "de": "Ich stimme zu",
+    },
+    "btn_hc_no": {"pt": "Não autorizo", "nl": "Nee", "en": "No", "fr": "Non", "de": "Nein"},
+    "health_consent_given": {
+        "pt": "Obrigado, autorização registrada. Agora mande de novo o que quer registrar.",
+        "nl": "Dank je, toestemming genoteerd. Stuur nu opnieuw wat je wilt bijhouden.",
+        "en": "Thanks, permission recorded. Now send again what you want to log.",
+        "fr": "Merci, accord enregistré. Renvoie maintenant ce que tu veux noter.",
+        "de": "Danke, Zustimmung gespeichert. Schick jetzt noch einmal, was du festhalten willst.",
+    },
+    "health_consent_refused": {
+        "pt": "Combinado, não guardo dados de saúde. Se mudar de ideia, é só registrar de novo.",
+        "nl": "Prima, ik bewaar geen gezondheidsgegevens. Verander je van gedachten, stuur het dan opnieuw.",
+        "en": "Fine, I won't keep health data. If you change your mind, just log it again.",
+        "fr": "D'accord, je ne garde pas de données de santé. Si tu changes d'avis, renvoie-le.",
+        "de": "In Ordnung, ich speichere keine Gesundheitsdaten. Wenn du es dir anders überlegst, schick es einfach noch einmal.",
+    },
+    "health_consent_withdrawn": {
+        "pt": "Pronto: retirei a autorização e apaguei os seus dados de saúde ({n}). Não guardo mais esse tipo de informação.",
+        "nl": "Klaar: toestemming ingetrokken en je gezondheidsgegevens verwijderd ({n}). Ik bewaar dit soort informatie niet meer.",
+        "en": "Done: permission withdrawn and your health data deleted ({n}). I won't keep this kind of information any more.",
+        "fr": "C'est fait : accord retiré et données de santé supprimées ({n}). Je ne garde plus ce type d'information.",
+        "de": "Erledigt: Zustimmung widerrufen und deine Gesundheitsdaten gelöscht ({n}). Ich speichere diese Art von Informationen nicht mehr.",
+    },
+    "expense_delete_ask": {
+        "pt": "Apagar {amount} em *{name}* ({date})?",
+        "nl": "{amount} bij *{name}* ({date}) verwijderen?",
+        "en": "Delete {amount} at *{name}* ({date})?",
+        "fr": "Supprimer {amount} chez *{name}* ({date}) ?",
+        "de": "{amount} bei *{name}* ({date}) löschen?",
+    },
+    "btn_delete": {
+        "pt": "Apagar",
+        "nl": "Verwijderen",
+        "en": "Delete",
+        "fr": "Supprimer",
+        "de": "Löschen",
+    },
+    "btn_keep": {"pt": "Manter", "nl": "Behouden", "en": "Keep", "fr": "Garder", "de": "Behalten"},
+    "multi_truncated": {
+        "pt": "Li só os {n} primeiros. Mande o resto em outra mensagem.",
+        "nl": "Ik heb alleen de eerste {n} gelezen. Stuur de rest in een ander bericht.",
+        "en": "I only read the first {n}. Send the rest in another message.",
+        "fr": "J'ai lu seulement les {n} premiers. Envoie le reste dans un autre message.",
+        "de": "Ich habe nur die ersten {n} gelesen. Schick den Rest in einer weiteren Nachricht.",
     },
     "high_value_hint": {
         "pt": "\nÉ um valor alto, confere se está certo?",
@@ -1825,6 +1885,10 @@ _HELP_WORDS = {
     "befehle",
     # natural questions about what the assistant can do (a habit was logged for "what can you do?")
     "o que voce faz",
+    "me ajuda",
+    "preciso de ajuda",
+    "menu",
+    "help me",
     "o que voce sabe fazer",
     "o que voce pode fazer",
     "como funciona",
@@ -2065,7 +2129,7 @@ _AMOUNT_CORRECTION_RE = re.compile(
     # "actually I spent 20 at Lidl" is a new expense and must NOT rewrite the last one.
     r"^(?:errei|foi\s+na\s+verdade|na\s+verdade\s+foi|corrijo|na\s+verdade|"
     r"actually|was\s+actually|c\'?etait|war\s+eigentlich|was\s+eigenlijk)"
-    r"\b[^0-9€$£]{0,25}?([€$£]?\s*[0-9]+(?:[.,][0-9]{1,2})?)\s*(?:[€$£]|eur(?:os?)?)?\s*[.!]*$",
+    r"\b[^0-9€$£]{0,25}?([€$£]?\s*(?:[0-9]{1,3}(?:\.[0-9]{3})+(?:,[0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?))\s*(?:[€$£]|eur(?:os?)?)?\s*[.!]*$",
     re.IGNORECASE,
 )
 
@@ -2244,8 +2308,11 @@ _HABIT_WORDS = {
     "estudied",
 }
 _HABIT_LOG_RE = re.compile(
-    r"(?P<activity>meditei|meditated|mediteerde|meditiert|li\b|leste|estudei|fiz yoga|"
-    r"bebi água|drank water|fiz pilates|fiz alongamento)\s*(?:hoje|today|vandaag|heute|aujourd'hui)?",
+    # The habit word must OPEN the message (after "hoje"/"eu"): searching anywhere turned
+    # "gastei 12 no tivoli", "ravioli 12" and "criar viagem Bali" into the habit "li".
+    r"^\s*(?:(?:hoje|today|vandaag|heute|aujourd'hui|eu|ik|i|ich|je|ja|já)\s+){0,2}"
+    r"(?P<activity>meditei|meditated|mediteerde|meditiert|li|leste|estudei|fiz yoga|"
+    r"bebi água|drank water|fiz pilates|fiz alongamento)\b\s*(?:hoje|today|vandaag|heute|aujourd'hui)?",
     re.IGNORECASE,
 )
 
@@ -2533,6 +2600,14 @@ _DASHBOARD_WORDS: set[str] = {
     "mein dashboard",
     "link dashboard",
     "dashboard link",
+    "abrir dashboard",
+    "painel",
+    "meu painel",
+    "o meu painel",
+    "abrir painel",
+    "abre o painel",
+    "abrir o painel",
+    "link do painel",
 }
 _TASK_DELETE_RE = re.compile(
     r"(?:apaga|apagar|delete|verwijder|supprimer|losch)\s+"
@@ -2578,6 +2653,15 @@ def _is_command(body: str, keywords: set[str]) -> bool:
         if plain == k or plain.startswith((k + " ", k + "?", k + "!")):
             return True
     return False
+
+
+_SALDO_ELSEWHERE_RE = re.compile(r"\b(?:casa|ano|anual|year|jaar|annee|jahr)\b")
+
+
+def _is_plain_command(body: str, keywords: set[str]) -> bool:
+    """A command word at the start AND no number in the message: "ajuda com a mudança 50" or
+    "saldo da conta 300" are expenses, not the help text or the balance."""
+    return _is_command(body, keywords) and not re.search(r"\d", body)
 
 
 _DID_LEAD_RE = re.compile(
@@ -2975,6 +3059,56 @@ _ZERO_OR_NEG_RE = re.compile(r"(?<!\S)-\d|(?<![\d.,-])0+(?:[.,]0+)?(?![\d.,])")
 # money (defect 19 of the 03/10 hard test: the habit classifier took it for a habit and the 24 EUR
 # was lost). "leitura 30 min" has a unit and stays free text.
 _BARE_AMOUNT_RE = re.compile(r"^\s*[^\W\d_][^\d]*?\s+\d+(?:[.,]\d{1,2})?\s*$")
+# a lone amount ("25", "7,50", "€ 1.200"): the answer to "what is the right value?"
+_LONE_AMOUNT_RE = re.compile(
+    r"^\s*[€$£]?\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:€|eur(?:os?)?)?\s*$"
+)
+EDIT_KIND = "edit_amount"  # PendingAction kind: the entry whose [Editar] was tapped
+EDIT_MINUTES = 15
+# Money in another currency named in the text; the model sometimes still answers EUR.
+_FOREIGN_CURRENCY = (
+    (re.compile(r"\breais\b|r\$|\bbrl\b"), "BRL"),
+    (re.compile(r"\bd[oó]lar(?:es)?\b|\bdollars?\b|\busd\b|us\$|\$\s*\d|\d\s*\$"), "USD"),
+    (re.compile(r"\blibras?\b|\bpounds?\b|\bgbp\b|£"), "GBP"),
+)
+
+
+def _foreign_currency(body: str) -> str | None:
+    for rx, code in _FOREIGN_CURRENCY:
+        if rx.search(body):
+            return code
+    return None
+
+
+async def _take_edit_target(session: AsyncSession, member: Member) -> Expense | None:
+    """The entry whose [Editar] was tapped in the last minutes (consumed), else None."""
+    row = await session.scalar(
+        select(PendingAction).where(
+            PendingAction.member_id == member.id, PendingAction.kind == EDIT_KIND
+        )
+    )
+    if row is None:
+        return None
+    await session.delete(row)
+    if row.expires_at < datetime.now(UTC):
+        return None
+    try:
+        eid = uuid.UUID(str(row.payload.get("id")))
+    except (ValueError, AttributeError):
+        return None
+    return await session.scalar(
+        select(Expense).where(Expense.id == eid, Expense.member_id == member.id)
+    )
+
+
+_HEALTH_WITHDRAW_RE = re.compile(
+    r"^(?:retirar|revogar|retiro|revogo|cancelar)\s+(?:o\s+|a\s+|meu\s+|minha\s+)?"
+    r"(?:consentimento|autoriza[cç][aã]o)\s+(?:de\s+|da\s+|dos\s+)?(?:dados\s+de\s+)?saude$"
+    r"|^withdraw\s+(?:my\s+)?health\s+consent$"
+    r"|^toestemming\s+gezondheid\s+intrekken$"
+    r"|^retirer\s+(?:le\s+|mon\s+)?consentement\s+sante$"
+    r"|^gesundheitszustimmung\s+widerrufen$"
+)
 
 
 def _original_text(message, start: int, end: int) -> str:
@@ -3627,6 +3761,18 @@ async def _handle_button_reply(
         await send_text(to, _t("wipe_done", lang))  # nothing to save: the member is gone
         return True
 
+    if action in ("hc_yes", "hc_no"):  # art. 9 consent for health data
+        if action == "hc_yes":
+            member.health_consent_at = datetime.now(UTC)
+            session.add(member)
+            audit(session, "health_consent_given", member.id)
+            reply = _t("health_consent_given", lang)
+        else:
+            reply = _t("health_consent_refused", lang)
+        await send_text(to, reply)
+        await _save_outbound(member, reply, session)
+        return True
+
     if action in ("dd_cat", "dd_top", "dd_bud"):  # V2-20 go deeper after a spending answer
         deeper_text = await handle_deeper_button(action, raw_id, member, lang, session)
         await send_text(to, deeper_text)
@@ -3733,13 +3879,52 @@ async def _handle_button_reply(
         await session.delete(expense)
         audit(session, "expense_undone", member.id)
         logger.info("conversation.expense_undone", member_id=str(member.id))
-    elif action == "edit":
+    elif action == "edit":  # remember which entry: the next amount corrects THIS one
+        await session.execute(
+            delete(PendingAction).where(
+                PendingAction.member_id == member.id, PendingAction.kind == EDIT_KIND
+            )
+        )
+        session.add(
+            PendingAction(
+                member_id=member.id,
+                kind=EDIT_KIND,
+                payload={"id": str(expense.id)},
+                expires_at=datetime.now(UTC) + timedelta(minutes=EDIT_MINUTES),
+            )
+        )
         reply = _t("button_edit_hint", lang)
     else:
         reply = _t("button_ok_reply", lang)
     await send_text(to, reply)
     await _save_outbound(member, reply, session)
     return True
+
+
+async def _gdpr_reply(member: Member, body_plain: str, session: AsyncSession, lang: str) -> None:
+    """ "apagar meus dados" (two steps, buttons) / "exportar meus dados" (single-use link)."""
+    to = member.wa_phone
+    if _WIPE_RE.match(body_plain.strip()):
+        now_epoch = int(datetime.now(UTC).timestamp())
+        await send_buttons(
+            to,
+            _t("wipe_ask", lang),
+            [(f"wipe:{now_epoch}", _t("btn_wipe", lang)), ("keep:0", _t("btn_cancel", lang))],
+        )
+        await _save_outbound(member, _t("wipe_ask", lang), session)
+        return
+    from alfred.panel_tokens import issue_export_token
+
+    base_url = (settings.base_url or "").rstrip("/")
+    if not base_url:
+        reply = _t("dashboard_no_base_url", lang)
+    else:
+        token = await issue_export_token(session, member)
+        audit(session, "data_export_link", member.id)
+        url = f"{base_url}/api/d/{token}/export"
+        reply = _t("export_link", lang, url=url, minutes=settings.export_token_ttl_minutes)
+    await send_text(to, reply)
+    await _save_outbound(member, reply, session)
 
 
 async def handle_inbound(
@@ -3814,6 +3999,15 @@ async def handle_inbound(
 
     # ── 3. Rejected — honour their choice ────────────────────────────────────
     if member.consent_state == "rejected":
+        # The data rights do not depend on having accepted: erase and export still work
+        # after "stop" (the privacy policy tells people to use them in the chat).
+        tapped = ((message.raw or {}).get("interactive") or {}).get("button_reply") or {}
+        if str(tapped.get("id") or "").split(":")[0] in ("wipe", "keep"):
+            await _handle_button_reply(member, message, session, lang)
+            return
+        if _WIPE_RE.match(body_plain.strip()) or _EXPORT_RE.match(body_plain.strip()):
+            await _gdpr_reply(member, body_plain, session, lang)
+            return
         if body in _RESUME_WORDS:
             member.consent_state = "pending_response"
             session.add(member)
@@ -3877,26 +4071,19 @@ async def handle_inbound(
             return
 
         # 4-0b. GDPR: "apagar meus dados" (two steps, buttons) / "exportar meus dados"
-        if _WIPE_RE.match(body_plain.strip()):
-            now_epoch = int(datetime.now(UTC).timestamp())
-            await send_buttons(
-                to,
-                _t("wipe_ask", lang),
-                [(f"wipe:{now_epoch}", _t("btn_wipe", lang)), ("keep:0", _t("btn_cancel", lang))],
-            )
-            await _save_outbound(member, _t("wipe_ask", lang), session)
+        if _WIPE_RE.match(body_plain.strip()) or _EXPORT_RE.match(body_plain.strip()):
+            await _gdpr_reply(member, body_plain, session, lang)
             return
-        if _EXPORT_RE.match(body_plain.strip()):
-            from alfred.panel_tokens import issue_export_token
 
-            base_url = (settings.base_url or "").rstrip("/")
-            if not base_url:
-                reply = _t("dashboard_no_base_url", lang)
-            else:
-                token = await issue_export_token(session, member)
-                audit(session, "data_export_link", member.id)
-                url = f"{base_url}/api/d/{token}/export"
-                reply = _t("export_link", lang, url=url, minutes=settings.export_token_ttl_minutes)
+        # Withdraw the art. 9 consent: stop storing AND delete what was stored
+        if _HEALTH_WITHDRAW_RE.match(" ".join(body_plain.split()).strip(" .!?")):
+            res_del = await session.execute(
+                delete(HealthLog).where(HealthLog.member_id == member.id)
+            )
+            member.health_consent_at = None
+            session.add(member)
+            audit(session, "health_consent_withdrawn", member.id)
+            reply = _t("health_consent_withdrawn", lang, n=res_del.rowcount or 0)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -3914,14 +4101,14 @@ async def handle_inbound(
             return
 
         # 4b. Saldo command
-        if _is_command(body, _SALDO_WORDS):
+        if _is_plain_command(body, _SALDO_WORDS) and not _SALDO_ELSEWHERE_RE.search(body_plain):
             saldo = await _build_saldo(member, session)
             await send_text(to, saldo)
             await _save_outbound(member, saldo, session)
             return
 
         # 4c. Help command
-        if _is_command(body, _HELP_WORDS):
+        if _is_plain_command(body, _HELP_WORDS):
             help_text = _t("help", lang)
             await send_text(to, help_text)
             await _save_outbound(member, help_text, session)
@@ -4415,7 +4602,7 @@ async def handle_inbound(
             return
 
         # 4e-5d. M11 — dashboard link: "meu dashboard"
-        if _is_command(body, _DASHBOARD_WORDS):
+        if _is_plain_command(body, _DASHBOARD_WORDS):
             import uuid as _uuid
 
             from alfred.dashboard import ensure_dashboard_token
@@ -4721,6 +4908,15 @@ async def handle_inbound(
         if _is_health and _UNSUPPORTED_HEALTH_RE.search(body_plain):
             reply = _t("health_unsupported", lang)
             await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+        if _is_health and member.health_consent_at is None:  # art. 9: ask before storing
+            reply = _t("health_consent_ask", lang)
+            await send_buttons(
+                to,
+                reply,
+                [("hc_yes:0", _t("btn_hc_yes", lang)), ("hc_no:0", _t("btn_hc_no", lang))],
+            )
             await _save_outbound(member, reply, session)
             return
         if _is_health:
@@ -5089,19 +5285,24 @@ async def handle_inbound(
             )
             if last is None:
                 reply = _t("expense_delete_none", lang)
-            else:
+                await send_text(to, reply)
+            else:  # ask first: "apaga" used to delete at once, even a salary or a bill
                 name = last.merchant or last.description or category_label(last.category, lang)
                 reply = _t(
-                    "expense_deleted",
+                    "expense_delete_ask",
                     lang,
                     amount=_fmt_eur(last.amount),
                     name=name,
                     date=to_local(last.expense_date).strftime("%d/%m"),
                 )
-                await session.delete(last)
-                audit(session, "expense_deleted", member.id)
-                logger.info("conversation.expense_deleted", member_id=str(member.id))
-            await send_text(to, reply)
+                await send_buttons(
+                    to,
+                    reply,
+                    [
+                        (f"undo:{last.id}", _t("btn_delete", lang)),
+                        (f"ok:{last.id}", _t("btn_keep", lang)),
+                    ],
+                )
             await _save_outbound(member, reply, session)
             return
 
@@ -5123,19 +5324,29 @@ async def handle_inbound(
 
         # 4e-0d. Amount correction: "errei foram 42€" / "na verdade foram 32"
         m_amt = _AMOUNT_CORRECTION_RE.search(body)
+        m_lone = None if m_amt else _LONE_AMOUNT_RE.match(body)
+        if m_amt or m_lone:
+            raw_amt = (m_amt or m_lone).group(1).replace("€", "").replace("$", "").replace("£", "")
+            new_amount = to_amount(raw_amt.strip())
+            target = await _take_edit_target(session, member)
+            if target is not None and new_amount and round(new_amount, 2) <= MAX_AMOUNT:
+                old_amount = target.amount
+                target.amount = round(new_amount, 2)
+                session.add(target)
+                audit(session, "expense_amount_corrected", member.id)
+                reply = _t(
+                    "expense_corrected",
+                    lang,
+                    name=target.merchant
+                    or target.description
+                    or category_label(target.category, lang),
+                    old=_fmt_eur(old_amount),
+                    amount=_fmt_eur(new_amount),
+                )
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
         if m_amt:
-            raw_amt = (
-                m_amt.group(1)
-                .replace("€", "")
-                .replace("$", "")
-                .replace("£", "")
-                .replace(",", ".")
-                .strip()
-            )
-            try:
-                new_amount = float(raw_amt)
-            except ValueError:
-                new_amount = None
             # bounded: NUMERIC(12,2) would overflow (and the reply was already sent)
             if new_amount and 0 < round(new_amount, 2) <= MAX_AMOUNT:
                 cutoff = datetime.now(UTC) - timedelta(hours=CORRECTION_WINDOW_HOURS)
@@ -5195,6 +5406,11 @@ async def handle_inbound(
                         )
                     else:
                         usable.append(item)
+                from alfred.batch import MAX_ITEMS as _MAX_BATCH
+
+                if len(usable) > _MAX_BATCH:  # said out loud: the rest used to vanish silently
+                    usable = usable[:_MAX_BATCH]
+                    skipped.append(_t("multi_truncated", lang, n=_MAX_BATCH))
                 # V2-17: two or more entries are shown as a draft; nothing is written yet.
                 draft = await create_draft(session, member, usable, lang)
                 if draft is not None:
@@ -5223,6 +5439,8 @@ async def handle_inbound(
         expense_data = await extract_expense(
             message.body or "", merchant_overrides=member_overrides, lang=member.language or "en"
         )
+        if expense_data and expense_data["currency"] == "EUR" and _foreign_currency(body):
+            expense_data = {**expense_data, "currency": _foreign_currency(body)}
         if expense_data and expense_data["currency"] != "EUR":
             reply = _t("currency_unsupported", lang, cur=expense_data["currency"])
             await send_text(to, reply)

@@ -41,6 +41,23 @@ _MARK_PAY = r"(?:a pagar|para pagar|te betalen|nog te betalen|to pay|to be paid|
 _MARK_RECV = r"(?:a receber|para receber|te ontvangen|nog te ontvangen|to receive|to be received|a recevoir|zu erhalten|zu bekommen)"
 _CREATE_PAY = re.compile(rf"^{_MARK_PAY}\s+(?P<rest>.+)$")
 _CREATE_RECV = re.compile(rf"^{_MARK_RECV}\s+(?P<rest>.+)$")
+# "luz 80 a pagar dia 5": the marker after the name and amount
+_MID_PAY = re.compile(rf"^(?P<pre>.+?)\s+{_MARK_PAY}(?=\s|$)(?P<post>.*)$")
+_MID_RECV = re.compile(rf"^(?P<pre>.+?)\s+{_MARK_RECV}(?=\s|$)(?P<post>.*)$")
+_QUESTION_LEAD = (
+    "quanto",
+    "tenho",
+    "o que",
+    "quais",
+    "qual",
+    "what",
+    "how",
+    "wat",
+    "hoeveel",
+    "combien",
+    "was ",
+    "wie ",
+)
 _AMT = re.compile(r"(?:€\s*)?(\d[\d.,]*)\s*(?:€|eur\b|euros?\b)?")
 _CONNECTORS = {
     "do", "da", "de", "dos", "das", "from", "van", "von", "vom", "du", "des", "der", "die", "voor",
@@ -63,6 +80,30 @@ _FILLER = {
     "meu",
     "minha",
     "got",
+    # words around the name that do not identify the bill: "já paguei a conta de luz"
+    "ja",
+    "conta",
+    "contas",
+    "boleto",
+    "fatura",
+    "hoje",
+    "ontem",
+    "agora",
+    "already",
+    "bill",
+    "today",
+    "yesterday",
+    "al",
+    "rekening",
+    "vandaag",
+    "gisteren",
+    "deja",
+    "facture",
+    "hier",
+    "schon",
+    "rechnung",
+    "heute",
+    "gestern",
 }
 _LIST_PAY = {
     "o que tenho a pagar", "o que eu tenho a pagar", "a pagar", "contas a pagar", "o que falta pagar",
@@ -146,13 +187,23 @@ def parse_pending(body: str, body_plain: str, today: date) -> NewPending | str |
     m = _CREATE_PAY.match(plain)
     if not m:
         kind, m = TO_RECEIVE, _CREATE_RECV.match(plain)
+    mid = None
     if not m:
-        return None
-    start = m.start("rest")
-    plain_rest, body_rest = (
-        plain[start:],
-        body[start:] if len(body) == len(plain) else plain[start:],
-    )
+        kind, mid = TO_PAY, _MID_PAY.match(plain)
+        if not mid:
+            kind, mid = TO_RECEIVE, _MID_RECV.match(plain)
+        if not mid or plain.startswith(_QUESTION_LEAD) or not re.search(r"\d", plain):
+            return None
+    if mid is not None:
+        cut = lambda t: (t[: mid.end("pre")] + t[mid.start("post") :]).strip()  # noqa: E731
+        plain_rest = cut(plain)
+        body_rest = cut(body) if len(body) == len(plain) else plain_rest
+    else:
+        start = m.start("rest")
+        plain_rest, body_rest = (
+            plain[start:],
+            body[start:] if len(body) == len(plain) else plain[start:],
+        )
     when = parse_when(plain_rest, datetime.combine(today, time(0, 0), tzinfo=local_tz()))
     spans = list(when.spans)
     cleaned = _cut(plain_rest, spans)

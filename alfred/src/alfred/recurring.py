@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.audit import audit
 from alfred.clock import now_local, today_local
 from alfred.models import Expense, Member, Message, RecurringItem
-from alfred.parsing import to_amount
+from alfred.parsing import strip_accents, to_amount
 from alfred.validation import MAX_AMOUNT
 
 MAX_ACTIVE_ITEMS = 30
@@ -62,6 +62,15 @@ _INSTALLMENT_RE = re.compile(
 _RECURRING_RE = re.compile(
     _LEAD + _NAME + r"\s+(?:de\s+)?" + _MONEY + r"(?P<rest>(?:\s+.*)?)\s*[.!]*$"
 )
+
+# First words that make the line a purchase or an income, never a fixed bill.
+_NOT_A_BILL = {
+    "gastei", "gasto", "gastamos", "paguei", "pago", "pagamos", "comprei", "compramos", "recebi",
+    "recebo", "ganhei", "ganho", "salario", "renda", "receita", "freela", "spent", "spend", "paid",
+    "pay", "bought", "received", "earned", "salary", "income", "uitgegeven", "betaald", "gekocht",
+    "ontvangen", "salaris", "inkomen", "depense", "paye", "achete", "recu", "salaire", "bezahlt",
+    "gekauft", "erhalten", "gehalt", "einkommen",
+}  # fmt: skip
 
 _CATEGORY_HINTS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("netflix", "spotify", "disney", "hbo", "youtube", "prime", "apple", "icloud", "deezer", "assinatura", "abonnement", "subscription"), "abonnement"),
@@ -119,6 +128,9 @@ def parse_recurring(body: str, body_plain: str) -> Parsed | None:
         return None
     name = body[m.start("name") : m.end("name")].strip(" .-'&")
     if not name:
+        return None
+    first = strip_accents(name.split()[0].lower())
+    if first in _NOT_A_BILL:  # "gastei 50 no mercado todo mês" is spending, "salário ..." income
         return None
     name = name[0].upper() + name[1:]
     cat = guess_category(m.group("name"))
@@ -320,6 +332,9 @@ async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -
     )
     if (count or 0) >= MAX_ACTIVE_ITEMS:
         return _t("recurring_limit", lang, n=MAX_ACTIVE_ITEMS)
+    same = [i for i in await _active_items(session, member.id) if i.name.lower() == p.name.lower()]
+    if same:  # a second "Aluguel" would make "paguei o aluguel" ambiguous for good
+        return _t("recurring_exists", lang, name=same[0].name)
     today = today_local()
     due = first_due(p.frequency, p.due_day, today)
     session.add(
@@ -574,6 +589,13 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": "Recurring item removed: {name}.",
         "fr": "Charge fixe supprimée : {name}.",
         "de": "Fixkosten entfernt: {name}.",
+    },
+    "recurring_exists": {
+        "pt": "Você já tem *{name}* nas contas fixas. Para trocar o valor, apague com *cancela {name}* e cadastre de novo.",
+        "nl": "*{name}* staat al bij je vaste lasten. Wil je het bedrag wijzigen, verwijder het met *stop {name}* en voeg het opnieuw toe.",
+        "en": "You already have *{name}* in your fixed bills. To change the amount, remove it with *cancel {name}* and add it again.",
+        "fr": "Tu as déjà *{name}* dans tes charges fixes. Pour changer le montant, supprime-la avec *annule {name}* et ajoute-la à nouveau.",
+        "de": "*{name}* steht schon bei deinen Fixkosten. Um den Betrag zu ändern, lösche es mit *stop {name}* und lege es neu an.",
     },
     "recurring_ambiguous": {
         "pt": "Mais de uma conta combina: {names}. Diga o nome completo.",

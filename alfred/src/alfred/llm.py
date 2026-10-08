@@ -469,7 +469,7 @@ Only include items that have BOTH an amount and something it was spent on / rece
 If the message is not a list of transactions, return {"items": []}.
 Do not invent amounts. Amounts are positive numbers; the sign lives in "type"."""
 
-MAX_MULTI_ITEMS = 10
+MAX_MULTI_ITEMS = 30  # the caller keeps the first 10 and says so
 
 
 async def extract_expenses_multi(text: str, lang: str = "en") -> list[dict]:
