@@ -6,7 +6,7 @@ M2 — expense table + preferred_name / language on member
 Design decisions:
 - All PKs are UUID generated server-side (no auto-increment)
 - wa_message_id has a UNIQUE constraint → idempotency key for deduplication
-- member.consent_state: pending | pending_language | pending_response | accepted | rejected
+- member.consent_state: pending | pending_signup | accepted | rejected (+ legacy states)
 - message.direction: inbound | outbound
 - All timestamps in UTC (timestamptz)
 """
@@ -73,12 +73,17 @@ class Member(Base):
     # AVG consent + EU AI Act Art. 50 disclosure
     consent_state: Mapped[str] = mapped_column(
         String(20), nullable=False, default="pending"
-    )  # pending | pending_language | pending_response | accepted | rejected
+    )  # pending | pending_signup | accepted | rejected (+ legacy pending_language/pending_response)
     disclosure_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     disclosure_version: Mapped[str | None] = mapped_column(String(20))
     # Art. 9 GDPR: explicit consent before any health data (sleep, mood, medication, water) is
     # stored. Set by the chat button (and, later, by the sign-up page); cleared on withdrawal.
     health_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Sign-up page (mandatory): a single-use secret link, 30 minutes; cleared on use
+    signup_token: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True, unique=True, default=None
+    )
+    signup_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # M11 — Dashboard
     dashboard_token: Mapped[uuid.UUID | None] = mapped_column(

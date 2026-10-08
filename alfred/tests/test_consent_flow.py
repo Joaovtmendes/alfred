@@ -1,12 +1,12 @@
 """M3 — consent state machine (conversation.handle_inbound).
 
-pending            → disclosure sent (in the detected language) → pending_response
-pending_response   + yes  → accepted (timestamp + version recorded)
-pending_response   + no   → rejected
-pending_response   + ?    → reminder, state unchanged
+pending            → sign-up link (button) in the detected language → pending_signup
+pending_signup     + anything → the link again (a chat "sim" does not open the account)
+pending_signup     + stop → rejected
+(the account becomes ``accepted`` only through the sign-up page: see test_signup_db.py)
 accepted           + stop → rejected, no LLM call
 rejected           + text → ignored
-rejected           + START→ disclosure again → pending_response (must re-consent)
+rejected           + START→ sign-up link again → pending_signup (must re-consent)
 """
 
 from __future__ import annotations
@@ -21,40 +21,59 @@ from tests.conftest import make_member, make_message, make_session
 SEND = "alfred.conversation.send_text"
 
 
-async def test_pending_sends_disclosure_in_detected_language() -> None:
+CTA = "alfred.signup.send_cta_url"
+
+
+async def test_first_message_sends_the_signup_link_in_the_detected_language() -> None:
     member = make_member("pending", language=None)
-    with patch(SEND, new_callable=AsyncMock) as send:
+    with patch(CTA, new_callable=AsyncMock) as cta, patch(SEND, new_callable=AsyncMock) as send:
         await handle_inbound(member, make_message("hallo, ik wil beginnen"), make_session())
-    assert member.consent_state == "pending_response"
-    send.assert_awaited_once_with(member.wa_phone, _t("disclosure", member.language))
+    assert member.consent_state == "pending_signup" and member.language == "nl"
+    send.assert_not_awaited()
+    cta.assert_awaited_once()
+    phone, body, button, url = cta.await_args.args
+    assert phone == member.wa_phone and body == _t("signup_invite", "nl")
+    assert button == _t("signup_button", "nl") and f"/cadastro/{member.signup_token}" in url
+    assert member.signup_token_expires_at is not None
 
 
 @pytest.mark.parametrize("word", ["sim", "yes", "ok", "aceito", "ja", "oui"])
-async def test_consent_accepted(word: str) -> None:
-    member = make_member("pending_response")
-    with patch(SEND, new_callable=AsyncMock) as send:
+async def test_a_chat_yes_no_longer_opens_the_account(word: str) -> None:
+    member = make_member("pending_signup")
+    with patch(CTA, new_callable=AsyncMock) as cta, patch(SEND, new_callable=AsyncMock):
         await handle_inbound(member, make_message(word), make_session())
-    assert member.consent_state == "accepted"
-    assert member.disclosure_accepted_at is not None
-    assert member.disclosure_version == "1.0"
-    send.assert_awaited_once_with(member.wa_phone, _t("consent_accepted", "pt"))
+    assert member.consent_state == "pending_signup"
+    assert member.disclosure_accepted_at is None
+    cta.assert_awaited_once()
+    assert cta.await_args.args[1] == _t("signup_again", "pt")
 
 
-@pytest.mark.parametrize("word", ["não", "nao", "no", "nee", "stop"])
-async def test_consent_rejected(word: str) -> None:
-    member = make_member("pending_response")
-    with patch(SEND, new_callable=AsyncMock) as send:
+async def test_a_fresh_link_is_sent_again_not_replaced() -> None:
+    member = make_member("pending", language=None)
+    with patch(CTA, new_callable=AsyncMock), patch(SEND, new_callable=AsyncMock):
+        await handle_inbound(member, make_message("oi"), make_session())
+        first = member.signup_token
+        await handle_inbound(member, make_message("oi de novo"), make_session())
+    assert member.signup_token == first
+
+
+@pytest.mark.parametrize("state", ["pending_language", "pending_response"])
+async def test_someone_caught_in_the_old_flow_gets_the_link(state: str) -> None:
+    member = make_member(state)
+    with patch(CTA, new_callable=AsyncMock) as cta, patch(SEND, new_callable=AsyncMock):
+        await handle_inbound(member, make_message("sim"), make_session())
+    assert member.consent_state == "pending_signup"
+    cta.assert_awaited_once()
+
+
+@pytest.mark.parametrize("word", ["stop", "não", "nao", "nee"])
+async def test_stop_while_waiting_for_the_signup_rejects(word: str) -> None:
+    member = make_member("pending_signup")
+    with patch(CTA, new_callable=AsyncMock) as cta, patch(SEND, new_callable=AsyncMock) as send:
         await handle_inbound(member, make_message(word), make_session())
     assert member.consent_state == "rejected"
+    cta.assert_not_awaited()
     send.assert_awaited_once_with(member.wa_phone, _t("consent_rejected", "pt"))
-
-
-async def test_consent_unknown_reply_keeps_state() -> None:
-    member = make_member("pending_response")
-    with patch(SEND, new_callable=AsyncMock) as send:
-        await handle_inbound(member, make_message("talvez"), make_session())
-    assert member.consent_state == "pending_response"
-    send.assert_awaited_once_with(member.wa_phone, _t("consent_unknown", "pt"))
 
 
 async def test_rejected_member_is_ignored() -> None:
@@ -68,10 +87,10 @@ async def test_rejected_member_is_ignored() -> None:
 @pytest.mark.parametrize("word", ["start", "START", "retomar", "hervatten"])
 async def test_rejected_member_can_resume_with_start(word: str) -> None:
     member = make_member("rejected")
-    with patch(SEND, new_callable=AsyncMock) as send:
+    with patch(CTA, new_callable=AsyncMock) as cta, patch(SEND, new_callable=AsyncMock):
         await handle_inbound(member, make_message(word), make_session())
-    assert member.consent_state == "pending_response"
-    send.assert_awaited_once_with(member.wa_phone, _t("disclosure", "pt"))
+    assert member.consent_state == "pending_signup"
+    cta.assert_awaited_once()
 
 
 def test_rejection_message_tells_user_how_to_resume() -> None:

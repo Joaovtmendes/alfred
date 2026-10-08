@@ -72,7 +72,7 @@ from alfred.iou import handle_iou_command
 from alfred.labels import activity_label as activity_name
 from alfred.labels import category_label
 from alfred.lang_cmd import STRINGS as _LANG_STRINGS
-from alfred.lang_cmd import parse_language_choice, parse_language_command
+from alfred.lang_cmd import parse_language_command
 from alfred.ledger_status import STRINGS as _LEDGER_STRINGS
 from alfred.ledger_status import handle_ledger_command
 from alfred.llm import (
@@ -135,6 +135,10 @@ from alfred.score import handle_score_command
 from alfred.services import STRINGS as _SERVICE_STRINGS
 from alfred.services import handle_service_button, handle_service_command
 from alfred.settings import settings
+from alfred.signup import STRINGS as _SIGNUP_STRINGS
+from alfred.signup import WAITING_STATES as SIGNUP_WAITING_STATES
+from alfred.signup import guess_language as guess_signup_language
+from alfred.signup import send_invite as send_signup_invite
 from alfred.statement import STRINGS as _STATEMENT_STRINGS
 from alfred.statement import (
     handle_document,
@@ -156,35 +160,6 @@ logger = structlog.get_logger()
 _SUPPORTED_LANGS = ("pt", "nl", "en", "fr", "de")
 
 _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
-    "disclosure": {
-        "pt": (
-            "*Alfred* — assistente pessoal pelo WhatsApp.\n\nSou uma inteligência artificial, não uma pessoa. Para ajudar você, processo as suas mensagens.\n\nResponda *sim* para continuar ou *não* para cancelar."
-        ),
-        "nl": (
-            "*Alfred* — persoonlijke assistent via WhatsApp.\n\n"
-            "Ik ben een kunstmatige intelligentie, geen mens. "
-            "Je berichten worden verwerkt om je te ondersteunen.\n\n"
-            "Schrijf *ja* om door te gaan of *nee* om te annuleren."
-        ),
-        "en": (
-            "*Alfred* — personal assistant via WhatsApp.\n\n"
-            "I am an artificial intelligence, not a person. "
-            "Your messages are processed to provide you support.\n\n"
-            "Write *yes* to continue or *no* to cancel."
-        ),
-        "fr": (
-            "*Alfred* — assistant personnel via WhatsApp.\n\n"
-            "Je suis une intelligence artificielle, pas une personne. "
-            "Tes messages sont traités pour t'apporter du soutien.\n\n"
-            "Écris *oui* pour continuer ou *non* pour annuler."
-        ),
-        "de": (
-            "*Alfred* — persönlicher Assistent via WhatsApp.\n\n"
-            "Ich bin eine künstliche Intelligenz, kein Mensch. "
-            "Deine Nachrichten werden verarbeitet, um dich zu unterstützen.\n\n"
-            "Schreib *ja*, um fortzufahren, oder *nein* zum Abbrechen."
-        ),
-    },
     "consent_accepted": {
         "pt": (
             'Tudo pronto! Me diga o que você gastou e eu anoto, por exemplo:\n\n• "gastei €45 no Jumbo" — anotar uma despesa\n• "recebi €2.800 de salário" — anotar uma receita\n• "resumo" — ver os gastos do mês\n• "ajuda" — ver tudo o que sei fazer'
@@ -224,13 +199,6 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": "Understood. I won't process any more messages. Send *START* to resume.",
         "fr": "Compris. Je ne traiterai plus de messages. Envoie *START* pour reprendre.",
         "de": "Verstanden. Ich verarbeite keine Nachrichten mehr. Sende *START*, um fortzufahren.",
-    },
-    "consent_unknown": {
-        "pt": "Responda *sim* para continuar ou *não* para cancelar.",
-        "nl": "Antwoord *ja* om door te gaan of *nee* om te annuleren.",
-        "en": "Reply *yes* to continue or *no* to cancel.",
-        "fr": "Réponds *oui* pour continuer ou *non* pour annuler.",
-        "de": "Antworte *ja*, um fortzufahren, oder *nein* zum Abbrechen.",
     },
     "help": {
         "pt": (
@@ -1603,6 +1571,7 @@ _derive_singular(
     de="_1 Buchung_",
 )
 
+_STRINGS.update(_SIGNUP_STRINGS)  # sign-up page invite and welcome (signup.py)
 _STRINGS.update(_BUDGET_STRINGS)  # V2-01 texts live next to their logic in budgets.py
 _STRINGS.update(_RECURRING_STRINGS)  # V2-02, same idea
 _STRINGS.update(_MSUM_STRINGS)  # V2-04
@@ -3943,59 +3912,29 @@ async def handle_inbound(
     # accents so "está"/"água"/"medicação" match; slice captured text from ``body``.
     body_plain = strip_accents(body)
 
-    # ── 1. First contact: detect language, send disclosure ───────────────────
-    if member.consent_state == "pending":
-        lang = _detect_language(body)
-        if lang is None:  # nothing shows the language: ask, and let the answer rule chat and panel
-            member.consent_state = "pending_language"
+    # ── 1. Not registered yet: the only way in is the sign-up page ─────────────
+    # (a number that never wrote, or one caught in the old "answer sim" flow). The first message
+    # shows the language when it can; otherwise the phone's country decides and the page lets
+    # the person change it. Nothing else is processed until the account exists.
+    if member.consent_state in SIGNUP_WAITING_STATES:
+        first = member.consent_state == "pending"
+        if first:
+            member.language = _detect_language(body) or guess_signup_language(to)
+        lang = member.language or "en"
+        if not first and body in _CONSENT_NO:  # "stop" while waiting: honour it
+            member.consent_state = "rejected"
             session.add(member)
-            await send_text(to, _t("language_ask", "en"))
-            logger.info("conversation.language_asked", member_id=str(member.id))
+            await send_text(to, _t("consent_rejected", lang))
+            logger.info("conversation.consent_rejected", member_id=str(member.id))
             return
-        member.language = lang
+        member.consent_state = "pending_signup"
         session.add(member)
-        disclosure = _t("disclosure", lang)
-        await send_text(to, disclosure)
-        member.consent_state = "pending_response"
-        logger.info("conversation.disclosure_sent", member_id=str(member.id), lang=lang)
-        return
-
-    # ── 1b. Answer to "which language?" ──────────────────────────────────────
-    if member.consent_state == "pending_language":
-        chosen = parse_language_choice(body)
-        if chosen is None:
-            await send_text(to, _t("language_ask", "en"))
-            return
-        member.language = chosen
-        member.consent_state = "pending_response"
-        session.add(member)
-        await send_text(to, _t("disclosure", chosen))
-        logger.info("conversation.language_chosen", member_id=str(member.id), lang=chosen)
+        await send_signup_invite(member, lang, again=not first)
+        audit(session, "signup_link_sent", member.id, first=first)
+        logger.info("conversation.signup_link_sent", member_id=str(member.id), first=first)
         return
 
     lang = member.language or "en"
-
-    # ── 2. Awaiting consent response ─────────────────────────────────────────
-    if member.consent_state == "pending_response":
-        if body in _CONSENT_YES:
-            member.consent_state = "accepted"
-            member.disclosure_accepted_at = datetime.now(UTC)
-            member.disclosure_version = "1.0"
-            session.add(member)
-            reply = _t("consent_accepted", lang)
-            await send_text(to, reply)
-            await _save_outbound(member, reply, session)
-            audit(session, "consent_accepted", member.id)
-            logger.info("conversation.consent_accepted", member_id=str(member.id))
-        elif body in _CONSENT_NO:
-            member.consent_state = "rejected"
-            session.add(member)
-            reply = _t("consent_rejected", lang)
-            await send_text(to, reply)
-            logger.info("conversation.consent_rejected", member_id=str(member.id))
-        else:
-            await send_text(to, _t("consent_unknown", lang))
-        return
 
     # ── 3. Rejected — honour their choice ────────────────────────────────────
     if member.consent_state == "rejected":
@@ -4009,9 +3948,10 @@ async def handle_inbound(
             await _gdpr_reply(member, body_plain, session, lang)
             return
         if body in _RESUME_WORDS:
-            member.consent_state = "pending_response"
+            member.consent_state = "pending_signup"
             session.add(member)
-            await send_text(to, _t("disclosure", lang))
+            await send_signup_invite(member, lang)
+            audit(session, "signup_link_sent", member.id, first=False)
             logger.info("conversation.resume_requested", member_id=str(member.id))
             return
         logger.info("conversation.rejected_member_ignored", member_id=str(member.id))
