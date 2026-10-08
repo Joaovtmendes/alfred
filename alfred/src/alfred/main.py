@@ -17,6 +17,7 @@ from alfred.legal import router as legal_router
 from alfred.observability import init_sentry
 from alfred.panel_api import router as panel_router
 from alfred.settings import settings
+from alfred.signup import router as signup_router
 from alfred.web_security import SecurityHeadersMiddleware
 from alfred.webhook import recovery_loop
 from alfred.webhook import router as webhook_router
@@ -59,6 +60,7 @@ app.include_router(webhook_router)
 app.include_router(dashboard_router)
 app.include_router(panel_router)
 app.include_router(legal_router)
+app.include_router(signup_router)
 app.include_router(internal_router)
 
 

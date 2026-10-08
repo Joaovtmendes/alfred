@@ -39,7 +39,7 @@ def _dashboard_csp(nonce: str) -> str:
 
 
 _DEFAULT_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
-_TOKEN_PREFIXES = ("/d/", "/api/d/")
+_TOKEN_PREFIXES = ("/d/", "/api/d/", "/cadastro/")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

@@ -17,7 +17,7 @@ import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 
 from alfred.db import AsyncSessionLocal, engine
 from alfred.models import Expense, Household, Member, Message
@@ -66,22 +66,22 @@ async def _cleanup(phone: str) -> None:
         await s.commit()
 
 
-async def test_first_message_creates_member_and_sends_disclosure(client) -> None:
+async def test_first_message_creates_member_and_sends_the_signup_link(client) -> None:
     phone = "3160" + uuid.uuid4().hex[:7]
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as send:
+    with patch("alfred.signup.send_cta_url", new_callable=AsyncMock) as cta:
         resp = await _post(client, _payload(phone, "olá"))
     assert resp.status_code == 200
-    send.assert_awaited_once()
+    cta.assert_awaited_once()
     async with AsyncSessionLocal() as s:
         member = (await s.execute(select(Member).where(Member.wa_phone == phone))).scalar_one()
-        assert member.consent_state == "pending_response"
+        assert member.consent_state == "pending_signup" and member.signup_token is not None
     await _cleanup(phone)
 
 
 async def test_duplicate_delivery_is_processed_once(client) -> None:
     phone = "3160" + uuid.uuid4().hex[:7]
     body = _payload(phone, "olá")
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as send:
+    with patch("alfred.signup.send_cta_url", new_callable=AsyncMock) as send:
         await _post(client, body)
         await _post(client, body)  # Meta retry with the same wamid
     assert send.await_count == 1
@@ -91,7 +91,7 @@ async def test_duplicate_delivery_is_processed_once(client) -> None:
 async def test_handler_failure_rolls_back_partial_writes_but_keeps_message(client) -> None:
     phone = "3160" + uuid.uuid4().hex[:7]
     boom = AsyncMock(side_effect=RuntimeError("whatsapp down"))
-    with patch("alfred.conversation.send_text", boom):
+    with patch("alfred.signup.send_cta_url", boom):
         resp = await _post(client, _payload(phone, "olá"))
     assert resp.status_code == 200  # Meta must always get 200
     async with AsyncSessionLocal() as s:
@@ -105,9 +105,13 @@ async def test_handler_failure_rolls_back_partial_writes_but_keeps_message(clien
 
 async def test_llm_history_does_not_repeat_current_message(client) -> None:
     phone = "3160" + uuid.uuid4().hex[:7]
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock):
+    with patch("alfred.signup.send_cta_url", new_callable=AsyncMock):
         await _post(client, _payload(phone, "olá"))
-        await _post(client, _payload(phone, "sim"))  # accept consent
+    async with AsyncSessionLocal() as s:  # the account opens on the sign-up page, not in the chat
+        await s.execute(
+            update(Member).where(Member.wa_phone == phone).values(consent_state="accepted")
+        )
+        await s.commit()
     llm = AsyncMock(return_value="Paris.")
     with (
         patch("alfred.conversation.send_text", new_callable=AsyncMock),
@@ -205,7 +209,7 @@ async def test_webhook_stores_then_acknowledges_then_processes(client) -> None:
 
 async def test_processed_flag_is_set_after_handling(client) -> None:
     phone = "3160" + uuid.uuid4().hex[:7]
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock):
+    with patch("alfred.signup.send_cta_url", new_callable=AsyncMock):
         await _post(client, _payload(phone, "olá"))
     async with AsyncSessionLocal() as s:
         member = (await s.execute(select(Member).where(Member.wa_phone == phone))).scalar_one()
@@ -226,7 +230,7 @@ async def test_failed_handler_leaves_message_unprocessed_for_recovery(client) ->
     from alfred.webhook import recover_unprocessed
 
     phone = "3160" + uuid.uuid4().hex[:7]
-    with patch("alfred.conversation.send_text", AsyncMock(side_effect=RuntimeError("down"))):
+    with patch("alfred.signup.send_cta_url", AsyncMock(side_effect=RuntimeError("down"))):
         resp = await _post(client, _payload(phone, "olá"))
     assert resp.status_code == 200
     async with AsyncSessionLocal() as s:
@@ -236,13 +240,13 @@ async def test_failed_handler_leaves_message_unprocessed_for_recovery(client) ->
         msg_id = msg.id
 
     # too fresh → left alone (the original task may still be running)
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as send:
+    with patch("alfred.signup.send_cta_url", new_callable=AsyncMock) as send:
         assert await recover_unprocessed() == 0
         send.assert_not_awaited()
 
     # five minutes later WhatsApp is back: the sweep answers it exactly once
     later = datetime.now(UTC) + timedelta(minutes=5)
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as send:
+    with patch("alfred.signup.send_cta_url", new_callable=AsyncMock) as send:
         assert await recover_unprocessed(now=later) == 1
         assert await recover_unprocessed(now=later) == 0  # processed now
         send.assert_awaited_once()
@@ -254,7 +258,7 @@ async def test_failed_handler_leaves_message_unprocessed_for_recovery(client) ->
         row = await s.get(Message, msg_id)
         row.processed = False
         await s.commit()
-    with patch("alfred.conversation.send_text", new_callable=AsyncMock) as send:
+    with patch("alfred.signup.send_cta_url", new_callable=AsyncMock) as send:
         assert await recover_unprocessed(now=datetime.now(UTC) + timedelta(hours=2)) == 0
         send.assert_not_awaited()
     await _cleanup(phone)

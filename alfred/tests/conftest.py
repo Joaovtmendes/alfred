@@ -58,6 +58,8 @@ def make_member(
         "disclosure_accepted_at": None,
         "disclosure_version": None,
         "dashboard_token": None,
+        "signup_token": None,
+        "signup_token_expires_at": None,
     }
     fields.update(kw)
     return SimpleNamespace(**fields)

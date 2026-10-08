@@ -106,7 +106,14 @@ async def metrics(session: AsyncSession = Depends(get_session)) -> dict:
             state: await count(
                 select(func.count()).select_from(Member).where(Member.consent_state == state)
             )
-            for state in ("pending", "pending_language", "pending_response", "accepted", "rejected")
+            for state in (
+                "pending",
+                "pending_signup",
+                "pending_language",
+                "pending_response",
+                "accepted",
+                "rejected",
+            )
         },
         "active_members_7d": await count(
             select(func.count(func.distinct(Message.author_id))).where(
