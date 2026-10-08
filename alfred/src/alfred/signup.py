@@ -1,6 +1,8 @@
 # ruff: noqa: E501
 """Sign-up page (mandatory since 08/10/2026): the only way to open an account.
 
+The invite and the page start in English; the person chooses the language on the page.
+
 A number that writes to Alfred for the first time gets one message with a button. The button opens
 ``/cadastro/{token}``: one screen where the person picks the language, says what to call them and
 accepts the privacy notice (and, separately and optionally, health data and deadline reminders).
@@ -336,20 +338,6 @@ def render_done(lang: str, name: str, health: bool, deadlines: bool) -> HTMLResp
 
 
 # ── tokens and the invite message ─────────────────────────────────────────────────────────────
-
-
-def guess_language(phone: str) -> str:
-    """First guess when the first message shows nothing: by country code (the page can change it)."""
-    digits = re.sub(r"\D", "", phone or "")
-    if digits.startswith("55"):
-        return "pt"
-    if digits.startswith(("31", "32")):
-        return "nl"
-    if digits.startswith("33"):
-        return "fr"
-    if digits.startswith(("49", "43")):
-        return "de"
-    return "en"
 
 
 def issue_token(member: Member, now: datetime | None = None) -> uuid.UUID:
