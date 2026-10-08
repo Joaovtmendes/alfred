@@ -306,13 +306,16 @@ async def test_trip_commands_need_a_trip(lab: Lab) -> None:
 async def test_itinerary_is_added_listed_in_date_order_and_validated(lab: Lab) -> None:
     trip = await _trip(lab, started_at=today_local() + timedelta(days=5))
     year = trip.started_at.year
-    assert "Museu do Fado" in await lab.say("roteiro 13/10 10:00 Museu do Fado")
-    await lab.say("roteiro 12/10 Jantar no Alfama")
+    # dates built from the trip start (a fixed "12/10" broke once the real date passed it)
+    first = trip.started_at.date() if hasattr(trip.started_at, "date") else trip.started_at
+    d1, d2 = f"{first:%d/%m}", f"{first + timedelta(days=1):%d/%m}"
+    assert "Museu do Fado" in await lab.say(f"roteiro {d2} 10:00 Museu do Fado")
+    await lab.say(f"roteiro {d1} Jantar no Alfama")
     listing = await lab.say("roteiro")
-    assert listing.index("12/10") < listing.index("13/10") and "10:00" in listing
+    assert listing.index(d1) < listing.index(d2) and "10:00" in listing
     assert await _count(lab, TripItem) == 2
     assert await lab.say("roteiro 31/02 algo") == _t("tp_itin_bad", "pt")
-    assert await lab.say("roteiro 12/10 25:00 algo") == _t("tp_itin_bad", "pt")
+    assert await lab.say(f"roteiro {d1} 25:00 algo") == _t("tp_itin_bad", "pt")
     assert year  # entries without a year take the trip's
 
 

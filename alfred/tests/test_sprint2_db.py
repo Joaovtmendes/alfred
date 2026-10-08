@@ -91,8 +91,10 @@ async def test_apaga_deletes_the_last_expense_and_says_which(lab: Lab) -> None:
     await lab.add(_exp(lab, 25, merchant="Mercado", days_ago=0))
     reply = await lab.say("apaga")
     assert "Mercado" in reply and "€25,00" in reply
-    assert await _count(lab) == 1
+    assert await _count(lab) == 2  # it asks first now
     lab.llm_reply.assert_not_awaited()
+    await lab.tap(lab.buttons[-1][0][0])
+    assert await _count(lab) == 1
 
 
 async def test_apaga_with_nothing_to_delete(lab: Lab) -> None:

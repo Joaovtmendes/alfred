@@ -51,7 +51,9 @@ def test_income_and_category_stay_consistent() -> None:
 
 
 def test_currency_is_allow_listed() -> None:
-    assert sanitize_expense(_exp(currency="btc"))["currency"] == "EUR"
+    # a real 3-letter code is kept so the chat refuses it; garbage falls back to euro
+    assert sanitize_expense(_exp(currency="btc"))["currency"] == "BTC"
+    assert sanitize_expense(_exp(currency="euro?"))["currency"] == "EUR"
     assert sanitize_expense(_exp(currency="usd"))["currency"] == "USD"
 
 

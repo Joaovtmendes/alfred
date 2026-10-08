@@ -6,6 +6,7 @@ Only the WhatsApp sender and the LLM calls are patched; router, SQL and models a
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -151,7 +152,13 @@ async def _make_lab(language: str = "pt") -> Lab:
         hh = Household(name="bugs")
         s.add(hh)
         await s.flush()
-        m = Member(household_id=hh.id, wa_phone=phone, consent_state="accepted", language=language)
+        m = Member(
+            household_id=hh.id,
+            wa_phone=phone,
+            consent_state="accepted",
+            language=language,
+            health_consent_at=datetime.now(UTC),  # a signed-up member; tests clear it when needed
+        )
         s.add(m)
         await s.commit()
         return Lab(m.id, hh.id, phone)

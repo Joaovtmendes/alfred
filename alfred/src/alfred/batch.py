@@ -297,6 +297,17 @@ _NO = {
     "annuleer", "annuleren", "non", "annule", "annuler", "nein", "abbrechen", "storno",
 }  # fmt: skip
 
+_YES_PHRASES = {
+    "sim pode", "pode sim", "sim confirma", "sim confirmo", "pode confirmar", "pode gravar", "pode salvar",
+    "ok pode", "ok pode gravar", "ok pode confirmar", "isso mesmo", "esta certo", "ta certo", "tudo certo",
+    "confirma tudo", "grava", "pode", "yes please", "yes confirm", "ja klopt", "ja graag", "oui confirme",
+    "ja bitte",
+}  # fmt: skip
+_NO_PHRASES = {
+    "nao quero", "pode cancelar", "cancela tudo", "nao obrigado", "deixa pra la", "esquece isso",
+    "no thanks", "nee bedankt", "non merci", "nein danke",
+}  # fmt: skip
+
 _ORD = {
     "primeiro": 1, "primeira": 1, "first": 1, "eerste": 1, "premier": 1, "premiere": 1, "erste": 1, "ersten": 1, "erster": 1,
     "segundo": 2, "segunda": 2, "second": 2, "tweede": 2, "deuxieme": 2, "zweite": 2, "zweiten": 2, "zweiter": 2,
@@ -345,9 +356,11 @@ async def handle_batch_text(
     from alfred.conversation import _t
 
     plain = " ".join(body_plain.split()).strip(" .!?,")
-    words = set(plain.replace(",", " ").split())
-    is_yes = plain in _YES or (len(words) <= 3 and bool(words & _YES) and not words & _NO)
-    is_no = plain in _NO or (len(words) <= 3 and bool(words & _NO) and not words & _YES)
+    # Only a whole-message answer counts: "almoço no shopping" or "já paguei" are new messages,
+    # not a "no"/"yes" to the draft (they used to cancel or record it by accident).
+    key = " ".join(plain.replace(",", " ").split())
+    is_yes = key in _YES or key in _YES_PHRASES
+    is_no = key in _NO or key in _NO_PHRASES
     rm = _REMOVE.match(plain)
     ch = _CHANGE.match(plain)
     if not (is_yes or is_no or rm or ch):
