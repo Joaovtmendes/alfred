@@ -68,6 +68,7 @@ class Member(Base):
 
     # M2 — user profile
     preferred_name: Mapped[str | None] = mapped_column(String(100))
+    email: Mapped[str | None] = mapped_column(String(254))  # given on the sign-up page
     language: Mapped[str] = mapped_column(String(10), nullable=False, default="pt")
 
     # AVG consent + EU AI Act Art. 50 disclosure

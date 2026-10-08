@@ -69,7 +69,7 @@ async def _cleanup(*ids: uuid.UUID) -> None:
 
 
 def _form(**kw) -> dict:
-    data = {"lang": "pt", "name": "Maria", "privacy": "1"}
+    data = {"lang": "pt", "name": "Maria", "email": "maria@example.com", "privacy": "1"}
     data.update(kw)
     return {k: v for k, v in data.items() if v is not None}
 
@@ -83,7 +83,7 @@ async def test_the_page_shows_the_form_in_the_members_language(client) -> None:
     assert resp.headers["cache-control"] == "no-store"
     assert "noindex" in resp.text
     other = await client.get(f"/cadastro/{token}?lang=de")
-    assert "Konto anlegen" in other.text
+    assert "Konto anlegen" in other.text and "Lege dein Konto an" in other.text
     await _cleanup(mid)
 
 
@@ -113,6 +113,7 @@ async def test_signup_opens_the_account_and_welcomes_in_the_chat(client) -> None
     m = await _load(mid)
     assert m.consent_state == "accepted"
     assert m.preferred_name == "Maria Silva" and m.language == "pt"
+    assert m.email == "maria@example.com"
     assert m.disclosure_version == POLICY_VERSION and m.disclosure_accepted_at is not None
     assert m.health_consent_at is not None
     assert m.signup_token is None and m.signup_token_expires_at is None  # single use
@@ -223,3 +224,25 @@ async def test_a_token_belongs_to_one_member_only(client) -> None:
         await s.commit()
     assert (await client.get(f"/cadastro/{tb}")).status_code == 404
     await _cleanup(a, b)
+
+
+@pytest.mark.parametrize(
+    "email", ["", "maria", "maria@", "a b@c.nl", "x@y", "<x>@y.com", "a@b@c.com"]
+)
+async def test_a_bad_or_missing_email_is_refused(client, email: str) -> None:
+    mid, token, _ = await _new_member()
+    with patch(CTA, new_callable=AsyncMock), patch(TEXT, new_callable=AsyncMock):
+        resp = await client.post(f"/cadastro/{token}", data=_form(email=email))
+    assert resp.status_code == 400 and 'role="alert"' in resp.text
+    assert (await _load(mid)).consent_state == "pending_signup"
+    await _cleanup(mid)
+
+
+async def test_the_form_asks_for_name_email_and_language_and_masks_the_number(client) -> None:
+    mid, token, phone = await _new_member(lang="en")
+    html = (await client.get(f"/cadastro/{token}")).text
+    assert 'name="email" maxlength="254" required' in html
+    assert 'name="name"' in html and '<select id="l" name="lang" required>' in html
+    assert phone not in html and "readonly" in html
+    assert "Financial" in html and "Example conversation" in html
+    await _cleanup(mid)

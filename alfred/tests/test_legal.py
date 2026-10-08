@@ -31,7 +31,7 @@ def test_every_language_has_the_same_sections() -> None:
 def test_policy_1_6_covers_the_v2_data_categories_couple_and_statements_in_every_language() -> None:
     from alfred.legal import POLICY_VERSION
 
-    assert POLICY_VERSION == "1.9"
+    assert POLICY_VERSION == "2.0"
     for lang, policy in POLICY.items():
         text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
         assert any(w in text for w in ("bank statement", "bankafschrift", "extrato banc")), lang

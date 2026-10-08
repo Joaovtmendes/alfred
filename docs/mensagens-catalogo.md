@@ -1346,14 +1346,6 @@
 - **fr** — Compris. Je ne traiterai plus de messages. Envoie *START* pour reprendre.
 - **de** — Verstanden. Ich verarbeite keine Nachrichten mehr. Sende *START*, um fortzufahren.
 
-## `consent_unknown`
-
-- **pt** — Responda *sim* para continuar ou *não* para cancelar.
-- **nl** — Antwoord *ja* om door te gaan of *nee* om te annuleren.
-- **en** — Reply *yes* to continue or *no* to cancel.
-- **fr** — Réponds *oui* pour continuer ou *non* pour annuler.
-- **de** — Antworte *ja*, um fortzufahren, oder *nein* zum Abbrechen.
-
 ## `correction_no_expense`
 
 - **pt** — Não achei nenhuma despesa recente para corrigir. Pode registrar de novo?
@@ -1776,34 +1768,6 @@
 - **en** — Biggest expenses in {category} — {period_label}:
 - **fr** — Plus grosses dépenses en {category} — {period_label} :
 - **de** — Größte Ausgaben bei {category} — {period_label}:
-
-## `disclosure`
-
-- **pt** — *Alfred* — assistente pessoal pelo WhatsApp.
-  > 
-  > Sou uma inteligência artificial, não uma pessoa. Para ajudar você, processo as suas mensagens.
-  > 
-  > Responda *sim* para continuar ou *não* para cancelar.
-- **nl** — *Alfred* — persoonlijke assistent via WhatsApp.
-  > 
-  > Ik ben een kunstmatige intelligentie, geen mens. Je berichten worden verwerkt om je te ondersteunen.
-  > 
-  > Schrijf *ja* om door te gaan of *nee* om te annuleren.
-- **en** — *Alfred* — personal assistant via WhatsApp.
-  > 
-  > I am an artificial intelligence, not a person. Your messages are processed to provide you support.
-  > 
-  > Write *yes* to continue or *no* to cancel.
-- **fr** — *Alfred* — assistant personnel via WhatsApp.
-  > 
-  > Je suis une intelligence artificielle, pas une personne. Tes messages sont traités pour t'apporter du soutien.
-  > 
-  > Écris *oui* pour continuer ou *non* pour annuler.
-- **de** — *Alfred* — persönlicher Assistent via WhatsApp.
-  > 
-  > Ich bin eine künstliche Intelligenz, kein Mensch. Deine Nachrichten werden verarbeitet, um dich zu unterstützen.
-  > 
-  > Schreib *ja*, um fortzufahren, oder *nein* zum Abbrechen.
 
 ## `evo_delta`
 
@@ -4376,6 +4340,64 @@
 - **en** — Tip: one more workout day adds about {points} points.
 - **fr** — Astuce : un jour de sport de plus ajoute environ {points} points.
 - **de** — Tipp: ein weiterer Trainingstag bringt etwa {points} Punkte.
+
+## `signup_again`
+
+- **pt** — Antes de conversar, preciso que você crie a sua conta. É rápido e o link vale por 30 minutos.
+- **nl** — Voordat we kunnen praten, maak je eerst je account aan. Het is snel en de link is 30 minuten geldig.
+- **en** — Before we chat, please create your account first. It's quick and the link is valid for 30 minutes.
+- **fr** — Avant de discuter, crée d'abord ton compte. C'est rapide et le lien est valable 30 minutes.
+- **de** — Bevor wir chatten, lege bitte zuerst dein Konto an. Das geht schnell und der Link gilt 30 Minuten.
+
+## `signup_button`
+
+- **pt** — Criar minha conta
+- **nl** — Account maken
+- **en** — Create account
+- **fr** — Créer mon compte
+- **de** — Konto erstellen
+
+## `signup_invite`
+
+- **pt** — Oi! Eu sou o *Alfred*, seu assistente pessoal de IA no WhatsApp. Para começar, crie a sua conta clicando no botão abaixo.
+- **nl** — Hoi! Ik ben *Alfred*, je persoonlijke AI-assistent op WhatsApp. Maak om te beginnen je account aan via de knop hieronder.
+- **en** — Hi! I'm *Alfred*, your personal AI assistant on WhatsApp. To start, please create your account by clicking the button below.
+- **fr** — Salut ! Je suis *Alfred*, ton assistant personnel IA sur WhatsApp. Pour commencer, crée ton compte en cliquant sur le bouton ci-dessous.
+- **de** — Hallo! Ich bin *Alfred*, dein persönlicher KI-Assistent auf WhatsApp. Lege zum Start dein Konto an, indem du unten auf den Button tippst.
+
+## `signup_panel_button`
+
+- **pt** — Abrir meu painel
+- **nl** — Dashboard openen
+- **en** — Open my dashboard
+- **fr** — Ouvrir mon tableau
+- **de** — Dashboard öffnen
+
+## `signup_panel_text`
+
+- **pt** — Este é o seu painel pessoal: só você tem este link. Ele mostra tudo o que você me contar.
+- **nl** — Dit is je persoonlijke dashboard: alleen jij hebt deze link. Het toont alles wat je me vertelt.
+- **en** — This is your personal dashboard: only you have this link. It shows everything you tell me.
+- **fr** — Voici ton tableau de bord personnel : toi seul as ce lien. Il montre tout ce que tu me racontes.
+- **de** — Das ist dein persönliches Dashboard: nur du hast diesen Link. Es zeigt alles, was du mir erzählst.
+
+## `signup_welcome`
+
+- **pt** — Olá, {name}. Sua conta está ativa.
+  > 
+  > 
+- **nl** — Hoi {name}, je account is actief.
+  > 
+  > 
+- **en** — Hi {name}, your account is active.
+  > 
+  > 
+- **fr** — Salut {name}, ton compte est actif.
+  > 
+  > 
+- **de** — Hallo {name}, dein Konto ist aktiv.
+  > 
+  > 
 
 ## `summary_title`
 

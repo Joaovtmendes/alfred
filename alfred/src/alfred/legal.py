@@ -17,8 +17,8 @@ from alfred.settings import settings
 
 router = APIRouter(tags=["legal"])
 
-POLICY_VERSION = "1.9"
-POLICY_DATE = "2026-10-07"
+POLICY_VERSION = "2.0"
+POLICY_DATE = "2026-10-08"
 CONTROLLER = "JVM Solutions, Biesbosch 179, 1181 JB Amstelveen, Nederland"
 # Public contact for data requests — set PRIVACY_CONTACT_EMAIL in the environment.
 CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
@@ -40,7 +40,8 @@ POLICY: dict[str, dict] = {
             (
                 "What we process",
                 [
-                    "Your WhatsApp phone number and profile name; the messages you send "
+                    "Your WhatsApp phone number and profile name, the name and e-mail address "
+                    "you give when you create your account; the messages you send "
                     "to Alfred and Alfred's replies.",
                     "What you ask Alfred to record: expenses and income, reminders, "
                     "workouts, goals and habits, notes and tasks, trips.",
@@ -162,7 +163,8 @@ POLICY: dict[str, dict] = {
             (
                 "Welke gegevens",
                 [
-                    "Je WhatsApp-nummer en profielnaam; de berichten die je naar Alfred "
+                    "Je WhatsApp-nummer en profielnaam, de naam en het e-mailadres die je bij "
+                    "het aanmaken van je account opgeeft; de berichten die je naar Alfred "
                     "stuurt en de antwoorden van Alfred.",
                     "Wat je Alfred laat vastleggen: uitgaven en inkomsten, herinneringen, "
                     "trainingen, doelen en gewoontes, notities en taken, reizen.",
@@ -285,7 +287,8 @@ POLICY: dict[str, dict] = {
             (
                 "Quais dados tratamos",
                 [
-                    "Seu número de WhatsApp e nome de perfil; as mensagens que você envia ao "
+                    "Seu número de WhatsApp e nome de perfil, o nome e o e-mail que você informa "
+                    "ao criar a conta; as mensagens que você envia ao "
                     "Alfred e as respostas do Alfred.",
                     "O que você pede ao Alfred para registrar: despesas e receitas, lembretes, "
                     "treinos, metas e hábitos, notas e tarefas, viagens.",
