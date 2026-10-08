@@ -1,6 +1,8 @@
 # ruff: noqa: E501
 """Sign-up page (mandatory since 08/10/2026): the only way to open an account.
 
+The invite and the page start in English; the person chooses the language on the page.
+
 A number that writes to Alfred for the first time gets one message with a button. The button opens
 ``/cadastro/{token}``: one screen where the person picks the language, says what to call them and
 accepts the privacy notice (and, separately and optionally, health data and deadline reminders).
@@ -50,6 +52,7 @@ LANG_NAMES = {
 TOKEN_TTL = timedelta(minutes=30)
 REUSE_IF_LEFT = timedelta(minutes=10)  # a still-fresh link is sent again instead of a new one
 NAME_RE = re.compile(r"^[\w .'’-]{1,40}$")
+EMAIL_RE = re.compile(r"^[^@\s<>\"]{1,64}@[^@\s<>\"]{1,185}\.[^@\s<>\".]{2,}$")
 MAX_BODY = 4096
 
 # The states in which a number is waiting for its sign-up. ``pending_language`` and
@@ -61,11 +64,11 @@ WAITING_STATES = ("pending", "pending_language", "pending_response", "pending_si
 
 STRINGS: dict[str, dict[str, str]] = {
     "signup_invite": {
-        "pt": "Oi! Eu sou o *Alfred*, um assistente pessoal pelo WhatsApp. Sou uma inteligência artificial, não uma pessoa.\n\nPara começar, crie a sua conta: leva um minuto, você escolhe o idioma e o que quer que eu guarde. O link vale por 30 minutos.",
-        "nl": "Hoi! Ik ben *Alfred*, een persoonlijke assistent via WhatsApp. Ik ben een kunstmatige intelligentie, geen mens.\n\nMaak om te beginnen je account aan: het duurt een minuut en je kiest je taal en wat ik mag bewaren. De link is 30 minuten geldig.",
-        "en": "Hi! I'm *Alfred*, a personal assistant on WhatsApp. I'm an artificial intelligence, not a person.\n\nTo start, create your account: it takes a minute, and you choose your language and what I may keep. The link is valid for 30 minutes.",
-        "fr": "Salut ! Je suis *Alfred*, un assistant personnel sur WhatsApp. Je suis une intelligence artificielle, pas une personne.\n\nPour commencer, crée ton compte : ça prend une minute, tu choisis ta langue et ce que je peux garder. Le lien est valable 30 minutes.",
-        "de": "Hallo! Ich bin *Alfred*, ein persönlicher Assistent auf WhatsApp. Ich bin eine künstliche Intelligenz, kein Mensch.\n\nLege zum Start dein Konto an: Das dauert eine Minute, du wählst deine Sprache und was ich speichern darf. Der Link gilt 30 Minuten.",
+        "pt": "Oi! Eu sou o *Alfred*, seu assistente pessoal de IA no WhatsApp. Para começar, crie a sua conta clicando no botão abaixo.",
+        "nl": "Hoi! Ik ben *Alfred*, je persoonlijke AI-assistent op WhatsApp. Maak om te beginnen je account aan via de knop hieronder.",
+        "en": "Hi! I'm *Alfred*, your personal AI assistant on WhatsApp. To start, please create your account by clicking the button below.",
+        "fr": "Salut ! Je suis *Alfred*, ton assistant personnel IA sur WhatsApp. Pour commencer, crée ton compte en cliquant sur le bouton ci-dessous.",
+        "de": "Hallo! Ich bin *Alfred*, dein persönlicher KI-Assistent auf WhatsApp. Lege zum Start dein Konto an, indem du unten auf den Button tippst.",
     },
     "signup_button": {
         "pt": "Criar minha conta",
@@ -229,30 +232,175 @@ PAGE: dict[str, dict[str, str]] = {
     },
 }
 
+_NEW: dict[str, dict] = {
+    "en": {
+        "h1": "Alfred, your personal assistant on WhatsApp",
+        "form_h": "Create your account",
+        "email": "Email",
+        "email_hint": "Used only for your account.",
+        "phone": "WhatsApp number",
+        "phone_hint": "The number that opened this link. It can't be changed here.",
+        "lang_hint": "Alfred will talk to you in this language.",
+        "err_email": "Enter a valid email address.",
+        "cards": [
+            ("Financial", "“Uber 12,50”"),
+            ("Calendar", "“dentist Friday 15:00”"),
+            ("Habits and training", "“bench press 60 kg”"),
+            ("Home and deadlines", "“energy contract ends 1 March”"),
+        ],
+        "chat": [
+            "Jumbo 45,20, Uber 12,50, salary 2800",
+            "I see 3 entries:\n1. Jumbo: €45,20\n2. Uber: €12,50\n3. salary: +€2.800,00\n\nConfirm and I'll add them. Nothing has been added yet.",
+            "Confirm",
+            "Recorded 3 transactions:\n• Jumbo: €45,20\n• Uber: €12,50\n• salary: +€2.800,00",
+            "Example conversation",
+        ],
+    },
+    "pt": {
+        "h1": "Alfred, seu assistente pessoal no WhatsApp",
+        "form_h": "Crie a sua conta",
+        "email": "E-mail",
+        "email_hint": "Usado só para a sua conta.",
+        "phone": "Número de WhatsApp",
+        "phone_hint": "O número que abriu este link. Não dá para mudar aqui.",
+        "lang_hint": "O Alfred vai falar com você neste idioma.",
+        "err_email": "Escreva um e-mail válido.",
+        "cards": [
+            ("Financeiro", "“Uber 12,50”"),
+            ("Agenda", "“dentista sexta 15h”"),
+            ("Hábitos e treino", "“supino 60 kg”"),
+            ("Casa e prazos", "“contrato de energia termina 1º de março”"),
+        ],
+        "chat": [
+            "Jumbo 45,20, Uber 12,50, salário 2800",
+            "Vejo 3 lançamentos:\n1. Jumbo: €45,20\n2. Uber: €12,50\n3. salário: +€2.800,00\n\nConfirme e eu registro. Nada foi registrado ainda.",
+            "Confirmar",
+            "Registrei 3 lançamentos:\n• Jumbo: €45,20\n• Uber: €12,50\n• salário: +€2.800,00",
+            "Exemplo de conversa",
+        ],
+    },
+    "nl": {
+        "h1": "Alfred, je persoonlijke assistent op WhatsApp",
+        "form_h": "Maak je account aan",
+        "email": "E-mail",
+        "email_hint": "Alleen gebruikt voor je account.",
+        "phone": "WhatsApp-nummer",
+        "phone_hint": "Het nummer dat deze link opende. Het kan hier niet worden gewijzigd.",
+        "lang_hint": "Alfred praat met je in deze taal.",
+        "err_email": "Vul een geldig e-mailadres in.",
+        "cards": [
+            ("Financieel", "“Uber 12,50”"),
+            ("Agenda", "“tandarts vrijdag 15:00”"),
+            ("Gewoontes en training", "“bankdrukken 60 kg”"),
+            ("Huis en deadlines", "“energiecontract eindigt 1 maart”"),
+        ],
+        "chat": [
+            "Jumbo 45,20, Uber 12,50, salaris 2800",
+            "Ik zie 3 posten:\n1. Jumbo: €45,20\n2. Uber: €12,50\n3. salaris: +€2.800,00\n\nBevestig en ik voeg ze toe. Er is nog niets toegevoegd.",
+            "Bevestigen",
+            "3 transacties vastgelegd:\n• Jumbo: €45,20\n• Uber: €12,50\n• salaris: +€2.800,00",
+            "Voorbeeldgesprek",
+        ],
+    },
+    "fr": {
+        "h1": "Alfred, ton assistant personnel sur WhatsApp",
+        "form_h": "Crée ton compte",
+        "email": "E-mail",
+        "email_hint": "Utilisé uniquement pour ton compte.",
+        "phone": "Numéro WhatsApp",
+        "phone_hint": "Le numéro qui a ouvert ce lien. Il ne peut pas être changé ici.",
+        "lang_hint": "Alfred te parlera dans cette langue.",
+        "err_email": "Saisis une adresse e-mail valide.",
+        "cards": [
+            ("Finances", "« Uber 12,50 »"),
+            ("Agenda", "« dentiste vendredi 15h »"),
+            ("Habitudes et sport", "« développé couché 60 kg »"),
+            ("Maison et échéances", "« contrat d'énergie fini le 1er mars »"),
+        ],
+        "chat": [
+            "Jumbo 45,20, Uber 12,50, salaire 2800",
+            "Je vois 3 écritures :\n1. Jumbo : €45,20\n2. Uber : €12,50\n3. salaire : +€2.800,00\n\nConfirme et je les ajoute. Rien n'a encore été ajouté.",
+            "Confirmer",
+            "3 opérations enregistrées :\n• Jumbo : €45,20\n• Uber : €12,50\n• salaire : +€2.800,00",
+            "Exemple de conversation",
+        ],
+    },
+    "de": {
+        "h1": "Alfred, dein persönlicher Assistent auf WhatsApp",
+        "form_h": "Lege dein Konto an",
+        "email": "E-Mail",
+        "email_hint": "Nur für dein Konto verwendet.",
+        "phone": "WhatsApp-Nummer",
+        "phone_hint": "Die Nummer, die diesen Link geöffnet hat. Sie kann hier nicht geändert werden.",
+        "lang_hint": "Alfred spricht in dieser Sprache mit dir.",
+        "err_email": "Gib eine gültige E-Mail-Adresse ein.",
+        "cards": [
+            ("Finanzen", "„Uber 12,50“"),
+            ("Kalender", "„Zahnarzt Freitag 15:00“"),
+            ("Gewohnheiten und Training", "„Bankdrücken 60 kg“"),
+            ("Haus und Fristen", "„Energievertrag endet am 1. März“"),
+        ],
+        "chat": [
+            "Jumbo 45,20, Uber 12,50, Gehalt 2800",
+            "Ich sehe 3 Einträge:\n1. Jumbo: €45,20\n2. Uber: €12,50\n3. Gehalt: +€2.800,00\n\nBestätige, dann trage ich sie ein. Noch nichts wurde eingetragen.",
+            "Bestätigen",
+            "3 Buchungen erfasst:\n• Jumbo: €45,20\n• Uber: €12,50\n• Gehalt: +€2.800,00",
+            "Beispielgespräch",
+        ],
+    },
+}
+for _l, _extra in _NEW.items():
+    PAGE[_l].update(_extra)
+
 _CSS = """
-:root{--bg:#fbfbf9;--fg:#1d2327;--muted:#5b646b;--line:#e3e5e2;--accent:#1f6f5c;--on:#fff;--err:#a3281d}
-@media (prefers-color-scheme:dark){:root{--bg:#141719;--fg:#e8eaeb;--muted:#9aa3a9;--line:#2a2f33;
---accent:#6fc3a9;--on:#0d1411;--err:#ff8a7d}}
+:root{color-scheme:light;--bg:#f3f5f8;--card:#fff;--fg:#101828;--muted:#556070;--line:#e1e5eb;--field:#c7ced9;
+--accent:#1d4ed8;--tint:#e6edff;--on:#fff;--err:#b3203a;--chat:#e9efe3;--out:#d9fdd3;--link:#027eb5}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:30rem;margin:0 auto;padding:1.5rem 1rem 3rem}
-h1{font-size:1.5rem;line-height:1.25;margin:.5rem 0;text-wrap:balance}
-.lead{color:var(--muted);margin:0 0 1rem}
-.feat{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1.5rem;padding:0;list-style:none}
-.feat li{border:1px solid var(--line);border-radius:999px;padding:.15rem .7rem;font-size:.9rem}
-nav{display:flex;flex-wrap:wrap;gap:.5rem 1rem;font-size:.9rem;margin-bottom:1rem}
-nav a{color:var(--accent)} nav b{font-weight:600}
-label{display:block;font-weight:600;margin:1rem 0 .25rem}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:30rem;margin:0 auto;padding:1rem 1rem 2rem;display:flex;flex-direction:column;gap:1.25rem}
+.brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.25rem}
+.logo{width:2rem;height:2rem;border-radius:.55rem;background:var(--accent);color:var(--on);display:grid;place-items:center}
+h1{font-size:2rem;line-height:1.12;margin:0;text-wrap:balance}
+h2{font-size:1.4rem;margin:0}
+form{background:var(--card);border:1px solid var(--line);border-radius:1.1rem;padding:1.25rem 1rem;display:flex;flex-direction:column;gap:1rem}
+.f{display:flex;flex-direction:column;gap:.35rem}
+label.l{font-weight:600}
 .hint{color:var(--muted);font-size:.85rem;margin:0}
-input[type=text]{width:100%;font:inherit;padding:.65rem .75rem;border:1px solid var(--line);border-radius:.5rem;background:transparent;color:var(--fg)}
-.check{display:flex;gap:.6rem;align-items:flex-start;margin:.9rem 0;font-weight:400}
-.check input{margin-top:.3rem;width:1.1rem;height:1.1rem;flex:none}
+input[type=text],input[type=email],select{width:100%;height:3rem;font:inherit;padding:0 .85rem;border:1px solid var(--field);border-radius:.6rem;background:var(--card);color:var(--fg)}
+input[readonly]{background:#edf0f5;color:var(--muted)}
+hr{border:0;border-top:1px solid var(--line);margin:0}
+.check{display:flex;gap:.7rem;align-items:flex-start;font-size:.9rem}
+.check input{margin-top:.2rem;width:1.35rem;height:1.35rem;flex:none;accent-color:var(--accent)}
 .check a{color:var(--accent)}
-button,.btn{display:block;width:100%;text-align:center;font:inherit;font-weight:600;margin-top:1.4rem;padding:.8rem 1rem;border:0;border-radius:.6rem;background:var(--accent);color:var(--on);text-decoration:none;cursor:pointer}
-.err{color:var(--err);margin:.75rem 0 0;font-weight:600}
-.note{color:var(--muted);font-size:.85rem;margin-top:1rem}
+.req{color:var(--err);font-weight:600}
+.opt{color:var(--muted)}
+button,.btn{display:block;width:100%;text-align:center;font:inherit;font-weight:600;padding:.9rem 1rem;border:0;border-radius:.75rem;background:var(--accent);color:var(--on);text-decoration:none;cursor:pointer}
+.err{color:var(--err);margin:0;font-weight:600}
+.note{color:var(--muted);font-size:.85rem;margin:0;text-align:center}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:.9rem;padding:.9rem;display:flex;flex-direction:column;gap:.4rem}
+.ic{width:2.25rem;height:2.25rem;border-radius:.6rem;background:var(--tint);color:var(--accent);display:grid;place-items:center}
+.card b{font-weight:600}
+.card span{font-size:.85rem;color:var(--muted)}
+.chat{background:var(--chat);border-radius:.9rem;padding:.9rem;display:flex;flex-direction:column;gap:.5rem;font-size:.9rem;color:#111b21}
+.chat div{padding:.5rem .75rem;border-radius:.75rem;max-width:92%;white-space:pre-line;background:#fff}
+.chat .me{align-self:flex-end;background:var(--out)}
+.chat small{color:var(--muted)}
+.foot{color:var(--muted);font-size:.8rem;margin:0;text-align:center}
 ul.sum{padding-left:1.1rem;color:var(--muted)}
+.lead{color:var(--muted);margin:0}
+@media (min-width:62rem){main{max-width:67rem;display:grid;grid-template-columns:1fr 26rem;column-gap:3rem;
+row-gap:1.25rem;align-items:start;grid-template-rows:auto auto auto auto 1fr}
+.brand{grid-column:1/-1}h1{grid-column:1;grid-row:2;font-size:3.2rem}.cards{grid-column:1;grid-row:3}
+.chat{grid-column:1;grid-row:4;max-width:29rem}form{grid-column:2;grid-row:2/6}}
 """
+
+_ICONS = (
+    '<path d="M3 7h15a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7z"/><path d="M3 7l12-3v3"/>',
+    '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    '<path d="M3 12h4l2-5 4 10 2-5h6"/>',
+    '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+)
 
 
 def _norm_lang(lang: str | None) -> str:
@@ -263,7 +411,7 @@ def _page(lang: str, title: str, body: str, status: int = 200) -> HTMLResponse:
     html = (
         f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<meta name="color-scheme" content="light dark">'
+        '<meta name="color-scheme" content="light">'
         '<meta name="robots" content="noindex,nofollow">'
         f"<title>{escape(title)}</title><style>{_CSS}</style></head><body><main>{body}</main></body></html>"
     )
@@ -281,11 +429,22 @@ def render_gone(lang: str | None) -> HTMLResponse:
     )
 
 
+def _mask(phone: str) -> str:
+    d = re.sub(r"\D", "", phone)
+    return f"+{d[:2]} {d[2:3]}•• ••• ••{d[-2:]}" if len(d) >= 6 else "+•• ••• •••"
+
+
+def _brand() -> str:
+    return '<div class="brand"><div class="logo">A</div>Alfred</div>'
+
+
 def render_form(
     lang: str,
     token: str,
     *,
+    phone: str = "",
     name: str = "",
+    email: str = "",
     health: bool = False,
     deadlines: bool = False,
     error: str | None = None,
@@ -293,27 +452,45 @@ def render_form(
 ) -> HTMLResponse:
     lang = _norm_lang(lang)
     p = PAGE[lang]
-    nav = " ".join(
-        f"<b>{n}</b>" if code == lang else f'<a href="?lang={code}">{n}</a>'
+    opts = "".join(
+        f'<option value="{code}"{" selected" if code == lang else ""}>{n}</option>'
         for code, n in LANG_NAMES.items()
     )
-    feats = "".join(f"<li>{escape(x)}</li>" for x in p["feat"].split("|"))
     privacy = p["privacy"].replace("{url}", f"/privacy?lang={lang}")
     err = f'<p class="err" role="alert">{escape(p[error])}</p>' if error else ""
-    body = (
-        f"<nav>{nav}</nav><h1>{escape(p['h1'])}</h1><p class='lead'>{escape(p['lead'])}</p>"
-        f'<ul class="feat">{feats}</ul>'
+    cards = "".join(
+        f'<div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" '
+        f'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{ic}</svg></div>'
+        f"<b>{escape(label)}</b><span>{escape(ex)}</span></div>"
+        for ic, (label, ex) in zip(_ICONS, p["cards"], strict=True)
+    )
+    c = p["chat"]
+    chat = (
+        f'<div class="chat"><div class="me">{escape(c[0])}</div><div>{escape(c[1])}</div>'
+        f'<div class="me">{escape(c[2])}</div><div>{escape(c[3])}</div><small>{escape(c[4])}</small></div>'
+    )
+    form = (
         f'<form method="post" action="/cadastro/{escape(token)}" autocomplete="off">'
-        f'<input type="hidden" name="lang" value="{lang}">'
-        f'<label for="n">{escape(p["name"])}</label>'
+        f"<h2>{escape(p['form_h'])}</h2>"
+        f'<div class="f"><label class="l" for="n">{escape(p["name"])}</label>'
         f'<input id="n" type="text" name="name" maxlength="40" required value="{escape(name)}" autocomplete="given-name">'
-        f'<p class="hint">{escape(p["name_hint"])}</p>'
+        f'<p class="hint">{escape(p["name_hint"])}</p></div>'
+        f'<div class="f"><label class="l" for="e">{escape(p["email"])}</label>'
+        f'<input id="e" type="email" name="email" maxlength="254" required value="{escape(email)}" autocomplete="email">'
+        f'<p class="hint">{escape(p["email_hint"])}</p></div>'
+        f'<div class="f"><label class="l" for="p">{escape(p["phone"])}</label>'
+        f'<input id="p" type="text" value="{escape(_mask(phone))}" readonly tabindex="-1">'
+        f'<p class="hint">{escape(p["phone_hint"])}</p></div>'
+        f'<div class="f"><label class="l" for="l">{escape(p["language"])}</label>'
+        f'<select id="l" name="lang" required>{opts}</select>'
+        f'<p class="hint">{escape(p["lang_hint"])}</p></div><hr>'
         f'<label class="check"><input type="checkbox" name="privacy" value="1" required><span>{privacy}</span></label>'
         f'<label class="check"><input type="checkbox" name="health" value="1"{" checked" if health else ""}><span>{escape(p["health"])}</span></label>'
         f'<label class="check"><input type="checkbox" name="deadlines" value="1"{" checked" if deadlines else ""}><span>{escape(p["deadlines"])}</span></label>'
-        f'{err}<button type="submit">{escape(p["submit"])}</button></form>'
-        f'<p class="note">{escape(p["note"])}</p>'
+        f'{err}<button type="submit">{escape(p["submit"])}</button>'
+        f'<p class="note">{escape(p["note"])}</p></form>'
     )
+    body = f"{_brand()}<h1>{escape(p['h1'])}</h1>{form}<div class='cards'>{cards}</div>{chat}"
     return _page(lang, p["title"], body, status=status)
 
 
@@ -336,20 +513,6 @@ def render_done(lang: str, name: str, health: bool, deadlines: bool) -> HTMLResp
 
 
 # ── tokens and the invite message ─────────────────────────────────────────────────────────────
-
-
-def guess_language(phone: str) -> str:
-    """First guess when the first message shows nothing: by country code (the page can change it)."""
-    digits = re.sub(r"\D", "", phone or "")
-    if digits.startswith("55"):
-        return "pt"
-    if digits.startswith(("31", "32")):
-        return "nl"
-    if digits.startswith("33"):
-        return "fr"
-    if digits.startswith(("49", "43")):
-        return "de"
-    return "en"
 
 
 def issue_token(member: Member, now: datetime | None = None) -> uuid.UUID:
@@ -407,7 +570,7 @@ async def signup_page(
     member = await _find(token, session)
     if member is None:
         return render_gone(lang)
-    return render_form(lang or member.language, token)
+    return render_form(lang or member.language, token, phone=member.wa_phone)
 
 
 def _form(raw: bytes) -> dict[str, str]:
@@ -428,26 +591,28 @@ async def signup_submit(
     data = _form(raw)
     lang = _norm_lang(data.get("lang"))
     name = " ".join(data.get("name", "").split())
+    email = data.get("email", "").strip()
     health = data.get("health") == "1"
     deadlines = data.get("deadlines") == "1"
+    again = {
+        "phone": member.wa_phone,
+        "name": name,
+        "email": email,
+        "health": health,
+        "deadlines": deadlines,
+        "status": 400,
+    }
     if not NAME_RE.match(name):
-        return render_form(
-            lang, token, name=name, health=health, deadlines=deadlines, error="err_name", status=400
-        )
+        return render_form(lang, token, error="err_name", **again)
+    if len(email) > 254 or not EMAIL_RE.match(email):
+        return render_form(lang, token, error="err_email", **again)
     if data.get("privacy") != "1":
-        return render_form(
-            lang,
-            token,
-            name=name,
-            health=health,
-            deadlines=deadlines,
-            error="err_privacy",
-            status=400,
-        )
+        return render_form(lang, token, error="err_privacy", **again)
 
     now = datetime.now(UTC)
     member.language = lang
     member.preferred_name = name
+    member.email = email
     member.consent_state = "accepted"
     member.disclosure_accepted_at = now
     member.disclosure_version = POLICY_VERSION

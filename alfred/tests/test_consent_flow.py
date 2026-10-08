@@ -24,28 +24,28 @@ SEND = "alfred.conversation.send_text"
 CTA = "alfred.signup.send_cta_url"
 
 
-async def test_first_message_sends_the_signup_link_in_the_detected_language() -> None:
+async def test_first_message_sends_the_signup_link_in_english() -> None:
     member = make_member("pending", language=None)
     with patch(CTA, new_callable=AsyncMock) as cta, patch(SEND, new_callable=AsyncMock) as send:
         await handle_inbound(member, make_message("hallo, ik wil beginnen"), make_session())
-    assert member.consent_state == "pending_signup" and member.language == "nl"
+    assert member.consent_state == "pending_signup" and member.language == "en"
     send.assert_not_awaited()
     cta.assert_awaited_once()
     phone, body, button, url = cta.await_args.args
-    assert phone == member.wa_phone and body == _t("signup_invite", "nl")
-    assert button == _t("signup_button", "nl") and f"/cadastro/{member.signup_token}" in url
+    assert phone == member.wa_phone and body == _t("signup_invite", "en")
+    assert button == _t("signup_button", "en") and f"/cadastro/{member.signup_token}" in url
     assert member.signup_token_expires_at is not None
 
 
 @pytest.mark.parametrize("word", ["sim", "yes", "ok", "aceito", "ja", "oui"])
 async def test_a_chat_yes_no_longer_opens_the_account(word: str) -> None:
-    member = make_member("pending_signup")
+    member = make_member("pending_signup", language="en")
     with patch(CTA, new_callable=AsyncMock) as cta, patch(SEND, new_callable=AsyncMock):
         await handle_inbound(member, make_message(word), make_session())
     assert member.consent_state == "pending_signup"
     assert member.disclosure_accepted_at is None
     cta.assert_awaited_once()
-    assert cta.await_args.args[1] == _t("signup_again", "pt")
+    assert cta.await_args.args[1] == _t("signup_again", "en")
 
 
 async def test_a_fresh_link_is_sent_again_not_replaced() -> None:

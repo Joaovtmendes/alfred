@@ -137,7 +137,6 @@ from alfred.services import handle_service_button, handle_service_command
 from alfred.settings import settings
 from alfred.signup import STRINGS as _SIGNUP_STRINGS
 from alfred.signup import WAITING_STATES as SIGNUP_WAITING_STATES
-from alfred.signup import guess_language as guess_signup_language
 from alfred.signup import send_invite as send_signup_invite
 from alfred.statement import STRINGS as _STATEMENT_STRINGS
 from alfred.statement import (
@@ -3913,13 +3912,13 @@ async def handle_inbound(
     body_plain = strip_accents(body)
 
     # ── 1. Not registered yet: the only way in is the sign-up page ─────────────
-    # (a number that never wrote, or one caught in the old "answer sim" flow). The first message
-    # shows the language when it can; otherwise the phone's country decides and the page lets
-    # the person change it. Nothing else is processed until the account exists.
+    # (a number that never wrote, or one caught in the old "answer sim" flow). Everything here is
+    # in English: the person picks the language on the page and from then on the chat follows it.
+    # Nothing else is processed until the account exists.
     if member.consent_state in SIGNUP_WAITING_STATES:
         first = member.consent_state == "pending"
         if first:
-            member.language = _detect_language(body) or guess_signup_language(to)
+            member.language = "en"  # the invite and the page open in English; the page changes it
         lang = member.language or "en"
         if not first and body in _CONSENT_NO:  # "stop" while waiting: honour it
             member.consent_state = "rejected"
