@@ -741,11 +741,11 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "seu par", "je partner", "your partner", "ton partenaire", "dein Partner"
     ),
     "couple_invite": _all(
-        "Para dividir o financeiro, peça para a outra pessoa abrir o WhatsApp do Alfred, aceitar os termos e mandar:\n\n*entrar casa {code}*\n{tap}\nO código vale {days} dias. Só o que cada um marcar como *da casa* fica visível para os dois; o resto continua privado.",
-        "Om de financiën te delen, vraag de ander om WhatsApp van Alfred te openen, de voorwaarden te accepteren en te sturen:\n\n*entrar casa {code}*\n{tap}\nDe code is {days} dagen geldig. Alleen wat jullie als *gedeeld* markeren is voor beiden zichtbaar; de rest blijft privé.",
-        "To share the household finances, ask the other person to open Alfred on WhatsApp, accept the terms and send:\n\n*join home {code}*\n{tap}\nThe code is valid for {days} days. Only what each of you marks as *shared* is visible to both; everything else stays private.",
-        "Pour partager les finances, demande à l'autre personne d'ouvrir Alfred sur WhatsApp, d'accepter les conditions et d'envoyer :\n\n*rejoindre foyer {code}*\n{tap}\nLe code est valable {days} jours. Seul ce que chacun marque comme *commun* est visible par les deux ; le reste reste privé.",
-        "Um die Finanzen zu teilen, bitte die andere Person, Alfred auf WhatsApp zu öffnen, die Bedingungen zu akzeptieren und zu senden:\n\n*haushalt beitreten {code}*\n{tap}\nDer Code gilt {days} Tage. Nur was ihr jeweils als *gemeinsam* markiert, sehen beide; alles andere bleibt privat.",
+        "Para dividir o financeiro, peça para a outra pessoa abrir o WhatsApp do Jofie, aceitar os termos e mandar:\n\n*entrar casa {code}*\n{tap}\nO código vale {days} dias. Só o que cada um marcar como *da casa* fica visível para os dois; o resto continua privado.",
+        "Om de financiën te delen, vraag de ander om WhatsApp van Jofie te openen, de voorwaarden te accepteren en te sturen:\n\n*entrar casa {code}*\n{tap}\nDe code is {days} dagen geldig. Alleen wat jullie als *gedeeld* markeren is voor beiden zichtbaar; de rest blijft privé.",
+        "To share the household finances, ask the other person to open Jofie on WhatsApp, accept the terms and send:\n\n*join home {code}*\n{tap}\nThe code is valid for {days} days. Only what each of you marks as *shared* is visible to both; everything else stays private.",
+        "Pour partager les finances, demande à l'autre personne d'ouvrir Jofie sur WhatsApp, d'accepter les conditions et d'envoyer :\n\n*rejoindre foyer {code}*\n{tap}\nLe code est valable {days} jours. Seul ce que chacun marque comme *commun* est visible par les deux ; le reste reste privé.",
+        "Um die Finanzen zu teilen, bitte die andere Person, Jofie auf WhatsApp zu öffnen, die Bedingungen zu akzeptieren und zu senden:\n\n*haushalt beitreten {code}*\n{tap}\nDer Code gilt {days} Tage. Nur was ihr jeweils als *gemeinsam* markiert, sehen beide; alles andere bleibt privat.",
     ),
     "couple_invite_tap": _all(
         "Ou toque aqui: {url}\n",
@@ -797,11 +797,11 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Du teilst die Finanzen schon mit jemandem. Schreib *haushalt verlassen*, bevor du einem anderen beitrittst.",
     ),
     "couple_join_ask": _all(
-        "{name} convidou você para dividir o financeiro da casa. Funciona assim: cada um continua com seus lançamentos privados; só o que for marcado como *da casa* aparece para os dois (valor, categoria, loja e quem pagou) e o Alfred calcula quem deve a quem. Você pode sair quando quiser. Aceita?",
-        "{name} nodigt je uit om de huishoudfinanciën te delen. Zo werkt het: ieder houdt eigen boekingen privé; alleen wat als *gedeeld* is gemarkeerd, zien jullie allebei (bedrag, categorie, winkel en wie betaalde) en Alfred rekent uit wie wie iets schuldig is. Je kunt altijd stoppen. Accepteer je?",
-        "{name} invited you to share the household finances. Here is how it works: each of you keeps your own entries private; only what is marked as *shared* shows for both (amount, category, shop and who paid) and Alfred works out who owes whom. You can leave any time. Do you accept?",
-        "{name} t'invite à partager les finances du foyer. Voici comment ça marche : chacun garde ses opérations privées ; seul ce qui est marqué *commun* apparaît pour les deux (montant, catégorie, magasin et qui a payé) et Alfred calcule qui doit quoi à qui. Tu peux partir quand tu veux. Tu acceptes ?",
-        "{name} lädt dich ein, die Haushaltsfinanzen zu teilen. So funktioniert es: Jeder behält seine Buchungen privat; nur was als *gemeinsam* markiert ist, sehen beide (Betrag, Kategorie, Geschäft und wer bezahlt hat) und Alfred rechnet aus, wer wem wie viel schuldet. Du kannst jederzeit aussteigen. Nimmst du an?",
+        "{name} convidou você para dividir o financeiro da casa. Funciona assim: cada um continua com seus lançamentos privados; só o que for marcado como *da casa* aparece para os dois (valor, categoria, loja e quem pagou) e o Jofie calcula quem deve a quem. Você pode sair quando quiser. Aceita?",
+        "{name} nodigt je uit om de huishoudfinanciën te delen. Zo werkt het: ieder houdt eigen boekingen privé; alleen wat als *gedeeld* is gemarkeerd, zien jullie allebei (bedrag, categorie, winkel en wie betaalde) en Jofie rekent uit wie wie iets schuldig is. Je kunt altijd stoppen. Accepteer je?",
+        "{name} invited you to share the household finances. Here is how it works: each of you keeps your own entries private; only what is marked as *shared* shows for both (amount, category, shop and who paid) and Jofie works out who owes whom. You can leave any time. Do you accept?",
+        "{name} t'invite à partager les finances du foyer. Voici comment ça marche : chacun garde ses opérations privées ; seul ce qui est marqué *commun* apparaît pour les deux (montant, catégorie, magasin et qui a payé) et Jofie calcule qui doit quoi à qui. Tu peux partir quand tu veux. Tu acceptes ?",
+        "{name} lädt dich ein, die Haushaltsfinanzen zu teilen. So funktioniert es: Jeder behält seine Buchungen privat; nur was als *gemeinsam* markiert ist, sehen beide (Betrag, Kategorie, Geschäft und wer bezahlt hat) und Jofie rechnet aus, wer wem wie viel schuldet. Du kannst jederzeit aussteigen. Nimmst du an?",
     ),
     "couple_gone": _all(
         "Esse convite não vale mais.",

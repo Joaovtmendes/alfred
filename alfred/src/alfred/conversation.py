@@ -201,10 +201,10 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     "help": {
         "pt": (
-            '*Alfred* — o que eu posso fazer por você:\n\n*Despesas*\n• "gastei €45 no Jumbo"\n• "Uber 12,50"\n• "paguei €180 de aluguel"\n\n*Receitas*\n• "recebi €2.800 de salário"\n\n*Consultas*\n• "resumo" — gastos do mês\n• "saldo" — receitas e despesas\n• "gastos desta semana" — por período\n• "compara este mês com o mês passado"\n• "ajuda" — esta mensagem\n\n_Para sair: "stop"_'
+            '*Jofie* — o que eu posso fazer por você:\n\n*Despesas*\n• "gastei €45 no Jumbo"\n• "Uber 12,50"\n• "paguei €180 de aluguel"\n\n*Receitas*\n• "recebi €2.800 de salário"\n\n*Consultas*\n• "resumo" — gastos do mês\n• "saldo" — receitas e despesas\n• "gastos desta semana" — por período\n• "compara este mês com o mês passado"\n• "ajuda" — esta mensagem\n\n_Para sair: "stop"_'
         ),
         "nl": (
-            "*Alfred* — wat ik voor je kan doen:\n\n"
+            "*Jofie* — wat ik voor je kan doen:\n\n"
             "*Uitgaven registreren*\n"
             '• "€45 uitgegeven bij Jumbo"\n'
             '• "Uber 12,50"\n'
@@ -220,7 +220,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             '_Om te stoppen: "stoppen"_'
         ),
         "en": (
-            "*Alfred* — what I can do for you:\n\n"
+            "*Jofie* — what I can do for you:\n\n"
             "*Record expenses*\n"
             '• "spent €45 at Jumbo"\n'
             '• "Uber 12.50"\n'
@@ -236,7 +236,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             '_To stop: "stop"_'
         ),
         "fr": (
-            "*Alfred* — ce que je peux faire pour toi :\n\n"
+            "*Jofie* — ce que je peux faire pour toi :\n\n"
             "*Enregistrer des dépenses*\n"
             '• "dépensé €45 au Jumbo"\n'
             '• "Uber 12,50"\n'
@@ -252,7 +252,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             '_Pour arrêter : "stop"_'
         ),
         "de": (
-            "*Alfred* — was ich für dich tun kann:\n\n"
+            "*Jofie* — was ich für dich tun kann:\n\n"
             "*Ausgaben erfassen*\n"
             '• "€45 bei Jumbo ausgegeben"\n'
             '• "Uber 12,50"\n'

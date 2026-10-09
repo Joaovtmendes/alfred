@@ -229,7 +229,7 @@ def audit_templates(folder: pathlib.Path) -> list[Finding]:
 def catalogue_markdown(strings: dict) -> str:
     """One section per key with the five languages side by side, for a human tone review."""
     lines = [
-        "# Alfred — catálogo de mensagens",
+        "# Jofie — catálogo de mensagens",
         "",
         "> Gerado por `scripts/message_audit.py --catalog`. Não editar à mão.",
         "",

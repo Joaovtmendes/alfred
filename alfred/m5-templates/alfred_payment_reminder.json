@@ -21,7 +21,7 @@
         },
         {
           "type": "BODY",
-          "text": "Hi! A reminder from Alfred: {{1}} Reply *paid* with the name once you have paid it, or *my bills* to see them all.",
+          "text": "Hi! A reminder from Jofie: {{1}} Reply *paid* with the name once you have paid it, or *my bills* to see them all.",
           "example": {
             "body_text": [
               [
@@ -32,7 +32,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — your AI assistant"
+          "text": "Jofie — your AI assistant"
         }
       ]
     },
@@ -46,7 +46,7 @@
         },
         {
           "type": "BODY",
-          "text": "Oi! Um lembrete do Alfred: {{1}} Quando pagar, responda *paguei* com o nome da conta, ou *minhas contas fixas* para ver todas.",
+          "text": "Oi! Um lembrete do Jofie: {{1}} Quando pagar, responda *paguei* com o nome da conta, ou *minhas contas fixas* para ver todas.",
           "example": {
             "body_text": [
               [
@@ -57,7 +57,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — seu assistente pessoal"
+          "text": "Jofie — seu assistente pessoal"
         }
       ]
     },
@@ -71,7 +71,7 @@
         },
         {
           "type": "BODY",
-          "text": "Hoi! Een herinnering van Alfred: {{1}} Antwoord *betaald* met de naam zodra je het hebt betaald, of *mijn vaste lasten* om ze allemaal te zien.",
+          "text": "Hoi! Een herinnering van Jofie: {{1}} Antwoord *betaald* met de naam zodra je het hebt betaald, of *mijn vaste lasten* om ze allemaal te zien.",
           "example": {
             "body_text": [
               [
@@ -82,7 +82,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — jouw persoonlijke assistent"
+          "text": "Jofie — jouw persoonlijke assistent"
         }
       ]
     },
@@ -96,7 +96,7 @@
         },
         {
           "type": "BODY",
-          "text": "Salut ! Un rappel d'Alfred : {{1}} Réponds *payé* avec le nom une fois réglé, ou *mes factures fixes* pour tout voir.",
+          "text": "Salut ! Un rappel de Jofie : {{1}} Réponds *payé* avec le nom une fois réglé, ou *mes factures fixes* pour tout voir.",
           "example": {
             "body_text": [
               [
@@ -107,7 +107,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — ton assistant personnel"
+          "text": "Jofie — ton assistant personnel"
         }
       ]
     },
@@ -121,7 +121,7 @@
         },
         {
           "type": "BODY",
-          "text": "Hallo! Eine Erinnerung von Alfred: {{1}} Antworte mit *bezahlt* und dem Namen, sobald du gezahlt hast, oder mit *meine Fixkosten* für alle.",
+          "text": "Hallo! Eine Erinnerung von Jofie: {{1}} Antworte mit *bezahlt* und dem Namen, sobald du gezahlt hast, oder mit *meine Fixkosten* für alle.",
           "example": {
             "body_text": [
               [
@@ -132,7 +132,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — dein persönlicher Assistent"
+          "text": "Jofie — dein persönlicher Assistent"
         }
       ]
     }

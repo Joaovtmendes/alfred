@@ -9,10 +9,10 @@
         { "type": "HEADER", "format": "TEXT", "text": "Goal check-in" },
         {
           "type": "BODY",
-          "text": "🎯 Daily check-in: {{1}}\n\nHow's it going? Reply to Alfred to log your progress.",
+          "text": "🎯 Daily check-in: {{1}}\n\nHow's it going? Reply to Jofie to log your progress.",
           "example": { "body_text": [["save €10 today"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — your AI assistant" }
+        { "type": "FOOTER", "text": "Jofie — your AI assistant" }
       ]
     },
     "pt_BR": {
@@ -21,10 +21,10 @@
         { "type": "HEADER", "format": "TEXT", "text": "Check-in de objetivo" },
         {
           "type": "BODY",
-          "text": "🎯 Check-in diário: {{1}}\n\nComo está indo? Responda ao Alfred para registrar o seu progresso.",
+          "text": "🎯 Check-in diário: {{1}}\n\nComo está indo? Responda ao Jofie para registrar o seu progresso.",
           "example": { "body_text": [["poupar €10 hoje"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — o seu assistente pessoal" }
+        { "type": "FOOTER", "text": "Jofie — o seu assistente pessoal" }
       ]
     },
     "nl": {
@@ -33,10 +33,10 @@
         { "type": "HEADER", "format": "TEXT", "text": "Doel check-in" },
         {
           "type": "BODY",
-          "text": "🎯 Dagelijkse check-in: {{1}}\n\nHoe gaat het? Antwoord Alfred om je voortgang bij te houden.",
+          "text": "🎯 Dagelijkse check-in: {{1}}\n\nHoe gaat het? Antwoord Jofie om je voortgang bij te houden.",
           "example": { "body_text": [["€10 sparen vandaag"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — jouw persoonlijke assistent" }
+        { "type": "FOOTER", "text": "Jofie — jouw persoonlijke assistent" }
       ]
     },
     "fr": {
@@ -45,10 +45,10 @@
         { "type": "HEADER", "format": "TEXT", "text": "Suivi d'objectif" },
         {
           "type": "BODY",
-          "text": "🎯 Check-in quotidien : {{1}}\n\nComment ça se passe ? Réponds à Alfred pour noter tes progrès.",
+          "text": "🎯 Check-in quotidien : {{1}}\n\nComment ça se passe ? Réponds à Jofie pour noter tes progrès.",
           "example": { "body_text": [["économiser 10 € aujourd'hui"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — ton assistant personnel" }
+        { "type": "FOOTER", "text": "Jofie — ton assistant personnel" }
       ]
     },
     "de": {
@@ -57,10 +57,10 @@
         { "type": "HEADER", "format": "TEXT", "text": "Ziel-Check-in" },
         {
           "type": "BODY",
-          "text": "🎯 Täglicher Check-in: {{1}}\n\nWie läuft es? Antworte Alfred, um deinen Fortschritt zu erfassen.",
+          "text": "🎯 Täglicher Check-in: {{1}}\n\nWie läuft es? Antworte Jofie, um deinen Fortschritt zu erfassen.",
           "example": { "body_text": [["heute 10 € sparen"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — dein persönlicher Assistent" }
+        { "type": "FOOTER", "text": "Jofie — dein persönlicher Assistent" }
       ]
     }
   }

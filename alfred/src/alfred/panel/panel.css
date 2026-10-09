@@ -1,36 +1,34 @@
-/* Painel Alfred v2 — tokens aprovados em 02/10/2026 (escuro por padrão). */
-@font-face{font-family:"Hanken Grotesk";font-weight:400;font-display:swap;src:url("/panel-assets/hanken-grotesk-latin-400-normal.woff2") format("woff2")}
-@font-face{font-family:"Hanken Grotesk";font-weight:500;font-display:swap;src:url("/panel-assets/hanken-grotesk-latin-500-normal.woff2") format("woff2")}
-@font-face{font-family:"Hanken Grotesk";font-weight:600;font-display:swap;src:url("/panel-assets/hanken-grotesk-latin-600-normal.woff2") format("woff2")}
-@font-face{font-family:"Bricolage Grotesque";font-weight:500;font-display:swap;src:url("/panel-assets/bricolage-grotesque-latin-500-normal.woff2") format("woff2")}
-@font-face{font-family:"Bricolage Grotesque";font-weight:700;font-display:swap;src:url("/panel-assets/bricolage-grotesque-latin-700-normal.woff2") format("woff2")}
+/* Jofie — marca: Fredoka (títulos) e Figtree (texto), servidas do próprio site (fonts/). */
+@font-face{font-family:"Figtree";font-weight:400;font-display:swap;src:url("/panel-assets/figtree-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Figtree";font-weight:600;font-display:swap;src:url("/panel-assets/figtree-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Fredoka";font-weight:500;font-display:swap;src:url("/panel-assets/fredoka-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"Fredoka";font-weight:600;font-display:swap;src:url("/panel-assets/fredoka-latin-600-normal.woff2") format("woff2")}
 
 :root,[data-theme="dark"]{
-  --bg:#0D1117;--surface:#161B22;--surface2:#1F2630;--ink:#E6EAF0;--muted:#9BA6B5;--line:#2A323D;
-  --accent:#7FB0FF;--on-accent:#0B1220;--accent-soft:#172845;--accent-text:#9CC2FF;
-  --warm:#FF6B7A;--warm-text:#FF6B7A;--warm-soft:#3B1A22;--good:#4ADE9A;color-scheme:dark;
+  --bg:#2A1A33;--surface:#34213E;--surface2:#3F2A4A;--ink:#FFF9F8;--muted:#CDBBD2;--line:#4E3B5C;--accent:#FF7FA2;--on-accent:#3B2547;--accent-soft:#4B2A45;--accent-text:#FFB3C6;--warm:#FFEDB0;--warm-text:#FFEDB0;--warm-soft:#4A3324;--good:#BFEBD9;color-scheme:dark;
 }
 [data-theme="light"]{
-  --bg:#F3F5F8;--surface:#FFFFFF;--surface2:#EDF0F5;--ink:#101828;--muted:#556070;--line:#E1E5EB;
-  --accent:#1D4ED8;--on-accent:#FFFFFF;--accent-soft:#E6EDFF;--accent-text:#1D4ED8;
-  --warm:#D6304A;--warm-text:#B3203A;--warm-soft:#FFE3E8;--good:#0A7A42;color-scheme:light;
+  --bg:#FFF9F8;--surface:#FFFFFF;--surface2:#FFEEF1;--ink:#3B2547;--muted:#6E5A79;--line:#E9DCE3;--accent:#C23A63;--on-accent:#FFFFFF;--accent-soft:#FFEEF1;--accent-text:#C23A63;--warm:#8A5A00;--warm-text:#8A5A00;--warm-soft:#FFEDB0;--good:#1E6F8F;color-scheme:light;
 }
 @media (prefers-color-scheme:light){
-  :root:not([data-theme-locked]){--bg:#F3F5F8;--surface:#FFFFFF;--surface2:#EDF0F5;--ink:#101828;--muted:#556070;--line:#E1E5EB;--accent:#1D4ED8;--on-accent:#FFFFFF;--accent-soft:#E6EDFF;--accent-text:#1D4ED8;--warm:#D6304A;--warm-text:#B3203A;--warm-soft:#FFE3E8;--good:#0A7A42;color-scheme:light}
+  :root:not([data-theme-locked]){--bg:#FFF9F8;--surface:#FFFFFF;--surface2:#FFEEF1;--ink:#3B2547;--muted:#6E5A79;--line:#E9DCE3;--accent:#C23A63;--on-accent:#FFFFFF;--accent-soft:#FFEEF1;--accent-text:#C23A63;--warm:#8A5A00;--warm-text:#8A5A00;--warm-soft:#FFEDB0;--good:#1E6F8F;color-scheme:light;}
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:15px/1.5 "Hanken Grotesk",system-ui,sans-serif;overflow-wrap:anywhere}
-.num,.hero,.big-num{font-family:"Bricolage Grotesque","Hanken Grotesk",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+body{margin:0;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:15px/1.5 "Figtree",system-ui,sans-serif;overflow-wrap:anywhere}
+.num,.hero,.big-num{font-family:"Fredoka","Figtree",system-ui,sans-serif;font-variant-numeric:tabular-nums}
 .page{flex:1;width:100%;max-width:1200px;margin:0 auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:16px}
 button,select,input{font:inherit;color:inherit}
 
 /* header */
 header.top{display:flex;align-items:center;justify-content:space-between;gap:8px 12px}
-.brand{white-space:nowrap;display:flex;align-items:center;gap:10px;font-family:"Bricolage Grotesque","Hanken Grotesk",system-ui,sans-serif;font-weight:700;font-size:20px}
-.logo{width:32px;height:32px;border-radius:9px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:700;font-size:18px}
-.who{font:400 13px "Hanken Grotesk",system-ui,sans-serif;color:var(--muted);padding-left:12px;border-left:1px solid var(--line)}
+.brand{white-space:nowrap;display:flex;align-items:center;gap:10px;font-family:"Fredoka","Figtree",system-ui,sans-serif;font-weight:600;font-size:22px}
+.logo{width:40px;height:auto;display:grid;place-items:center}
+.logo .mark{width:100%;height:auto;display:block}
+.wordmark{height:30px;width:auto;display:block;overflow:visible}
+.logo .mark path:last-child{fill:var(--ink)}  /* o nó-balão acompanha o texto: claro no tema escuro */
+.who{font:400 13px "Figtree",system-ui,sans-serif;color:var(--muted);padding-left:12px;border-left:1px solid var(--line)}
 .top-right{display:flex;align-items:center;gap:10px;margin-left:auto;min-width:0}
 .valid{min-width:0;text-align:right}
 .muted{font-size:12px;color:var(--muted)}
@@ -113,7 +111,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:8px
 .total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .total .num{font-weight:700;font-size:24px;color:var(--ink);white-space:nowrap}
 .voice{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--accent-soft);font-size:14px;line-height:1.45}
-.voice .av{flex:none;width:24px;height:24px;border-radius:7px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:700 13px "Bricolage Grotesque",system-ui,sans-serif}
+.voice .av{flex:none;width:24px;height:24px;border-radius:7px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:700 13px "Fredoka",system-ui,sans-serif}
 .voice .chip{margin-top:8px}
 .phrase{font-size:14px;line-height:1.5;padding-top:14px;border-top:1px solid var(--line)}
 .chip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:8px;padding:6px 12px;border-radius:16px;background:var(--accent-soft);color:var(--accent-text);font-size:13px;font-weight:500}
@@ -140,8 +138,8 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:8px
 .bill .s{font-size:13px}
 .bill .amt{font-weight:600;font-size:15px}
 .date-tile{text-align:center;border-radius:10px;background:var(--surface2);padding:6px 0}
-.date-tile b{display:block;font:600 11px "Hanken Grotesk",system-ui,sans-serif;text-transform:uppercase;color:var(--muted)}
-.date-tile span{display:block;font:700 20px/1 "Bricolage Grotesque",system-ui,sans-serif}
+.date-tile b{display:block;font:600 11px "Figtree",system-ui,sans-serif;text-transform:uppercase;color:var(--muted)}
+.date-tile span{display:block;font:700 20px/1 "Fredoka",system-ui,sans-serif}
 .date-tile.hot{background:var(--warm-soft)}
 .date-tile.hot b,.date-tile.hot span{color:var(--warm-text)}
 .date-tile.in{background:var(--accent-soft)}
@@ -208,8 +206,8 @@ footer.foot{display:flex;flex-direction:column;gap:6px;padding-top:16px;border-t
 }
 @media (min-width:900px){
   .page{max-width:1264px;padding:28px 32px 56px;gap:24px}
-  .logo{width:36px;height:36px;border-radius:10px;font-size:20px}
-  .brand{font-size:22px}
+  .logo{width:44px}
+  .brand{font-size:24px}
   .theme{width:40px;height:40px}
   .cta{display:none}
   .cta-top{display:inline-flex}

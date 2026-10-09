@@ -7,15 +7,15 @@
     {
       "type": "HEADER",
       "format": "TEXT",
-      "text": "Welcome to Alfred"
+      "text": "Welcome to Jofie"
     },
     {
       "type": "BODY",
-      "text": "Hi! I'm Alfred, your personal WhatsApp assistant.\n\nI help you track expenses, set reminders and manage goals — all in a simple chat.\n\nTap below to activate your account in 30 seconds."
+      "text": "Hi! I'm Jofie, your personal WhatsApp assistant.\n\nI help you track expenses, set reminders and manage goals — all in a simple chat.\n\nTap below to activate your account in 30 seconds."
     },
     {
       "type": "FOOTER",
-      "text": "Alfred — your AI assistant"
+      "text": "Jofie — your AI assistant"
     },
     {
       "type": "BUTTONS",

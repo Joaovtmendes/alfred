@@ -1,6 +1,6 @@
 """Single source of "now" and "today" for user-facing dates.
 
-Alfred's users live in the Netherlands: "today", "this week" and "this month"
+Jofie's users live in the Netherlands: "today", "this week" and "this month"
 mean Europe/Amsterdam days, never UTC days. Between 00:00 and 01:00/02:00
 local time UTC is still yesterday, which used to file expenses, water and
 habit check-ins on the wrong day. Every "what day is it for the user" question

@@ -59,7 +59,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         elif is_html and not path.startswith(("/docs", "/redoc")):
             h.setdefault(
                 "Content-Security-Policy",
-                "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+                "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; "
+                "frame-ancestors 'none'",
             )
         elif not path.startswith(("/docs", "/redoc")):
             h.setdefault("Content-Security-Policy", _DEFAULT_CSP)

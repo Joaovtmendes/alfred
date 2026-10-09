@@ -57,21 +57,21 @@ def test_css_declares_both_themes_with_the_approved_tokens() -> None:
     css = (PANEL / "panel.css").read_text().lower()
     flat = css.replace(" ", "")
     for token in (
-        "--bg:#0d1117",
-        "--surface:#161b22",
-        "--accent:#7fb0ff",
-        "--warm:#ff6b7a",
-        "--good:#4ade9a",
+        "--bg:#2a1a33",
+        "--surface:#34213e",
+        "--accent:#ff7fa2",
+        "--warm:#ffedb0",
+        "--good:#bfebd9",
     ):
         assert token in flat, token
-    assert "#f3f5f8" in css and "#1d4ed8" in css  # light theme
+    assert "#fff9f8" in css and "#c23a63" in css  # light theme (marca Jofie)
     assert "@font-face" in css and "https://" not in css
     assert ":focus-visible" in css
 
 
 def test_font_files_and_licences_ship_with_the_panel() -> None:
     fonts = PANEL / "fonts"
-    assert len(list(fonts.glob("*.woff2"))) == 5
+    assert len(list(fonts.glob("*.woff2"))) == 4  # Fredoka 500/600 e Figtree 400/600
     for lic in fonts.glob("LICENSE-OFL-*.txt"):
         assert "SIL OPEN FONT LICENSE" in lic.read_text().upper()
     assert len(list(fonts.glob("LICENSE-OFL-*.txt"))) == 2
@@ -172,7 +172,7 @@ async def test_assets_are_public_whitelisted_and_cacheable(client) -> None:
     assert ok.status_code == 200 and "immutable" in ok.headers["cache-control"]
     assert ok.headers["content-type"].startswith("text/css")
     await engine.dispose()
-    font = await client.get("/panel-assets/hanken-grotesk-latin-400-normal.woff2")
+    font = await client.get("/panel-assets/figtree-latin-400-normal.woff2")
     assert font.status_code == 200 and font.headers["content-type"] == "font/woff2"
     await engine.dispose()
     assert (await client.get("/panel-assets/..%2Fmodels.py")).status_code in (404, 400)

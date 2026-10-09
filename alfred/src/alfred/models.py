@@ -305,8 +305,8 @@ class ScheduledJob(Base):
 class MerchantCategoryOverride(Base):
     """M12 — User-taught category corrections.
 
-    When a member corrects Alfred's category for a merchant
-    (e.g. "Jumbo is supermarkt, not restaurant"), Alfred stores the override
+    When a member corrects Jofie's category for a merchant
+    (e.g. "Jumbo is supermarkt, not restaurant"), Jofie stores the override
     here and applies it automatically the next time that merchant appears.
 
     merchant is normalised to lowercase for case-insensitive matching.

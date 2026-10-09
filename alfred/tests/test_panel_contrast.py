@@ -22,7 +22,7 @@ def test_ratio_known_values() -> None:
 def test_both_themes_are_read_from_the_css() -> None:
     themes = cc._themes()
     assert set(themes) == {"dark", "light", "dark-media-light"}
-    assert themes["dark"]["bg"].lower() == "#0d1117" and themes["light"]["bg"].lower() == "#f3f5f8"
+    assert themes["dark"]["bg"].lower() == "#2a1a33" and themes["light"]["bg"].lower() == "#fff9f8"
     # the prefers-color-scheme copy of the light theme must not drift from [data-theme=light]
     assert themes["dark-media-light"] == themes["light"]
 

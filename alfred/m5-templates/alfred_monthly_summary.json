@@ -21,7 +21,7 @@
         },
         {
           "type": "BODY",
-          "text": "Hi! Alfred's summary of last month: {{1}} Reply *summary* for the full picture.",
+          "text": "Hi! Jofie's summary of last month: {{1}} Reply *summary* for the full picture.",
           "example": {
             "body_text": [
               [
@@ -32,7 +32,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — your AI assistant"
+          "text": "Jofie — your AI assistant"
         }
       ]
     },
@@ -46,7 +46,7 @@
         },
         {
           "type": "BODY",
-          "text": "Oi! O resumo do Alfred do mês passado: {{1}} Responda *resumo* para ver o quadro completo.",
+          "text": "Oi! O resumo do Jofie do mês passado: {{1}} Responda *resumo* para ver o quadro completo.",
           "example": {
             "body_text": [
               [
@@ -57,7 +57,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — seu assistente pessoal"
+          "text": "Jofie — seu assistente pessoal"
         }
       ]
     },
@@ -71,7 +71,7 @@
         },
         {
           "type": "BODY",
-          "text": "Hoi! Alfreds overzicht van vorige maand: {{1}} Antwoord *overzicht* voor het volledige beeld.",
+          "text": "Hoi! Jofies overzicht van vorige maand: {{1}} Antwoord *overzicht* voor het volledige beeld.",
           "example": {
             "body_text": [
               [
@@ -82,7 +82,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — jouw persoonlijke assistent"
+          "text": "Jofie — jouw persoonlijke assistent"
         }
       ]
     },
@@ -96,7 +96,7 @@
         },
         {
           "type": "BODY",
-          "text": "Salut ! Le résumé d'Alfred du mois dernier : {{1}} Réponds *résumé* pour tout voir.",
+          "text": "Salut ! Le résumé de Jofie du mois dernier : {{1}} Réponds *résumé* pour tout voir.",
           "example": {
             "body_text": [
               [
@@ -107,7 +107,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — ton assistant personnel"
+          "text": "Jofie — ton assistant personnel"
         }
       ]
     },
@@ -121,7 +121,7 @@
         },
         {
           "type": "BODY",
-          "text": "Hallo! Alfreds Zusammenfassung des letzten Monats: {{1}} Antworte *Übersicht* für alle Details.",
+          "text": "Hallo! Jofies Zusammenfassung des letzten Monats: {{1}} Antworte *Übersicht* für alle Details.",
           "example": {
             "body_text": [
               [
@@ -132,7 +132,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — dein persönlicher Assistent"
+          "text": "Jofie — dein persönlicher Assistent"
         }
       ]
     }
