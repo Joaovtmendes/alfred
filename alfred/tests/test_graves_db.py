@@ -63,6 +63,7 @@ async def _add_exp(
         ("uber zona leste 15", "Uber"),
     ],
 )
+@pytest.mark.bug("A-01")
 async def test_words_ending_in_li_are_expenses_not_habits(lab: Lab, text, name) -> None:
     lab.expense.return_value = _exp(12, name)
     out = await lab.say(text)
@@ -78,6 +79,7 @@ async def test_real_habit_logs_still_work(lab: Lab, text) -> None:
 
 
 @db
+@pytest.mark.bug("A-01")
 async def test_trip_name_with_li_is_not_a_habit(lab: Lab) -> None:
     await lab.say("criar viagem Bali")
     assert await _count(lab, HabitLog) == 0
@@ -87,6 +89,7 @@ async def test_trip_name_with_li_is_not_a_habit(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("A-13")
 async def test_help_and_balance_words_with_an_amount_are_expenses(lab: Lab) -> None:
     lab.expense.return_value = _exp(50, "Mudança", "overig")
     out = await lab.say("ajuda com a mudança 50")
@@ -110,6 +113,7 @@ async def test_balance_still_works(lab: Lab) -> None:
 
 @db
 @pytest.mark.parametrize("text", ["painel", "meu painel", "abrir painel"])
+@pytest.mark.bug("A-18")
 async def test_panel_words_open_the_dashboard(lab: Lab, text) -> None:
     out = await lab.say(text)
     assert out != "[llm]"
@@ -120,6 +124,7 @@ async def test_panel_words_open_the_dashboard(lab: Lab, text) -> None:
 
 
 @db
+@pytest.mark.bug("A-04")
 async def test_delete_last_asks_before_deleting(lab: Lab) -> None:
     eid = await _add_exp(lab, 2800, "Salário", kind="income")
     out = await lab.say("apaga")
@@ -136,6 +141,7 @@ async def test_delete_last_asks_before_deleting(lab: Lab) -> None:
 # ── 5. foreign currencies are refused, not stored as euros ────────────────────
 
 
+@pytest.mark.bug("A-05")
 def test_sanitizer_keeps_an_unknown_currency_code() -> None:
     assert sanitize_expense(_exp(50, "x", currency="BRL"))["currency"] == "BRL"
     assert sanitize_expense(_exp(50, "x", currency="euro?"))["currency"] == "EUR"
@@ -151,6 +157,7 @@ def test_sanitizer_keeps_an_unknown_currency_code() -> None:
         "lunch 15 dollars",
     ],
 )
+@pytest.mark.bug("A-05")
 async def test_text_in_another_currency_is_refused(lab: Lab, text) -> None:
     lab.expense.return_value = _exp(50, "Mercado")  # the model said EUR
     out = await lab.say(text)
@@ -169,6 +176,7 @@ async def test_euro_text_is_recorded(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("A-10")
 async def test_edit_button_targets_its_own_entry(lab: Lab) -> None:
     padaria = await _add_exp(lab, 6, "Padaria", minutes_ago=5)
     mercado = await _add_exp(lab, 20, "Mercado", minutes_ago=1)
@@ -181,6 +189,7 @@ async def test_edit_button_targets_its_own_entry(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("A-10")
 async def test_edit_button_accepts_a_bare_amount(lab: Lab) -> None:
     padaria = await _add_exp(lab, 6, "Padaria", minutes_ago=300)  # older than the 2 h window
     await lab.tap(f"edit:{padaria}")
@@ -190,6 +199,7 @@ async def test_edit_button_accepts_a_bare_amount(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("A-30")
 async def test_correction_with_thousands_separator(lab: Lab) -> None:
     eid = await _add_exp(lab, 1150, "Aluguel")
     await lab.say("errei foram 1.200")
@@ -209,6 +219,7 @@ async def test_correction_with_thousands_separator(lab: Lab) -> None:
         "recebi 200 por mês",
     ],
 )
+@pytest.mark.bug("A-11")
 def test_spending_or_income_is_not_a_fixed_bill(text) -> None:
     assert parse_recurring(text, text) is None
 
@@ -218,6 +229,7 @@ def test_real_fixed_bill_still_parses() -> None:
 
 
 @db
+@pytest.mark.bug("A-32")
 async def test_same_fixed_bill_twice_is_not_duplicated(lab: Lab) -> None:
     await lab.say("aluguel 1200 todo dia 1")
     out = await lab.say("aluguel 1200 todo dia 1")
@@ -228,6 +240,7 @@ async def test_same_fixed_bill_twice_is_not_duplicated(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("A-12")
 async def test_insurance_expense_with_date_is_recorded(lab: Lab) -> None:
     lab.expense.return_value = _exp(130, "Seguro saúde", "verzekering")
     await lab.say("paguei 130 de seguro saúde, data 05/10")
@@ -251,6 +264,7 @@ async def _draft(lab: Lab, n: int = 2) -> None:
 @pytest.mark.parametrize(
     "text", ["almoço no shopping", "já paguei", "isso é transporte", "pode ser amanhã"]
 )
+@pytest.mark.bug("A-02")
 async def test_sentences_do_not_answer_an_open_draft(lab: Lab, text) -> None:
     await _draft(lab)
     lab.expense.return_value = None
@@ -271,6 +285,7 @@ async def test_clear_answers_still_work(lab: Lab, text, saved) -> None:
 
 
 @db
+@pytest.mark.bug("A-03")
 async def test_more_than_ten_items_are_announced(lab: Lab) -> None:
     lab.multi.return_value = [_exp(1 + i, f"loja{i}") for i in range(12)]
     out = await lab.say(", ".join(f"loja{i} {1 + i}" for i in range(12)))
@@ -280,6 +295,7 @@ async def test_more_than_ten_items_are_announced(lab: Lab) -> None:
 # ── 9. pending entries: marker in the middle, extra words when settling ───────
 
 
+@pytest.mark.bug("A-09")
 def test_pending_marker_in_the_middle() -> None:
     got = parse_pending("luz 80 a pagar dia 5", "luz 80 a pagar dia 5", date(2026, 10, 8))
     assert isinstance(got, NewPending) and got.name.lower() == "luz" and got.amount == 80.0
@@ -287,6 +303,7 @@ def test_pending_marker_in_the_middle() -> None:
 
 
 @db
+@pytest.mark.bug("A-09")
 async def test_settle_with_extra_words(lab: Lab) -> None:
     await lab.say("a pagar luz 120 dia 20")
     await lab.say("já paguei a conta de luz")
@@ -306,6 +323,7 @@ async def _no_consent(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("A-06")
 async def test_health_log_asks_for_consent_first(lab: Lab) -> None:
     await _no_consent(lab)
     lab.health.return_value = {
@@ -331,6 +349,7 @@ async def test_health_log_asks_for_consent_first(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("A-06")
 async def test_withdrawing_health_consent_deletes_health_data(lab: Lab) -> None:
     lab.health.return_value = {
         "log_type": "water",
@@ -348,6 +367,7 @@ async def test_withdrawing_health_consent_deletes_health_data(lab: Lab) -> None:
         assert (await s.get(Member, lab.member_id)).health_consent_at is None
 
 
+@pytest.mark.bug("A-07")
 def test_unsupported_health_reply_does_not_suggest_a_note() -> None:
     assert "nota" not in _t("health_unsupported", "pt").lower()
 
@@ -364,6 +384,7 @@ async def _stop(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("A-08")
 async def test_erase_and_export_work_after_stop(lab: Lab) -> None:
     await _stop(lab)
     out = await lab.say("apagar meus dados")
@@ -374,6 +395,7 @@ async def test_erase_and_export_work_after_stop(lab: Lab) -> None:
     assert out in (_t("dashboard_no_base_url", "pt"),) or "http" in out
 
 
+@pytest.mark.bug("A-07")
 def test_missing_health_key_in_production_raises_an_alert(monkeypatch) -> None:
     from alfred import crypto, observability
 

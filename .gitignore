@@ -4,3 +4,6 @@
 
 # graphify — grafo regenerável (python3 -m graphify update .)
 graphify-out/
+
+# relatório de falhas do scripts/hard_test.py (vira bugs com scripts/bugs.py from-report)
+hard_test_relatorio.json

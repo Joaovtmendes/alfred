@@ -17,6 +17,7 @@ from tests.test_panel_tabs_api import _cards, db
         ("pagar renda toda segunda", "pagar renda", 1),
     ],
 )
+@pytest.mark.bug("H0310-C")
 def test_toda_a_segunda_is_a_weekly_cadence(text: str, title: str, mask: int):
     """Defect 17: the reminder was saved as "pagar renda toda a"."""
     rec = parse_recurrence(text)
@@ -25,6 +26,7 @@ def test_toda_a_segunda_is_a_weekly_cadence(text: str, title: str, mask: int):
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0310-C")
 async def test_the_panel_names_reminders_by_what_they_are(lab, client):
     """Defect 10: every reminder was labelled "Medication"; defect 11: "todo dia 5" was daily."""
     from alfred.models import ScheduledJob
@@ -81,6 +83,7 @@ def test_a_habit_verb_finds_its_goal_by_stem():
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0310-C")
 async def test_meditei_counts_for_the_goal_and_a_savings_goal_has_no_day_bar(lab, client):
     from alfred.models import Goal
 

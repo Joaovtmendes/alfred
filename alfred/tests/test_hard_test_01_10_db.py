@@ -16,6 +16,7 @@ db = pytest.mark.skipif(os.environ.get("ALFRED_TEST_DB") != "1", reason="needs t
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0110-1")
 async def test_note_prefix_is_never_an_appointment(lab: Lab):
     await lab.say("nota: reunião com cliente segunda às 14h, levar contrato")
     notes = await lab.rows(select(Note.body).where(Note.member_id == lab.member_id))
@@ -28,6 +29,7 @@ async def test_note_prefix_is_never_an_appointment(lab: Lab):
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0110-1")
 async def test_mood_score_is_not_read_as_a_time(lab: Lab):
     reply = await lab.say("hoje sinto-me um 6 em 10")
     assert "já passaram" not in reply
@@ -39,6 +41,7 @@ async def test_mood_score_is_not_read_as_a_time(lab: Lab):
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0110-2")
 async def test_workout_count_uses_the_period_asked(lab: Lab):
     today = today_local()
     prev = month_start(today).replace(day=1)
@@ -64,6 +67,7 @@ async def test_workout_count_uses_the_period_asked(lab: Lab):
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0110-2")
 async def test_trip_with_explicit_range_keeps_its_dates(lab: Lab):
     from datetime import date
 

@@ -34,6 +34,7 @@ async def _clean_demo():
 
 
 @db
+@pytest.mark.bug("B-001")
 async def test_seed_is_idempotent_and_matches_the_mockup(client) -> None:
     _dashboard_limiter._hits.clear()
     token = await seed.run()

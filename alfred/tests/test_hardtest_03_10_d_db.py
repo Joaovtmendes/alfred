@@ -25,6 +25,7 @@ TODAY = date(2026, 10, 14)
         ("a pagar dentista 60 dia 12", "overig"),
     ],
 )
+@pytest.mark.bug("H0310-D")
 async def test_a_bill_gets_its_category_from_its_name(lab: Lab, text: str, category: str):
     """Defect 15: the bill "Luz" was saved as Other."""
     await lab.say(text)
@@ -34,6 +35,7 @@ async def test_a_bill_gets_its_category_from_its_name(lab: Lab, text: str, categ
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0310-D")
 async def test_housing_and_subscriptions_count_as_fixed_without_a_recurring_item(
     lab: Lab,
     client,
@@ -65,6 +67,7 @@ async def test_housing_and_subscriptions_count_as_fixed_without_a_recurring_item
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0310-D")
 async def test_what_i_owe_shows_in_the_owed_card(lab: Lab, client, today):  # noqa: F811
     """Defect 13: "Devo 40 pro Lucas" never reached the panel."""
     today(TODAY)
@@ -86,6 +89,7 @@ async def test_what_i_owe_shows_in_the_owed_card(lab: Lab, client, today):  # no
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0310-D")
 async def test_entries_start_with_a_capital_whatever_was_typed(lab: Lab, client, today):  # noqa: F811
     """Defect 16: "jumbo" next to "Cinema" in the same list."""
     today(TODAY)
