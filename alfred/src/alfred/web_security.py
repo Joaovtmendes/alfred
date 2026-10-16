@@ -59,7 +59,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         elif is_html and not path.startswith(("/docs", "/redoc")):
             h.setdefault(
                 "Content-Security-Policy",
-                "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; "
+                "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; "
                 "frame-ancestors 'none'",
             )
         elif not path.startswith(("/docs", "/redoc")):

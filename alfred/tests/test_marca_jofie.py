@@ -11,7 +11,7 @@ import re
 import tokenize
 
 from alfred import legal
-from alfred.signup import MARK_SVG, WORDMARK_SVG, _brand
+from alfred.signup import WORDMARK_SVG, _brand
 
 SRC = pathlib.Path(__file__).resolve().parent.parent / "src" / "alfred"
 
@@ -42,10 +42,9 @@ def test_legal_text_names_jofie_and_bumps_version():
     assert legal.POLICY_DATE == "2026-10-16"
 
 
-def test_brand_block_uses_mark_and_wordmark():
+def test_brand_block_is_wordmark_only():
     html = _brand()
-    assert MARK_SVG.startswith("<svg")
-    assert html.count("<svg") == 2
+    assert html.count("<svg") == 1
     assert WORDMARK_SVG in html and 'aria-label="Jofie"' in html
     assert "Alfred" not in html
 

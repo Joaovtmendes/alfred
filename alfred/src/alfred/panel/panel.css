@@ -24,10 +24,7 @@ button,select,input{font:inherit;color:inherit}
 /* header */
 header.top{display:flex;align-items:center;justify-content:space-between;gap:8px 12px}
 .brand{white-space:nowrap;display:flex;align-items:center;gap:10px;font-family:"Fredoka","Figtree",system-ui,sans-serif;font-weight:600;font-size:22px}
-.logo{width:40px;height:auto;display:grid;place-items:center}
-.logo .mark{width:100%;height:auto;display:block}
 .wordmark{height:30px;width:auto;display:block;overflow:visible}
-.logo .mark path:last-child{fill:var(--ink)}  /* o nó-balão acompanha o texto: claro no tema escuro */
 .who{font:400 13px "Figtree",system-ui,sans-serif;color:var(--muted);padding-left:12px;border-left:1px solid var(--line)}
 .top-right{display:flex;align-items:center;gap:10px;margin-left:auto;min-width:0}
 .valid{min-width:0;text-align:right}
@@ -206,7 +203,6 @@ footer.foot{display:flex;flex-direction:column;gap:6px;padding-top:16px;border-t
 }
 @media (min-width:900px){
   .page{max-width:1264px;padding:28px 32px 56px;gap:24px}
-  .logo{width:44px}
   .brand{font-size:24px}
   .theme{width:40px;height:40px}
   .cta{display:none}
