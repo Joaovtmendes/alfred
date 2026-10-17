@@ -438,3 +438,25 @@ async def privacy(lang: str = Query(default="en", max_length=5)) -> HTMLResponse
     return HTMLResponse(
         render_policy(lang.lower()), headers={"Cache-Control": "public, max-age=3600"}
     )
+
+
+TERMS_URL = "https://jofie.nl/terms/"
+
+
+def render_terms() -> str:
+    """Stable in-app page pointing to the full Terms of Use on the public site."""
+    return (
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"<title>Jofie — Terms of Use</title><style>{_CSS}</style></head><body><main>"
+        "<h1>Jofie — Terms of Use</h1>"
+        '<p class="meta">English is the official version.</p>'
+        f'<p>Read the full Terms of Use at <a href="{TERMS_URL}">{TERMS_URL}</a>.</p>'
+        f'<p>Privacy: <a href="/privacy">/privacy</a></p>'
+        "</main></body></html>"
+    )
+
+
+@router.get("/terms", response_class=HTMLResponse, include_in_schema=False)
+async def terms() -> HTMLResponse:
+    return HTMLResponse(render_terms(), headers={"Cache-Control": "public, max-age=3600"})

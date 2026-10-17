@@ -58,7 +58,6 @@ async def _category_of(lab: Lab, merchant: str) -> str | None:
         "verwijder mijn account",
     ],
 )
-@pytest.mark.xfail(strict=True, reason="A-15/C-01 aberto: remova junto com a correção")
 async def test_wipe_requests_in_other_words_ask_for_confirmation(lab: Lab, text) -> None:
     out = await lab.say(text)
     assert lab.buttons[-1], f"sem botão de confirmação: {out!r}"
@@ -67,7 +66,6 @@ async def test_wipe_requests_in_other_words_ask_for_confirmation(lab: Lab, text)
 
 @db
 @pytest.mark.bug("A-15")
-@pytest.mark.xfail(strict=True, reason="A-15 aberto: remova junto com a correção")
 async def test_export_in_other_words_gives_the_export(lab: Lab) -> None:
     out = await lab.say("quero exportar meus dados")
     assert "[llm]" not in out
@@ -75,7 +73,6 @@ async def test_export_in_other_words_gives_the_export(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-16")
-@pytest.mark.xfail(strict=True, reason="A-16 aberto: remova junto com a correção")
 async def test_cancel_invalidates_the_wipe_button(lab: Lab) -> None:
     await lab.say("apagar meus dados")
     wipe_id = next(i for i, _ in lab.buttons[-1] if i.startswith("wipe"))
@@ -86,6 +83,21 @@ async def test_cancel_invalidates_the_wipe_button(lab: Lab) -> None:
         select(func.count()).select_from(Member).where(Member.id == lab.member_id)
     )
     assert still_there == 1
+
+
+@db
+@pytest.mark.bug("A-15")
+async def test_typed_yes_confirms_the_wipe_and_typed_no_cancels(lab: Lab) -> None:
+    await lab.say("apagar meus dados")
+    await lab.say("não")
+    assert await lab.scalar(
+        select(func.count()).select_from(Member).where(Member.id == lab.member_id)
+    )
+    await lab.say("apagar meus dados")
+    await lab.say("sim")
+    assert not await lab.scalar(
+        select(func.count()).select_from(Member).where(Member.id == lab.member_id)
+    )
 
 
 # ── mídia e idioma ────────────────────────────────────────────────────────────
@@ -166,7 +178,6 @@ async def test_a_question_about_stored_data_is_not_swallowed_by_the_guard(lab: L
 
 @db
 @pytest.mark.bug("A-29")
-@pytest.mark.xfail(strict=True, reason="A-29 aberto: remova junto com a correção")
 async def test_a_negative_amount_is_not_recorded_as_an_expense(lab: Lab) -> None:
     lab.expense.return_value = _exp(-15, "Reembolso", "overig")
     await lab.say("reembolso -15")

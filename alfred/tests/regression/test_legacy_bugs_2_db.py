@@ -27,7 +27,6 @@ async def _count(lab: Lab, model) -> int:
 
 
 @pytest.mark.bug("A-14")
-@pytest.mark.xfail(strict=True, reason="A-14 aberto: remova junto com a correção")
 async def test_the_terms_page_the_couple_invite_mentions_exists(client) -> None:
     resp = await client.get("/terms")
     assert resp.status_code == 200
