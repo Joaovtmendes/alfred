@@ -18,6 +18,7 @@ db = pytest.mark.skipif(os.environ.get("ALFRED_TEST_DB") != "1", reason="needs t
 
 
 @pytest.mark.parametrize(("day", "shown"), [(3, False), (9, False), (10, True), (28, True)])
+@pytest.mark.bug("H0310-F")
 def test_the_chat_projection_waits_for_enough_days_like_the_panel(day: int, shown: bool):
     """Defect 20: on day 3 the chat projected 1.327 EUR for the month; the panel said "not enough
     data"."""
@@ -35,6 +36,7 @@ def test_the_chat_projection_waits_for_enough_days_like_the_panel(day: int, show
         ("task: send report by friday", "send report", 4),
     ],
 )
+@pytest.mark.bug("H0310-F")
 async def test_a_task_deadline_in_words_becomes_the_due_date(
     lab: Lab, text: str, title: str, weekday: int
 ):

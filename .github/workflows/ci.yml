@@ -37,11 +37,15 @@ jobs:
         run: |
           ruff check src scripts tests alembic
           ruff format --check src scripts tests alembic
+      - name: Bug registry (every fixed bug has a regression test)
+        run: python scripts/bugs.py check
       - name: Migrations (upgrade, downgrade one step, upgrade)
         run: |
           alembic upgrade head
           alembic downgrade -1
           alembic upgrade head
+      - name: Bug regressions (tests/bugs.json)
+        run: pytest -q -m bug
       - name: Tests
         run: pytest -q
 

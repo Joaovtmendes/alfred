@@ -40,6 +40,7 @@ db = pytest.mark.skipif(os.environ.get("ALFRED_TEST_DB") != "1", reason="needs t
         ("english", "en"),
     ],
 )
+@pytest.mark.bug("P0110-1")
 def test_language_requests_are_understood(text: str, lang: str) -> None:
     assert parse_language_command(text) == lang
 
@@ -56,11 +57,13 @@ def test_language_requests_are_understood(text: str, lang: str) -> None:
         "",
     ],
 )
+@pytest.mark.bug("P0110-1")
 def test_language_lookalikes_are_not_requests(text: str) -> None:
     assert parse_language_command(text) is None
 
 
 @db
+@pytest.mark.bug("P0110-1")
 async def test_changing_language_replies_in_the_new_language(lab: Lab) -> None:  # noqa: F811
     assert await lab.say("Change to English") == _t("lang_changed", "en")
     assert await lab.scalar(select(Member.language).where(Member.id == lab.member_id)) == "en"
@@ -104,6 +107,7 @@ async def test_task_without_colon(lab: Lab) -> None:  # noqa: F811
 # ── amounts ───────────────────────────────────────────────────────────────────
 
 
+@pytest.mark.bug("P0110-2")
 def test_negative_money_has_the_sign_first() -> None:
     assert _fmt_eur(-133.6) == "-€133,60"
     assert _fmt_eur(1234.5) == "€1.234,50"
@@ -111,6 +115,7 @@ def test_negative_money_has_the_sign_first() -> None:
 
 
 @db
+@pytest.mark.bug("P0110-2")
 async def test_zero_amount_is_not_taken_for_a_habit(lab: Lab) -> None:  # noqa: F811
     lab.habit = AsyncMock(return_value={"activity": "café", "days_ago": 0})
     assert await lab.say("café 0") == _t("invalid_amount_check", "pt")
@@ -160,6 +165,7 @@ EXAMPLES = {
 
 @db
 @pytest.mark.parametrize("lang", sorted(EXAMPLES))
+@pytest.mark.bug("P0110-2")
 async def test_every_example_in_the_help_text_works(lab: Lab, lang: str) -> None:  # noqa: F811
     async with AsyncSessionLocal() as s:
         await s.execute(update(Member).where(Member.id == lab.member_id).values(language=lang))
@@ -220,6 +226,7 @@ def test_portuguese_llm_prompts_are_brazilian_and_formal() -> None:
     assert "tua" not in llm._LLM_ERROR["pt"] and "Tente" in llm._LLM_ERROR["pt"]
 
 
+@pytest.mark.bug("P0110-2")
 def test_draft_buttons_say_undo_not_cancel() -> None:
     from alfred.batch import STRINGS
 

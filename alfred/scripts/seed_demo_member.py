@@ -444,7 +444,7 @@ async def _seed_trip_plan(s, mid, hid, trip: Trip, at) -> None:
         Expense(
             member_id=mid, household_id=hid, transaction_type="expense", amount=180,
             merchant="Hotel Alfama", category="wonen", status="paid", trip_id=trip.id,
-            expense_date=at(today_local() - timedelta(days=12), 11),
+            expense_date=at(date(2026, 9, 28), 11),  # fixed: the mockup's October must not move
         )
     )  # fmt: skip
 

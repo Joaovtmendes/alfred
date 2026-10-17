@@ -1,0 +1,939 @@
+{
+  "bugs": [
+    {
+      "id": "BUG-02",
+      "title": "Link do painel falha: BASE_URL não configurado no Railway",
+      "status": "manual",
+      "source": "Hard test 28/09",
+      "legacy": true,
+      "reason": "Variável de ambiente de produção; confirmar no Railway que BASE_URL existe e que 'dashboard' devolve o link."
+    },
+    {
+      "id": "BUG-03",
+      "title": "'hoje' devolve consulta semanal em vez de diária",
+      "status": "open",
+      "source": "Hard test 28/09",
+      "legacy": true
+    },
+    {
+      "id": "BUG-04",
+      "title": "'errei foram 42€' cria despesa nova em vez de corrigir",
+      "status": "fixed",
+      "source": "Hard test 28/09",
+      "legacy": true
+    },
+    {
+      "id": "BUG-05",
+      "title": "Viagem com despesa responde duas vezes",
+      "status": "fixed",
+      "source": "Hard test 28/09",
+      "legacy": true
+    },
+    {
+      "id": "BUG-06",
+      "title": "Entrada ambígua de viagem devolve duas respostas",
+      "status": "fixed",
+      "source": "Hard test 28/09",
+      "legacy": true
+    },
+    {
+      "id": "BUG-07",
+      "title": "Despesa de viagem não mostra o restante do orçamento",
+      "status": "fixed",
+      "source": "Hard test 28/09",
+      "legacy": true
+    },
+    {
+      "id": "BUG-08",
+      "title": "Texto sem sentido ('asdfjklqwerty') gasta chamadas do modelo",
+      "status": "open",
+      "source": "Hard test 28/09",
+      "legacy": true
+    },
+    {
+      "id": "C-01",
+      "title": "'apagar dados' só funciona com a frase exata; o modelo inventa 'fale com o suporte'",
+      "status": "open",
+      "source": "Pós hard test 08/10",
+      "legacy": true,
+      "severity": "media"
+    },
+    {
+      "id": "C-02",
+      "title": "Checklist e hard_test.py abrem com 'sim', que com cadastro obrigatório só reenvia o link",
+      "status": "open",
+      "source": "Pós hard test 08/10",
+      "legacy": true,
+      "severity": "baixa"
+    },
+    {
+      "id": "A-01",
+      "title": "Palavra terminada em 'li' vira hábito e a despesa/viagem some",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Hábitos × despesas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-02",
+      "title": "Frase curta com 'no' cancela e com 'já/isso' grava o rascunho de vários lançamentos",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Rascunho de lote",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-03",
+      "title": "Mais de 10 gastos numa mensagem: o excedente é descartado sem aviso",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Rascunho de lote",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-04",
+      "title": "'apaga' apaga o último lançamento de qualquer tipo sem perguntar",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Apagar lançamento",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-05",
+      "title": "Valores em reais ou outra moeda são gravados como euros",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Moeda",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-06",
+      "title": "Dado de saúde gravado sem o consentimento explícito que a política promete",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Privacidade: saúde",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-07",
+      "title": "Saúde sem cifra garantida e sugestão de guardar dado de saúde como nota",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Privacidade: saúde",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-08",
+      "title": "Depois de 'stop' não dá para apagar nem exportar os dados",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Privacidade: direitos",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-09",
+      "title": "'luz 80 a pagar dia 5' e 'já paguei a conta de luz' não funcionam",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Contas a pagar",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-10",
+      "title": "Botão Editar corrige sempre a última despesa, não a tocada",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Correção de valor",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-11",
+      "title": "Gasto ou salário com 'todo mês' vira conta fixa e o lançamento some",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Contas fixas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-12",
+      "title": "Despesa de seguro com 'data/mudar/trocar' recebe texto de prazo e não é gravada",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Prazos holandeses",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-13",
+      "title": "'ajuda com a mudança 50' e 'saldo da conta 300' são engolidos pelo comando",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "Comandos por prefixo",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-14",
+      "title": "Consentimento sem link da política, sem /terms e /privacy abre em inglês",
+      "status": "open",
+      "severity": "media",
+      "area": "Privacidade: consentimento",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-15",
+      "title": "Só a frase exata apaga/exporta; 'sim' digitado não confirma o apagar",
+      "status": "open",
+      "severity": "media",
+      "area": "Privacidade: apagar e exportar",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-16",
+      "title": "Cancelar não invalida o botão Apagar tudo; botão antigo devolve menu de idiomas",
+      "status": "open",
+      "severity": "media",
+      "area": "Privacidade: apagar",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-17",
+      "title": "Sem comando para revogar o link do painel; linhas antigas nunca expiram",
+      "status": "open",
+      "severity": "media",
+      "area": "Painel: link",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-18",
+      "title": "'painel', 'meu painel' e 'abrir dashboard' não abrem o painel",
+      "status": "fixed",
+      "severity": "media",
+      "area": "Painel: comando",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-19",
+      "title": "Áudio, vídeo, figurinha, localização e contato não recebem resposta",
+      "status": "fixed",
+      "severity": "media",
+      "area": "Mídia",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "fixed": "2026-10-15",
+      "note": "Confirmado no master aebd5c7 pelo teste de regressão (não havia teste antes)."
+    },
+    {
+      "id": "A-20",
+      "title": "Primeira mensagem não é executada; 'Bom dia' abre menu; 'comercial' cai em francês",
+      "status": "open",
+      "severity": "media",
+      "area": "Primeiro contato",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-21",
+      "title": "'Sim.' com pontuação, 'claro' e 'concordo' não são aceitos",
+      "status": "wontfix",
+      "severity": "media",
+      "area": "Consentimento",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "reason": "Superado pelo cadastro obrigatório (PR #56, 08/10): o aceite agora é feito na página de cadastro; 'sim' em chat só reenvia o link."
+    },
+    {
+      "id": "A-22",
+      "title": "'muda pra inglês' não funciona e o nome do idioma sozinho troca a língua",
+      "status": "open",
+      "severity": "media",
+      "area": "Idioma",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-23",
+      "title": "Nomes de categoria que o Alfred mostra não são aceitos na correção",
+      "status": "open",
+      "severity": "media",
+      "area": "Categorias",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-24",
+      "title": "'isso é renda' põe despesa na categoria de receita; mapas de categoria errados",
+      "status": "open",
+      "severity": "media",
+      "area": "Categorias",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-25",
+      "title": "'gastos desta semana/deste ano/em 2025' devolvem o mês corrente",
+      "status": "open",
+      "severity": "media",
+      "area": "Consultas por período",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-26",
+      "title": "'quanto recebi este mês?' pode responder Rendimento com total zero",
+      "status": "open",
+      "severity": "media",
+      "area": "Consultas: receitas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-27",
+      "title": "'saldo da casa' e 'balanço do ano' respondem o saldo do mês",
+      "status": "fixed",
+      "severity": "media",
+      "area": "Saldo × casal/contabilidade",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "fixed": "2026-10-15",
+      "note": "Confirmado no master aebd5c7 pelo teste de regressão (não havia teste antes)."
+    },
+    {
+      "id": "A-28",
+      "title": "Resposta com 'registrado/anotado' é descartada mesmo em pergunta",
+      "status": "open",
+      "severity": "media",
+      "area": "Guarda do modelo",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-29",
+      "title": "'reembolso -15' pode virar despesa de €15",
+      "status": "open",
+      "severity": "media",
+      "area": "Valor negativo",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-30",
+      "title": "'errei foram 1.200' não casa e cria despesa nova",
+      "status": "fixed",
+      "severity": "media",
+      "area": "Correção de valor",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-31",
+      "title": "Artigo vira nome ('A Ana'), nota vira parte do nome, texto de quem paga errado",
+      "status": "open",
+      "severity": "media",
+      "area": "Dívidas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-32",
+      "title": "Conta fixa repetida cria duas e depois não dá para pagar nem cancelar",
+      "status": "fixed",
+      "severity": "media",
+      "area": "Contas fixas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-33",
+      "title": "'paguei X' tem três donos e a conta fixa não avança",
+      "status": "open",
+      "severity": "media",
+      "area": "Pagar",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-34",
+      "title": "'fatura de luz 80' vira fatura de cliente; data passada; apagar fatura paga deixa receita",
+      "status": "open",
+      "severity": "media",
+      "area": "Faturas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-35",
+      "title": "'sempre da empresa: software, transporte' ignora software; marca linha do extrato",
+      "status": "open",
+      "severity": "media",
+      "area": "Contabilidade",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-36",
+      "title": "Convite preso por 7 dias; lote e recibo não recebem 'sempre da casa'",
+      "status": "open",
+      "severity": "media",
+      "area": "Modo casal",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-37",
+      "title": "Cabeçalho em português, linhas ignoradas sem aviso, .TAB recusado",
+      "status": "open",
+      "severity": "media",
+      "area": "Extrato CSV",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-38",
+      "title": "Duplicado com nome diferente não é avisado",
+      "status": "open",
+      "severity": "media",
+      "area": "Extrato CSV",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-39",
+      "title": "Tarefa, meta ou viagem com dia e hora vira compromisso",
+      "status": "open",
+      "severity": "media",
+      "area": "Agenda",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-40",
+      "title": "'agenda dentista amanhã' lista; 'muda o dentista' cria compromisso; 'avisa 1 dia antes'",
+      "status": "open",
+      "severity": "media",
+      "area": "Agenda",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-41",
+      "title": "'muda a reunião de segunda para sexta' é capturado pelo plano de treino",
+      "status": "open",
+      "severity": "media",
+      "area": "Agenda × treino",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-42",
+      "title": "'apaga o treino de hoje' pode cancelar compromisso sem confirmação",
+      "status": "fixed",
+      "severity": "media",
+      "area": "Agenda × treino",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "fixed": "2026-10-15",
+      "note": "Confirmado no master aebd5c7 pelo teste de regressão (não havia teste antes)."
+    },
+    {
+      "id": "A-43",
+      "title": "'lembrete: dentista amanhã às 14:00' vira lembrete diário",
+      "status": "open",
+      "severity": "media",
+      "area": "Lembretes",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-44",
+      "title": "Lembrete do chat sempre por template, que pode não estar aprovado",
+      "status": "manual",
+      "severity": "media",
+      "area": "Lembretes: entrega",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "reason": "Depende de os templates da Meta estarem aprovados (produção). Confirmar no WhatsApp Manager e enviando um lembrete real."
+    },
+    {
+      "id": "A-45",
+      "title": "Avisos só chegam dentro da janela de 24 h; faltam três templates",
+      "status": "manual",
+      "severity": "media",
+      "area": "Avisos proativos",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "reason": "Depende de criar e aprovar três templates na Meta e das flags de template em produção."
+    },
+    {
+      "id": "A-46",
+      "title": "Conta a pagar nunca avisa; conta fixa avisa uma vez só",
+      "status": "open",
+      "severity": "media",
+      "area": "Avisos de contas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-47",
+      "title": "Pergunta sem '?' registra em vez de consultar",
+      "status": "open",
+      "severity": "media",
+      "area": "Saúde",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-48",
+      "title": "'criar viagem Roma 800' não cria; viagem futura fica ativa; 'voltei' encerra",
+      "status": "open",
+      "severity": "media",
+      "area": "Viagens",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-49",
+      "title": "Falso positivo do modelo grava hábito para 'oi', 'voltei', 'apaga'",
+      "status": "open",
+      "severity": "media",
+      "area": "Hábito pelo modelo",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-50",
+      "title": "Foto como Documento recebe mensagem de CSV; extrato em PDF não é reconhecido",
+      "status": "open",
+      "severity": "media",
+      "area": "Fotos e PDFs",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-51",
+      "title": "'ok/certo/pode' solto confirma o recibo e frase com 'no' cancela",
+      "status": "open",
+      "severity": "media",
+      "area": "Recibo por foto",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-52",
+      "title": "Pergunta de análise só chega ao módulo certo depois de dois modelos",
+      "status": "open",
+      "severity": "media",
+      "area": "Análises livres",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-53",
+      "title": "Serviço roda na região US West; a política precisa dizer onde ficam os dados",
+      "status": "manual",
+      "severity": "media",
+      "area": "Infraestrutura",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "reason": "Região do Railway e texto da política: decisão e configuração de infraestrutura, fora do código."
+    },
+    {
+      "id": "A-54",
+      "title": "Categorias e Flow em português de Portugal",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Texto pt-PT",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-55",
+      "title": "Identificador interno em holandês vaza para o usuário",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Texto nl",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-56",
+      "title": "'1 lançamento importados', 'últimas 1 despesas'",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Texto plural",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-57",
+      "title": "Política sem fr/de, e-mail de contato pode sair como placeholder",
+      "status": "manual",
+      "severity": "baixa",
+      "area": "Política",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "reason": "Depende de variáveis de produção (PRIVACY_CONTACT_EMAIL) e de tradução jurídica da política."
+    },
+    {
+      "id": "A-58",
+      "title": "Chat e painel formatam o dinheiro de jeitos diferentes",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Painel: dinheiro",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-59",
+      "title": "'dashboard está lento' devolve o link",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "Painel: comando",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "fixed": "2026-10-15",
+      "note": "Confirmado no master aebd5c7 pelo teste de regressão (não havia teste antes)."
+    },
+    {
+      "id": "A-60",
+      "title": "Alerta de 100% inconsistente entre chat e resumo; 'orçamento mercado 0' sem erro",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "Orçamentos",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "fixed": "2026-10-15",
+      "note": "Confirmado no master aebd5c7 pelo teste de regressão (não havia teste antes)."
+    },
+    {
+      "id": "A-61",
+      "title": "'comprei 2 kg de arroz' e 'peso corporal 75 kg' são mal lidos",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Peso e carga",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-62",
+      "title": "'plano de treino de hoje' é lido como plano; rascunho esquecido captura edição",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Plano de treino",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-63",
+      "title": "'tarefa difícil essa' cria tarefa; prazo em dois formatos; 'nota:' vira lembrete",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Tarefas e notas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-64",
+      "title": "Cancelar lembrete ambíguo não pergunta; 'transporte' vira treino",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Lembretes",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-65",
+      "title": "Sequência usa data UTC e o registro usa Amsterdã",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Hábitos: sequência",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-66",
+      "title": "Todos os horários são de Amsterdã, mesmo para quem está no Brasil",
+      "status": "manual",
+      "severity": "baixa",
+      "area": "Fuso horário",
+      "source": "Leitura de código 07/10",
+      "legacy": true,
+      "reason": "Decisão de produto (fuso por membro). Só se confirma viajando; sem teste automático útil até haver o desenho."
+    },
+    {
+      "id": "A-67",
+      "title": "Dois botões chamados Desfazer; mensagem 'já tinha sido apagado' em casos sem relação",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Botões",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-68",
+      "title": "Lote com 6 a 10 itens sem desfazer; valor alto sem 'Está certo'",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Lote",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-69",
+      "title": "'meus gastos' não é comando; lista corta em 10 sem dizer",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Resumo e listas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-70",
+      "title": "'Saldo' não é saldo de conta e não explica o que é",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Saldo",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-71",
+      "title": "Só despesas = 100% no negativo desde o primeiro gasto",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Dias no positivo",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-72",
+      "title": "Texto de cobrança em pt pede 'envie um Tikkie' ao devedor",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Cobrança",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-73",
+      "title": "'o que você enviou ontem' ignora 'ontem'",
+      "status": "open",
+      "severity": "baixa",
+      "area": "O que você me enviou",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-74",
+      "title": "Palavras isoladas disparam módulos",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Palavras soltas",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-75",
+      "title": "Ajuda incompleta; 'sair' e 'stop.' não funcionam",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Ajuda",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-76",
+      "title": "Cinco 👍 gravam cinco avaliações; reação com emoji ignorada",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Feedback",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-77",
+      "title": "Botões de serviço não invalidam depois do primeiro toque",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Serviços e contratos",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-78",
+      "title": "Hospedagem cai em Habitação; total planejado diferente do orçamento",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Viagem: orçamento",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-79",
+      "title": "Recusa de dólar fala 'não guardei os USD' e termina com '?'",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Texto de moeda",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-80",
+      "title": "Saudação passa por até 4 chamadas ao modelo",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Lentidão",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "A-81",
+      "title": "Sem limite de mensagens por minuto por usuário",
+      "status": "open",
+      "severity": "baixa",
+      "area": "Sem limite",
+      "source": "Leitura de código 07/10",
+      "legacy": true
+    },
+    {
+      "id": "H3009-1",
+      "title": "'sim/yes/ja' soltos respondem 'Não registei nada'",
+      "status": "fixed",
+      "source": "Hard test 30/09",
+      "legacy": true
+    },
+    {
+      "id": "H3009-2",
+      "title": "Fallback fala só de despesas para mensagens de saúde/treino não reconhecidas",
+      "status": "fixed",
+      "source": "Hard test 30/09",
+      "legacy": true
+    },
+    {
+      "id": "H3009-3",
+      "title": "'apaga tarefa de aniversário' não acha a tarefa (acento)",
+      "status": "fixed",
+      "source": "Hard test 30/09",
+      "legacy": true
+    },
+    {
+      "id": "H3009-4",
+      "title": "'meta de corrida concluída' não acha a meta por radical",
+      "status": "fixed",
+      "source": "Hard test 30/09",
+      "legacy": true
+    },
+    {
+      "id": "H3009-5",
+      "title": "'bebi água suficiente hoje?' é gravado como hábito",
+      "status": "fixed",
+      "source": "Hard test 30/09",
+      "legacy": true
+    },
+    {
+      "id": "H3009-6",
+      "title": "'de 1 a 7 de outubro' ignorado: a viagem começa hoje",
+      "status": "fixed",
+      "source": "Hard test 30/09",
+      "legacy": true
+    },
+    {
+      "id": "H0110-1",
+      "title": "'nota:' tratada como compromisso e nota de humor lida como horário",
+      "status": "fixed",
+      "source": "Hard test 01/10",
+      "legacy": true
+    },
+    {
+      "id": "H0110-2",
+      "title": "Contagem de treinos ignora o período pedido e viagem perde as datas",
+      "status": "fixed",
+      "source": "Hard test 01/10",
+      "legacy": true
+    },
+    {
+      "id": "H0310-A",
+      "title": "Palavra + valor virava hábito; compromisso duplicado; texto de notas alterado",
+      "status": "fixed",
+      "source": "Hard test 03/10 grupo A",
+      "legacy": true
+    },
+    {
+      "id": "H0310-B",
+      "title": "'fiz 50 minutos de musculação' não vira treino; plano em layout natural não é aceito",
+      "status": "fixed",
+      "source": "Hard test 03/10 grupo B",
+      "legacy": true
+    },
+    {
+      "id": "H0310-C",
+      "title": "'toda a segunda' não é semanal; painel rotula lembrete como Medicação; 'meditei' não liga à meta",
+      "status": "fixed",
+      "source": "Hard test 03/10 grupo C",
+      "legacy": true
+    },
+    {
+      "id": "H0310-D",
+      "title": "Conta 'Luz' em Other; fixos 0%; 'Você deve' ausente; descrições em minúscula",
+      "status": "fixed",
+      "source": "Hard test 03/10 grupos D/E",
+      "legacy": true
+    },
+    {
+      "id": "H0310-F",
+      "title": "Projeção do chat diferente do painel; 'até sexta' não vira prazo da tarefa",
+      "status": "fixed",
+      "source": "Hard test 03/10 grupo F",
+      "legacy": true
+    },
+    {
+      "id": "H0410-X",
+      "title": "Hábito repetido no dia; meta de poupança sem progresso; total do mês ausente na confirmação",
+      "status": "fixed",
+      "source": "Sobras do hard test 03/10",
+      "legacy": true
+    },
+    {
+      "id": "P0110-1",
+      "title": "Pedido de idioma ('change to English') não entendido ou confundido com outra coisa",
+      "status": "fixed",
+      "source": "Hard test em produção 01/10",
+      "legacy": true
+    },
+    {
+      "id": "P0110-2",
+      "title": "Valor negativo/zero, exemplos da ajuda, aspas e prompts do modelo fora do padrão",
+      "status": "fixed",
+      "source": "Hard test em produção 01/10",
+      "legacy": true
+    },
+    {
+      "id": "B-001",
+      "title": "Seed do painel de demonstração depende da data de hoje: teste do mockup quebra a partir de 13/10",
+      "status": "fixed",
+      "severity": "media",
+      "area": "painel",
+      "source": "Rodada de verificação de 15/10 (master vermelho)",
+      "opened": "2026-10-15",
+      "fixed": "2026-10-15",
+      "step": "tests/test_panel_demo.py",
+      "note": "A despesa 'Hotel Alfama' era datada em hoje−12 dias e entrava em outubro a partir de 13/10, somando €180 ao total do mockup. Agora tem data fixa (28/09/2026)."
+    }
+  ]
+}

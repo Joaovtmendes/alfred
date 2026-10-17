@@ -109,6 +109,7 @@ async def test_apaga_treino_is_still_the_workout_command(lab: Lab) -> None:
     assert await _count(lab) == 1  # the expense is untouched
 
 
+@pytest.mark.bug("BUG-04")
 async def test_amount_correction_says_corrected_with_old_and_new(lab: Lab) -> None:
     await lab.add(_exp(lab, 80, merchant="Mercado", category="supermarkt"))
     reply = await lab.say("errei foram 42€")

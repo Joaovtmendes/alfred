@@ -88,6 +88,21 @@ def _sign(body: bytes) -> str:
 
 
 _seq_counter = 0
+_falhas: list[dict] = []  # tudo o que o webhook não aceitou (HTTP != 200 ou erro de rede)
+
+
+def _registrar_falha(label: str, text: str, status: int | None, erro: str = "") -> None:
+    """Guarda a falha para o relatório; scripts/bugs.py from-report abre um bug por item."""
+    _falhas.append(
+        {
+            "title": f"Webhook recusou [{label}] ({'erro de rede' if status is None else status})",
+            "step": f"{label}#{_seq_counter}",
+            "message": text,
+            "expected": "HTTP 200 do webhook",
+            "got": erro or f"HTTP {status}",
+            "area": "webhook",
+        }
+    )
 
 
 def send(label: str, text: str, run_id: str, delay: float = DEFAULT_DELAY) -> int:
@@ -108,8 +123,11 @@ def send(label: str, text: str, run_id: str, delay: float = DEFAULT_DELAY) -> in
         status = "✅" if resp.status_code == 200 else f"❌ {resp.status_code}"
         extra = f"  ← {resp.text[:120]}" if resp.status_code != 200 else ""
         print(f"  [{_seq_counter:03d}] {status}  [{label}]  {repr(text)}{extra}")
+        if resp.status_code != 200:
+            _registrar_falha(label, text, resp.status_code, resp.text[:200])
     except Exception as exc:
         print(f"  [{_seq_counter:03d}] ❌ ERRO  [{label}]  {repr(text)}  → {exc}")
+        _registrar_falha(label, text, None, str(exc))
 
     time.sleep(delay)
     return getattr(resp, "status_code", 0) if "resp" in dir() else 0
@@ -145,8 +163,11 @@ def send_tap(label: str, button_id: str, run_id: str, delay: float = DEFAULT_DEL
         code = resp.status_code
         status = "✅" if code == 200 else f"❌ {code}"
         print(f"  [{_seq_counter:03d}] {status}  [{label}]  TAP {button_id!r}")
+        if code != 200:
+            _registrar_falha(label, f"TAP {button_id}", code, resp.text[:200])
     except Exception as exc:
         print(f"  [{_seq_counter:03d}] ❌ ERRO  [{label}]  TAP {button_id!r}  → {exc}")
+        _registrar_falha(label, f"TAP {button_id}", None, str(exc))
     time.sleep(delay)
     return code
 
@@ -695,6 +716,12 @@ if __name__ == "__main__":
         action="store_true",
         help='Não enviar "oi" e "sim" antes dos blocos (conta já aceitou os termos).',
     )
+    parser.add_argument(
+        "--relatorio",
+        default="hard_test_relatorio.json",
+        help="Onde gravar as falhas do webhook (default: hard_test_relatorio.json). "
+        "Depois: python scripts/bugs.py from-report <arquivo> abre um bug + teste por falha.",
+    )
     args = parser.parse_args()
 
     run_id = str(int(time.time()))
@@ -721,4 +748,17 @@ if __name__ == "__main__":
     print(f"\n{'=' * 60}")
     print(f"Concluído em {elapsed:.0f}s — {_seq_counter} mensagens enviadas")
     print("Verifica o teu WhatsApp e os Railway Logs para as respostas.")
+    if _falhas:
+        for f in _falhas:
+            f["source"] = f"hard_test {run_id}"
+        Path(args.relatorio).write_text(
+            json.dumps({"falhas": _falhas}, ensure_ascii=False, indent=2)
+        )
+        print(f"\n{len(_falhas)} falha(s) do webhook em {args.relatorio}. Para abrir os bugs:")
+        print(f"  python scripts/bugs.py from-report {args.relatorio}")
+    print(
+        "\nRegra de regressão: cada bug que você achar lendo as respostas (WhatsApp/checklist)"
+        "\nentra no registro e ganha um teste que falha:"
+        '\n  python scripts/bugs.py add --title "..." --message "o texto exato" --severity alta'
+    )
     print("=" * 60)

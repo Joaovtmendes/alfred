@@ -34,6 +34,7 @@ def _wo(kind: str, minutes: int | None, km: float | None = None) -> dict:
         ("fiz pilates 40 min", "pilates", 40),
     ],
 )
+@pytest.mark.bug("H0310-B")
 async def test_did_an_activity_for_some_minutes_is_a_workout(
     lab: Lab, text: str, kind: str, minutes: int
 ):
@@ -71,6 +72,7 @@ def test_duration_and_distance_are_both_shown():
     assert _workout_dur(None, None, "pt") == ""
 
 
+@pytest.mark.bug("H0310-B")
 def test_a_plan_in_the_natural_layout_parses():
     """Defect 6: "Segunda: peito" with one exercise per line was "Não entendi a linha 2"."""
     from alfred.training import parse_plan
