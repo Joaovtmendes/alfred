@@ -23,6 +23,7 @@ def test_fuzzy_contains_is_accent_and_stem_tolerant() -> None:
     assert not _fuzzy_contains("de", "correr 3x por semana")
 
 
+@pytest.mark.bug("H3009-6")
 def test_trip_start_date_from_range() -> None:
     today = date(2026, 9, 30)
     assert parse_trip_start_date("viagem Lisboa de 1 a 7 de outubro", today) == date(2026, 10, 1)
@@ -32,6 +33,7 @@ def test_trip_start_date_from_range() -> None:
 
 @db
 @pytest.mark.parametrize("word", ["sim", "yes", "ja", "Ok!"])
+@pytest.mark.bug("H3009-1")
 async def test_bare_yes_is_neutral(lab: Lab, word: str) -> None:
     reply = await lab.say(word)
     assert "nada esperando" in reply or "niets" in reply or "anything waiting" in reply
@@ -39,6 +41,7 @@ async def test_bare_yes_is_neutral(lab: Lab, word: str) -> None:
 
 
 @db
+@pytest.mark.bug("H3009-2")
 async def test_unrecognised_health_message_gets_neutral_fallback(lab: Lab) -> None:
     lab.llm_reply.return_value = "[llm]"
     reply = await lab.say("peso 75kg pressão 12/8")
@@ -46,6 +49,7 @@ async def test_unrecognised_health_message_gets_neutral_fallback(lab: Lab) -> No
 
 
 @db
+@pytest.mark.bug("H3009-3")
 async def test_delete_task_ignores_accents(lab: Lab) -> None:
     await lab.add(Task(member_id=lab.member_id, body="comprar presente para o aniversário"))
     reply = await lab.say("apaga tarefa de aniversario")
@@ -57,6 +61,7 @@ async def test_delete_task_ignores_accents(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("H3009-4")
 async def test_complete_goal_by_stem(lab: Lab) -> None:
     await lab.add(Goal(member_id=lab.member_id, title="correr 3x por semana", active=True))
     reply = await lab.say("meta de corrida concluída")
@@ -66,6 +71,7 @@ async def test_complete_goal_by_stem(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("H3009-5")
 async def test_question_is_not_logged_as_habit(lab: Lab) -> None:
     await lab.say("bebi água suficiente hoje?")
     n = await lab.scalar(
@@ -75,6 +81,7 @@ async def test_question_is_not_logged_as_habit(lab: Lab) -> None:
 
 
 @db
+@pytest.mark.bug("H3009-6")
 async def test_trip_uses_given_start_date(lab: Lab) -> None:
     await lab.say("criar viagem Lisboa de 1 a 7 de outubro")
     trip = await lab.scalar(select(Trip).where(Trip.member_id == lab.member_id))
@@ -90,6 +97,7 @@ async def test_trip_uses_given_start_date(lab: Lab) -> None:
         ("mais 500ml de água", {"log_type": "water", "value": "0.5", "unit": "L"}),
     ],
 )
+@pytest.mark.bug("H3009-2")
 async def test_midsentence_health_logs_reach_the_extractor(lab: Lab, text: str, data: dict) -> None:
     lab.health.return_value = {"notes": None, "days_ago": 0, "unit": None, **data}
     await lab.say(text)
@@ -99,6 +107,7 @@ async def test_midsentence_health_logs_reach_the_extractor(lab: Lab, text: str, 
 
 
 @db
+@pytest.mark.bug("H3009-2")
 async def test_swimming_reaches_the_workout_extractor(lab: Lab) -> None:
     lab.workout.return_value = {
         "activity_type": "swimming",
@@ -157,6 +166,7 @@ def test_number_formatting_is_localised() -> None:
 
 
 @db
+@pytest.mark.bug("H3009-2")
 async def test_weight_and_pressure_are_not_recorded_or_confirmed(lab: Lab) -> None:
     lab.llm_reply.return_value = "Registrado: peso 75 kg, pressão 12/8."
     reply = await lab.say("peso 75kg pressão 12/8")

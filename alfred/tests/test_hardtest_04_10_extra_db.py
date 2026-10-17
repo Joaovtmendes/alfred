@@ -17,6 +17,7 @@ db = pytest.mark.skipif(os.environ.get("ALFRED_TEST_DB") != "1", reason="needs t
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0410-X")
 async def test_the_same_habit_twice_in_a_day_is_one_check_in(lab: Lab):
     """Defect 18: the second "meditei" of the day said "Mais um dia!" and counted twice."""
     first = await lab.say("meditei")
@@ -31,6 +32,7 @@ async def test_the_same_habit_twice_in_a_day_is_one_check_in(lab: Lab):
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0410-X")
 async def test_a_savings_goal_shows_progress_in_euro(lab: Lab, client):
     """Defect 12: "poupar 5000€" showed nothing; it now shows what was saved since it was set."""
     await lab.add(
@@ -84,6 +86,7 @@ async def test_the_streak_reply_uses_the_noun(lab: Lab):
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0410-X")
 async def test_every_expense_confirmation_carries_a_month_total(lab: Lab):
     """Defect 21: some entries showed the month total and others did not."""
     item = {

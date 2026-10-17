@@ -83,6 +83,25 @@ docker compose up                           # app + Postgres local
 - Testes: `SimpleNamespace` + `make_member/make_message/make_session` de
   `tests/conftest.py`; nunca chamar Meta ou Anthropic de verdade.
 
+## Bugs: todo bug ganha ID e teste de regressão (trava no CI)
+
+O registro é `alfred/tests/bugs.json`; a regra é `python scripts/bugs.py check` (roda no CI e
+em `tests/test_bug_registry.py`). Fluxo, sempre nesta ordem:
+
+1. **Achou um bug** (hard test, WhatsApp, checklist, revisão): `python scripts/bugs.py add
+   --title "..." --message "texto exato" --severity alta`. Cria `B-NNN` e o teste em
+   `tests/regression/` com `@pytest.mark.bug("B-NNN")` + `xfail(strict=True)`. Falhas do
+   `hard_test.py`: `python scripts/bugs.py from-report hard_test_relatorio.json`.
+2. **Escreva a verificação real** no teste (ele tem de falhar sem a correção).
+3. **Corrija o código.** O xfail passa a XPASS e o CI fica vermelho de propósito: remova o
+   xfail e rode `python scripts/bugs.py fixed B-NNN`.
+4. Bug corrigido sem teste marcado, ou teste marcado sem bug no registro, **bloqueia o merge**.
+   Nunca apague nem enfraqueça um teste `bug` para fazer o CI passar: se o comportamento mudou
+   de propósito, o bug vira `wontfix` com `reason`.
+5. Bug que só se confirma fora do pytest (Meta, modelo, produção) é `manual` com `reason`.
+   Bugs herdados (`"legacy": true`) podem ficar abertos sem teste enquanto o backlog é coberto;
+   bug novo, não.
+
 ## Deploy
 
 Push/merge em `master` → Railway faz build do `alfred/Dockerfile` e corre

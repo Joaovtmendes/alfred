@@ -156,6 +156,9 @@ async def test_pronoun_correction_applies_to_the_last_expense(lab: Lab) -> None:
 # ── trip budget (hard test BUG-07) and single replies (BUG-05/06) ─────────────
 
 
+@pytest.mark.bug("BUG-05")
+@pytest.mark.bug("BUG-06")
+@pytest.mark.bug("BUG-07")
 async def test_trip_budget_is_parsed_and_remaining_is_shown(lab: Lab) -> None:
     reply = await lab.say("criar viagem Portugal €500 de 1 a 7 de outubro")
     assert "€500,00" in reply

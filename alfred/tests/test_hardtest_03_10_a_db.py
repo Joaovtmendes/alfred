@@ -35,6 +35,7 @@ def _exp(amount: float, name: str, category: str):
         ("uber 12", 12.0, "Uber", "transport"),
     ],
 )
+@pytest.mark.bug("H0310-A")
 async def test_a_word_and_a_bare_amount_is_an_expense_never_a_habit(
     lab: Lab, text: str, amount: float, name: str, category: str
 ):
@@ -75,6 +76,7 @@ async def test_a_reminder_prefix_is_not_part_of_the_appointment_title(lab: Lab):
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0310-A")
 async def test_the_same_appointment_is_not_created_twice(lab: Lab):
     """Defect 9: "dentista amanhã às 14h" and then the reminder for it made two entries."""
     await lab.say("dentista amanhã às 14h")
@@ -97,6 +99,7 @@ async def test_two_different_things_at_the_same_time_are_both_kept(lab: Lab):
 
 @db
 @pytest.mark.asyncio
+@pytest.mark.bug("H0310-A")
 async def test_notes_and_tasks_keep_the_text_the_way_it_was_written(lab: Lab):
     """Defect 8: "Nota: Ligar pro Dentista" was stored in lower case."""
     await lab.say("Nota: Ligar pro Dentista Amanhã, falar com a Dra. Silva")
