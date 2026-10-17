@@ -118,7 +118,7 @@ PAGE: dict[str, dict[str, str]] = {
         "language": "Idioma",
         "name": "Como devo chamar você?",
         "name_hint": "Até 40 caracteres.",
-        "privacy": 'Li o <a href="{url}">aviso de privacidade</a> e entendo que o Jofie é uma inteligência artificial e pode errar. (obrigatório)',
+        "privacy": 'Li o <a href="{url}">aviso de privacidade</a> e os <a href="{terms}">termos de uso</a> e entendo que o Jofie é uma inteligência artificial e pode errar. (obrigatório)',
         "health": "Autorizo o Jofie a guardar dados de saúde que eu contar (sono, humor, remédio, água). Posso retirar quando quiser. (opcional)",
         "deadlines": "Quero avisos dos prazos holandeses (seguro-saúde, imposto, BTW). (opcional)",
         "submit": "Criar conta e voltar ao WhatsApp",
@@ -142,7 +142,7 @@ PAGE: dict[str, dict[str, str]] = {
         "language": "Taal",
         "name": "Hoe mag ik je noemen?",
         "name_hint": "Maximaal 40 tekens.",
-        "privacy": 'Ik heb de <a href="{url}">privacyverklaring</a> gelezen en begrijp dat Jofie een kunstmatige intelligentie is die fouten kan maken. (verplicht)',
+        "privacy": 'Ik heb de <a href="{url}">privacyverklaring</a> en de <a href="{terms}">gebruiksvoorwaarden</a> gelezen en begrijp dat Jofie een kunstmatige intelligentie is die fouten kan maken. (verplicht)',
         "health": "Ik geef Jofie toestemming om gezondheidsgegevens te bewaren die ik vertel (slaap, stemming, medicijn, water). Ik kan dit altijd intrekken. (optioneel)",
         "deadlines": "Ik wil herinneringen aan Nederlandse deadlines (zorgverzekering, belasting, btw). (optioneel)",
         "submit": "Account maken en terug naar WhatsApp",
@@ -166,7 +166,7 @@ PAGE: dict[str, dict[str, str]] = {
         "language": "Language",
         "name": "What should I call you?",
         "name_hint": "Up to 40 characters.",
-        "privacy": 'I have read the <a href="{url}">privacy notice</a> and understand that Jofie is an artificial intelligence and can make mistakes. (required)',
+        "privacy": 'I have read the <a href="{url}">privacy notice</a> and the <a href="{terms}">terms of use</a> and understand that Jofie is an artificial intelligence and can make mistakes. (required)',
         "health": "I allow Jofie to keep the health data I share (sleep, mood, medication, water). I can withdraw at any time. (optional)",
         "deadlines": "I want reminders for Dutch deadlines (health insurance, income tax, VAT). (optional)",
         "submit": "Create account and go back to WhatsApp",
@@ -190,7 +190,7 @@ PAGE: dict[str, dict[str, str]] = {
         "language": "Langue",
         "name": "Comment dois-je t'appeler ?",
         "name_hint": "40 caractères au maximum.",
-        "privacy": "J'ai lu l'<a href=\"{url}\">avis de confidentialité</a> et je comprends que Jofie est une intelligence artificielle qui peut se tromper. (obligatoire)",
+        "privacy": 'J\'ai lu l\'<a href="{url}">avis de confidentialité</a> et les <a href="{terms}">conditions d\'utilisation</a> et je comprends que Jofie est une intelligence artificielle qui peut se tromper. (obligatoire)',
         "health": "J'autorise Jofie à garder les données de santé que je donne (sommeil, humeur, médicament, eau). Je peux retirer cet accord à tout moment. (facultatif)",
         "deadlines": "Je veux des rappels des échéances néerlandaises (assurance maladie, impôts, TVA). (facultatif)",
         "submit": "Créer le compte et retourner sur WhatsApp",
@@ -214,7 +214,7 @@ PAGE: dict[str, dict[str, str]] = {
         "language": "Sprache",
         "name": "Wie soll ich dich nennen?",
         "name_hint": "Höchstens 40 Zeichen.",
-        "privacy": 'Ich habe die <a href="{url}">Datenschutzerklärung</a> gelesen und verstehe, dass Jofie eine künstliche Intelligenz ist und Fehler machen kann. (erforderlich)',
+        "privacy": 'Ich habe die <a href="{url}">Datenschutzerklärung</a> und die <a href="{terms}">Nutzungsbedingungen</a> gelesen und verstehe, dass Jofie eine künstliche Intelligenz ist und Fehler machen kann. (erforderlich)',
         "health": "Ich erlaube Jofie, die Gesundheitsdaten zu speichern, die ich mitteile (Schlaf, Stimmung, Medikament, Wasser). Ich kann das jederzeit widerrufen. (optional)",
         "deadlines": "Ich möchte Erinnerungen an niederländische Fristen (Krankenversicherung, Steuer, MwSt.). (optional)",
         "submit": "Konto anlegen und zurück zu WhatsApp",
@@ -468,7 +468,7 @@ def render_form(
         f'<option value="{code}"{" selected" if code == lang else ""}>{n}</option>'
         for code, n in LANG_NAMES.items()
     )
-    privacy = p["privacy"].replace("{url}", f"/privacy?lang={lang}")
+    privacy = p["privacy"].replace("{url}", f"/privacy?lang={lang}").replace("{terms}", "/terms")
     err = f'<p class="err" role="alert">{escape(p[error])}</p>' if error else ""
     cards = "".join(
         f'<div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" '

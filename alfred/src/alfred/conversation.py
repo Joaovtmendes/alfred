@@ -88,6 +88,7 @@ from alfred.media_input import STRINGS as _MEDIA_STRINGS
 from alfred.media_input import handle_media_file, is_media_file
 from alfred.models import (
     SETTLED,
+    AuditLog,
     Expense,
     Goal,
     HabitLog,
@@ -2077,20 +2078,76 @@ _CAT_ALIAS: dict[str, str] = {
 # A correction only rewrites an expense recorded moments ago; older ones are deleted/re-entered.
 CORRECTION_WINDOW_HOURS = 2
 
+_WIPE_VERB = (
+    r"(?:apag(?:a|ar|ue)|exclu(?:i|ir)|delet(?:a|ar|e)|elimin(?:a|ar)|remov(?:e|er)|"
+    r"erase|remove|wipe|verwijder(?:en)?|wis(?:sen)?|supprim(?:e|er)|efface(?:r)?|"
+    r"loesch(?:e|en)|losch(?:e|en))"
+)
+_DATA_OBJ = (
+    r"(?:dados|data|conta|account|gegevens|donnees|compte|daten|konto)"
+    r"(?:\s+(?:pessoais|personal|persoonlijke|personnelles|personlichen))?"
+)
+_POSSESSIVE = (
+    r"(?:os|as|o|a|todos|todas|meus|minhas|meu|minha|my|all|the|mijn|mijn|al|alle|de|mes|mon|ma|"
+    r"toutes|tous|les|meine|meinen|mein|die|der|das)"
+)
+_WANT = (
+    r"(?:(?:eu\s+)?(?:quero|queria|gostaria\s+de|preciso|please|por\s+favor|i\s+want\s+to|i\s+would\s+like\s+to|"
+    r"ik\s+wil|graag|je\s+veux|bitte|ich\s+mochte|ich\s+will)\s+)?"
+)
 _WIPE_RE = re.compile(
-    r"^(?:apaga(?:r)?\s+(?:os\s+)?(?:meus|todos\s+os\s+meus)\s+dados|"
-    r"delete\s+(?:all\s+)?my\s+data|erase\s+my\s+data|"
-    r"verwijder\s+(?:al\s+)?mijn\s+gegevens|"
-    r"supprime(?:r)?\s+(?:toutes\s+)?mes\s+donnees|"
-    r"(?:loesche|loeschen|losche|loschen)\s+(?:alle\s+)?meine\s+daten|meine\s+daten\s+(?:loeschen|loschen))"
+    rf"^{_WANT}(?:{_WIPE_VERB}\s+(?:{_POSSESSIVE}\s+){{0,2}}{_DATA_OBJ}|"
+    rf"{_WIPE_VERB}\s+(?:tudo|everything|alles|tout)|"
+    r"meine\s+daten\s+(?:loeschen|loschen))"
     r"\s*[.!]*$"
 )
+_EXPORT_VERB = (
+    r"(?:exporta(?:r)?|export(?:eer|er|e)?|exportier(?:e|en)|baix(?:a|ar)|download|"
+    r"telecharg(?:e|er)|descarreg(?:a|ar))"
+)
 _EXPORT_RE = re.compile(
-    r"^(?:exporta(?:r)?\s+(?:os\s+)?(?:meus|todos\s+os\s+meus)\s+dados|"
-    r"export\s+my\s+data|exporteer\s+mijn\s+gegevens|"
-    r"exporte(?:r)?\s+mes\s+donnees|meine\s+daten\s+exportieren)\s*[.!]*$"
+    rf"^{_WANT}(?:{_EXPORT_VERB}\s+(?:{_POSSESSIVE}\s+){{0,2}}{_DATA_OBJ}|"
+    r"meine\s+daten\s+exportieren)\s*[.!]*$"
 )
 WIPE_CONFIRM_SECONDS = 600
+_WIPE_YES_RE = re.compile(
+    r"^(?:sim|s|yes|yep|ja|jep|oui|si|confirmo|confirm|confirmar|apagar\s+tudo|delete\s+everything|"
+    r"alles\s+verwijderen|tout\s+supprimer|alles\s+loschen)[\s.!]*$"
+)
+_WIPE_NO_RE = re.compile(
+    r"^(?:nao|n|no|nee|non|nein|cancelar|cancela|cancel|annuleren|annuler|abbrechen)[\s.!]*$"
+)
+
+
+async def _wipe_state(session: AsyncSession, member: Member) -> tuple[str, int] | None:
+    """The member's latest wipe event: ("requested" | "cancelled", epoch seconds), or None."""
+    row = (
+        await session.execute(
+            select(AuditLog.event, AuditLog.detail)
+            .where(
+                AuditLog.member_id == member.id,
+                AuditLog.event.in_(("wipe_requested", "wipe_cancelled")),
+            )
+            .order_by(AuditLog.created_at.desc())
+            .limit(1)
+        )
+    ).first()
+    if row is None:
+        return None
+    try:
+        ts = int((row[1] or {}).get("ts") or 0)
+    except (TypeError, ValueError):
+        ts = 0
+    return ("requested" if row[0] == "wipe_requested" else "cancelled", ts)
+
+
+async def _wipe_pending(session: AsyncSession, member: Member) -> bool:
+    """True while the last "delete my data" question is still open (asked, not cancelled, fresh)."""
+    state = await _wipe_state(session, member)
+    if state is None or state[0] != "requested":
+        return False
+    return 0 <= int(datetime.now(UTC).timestamp()) - state[1] <= WIPE_CONFIRM_SECONDS
+
 
 _AMOUNT_CORRECTION_RE = re.compile(
     # The whole message must be the correction: "errei, foram 42€", "na verdade foram 32".
@@ -3708,6 +3765,7 @@ async def _handle_button_reply(
     to = member.wa_phone
 
     if action == "keep":
+        audit(session, "wipe_cancelled", member.id, ts=int(datetime.now(UTC).timestamp()))
         reply = _t("wipe_cancelled", lang)
         await send_text(to, reply)
         await _save_outbound(member, reply, session)
@@ -3717,6 +3775,10 @@ async def _handle_button_reply(
             fresh = 0 <= int(datetime.now(UTC).timestamp()) - int(raw_id) <= WIPE_CONFIRM_SECONDS
         except ValueError:
             fresh = False
+        if fresh:  # "Cancel" (button or typed) kills every older "Delete everything" button
+            state = await _wipe_state(session, member)
+            if state is not None and state[0] == "cancelled" and state[1] >= int(raw_id):
+                fresh = False
         if not fresh:
             reply = _t("wipe_expired", lang)
             await send_text(to, reply)
@@ -3874,6 +3936,7 @@ async def _gdpr_reply(member: Member, body_plain: str, session: AsyncSession, la
     to = member.wa_phone
     if _WIPE_RE.match(body_plain.strip()):
         now_epoch = int(datetime.now(UTC).timestamp())
+        audit(session, "wipe_requested", member.id, ts=now_epoch)
         await send_buttons(
             to,
             _t("wipe_ask", lang),
@@ -3998,6 +4061,24 @@ async def handle_inbound(
             member.language = new_lang
             session.add(member)
             reply = _t("lang_changed", new_lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4-0-. An open "delete my data" question can be answered by typing as well as by button.
+        plain = body_plain.strip()
+        if (_WIPE_YES_RE.match(plain) or _WIPE_NO_RE.match(plain)) and await _wipe_pending(
+            session, member
+        ):
+            if _WIPE_YES_RE.match(plain):
+                from alfred.privacy import erase_member
+
+                logger.info("conversation.member_erased", member_id=str(member.id))
+                await erase_member(session, member)
+                await send_text(to, _t("wipe_done", lang))
+                return
+            audit(session, "wipe_cancelled", member.id, ts=int(datetime.now(UTC).timestamp()))
+            reply = _t("wipe_cancelled", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -5374,6 +5455,13 @@ async def handle_inbound(
                     skipped=len(skipped),
                 )
                 return
+
+        if re.search(r"(?<!\S)-\d", body):  # A-29: "reembolso -15" is never stored as an expense
+            reply = _t("invalid_amount_check", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            logger.info("conversation.invalid_amount", member_id=str(member.id))
+            return
 
         expense_data = await extract_expense(
             message.body or "", merchant_overrides=member_overrides, lang=member.language or "en"

@@ -53,10 +53,11 @@
     {
       "id": "C-01",
       "title": "'apagar dados' só funciona com a frase exata; o modelo inventa 'fale com o suporte'",
-      "status": "open",
+      "status": "fixed",
       "source": "Pós hard test 08/10",
       "legacy": true,
-      "severity": "media"
+      "severity": "media",
+      "fixed": "2026-10-17"
     },
     {
       "id": "C-02",
@@ -186,29 +187,32 @@
     {
       "id": "A-14",
       "title": "Consentimento sem link da política, sem /terms e /privacy abre em inglês",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Privacidade: consentimento",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-17"
     },
     {
       "id": "A-15",
       "title": "Só a frase exata apaga/exporta; 'sim' digitado não confirma o apagar",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Privacidade: apagar e exportar",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-17"
     },
     {
       "id": "A-16",
       "title": "Cancelar não invalida o botão Apagar tudo; botão antigo devolve menu de idiomas",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Privacidade: apagar",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-17"
     },
     {
       "id": "A-17",
@@ -326,11 +330,12 @@
     {
       "id": "A-29",
       "title": "'reembolso -15' pode virar despesa de €15",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Valor negativo",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-17"
     },
     {
       "id": "A-30",
