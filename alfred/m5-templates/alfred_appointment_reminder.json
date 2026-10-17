@@ -21,7 +21,7 @@
         },
         {
           "type": "BODY",
-          "text": "Hi! A reminder from Alfred: {{1}} Reply *my agenda* to see what is next.",
+          "text": "Hi! A reminder from Jofie: {{1}} Reply *my agenda* to see what is next.",
           "example": {
             "body_text": [
               [
@@ -32,7 +32,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — your AI assistant"
+          "text": "Jofie — your AI assistant"
         }
       ]
     },
@@ -46,7 +46,7 @@
         },
         {
           "type": "BODY",
-          "text": "Oi! Um lembrete do Alfred: {{1}} Responda *minha agenda* para ver os próximos compromissos.",
+          "text": "Oi! Um lembrete do Jofie: {{1}} Responda *minha agenda* para ver os próximos compromissos.",
           "example": {
             "body_text": [
               [
@@ -57,7 +57,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — seu assistente pessoal"
+          "text": "Jofie — seu assistente pessoal"
         }
       ]
     },
@@ -71,7 +71,7 @@
         },
         {
           "type": "BODY",
-          "text": "Hoi! Een herinnering van Alfred: {{1}} Antwoord *mijn agenda* om te zien wat er nog komt.",
+          "text": "Hoi! Een herinnering van Jofie: {{1}} Antwoord *mijn agenda* om te zien wat er nog komt.",
           "example": {
             "body_text": [
               [
@@ -82,7 +82,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — jouw persoonlijke assistent"
+          "text": "Jofie — jouw persoonlijke assistent"
         }
       ]
     },
@@ -96,7 +96,7 @@
         },
         {
           "type": "BODY",
-          "text": "Salut ! Un rappel d'Alfred : {{1}} Réponds *mon agenda* pour voir la suite.",
+          "text": "Salut ! Un rappel de Jofie : {{1}} Réponds *mon agenda* pour voir la suite.",
           "example": {
             "body_text": [
               [
@@ -107,7 +107,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — ton assistant personnel"
+          "text": "Jofie — ton assistant personnel"
         }
       ]
     },
@@ -121,7 +121,7 @@
         },
         {
           "type": "BODY",
-          "text": "Hallo! Eine Erinnerung von Alfred: {{1}} Antworte *meine Termine*, um die nächsten zu sehen.",
+          "text": "Hallo! Eine Erinnerung von Jofie: {{1}} Antworte *meine Termine*, um die nächsten zu sehen.",
           "example": {
             "body_text": [
               [
@@ -132,7 +132,7 @@
         },
         {
           "type": "FOOTER",
-          "text": "Alfred — dein persönlicher Assistent"
+          "text": "Jofie — dein persönlicher Assistent"
         }
       ]
     }

@@ -78,7 +78,7 @@ async def test_the_page_shows_the_form_in_the_members_language(client) -> None:
     mid, token, _ = await _new_member(lang="nl")
     resp = await client.get(f"/cadastro/{token}")
     assert resp.status_code == 200
-    assert "Account maken bij Alfred" in resp.text
+    assert "Account maken bij Jofie" in resp.text
     assert 'name="privacy"' in resp.text and 'name="health"' in resp.text
     assert resp.headers["cache-control"] == "no-store"
     assert "noindex" in resp.text

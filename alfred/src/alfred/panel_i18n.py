@@ -164,11 +164,11 @@ SHELL.update(
             "Zum dunklen Design wechseln",
         ),
         "footer_readonly": _t(
-            "Este painel só mostra o que você registrou. Para mudar algo, escreva ao Alfred no WhatsApp.",
-            "Dit paneel toont alleen wat je hebt vastgelegd. Wil je iets wijzigen, schrijf dan Alfred op WhatsApp.",
-            "This panel only shows what you recorded. To change something, write to Alfred on WhatsApp.",
-            "Ce panneau montre seulement ce que tu as enregistré. Pour changer quelque chose, écris à Alfred sur WhatsApp.",
-            "Dieses Panel zeigt nur, was du erfasst hast. Um etwas zu ändern, schreibe Alfred im WhatsApp.",
+            "Este painel só mostra o que você registrou. Para mudar algo, escreva ao Jofie no WhatsApp.",
+            "Dit paneel toont alleen wat je hebt vastgelegd. Wil je iets wijzigen, schrijf dan Jofie op WhatsApp.",
+            "This panel only shows what you recorded. To change something, write to Jofie on WhatsApp.",
+            "Ce panneau montre seulement ce que tu as enregistré. Pour changer quelque chose, écris à Jofie sur WhatsApp.",
+            "Dieses Panel zeigt nur, was du erfasst hast. Um etwas zu ändern, schreibe Jofie im WhatsApp.",
         ),
         # filters
         "filters_label": _t("Filtros", "Filters", "Filters", "Filtres", "Filter"),

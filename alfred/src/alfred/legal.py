@@ -17,8 +17,8 @@ from alfred.settings import settings
 
 router = APIRouter(tags=["legal"])
 
-POLICY_VERSION = "2.0"
-POLICY_DATE = "2026-10-08"
+POLICY_VERSION = "2.1"
+POLICY_DATE = "2026-10-16"
 CONTROLLER = "JVM Solutions, Biesbosch 179, 1181 JB Amstelveen, Nederland"
 # Public contact for data requests — set PRIVACY_CONTACT_EMAIL in the environment.
 CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
@@ -26,13 +26,13 @@ CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
 # Each policy: list of (heading, paragraphs). Plain text, escaped on render.
 POLICY: dict[str, dict] = {
     "en": {
-        "title": "Alfred — Privacy policy",
+        "title": "Jofie — Privacy policy",
         "updated": "Last updated",
         "sections": [
             (
                 "Who we are",
                 [
-                    f"Alfred is a personal assistant on WhatsApp, operated by {CONTROLLER} "
+                    f"Jofie is a personal assistant on WhatsApp, operated by {CONTROLLER} "
                     "(the data controller).",
                     f"Questions or requests about your data: {CONTACT}.",
                 ],
@@ -42,8 +42,8 @@ POLICY: dict[str, dict] = {
                 [
                     "Your WhatsApp phone number and profile name, the name and e-mail address "
                     "you give when you create your account; the messages you send "
-                    "to Alfred and Alfred's replies.",
-                    "What you ask Alfred to record: expenses and income, reminders, "
+                    "to Jofie and Jofie's replies.",
+                    "What you ask Jofie to record: expenses and income, reminders, "
                     "workouts, goals and habits, notes and tasks, trips.",
                     "If you choose to log it: health information (medication, mood, sleep, "
                     "water). This is special-category data; we only process it because you "
@@ -62,7 +62,7 @@ POLICY: dict[str, dict] = {
             (
                 "Artificial intelligence",
                 [
-                    "Alfred is an AI system, not a human (EU AI Act art. 50). Your messages "
+                    "Jofie is an AI system, not a human (EU AI Act art. 50). Your messages "
                     "are processed by an AI model from Anthropic to understand and answer "
                     "them. Anthropic does not use this data to train its models.",
                 ],
@@ -81,7 +81,7 @@ POLICY: dict[str, dict] = {
             (
                 "How long we keep it",
                 [
-                    "As long as you use Alfred. After you ask us to delete your account, "
+                    "As long as you use Jofie. After you ask us to delete your account, "
                     "your data is deleted within 30 days, except where the law requires "
                     "us to keep it longer.",
                 ],
@@ -99,7 +99,7 @@ POLICY: dict[str, dict] = {
             (
                 "Your dashboard link",
                 [
-                    "The link Alfred sends you to see your dashboard contains a personal access code. Anyone with the link can see your dashboard, so do not share it. Links expire after 7 days; ask for 'my dashboard' to get a new one.",
+                    "The link Jofie sends you to see your dashboard contains a personal access code. Anyone with the link can see your dashboard, so do not share it. Links expire after 7 days; ask for 'my dashboard' to get a new one.",
                 ],
             ),
             (
@@ -118,8 +118,8 @@ POLICY: dict[str, dict] = {
                 "More of what you can record",
                 [
                     "Debts and loans: the name you give for the other person, the amount and a note. Please record only what concerns you; that person has the same rights over their name and can ask us to erase it. Training plans and the loads you lift, trip destinations, dates, itineraries, packing lists and trip budgets, monthly budgets, fixed bills and instalments, and analysis views you save are also kept. The dashboard shows all of this to anyone who has your link.",
-                    "Questions you ask Alfred about your own numbers (for example 'how much did I spend on food in August?') are sent as text to the AI provider to understand the question; the figures themselves are calculated by us and are not sent to the AI provider.",
-                    "A log of the messages Alfred sent you, with their delivery status, is kept for about three months and then erased.",
+                    "Questions you ask Jofie about your own numbers (for example 'how much did I spend on food in August?') are sent as text to the AI provider to understand the question; the figures themselves are calculated by us and are not sent to the AI provider.",
+                    "A log of the messages Jofie sent you, with their delivery status, is kept for about three months and then erased.",
                 ],
             ),
             (
@@ -131,31 +131,31 @@ POLICY: dict[str, dict] = {
             (
                 "Sharing with your partner",
                 [
-                    "If you invite a partner and they accept, you share the household finances. Nothing is shared by default: only the expenses that you or your partner mark as shared are visible to both (amount, category, shop, date and who paid), and Alfred uses them to work out who owes whom. Everything else stays private. Either of you can leave at any time with 'leave home'; the shared marks are then removed. If one of you erases their data, the other keeps only their own entries.",
+                    "If you invite a partner and they accept, you share the household finances. Nothing is shared by default: only the expenses that you or your partner mark as shared are visible to both (amount, category, shop, date and who paid), and Jofie uses them to work out who owes whom. Everything else stays private. Either of you can leave at any time with 'leave home'; the shared marks are then removed. If one of you erases their data, the other keeps only their own entries.",
                 ],
             ),
             (
                 "Bank statements",
                 [
-                    "If you send a bank statement file (CSV), Alfred reads it only to create entries after your confirmation: date, amount, counterparty name and description of each line. Account numbers (IBAN) are masked and the file itself is not kept. The entries are stored like any other entry of yours, so they are covered by export and erasure, and 'undo import' removes the last import. Statements often contain details about other people (names of those who paid you); only send files you are entitled to use.",
+                    "If you send a bank statement file (CSV), Jofie reads it only to create entries after your confirmation: date, amount, counterparty name and description of each line. Account numbers (IBAN) are masked and the file itself is not kept. The entries are stored like any other entry of yours, so they are covered by export and erasure, and 'undo import' removes the last import. Statements often contain details about other people (names of those who paid you); only send files you are entitled to use.",
                 ],
             ),
             (
                 "Photos and PDFs of training plans and receipts",
                 [
-                    'If you send a photo or a PDF of your training plan or of a receipt, the file is sent to Anthropic (our AI provider) only to read it (the exercises, or the shop, total and date), and Alfred shows you the result to confirm before anything is saved. The file itself is not kept: only what you confirm is stored, like any other data of yours (covered by export and erasure). Only send files you are entitled to use, and leave out other people\'s details or health information. If the file is an invoice for a service, Alfred also keeps, after you confirm, the provider, a short description, the date, the amount if any and the warranty period you give or that is printed, to remind you before the dates end. An unconfirmed draft is deleted after 15 minutes. These notes are covered by export and erasure;  Contracts of your home (energy, gas, internet): if you send a photo or PDF of one, or type it, Alfred keeps after you confirm the type, provider, monthly amount and end date, to remind you 60 and 30 days before it ends. This is covered by export and erasure; Alfred does not recommend suppliers. Deadline reminders: if you turn them on ("turn on deadline reminders"), Alfred keeps only that choice and which reminders it already sent, and reminds you about the health-insurance switch, the income tax return and the quarterly BTW. You can turn them off at any time ("turn off deadline reminders"), which deletes this record. The dates come from official sources and are not advice; check them at the source.',
+                    'If you send a photo or a PDF of your training plan or of a receipt, the file is sent to Anthropic (our AI provider) only to read it (the exercises, or the shop, total and date), and Jofie shows you the result to confirm before anything is saved. The file itself is not kept: only what you confirm is stored, like any other data of yours (covered by export and erasure). Only send files you are entitled to use, and leave out other people\'s details or health information. If the file is an invoice for a service, Jofie also keeps, after you confirm, the provider, a short description, the date, the amount if any and the warranty period you give or that is printed, to remind you before the dates end. An unconfirmed draft is deleted after 15 minutes. These notes are covered by export and erasure;  Contracts of your home (energy, gas, internet): if you send a photo or PDF of one, or type it, Jofie keeps after you confirm the type, provider, monthly amount and end date, to remind you 60 and 30 days before it ends. This is covered by export and erasure; Jofie does not recommend suppliers. Deadline reminders: if you turn them on ("turn on deadline reminders"), Jofie keeps only that choice and which reminders it already sent, and reminds you about the health-insurance switch, the income tax return and the quarterly BTW. You can turn them off at any time ("turn off deadline reminders"), which deletes this record. The dates come from official sources and are not advice; check them at the source.',
                 ],
             ),
         ],
     },
     "nl": {
-        "title": "Alfred — Privacyverklaring",
+        "title": "Jofie — Privacyverklaring",
         "updated": "Laatst bijgewerkt",
         "sections": [
             (
                 "Wie wij zijn",
                 [
-                    f"Alfred is een persoonlijke assistent op WhatsApp, beheerd door "
+                    f"Jofie is een persoonlijke assistent op WhatsApp, beheerd door "
                     f"{CONTROLLER} (verwerkingsverantwoordelijke).",
                     f"Vragen of verzoeken over je gegevens: {CONTACT}.",
                 ],
@@ -164,9 +164,9 @@ POLICY: dict[str, dict] = {
                 "Welke gegevens",
                 [
                     "Je WhatsApp-nummer en profielnaam, de naam en het e-mailadres die je bij "
-                    "het aanmaken van je account opgeeft; de berichten die je naar Alfred "
-                    "stuurt en de antwoorden van Alfred.",
-                    "Wat je Alfred laat vastleggen: uitgaven en inkomsten, herinneringen, "
+                    "het aanmaken van je account opgeeft; de berichten die je naar Jofie "
+                    "stuurt en de antwoorden van Jofie.",
+                    "Wat je Jofie laat vastleggen: uitgaven en inkomsten, herinneringen, "
                     "trainingen, doelen en gewoontes, notities en taken, reizen.",
                     "Als je dat zelf kiest: gezondheidsgegevens (medicatie, stemming, slaap, "
                     "water). Dit zijn bijzondere persoonsgegevens; we verwerken ze alleen met "
@@ -186,7 +186,7 @@ POLICY: dict[str, dict] = {
             (
                 "Kunstmatige intelligentie",
                 [
-                    "Alfred is een AI-systeem, geen mens (EU AI-verordening art. 50). Je "
+                    "Jofie is een AI-systeem, geen mens (EU AI-verordening art. 50). Je "
                     "berichten worden verwerkt door een AI-model van Anthropic om ze te "
                     "begrijpen en te beantwoorden. Anthropic traint zijn modellen niet met "
                     "deze gegevens.",
@@ -205,7 +205,7 @@ POLICY: dict[str, dict] = {
             (
                 "Bewaartermijn",
                 [
-                    "Zolang je Alfred gebruikt. Nadat je vraagt je account te verwijderen, "
+                    "Zolang je Jofie gebruikt. Nadat je vraagt je account te verwijderen, "
                     "worden je gegevens binnen 30 dagen gewist, tenzij de wet langer bewaren "
                     "verplicht.",
                 ],
@@ -223,7 +223,7 @@ POLICY: dict[str, dict] = {
             (
                 "Je dashboardlink",
                 [
-                    "De link die Alfred je stuurt voor je dashboard bevat een persoonlijke toegangscode. Iedereen met de link kan je dashboard zien, deel hem dus niet. Links verlopen na 7 dagen; vraag 'mijn dashboard' voor een nieuwe.",
+                    "De link die Jofie je stuurt voor je dashboard bevat een persoonlijke toegangscode. Iedereen met de link kan je dashboard zien, deel hem dus niet. Links verlopen na 7 dagen; vraag 'mijn dashboard' voor een nieuwe.",
                 ],
             ),
             (
@@ -242,8 +242,8 @@ POLICY: dict[str, dict] = {
                 "Meer gegevens die je kunt vastleggen",
                 [
                     "Schulden en leningen: de naam die je van de andere persoon opgeeft, het bedrag en een notitie. Leg alleen vast wat jou aangaat; die persoon heeft dezelfde rechten over zijn of haar naam en kan ons vragen die te wissen. Ook bewaren we trainingsschema's en de gewichten die je tilt, reisbestemmingen, data, routes, paklijsten en reisbudgetten, maandbudgetten, vaste lasten en termijnen, en analyseweergaven die je opslaat. Het dashboard toont dit alles aan iedereen die je link heeft.",
-                    "Vragen die je Alfred stelt over je eigen cijfers (bijvoorbeeld 'hoeveel gaf ik in augustus uit aan eten?') worden als tekst naar de AI-aanbieder gestuurd om de vraag te begrijpen; de bedragen zelf rekenen wij uit en gaan niet naar de AI-aanbieder.",
-                    "Een logboek van de berichten die Alfred je stuurde, met de bezorgstatus, bewaren we ongeveer drie maanden en wissen we daarna.",
+                    "Vragen die je Jofie stelt over je eigen cijfers (bijvoorbeeld 'hoeveel gaf ik in augustus uit aan eten?') worden als tekst naar de AI-aanbieder gestuurd om de vraag te begrijpen; de bedragen zelf rekenen wij uit en gaan niet naar de AI-aanbieder.",
+                    "Een logboek van de berichten die Jofie je stuurde, met de bezorgstatus, bewaren we ongeveer drie maanden en wissen we daarna.",
                 ],
             ),
             (
@@ -255,31 +255,31 @@ POLICY: dict[str, dict] = {
             (
                 "Delen met je partner",
                 [
-                    "Als je een partner uitnodigt en die accepteert, delen jullie de huishoudfinanciën. Standaard wordt niets gedeeld: alleen de uitgaven die jij of je partner als gedeeld markeert zijn voor beiden zichtbaar (bedrag, categorie, winkel, datum en wie betaalde) en Alfred rekent daarmee uit wie wie iets schuldig is. Al het andere blijft privé. Je kunt altijd stoppen met 'verlaat het huis'; de markeringen worden dan verwijderd. Wist een van jullie de eigen gegevens, dan houdt de ander alleen de eigen boekingen.",
+                    "Als je een partner uitnodigt en die accepteert, delen jullie de huishoudfinanciën. Standaard wordt niets gedeeld: alleen de uitgaven die jij of je partner als gedeeld markeert zijn voor beiden zichtbaar (bedrag, categorie, winkel, datum en wie betaalde) en Jofie rekent daarmee uit wie wie iets schuldig is. Al het andere blijft privé. Je kunt altijd stoppen met 'verlaat het huis'; de markeringen worden dan verwijderd. Wist een van jullie de eigen gegevens, dan houdt de ander alleen de eigen boekingen.",
                 ],
             ),
             (
                 "Bankafschriften",
                 [
-                    "Als je een bankafschrift (CSV) stuurt, leest Alfred het alleen om na jouw bevestiging boekingen aan te maken: datum, bedrag, naam van de tegenpartij en omschrijving van elke regel. Rekeningnummers (IBAN) worden afgeschermd en het bestand zelf wordt niet bewaard. De boekingen worden opgeslagen zoals al je andere boekingen, dus export en verwijdering gelden ook voor hen, en 'import ongedaan maken' verwijdert de laatste import. Afschriften bevatten vaak gegevens van anderen (namen van wie jou betaalde); stuur alleen bestanden die je mag gebruiken.",
+                    "Als je een bankafschrift (CSV) stuurt, leest Jofie het alleen om na jouw bevestiging boekingen aan te maken: datum, bedrag, naam van de tegenpartij en omschrijving van elke regel. Rekeningnummers (IBAN) worden afgeschermd en het bestand zelf wordt niet bewaard. De boekingen worden opgeslagen zoals al je andere boekingen, dus export en verwijdering gelden ook voor hen, en 'import ongedaan maken' verwijdert de laatste import. Afschriften bevatten vaak gegevens van anderen (namen van wie jou betaalde); stuur alleen bestanden die je mag gebruiken.",
                 ],
             ),
             (
                 "Foto's en pdf's van trainingsschema's en bonnen",
                 [
-                    'Als je een foto of pdf van je trainingsschema of van een bon stuurt, wordt het bestand alleen naar Anthropic (onze AI-leverancier) gestuurd om het te lezen (de oefeningen, of winkel, totaal en datum), en toont Alfred je het resultaat ter bevestiging voordat iets wordt opgeslagen. Het bestand zelf wordt niet bewaard: alleen wat je bevestigt blijft staan, zoals al je andere gegevens (ze vallen onder export en verwijdering). Stuur alleen bestanden die je mag gebruiken en laat gegevens van anderen of over je gezondheid erbuiten. Is het bestand een factuur voor een dienst, dan bewaart Alfred na je bevestiging ook de leverancier, een korte omschrijving, de datum, het bedrag (indien aanwezig) en de garantieperiode die je opgeeft of die erop staat, om je te waarschuwen voordat de data aflopen. Een niet-bevestigd concept wordt na 15 minuten verwijderd. Deze notities vallen onder export en verwijdering;  Contracten van je huis (energie, gas, internet): stuur je een foto of pdf, of typ je het, dan bewaart Alfred na je bevestiging het type, de leverancier, het maandbedrag en de einddatum, om je 60 en 30 dagen voor het einde te waarschuwen. Dit valt onder export en verwijdering; Alfred adviseert geen leveranciers. Deadline-herinneringen: zet je ze aan ("zet herinneringen deadlines aan"), dan bewaart Alfred alleen die keuze en welke herinneringen al zijn verstuurd, en herinnert hij je aan het overstappen van zorgverzekering, de belastingaangifte en de kwartaal-btw. Je kunt ze altijd uitzetten ("zet herinneringen deadlines uit"), waarna dit gegeven wordt verwijderd. De data komen uit officiële bronnen en zijn geen advies; controleer ze bij de bron.',
+                    'Als je een foto of pdf van je trainingsschema of van een bon stuurt, wordt het bestand alleen naar Anthropic (onze AI-leverancier) gestuurd om het te lezen (de oefeningen, of winkel, totaal en datum), en toont Jofie je het resultaat ter bevestiging voordat iets wordt opgeslagen. Het bestand zelf wordt niet bewaard: alleen wat je bevestigt blijft staan, zoals al je andere gegevens (ze vallen onder export en verwijdering). Stuur alleen bestanden die je mag gebruiken en laat gegevens van anderen of over je gezondheid erbuiten. Is het bestand een factuur voor een dienst, dan bewaart Jofie na je bevestiging ook de leverancier, een korte omschrijving, de datum, het bedrag (indien aanwezig) en de garantieperiode die je opgeeft of die erop staat, om je te waarschuwen voordat de data aflopen. Een niet-bevestigd concept wordt na 15 minuten verwijderd. Deze notities vallen onder export en verwijdering;  Contracten van je huis (energie, gas, internet): stuur je een foto of pdf, of typ je het, dan bewaart Jofie na je bevestiging het type, de leverancier, het maandbedrag en de einddatum, om je 60 en 30 dagen voor het einde te waarschuwen. Dit valt onder export en verwijdering; Jofie adviseert geen leveranciers. Deadline-herinneringen: zet je ze aan ("zet herinneringen deadlines aan"), dan bewaart Jofie alleen die keuze en welke herinneringen al zijn verstuurd, en herinnert hij je aan het overstappen van zorgverzekering, de belastingaangifte en de kwartaal-btw. Je kunt ze altijd uitzetten ("zet herinneringen deadlines uit"), waarna dit gegeven wordt verwijderd. De data komen uit officiële bronnen en zijn geen advies; controleer ze bij de bron.',
                 ],
             ),
         ],
     },
     "pt": {
-        "title": "Alfred — Política de privacidade",
+        "title": "Jofie — Política de privacidade",
         "updated": "Última atualização",
         "sections": [
             (
                 "Quem somos",
                 [
-                    f"O Alfred é um assistente pessoal no WhatsApp, operado por {CONTROLLER} "
+                    f"O Jofie é um assistente pessoal no WhatsApp, operado por {CONTROLLER} "
                     "(responsável pelo tratamento).",
                     f"Dúvidas ou pedidos sobre os seus dados: {CONTACT}.",
                 ],
@@ -289,8 +289,8 @@ POLICY: dict[str, dict] = {
                 [
                     "Seu número de WhatsApp e nome de perfil, o nome e o e-mail que você informa "
                     "ao criar a conta; as mensagens que você envia ao "
-                    "Alfred e as respostas do Alfred.",
-                    "O que você pede ao Alfred para registrar: despesas e receitas, lembretes, "
+                    "Jofie e as respostas do Jofie.",
+                    "O que você pede ao Jofie para registrar: despesas e receitas, lembretes, "
                     "treinos, metas e hábitos, notas e tarefas, viagens.",
                     "Se você escolher registrá-los: dados de saúde (medicação, humor, sono, "
                     "água). São dados de categoria especial; só os tratamos com o seu "
@@ -309,7 +309,7 @@ POLICY: dict[str, dict] = {
             (
                 "Inteligência artificial",
                 [
-                    "O Alfred é um sistema de IA, não uma pessoa (Regulamento Europeu da IA, "
+                    "O Jofie é um sistema de IA, não uma pessoa (Regulamento Europeu da IA, "
                     "art. 50.º). Suas mensagens são processadas por um modelo de IA da "
                     "Anthropic para as compreender e responder. A Anthropic não usa estes "
                     "dados para treinar os seus modelos.",
@@ -329,7 +329,7 @@ POLICY: dict[str, dict] = {
             (
                 "Durante quanto tempo",
                 [
-                    "Enquanto você usar o Alfred. Depois de pedir a exclusão da conta, os "
+                    "Enquanto você usar o Jofie. Depois de pedir a exclusão da conta, os "
                     "seus dados são apagados em 30 dias, salvo obrigação legal de os manter.",
                 ],
             ),
@@ -346,7 +346,7 @@ POLICY: dict[str, dict] = {
             (
                 "Seu link do painel",
                 [
-                    "O link que o Alfred envia para você ver o painel contém um código pessoal de acesso. Quem tiver o link vê o seu painel, então não compartilhe. Os links expiram em 7 dias; peça 'meu dashboard' para receber um novo.",
+                    "O link que o Jofie envia para você ver o painel contém um código pessoal de acesso. Quem tiver o link vê o seu painel, então não compartilhe. Os links expiram em 7 dias; peça 'meu dashboard' para receber um novo.",
                 ],
             ),
             (
@@ -365,8 +365,8 @@ POLICY: dict[str, dict] = {
                 "Mais dados que você pode registrar",
                 [
                     "Dívidas e empréstimos: o nome que você informa da outra pessoa, o valor e uma nota. Registre apenas o que diz respeito a você; essa pessoa tem os mesmos direitos sobre o próprio nome e pode pedir que o apaguemos. Também guardamos planos de treino e as cargas que você usa, destinos, datas, roteiros, listas de mala e orçamentos de viagem, orçamentos mensais, contas fixas e parcelas, e as visões de análise que você salva. O painel mostra tudo isso a quem tiver o seu link.",
-                    "As perguntas que você faz ao Alfred sobre os seus próprios números (por exemplo, 'quanto gastei com comida em agosto?') são enviadas como texto ao provedor de IA para entender a pergunta; os valores em si são calculados por nós e não vão para o provedor de IA.",
-                    "Um registro das mensagens que o Alfred enviou a você, com o estado de entrega, é guardado por cerca de três meses e depois apagado.",
+                    "As perguntas que você faz ao Jofie sobre os seus próprios números (por exemplo, 'quanto gastei com comida em agosto?') são enviadas como texto ao provedor de IA para entender a pergunta; os valores em si são calculados por nós e não vão para o provedor de IA.",
+                    "Um registro das mensagens que o Jofie enviou a você, com o estado de entrega, é guardado por cerca de três meses e depois apagado.",
                 ],
             ),
             (
@@ -378,19 +378,19 @@ POLICY: dict[str, dict] = {
             (
                 "Compartilhar com seu par",
                 [
-                    "Se você convidar uma pessoa e ela aceitar, vocês passam a dividir o financeiro da casa. Nada é compartilhado por padrão: só os gastos que você ou a outra pessoa marcarem como da casa ficam visíveis para os dois (valor, categoria, loja, data e quem pagou), e o Alfred usa isso para calcular quem deve a quem. Todo o resto continua privado. Qualquer um pode sair a qualquer momento com 'sair da casa'; as marcas de compartilhamento são então removidas. Se um dos dois apagar os próprios dados, o outro fica só com os próprios lançamentos.",
+                    "Se você convidar uma pessoa e ela aceitar, vocês passam a dividir o financeiro da casa. Nada é compartilhado por padrão: só os gastos que você ou a outra pessoa marcarem como da casa ficam visíveis para os dois (valor, categoria, loja, data e quem pagou), e o Jofie usa isso para calcular quem deve a quem. Todo o resto continua privado. Qualquer um pode sair a qualquer momento com 'sair da casa'; as marcas de compartilhamento são então removidas. Se um dos dois apagar os próprios dados, o outro fica só com os próprios lançamentos.",
                 ],
             ),
             (
                 "Extratos bancários",
                 [
-                    "Se você enviar um extrato bancário (CSV), o Alfred o lê apenas para criar lançamentos depois da sua confirmação: data, valor, nome da outra parte e descrição de cada linha. Números de conta (IBAN) são ocultados e o arquivo em si não é guardado. Os lançamentos ficam armazenados como todos os seus outros, então a exportação e a exclusão também os cobrem, e 'desfazer importação' remove a última importação. Extratos costumam ter dados de outras pessoas (nomes de quem pagou você); envie só arquivos que você possa usar.",
+                    "Se você enviar um extrato bancário (CSV), o Jofie o lê apenas para criar lançamentos depois da sua confirmação: data, valor, nome da outra parte e descrição de cada linha. Números de conta (IBAN) são ocultados e o arquivo em si não é guardado. Os lançamentos ficam armazenados como todos os seus outros, então a exportação e a exclusão também os cobrem, e 'desfazer importação' remove a última importação. Extratos costumam ter dados de outras pessoas (nomes de quem pagou você); envie só arquivos que você possa usar.",
                 ],
             ),
             (
                 "Fotos e PDFs de planos de treino e recibos",
                 [
-                    'Se você enviar uma foto ou um PDF do seu plano de treino ou de um recibo, o arquivo é enviado à Anthropic (nossa provedora de IA) apenas para ser lido (os exercícios, ou a loja, o total e a data), e Alfred mostra o resultado para você confirmar antes de guardar. O arquivo em si não é guardado: fica só o que você confirmar, como qualquer outro dado seu (incluídos na exportação e na exclusão). Envie apenas arquivos que você pode usar e evite incluir dados de outras pessoas ou de saúde. Se o arquivo for uma nota de serviço, o Alfred também guarda, depois da sua confirmação, o prestador, uma descrição curta, a data, o valor (se houver) e o prazo de garantia que você informar ou que estiver impresso, para avisar antes de as datas acabarem. Um rascunho não confirmado é apagado após 15 minutos. Essas anotações entram na exportação e na exclusão;  Contratos da casa (energia, gás, internet): se você enviar uma foto ou PDF, ou escrever, o Alfred guarda, depois da sua confirmação, o tipo, o fornecedor, o valor mensal e a data de fim, para avisar 60 e 30 dias antes. Isso entra na exportação e na exclusão; o Alfred não recomenda fornecedores. Avisos de prazos: se você ligar ("ligar avisos de prazos"), o Alfred guarda só essa escolha e quais avisos já enviou, e avisa sobre a troca de seguro-saúde, a declaração de imposto e o BTW trimestral. Você pode desligar quando quiser ("desligar avisos de prazos"), o que apaga esse registro. As datas vêm de fontes oficiais e não são aconselhamento; confira na fonte.',
+                    'Se você enviar uma foto ou um PDF do seu plano de treino ou de um recibo, o arquivo é enviado à Anthropic (nossa provedora de IA) apenas para ser lido (os exercícios, ou a loja, o total e a data), e Jofie mostra o resultado para você confirmar antes de guardar. O arquivo em si não é guardado: fica só o que você confirmar, como qualquer outro dado seu (incluídos na exportação e na exclusão). Envie apenas arquivos que você pode usar e evite incluir dados de outras pessoas ou de saúde. Se o arquivo for uma nota de serviço, o Jofie também guarda, depois da sua confirmação, o prestador, uma descrição curta, a data, o valor (se houver) e o prazo de garantia que você informar ou que estiver impresso, para avisar antes de as datas acabarem. Um rascunho não confirmado é apagado após 15 minutos. Essas anotações entram na exportação e na exclusão;  Contratos da casa (energia, gás, internet): se você enviar uma foto ou PDF, ou escrever, o Jofie guarda, depois da sua confirmação, o tipo, o fornecedor, o valor mensal e a data de fim, para avisar 60 e 30 dias antes. Isso entra na exportação e na exclusão; o Jofie não recomenda fornecedores. Avisos de prazos: se você ligar ("ligar avisos de prazos"), o Jofie guarda só essa escolha e quais avisos já enviou, e avisa sobre a troca de seguro-saúde, a declaração de imposto e o BTW trimestral. Você pode desligar quando quiser ("desligar avisos de prazos"), o que apaga esse registro. As datas vêm de fontes oficiais e não são aconselhamento; confira na fonte.',
                 ],
             ),
         ],

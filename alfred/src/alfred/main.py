@@ -1,4 +1,4 @@
-"""Alfred FastAPI application entry point."""
+"""Jofie FastAPI application entry point."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
 
 
 app = FastAPI(
-    title="Alfred",
+    title="Jofie",
     description="Assistente pessoal WhatsApp — Dutch market",
     version="0.1.0",
     lifespan=lifespan,

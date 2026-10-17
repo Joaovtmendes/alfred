@@ -3,7 +3,7 @@
 
 The invite and the page start in English; the person chooses the language on the page.
 
-A number that writes to Alfred for the first time gets one message with a button. The button opens
+A number that writes to Jofie for the first time gets one message with a button. The button opens
 ``/cadastro/{token}``: one screen where the person picks the language, says what to call them and
 accepts the privacy notice (and, separately and optionally, health data and deadline reminders).
 Only then does the account become active and the chat starts. Nothing is stored about the person
@@ -64,11 +64,11 @@ WAITING_STATES = ("pending", "pending_language", "pending_response", "pending_si
 
 STRINGS: dict[str, dict[str, str]] = {
     "signup_invite": {
-        "pt": "Oi! Eu sou o *Alfred*, seu assistente pessoal de IA no WhatsApp. Para começar, crie a sua conta clicando no botão abaixo.",
-        "nl": "Hoi! Ik ben *Alfred*, je persoonlijke AI-assistent op WhatsApp. Maak om te beginnen je account aan via de knop hieronder.",
-        "en": "Hi! I'm *Alfred*, your personal AI assistant on WhatsApp. To start, please create your account by clicking the button below.",
-        "fr": "Salut ! Je suis *Alfred*, ton assistant personnel IA sur WhatsApp. Pour commencer, crée ton compte en cliquant sur le bouton ci-dessous.",
-        "de": "Hallo! Ich bin *Alfred*, dein persönlicher KI-Assistent auf WhatsApp. Lege zum Start dein Konto an, indem du unten auf den Button tippst.",
+        "pt": "Oi! Eu sou o *Jofie*, seu assistente pessoal de IA no WhatsApp. Para começar, crie a sua conta clicando no botão abaixo.",
+        "nl": "Hoi! Ik ben *Jofie*, je persoonlijke AI-assistent op WhatsApp. Maak om te beginnen je account aan via de knop hieronder.",
+        "en": "Hi! I'm *Jofie*, your personal AI assistant on WhatsApp. To start, please create your account by clicking the button below.",
+        "fr": "Salut ! Je suis *Jofie*, ton assistant personnel IA sur WhatsApp. Pour commencer, crée ton compte en cliquant sur le bouton ci-dessous.",
+        "de": "Hallo! Ich bin *Jofie*, dein persönlicher KI-Assistent auf WhatsApp. Lege zum Start dein Konto an, indem du unten auf den Button tippst.",
     },
     "signup_button": {
         "pt": "Criar minha conta",
@@ -111,15 +111,15 @@ STRINGS: dict[str, dict[str, str]] = {
 
 PAGE: dict[str, dict[str, str]] = {
     "pt": {
-        "title": "Criar conta no Alfred",
+        "title": "Criar conta no Jofie",
         "h1": "Seu assistente pessoal no WhatsApp",
         "lead": "Anote gastos, compromissos, hábitos e treinos conversando. Crie a sua conta em um minuto.",
         "feat": "Dinheiro|Agenda|Hábitos e treino|Casa e prazos",
         "language": "Idioma",
         "name": "Como devo chamar você?",
         "name_hint": "Até 40 caracteres.",
-        "privacy": 'Li o <a href="{url}">aviso de privacidade</a> e entendo que o Alfred é uma inteligência artificial e pode errar. (obrigatório)',
-        "health": "Autorizo o Alfred a guardar dados de saúde que eu contar (sono, humor, remédio, água). Posso retirar quando quiser. (opcional)",
+        "privacy": 'Li o <a href="{url}">aviso de privacidade</a> e entendo que o Jofie é uma inteligência artificial e pode errar. (obrigatório)',
+        "health": "Autorizo o Jofie a guardar dados de saúde que eu contar (sono, humor, remédio, água). Posso retirar quando quiser. (opcional)",
         "deadlines": "Quero avisos dos prazos holandeses (seguro-saúde, imposto, BTW). (opcional)",
         "submit": "Criar conta e voltar ao WhatsApp",
         "note": "Sem senha: a conta fica ligada ao número de WhatsApp que pediu este link.",
@@ -135,15 +135,15 @@ PAGE: dict[str, dict[str, str]] = {
         "gone_text": "Ele expirou ou já foi usado. Mande oi de novo no WhatsApp para receber um novo.",
     },
     "nl": {
-        "title": "Account maken bij Alfred",
+        "title": "Account maken bij Jofie",
         "h1": "Je persoonlijke assistent op WhatsApp",
         "lead": "Noteer uitgaven, afspraken, gewoontes en trainingen door te praten. Maak je account in een minuut.",
         "feat": "Geld|Agenda|Gewoontes en training|Huis en deadlines",
         "language": "Taal",
         "name": "Hoe mag ik je noemen?",
         "name_hint": "Maximaal 40 tekens.",
-        "privacy": 'Ik heb de <a href="{url}">privacyverklaring</a> gelezen en begrijp dat Alfred een kunstmatige intelligentie is die fouten kan maken. (verplicht)',
-        "health": "Ik geef Alfred toestemming om gezondheidsgegevens te bewaren die ik vertel (slaap, stemming, medicijn, water). Ik kan dit altijd intrekken. (optioneel)",
+        "privacy": 'Ik heb de <a href="{url}">privacyverklaring</a> gelezen en begrijp dat Jofie een kunstmatige intelligentie is die fouten kan maken. (verplicht)',
+        "health": "Ik geef Jofie toestemming om gezondheidsgegevens te bewaren die ik vertel (slaap, stemming, medicijn, water). Ik kan dit altijd intrekken. (optioneel)",
         "deadlines": "Ik wil herinneringen aan Nederlandse deadlines (zorgverzekering, belasting, btw). (optioneel)",
         "submit": "Account maken en terug naar WhatsApp",
         "note": "Geen wachtwoord: het account hoort bij het WhatsApp-nummer dat deze link heeft aangevraagd.",
@@ -159,15 +159,15 @@ PAGE: dict[str, dict[str, str]] = {
         "gone_text": "Hij is verlopen of al gebruikt. Stuur opnieuw hallo op WhatsApp voor een nieuwe.",
     },
     "en": {
-        "title": "Create your Alfred account",
+        "title": "Create your Jofie account",
         "h1": "Your personal assistant on WhatsApp",
         "lead": "Log spending, appointments, habits and workouts just by chatting. Create your account in a minute.",
         "feat": "Money|Calendar|Habits and training|Home and deadlines",
         "language": "Language",
         "name": "What should I call you?",
         "name_hint": "Up to 40 characters.",
-        "privacy": 'I have read the <a href="{url}">privacy notice</a> and understand that Alfred is an artificial intelligence and can make mistakes. (required)',
-        "health": "I allow Alfred to keep the health data I share (sleep, mood, medication, water). I can withdraw at any time. (optional)",
+        "privacy": 'I have read the <a href="{url}">privacy notice</a> and understand that Jofie is an artificial intelligence and can make mistakes. (required)',
+        "health": "I allow Jofie to keep the health data I share (sleep, mood, medication, water). I can withdraw at any time. (optional)",
         "deadlines": "I want reminders for Dutch deadlines (health insurance, income tax, VAT). (optional)",
         "submit": "Create account and go back to WhatsApp",
         "note": "No password: the account is tied to the WhatsApp number that asked for this link.",
@@ -183,15 +183,15 @@ PAGE: dict[str, dict[str, str]] = {
         "gone_text": "It expired or was already used. Say hi again on WhatsApp to get a new one.",
     },
     "fr": {
-        "title": "Créer un compte Alfred",
+        "title": "Créer un compte Jofie",
         "h1": "Ton assistant personnel sur WhatsApp",
         "lead": "Note tes dépenses, rendez-vous, habitudes et entraînements en discutant. Crée ton compte en une minute.",
         "feat": "Argent|Agenda|Habitudes et sport|Maison et échéances",
         "language": "Langue",
         "name": "Comment dois-je t'appeler ?",
         "name_hint": "40 caractères au maximum.",
-        "privacy": "J'ai lu l'<a href=\"{url}\">avis de confidentialité</a> et je comprends qu'Alfred est une intelligence artificielle qui peut se tromper. (obligatoire)",
-        "health": "J'autorise Alfred à garder les données de santé que je donne (sommeil, humeur, médicament, eau). Je peux retirer cet accord à tout moment. (facultatif)",
+        "privacy": "J'ai lu l'<a href=\"{url}\">avis de confidentialité</a> et je comprends que Jofie est une intelligence artificielle qui peut se tromper. (obligatoire)",
+        "health": "J'autorise Jofie à garder les données de santé que je donne (sommeil, humeur, médicament, eau). Je peux retirer cet accord à tout moment. (facultatif)",
         "deadlines": "Je veux des rappels des échéances néerlandaises (assurance maladie, impôts, TVA). (facultatif)",
         "submit": "Créer le compte et retourner sur WhatsApp",
         "note": "Pas de mot de passe : le compte est lié au numéro WhatsApp qui a demandé ce lien.",
@@ -207,15 +207,15 @@ PAGE: dict[str, dict[str, str]] = {
         "gone_text": "Il a expiré ou a déjà été utilisé. Dis à nouveau salut sur WhatsApp pour en recevoir un nouveau.",
     },
     "de": {
-        "title": "Alfred-Konto anlegen",
+        "title": "Jofie-Konto anlegen",
         "h1": "Dein persönlicher Assistent auf WhatsApp",
         "lead": "Erfasse Ausgaben, Termine, Gewohnheiten und Training einfach im Chat. Lege dein Konto in einer Minute an.",
         "feat": "Geld|Kalender|Gewohnheiten und Training|Haus und Fristen",
         "language": "Sprache",
         "name": "Wie soll ich dich nennen?",
         "name_hint": "Höchstens 40 Zeichen.",
-        "privacy": 'Ich habe die <a href="{url}">Datenschutzerklärung</a> gelesen und verstehe, dass Alfred eine künstliche Intelligenz ist und Fehler machen kann. (erforderlich)',
-        "health": "Ich erlaube Alfred, die Gesundheitsdaten zu speichern, die ich mitteile (Schlaf, Stimmung, Medikament, Wasser). Ich kann das jederzeit widerrufen. (optional)",
+        "privacy": 'Ich habe die <a href="{url}">Datenschutzerklärung</a> gelesen und verstehe, dass Jofie eine künstliche Intelligenz ist und Fehler machen kann. (erforderlich)',
+        "health": "Ich erlaube Jofie, die Gesundheitsdaten zu speichern, die ich mitteile (Schlaf, Stimmung, Medikament, Wasser). Ich kann das jederzeit widerrufen. (optional)",
         "deadlines": "Ich möchte Erinnerungen an niederländische Fristen (Krankenversicherung, Steuer, MwSt.). (optional)",
         "submit": "Konto anlegen und zurück zu WhatsApp",
         "note": "Kein Passwort: Das Konto gehört zur WhatsApp-Nummer, die diesen Link angefordert hat.",
@@ -234,13 +234,13 @@ PAGE: dict[str, dict[str, str]] = {
 
 _NEW: dict[str, dict] = {
     "en": {
-        "h1": "Alfred, your personal assistant on WhatsApp",
+        "h1": "Jofie, your personal assistant on WhatsApp",
         "form_h": "Create your account",
         "email": "Email",
         "email_hint": "Used only for your account.",
         "phone": "WhatsApp number",
         "phone_hint": "The number that opened this link. It can't be changed here.",
-        "lang_hint": "Alfred will talk to you in this language.",
+        "lang_hint": "Jofie will talk to you in this language.",
         "err_email": "Enter a valid email address.",
         "cards": [
             ("Financial", "“Uber 12,50”"),
@@ -257,13 +257,13 @@ _NEW: dict[str, dict] = {
         ],
     },
     "pt": {
-        "h1": "Alfred, seu assistente pessoal no WhatsApp",
+        "h1": "Jofie, seu assistente pessoal no WhatsApp",
         "form_h": "Crie a sua conta",
         "email": "E-mail",
         "email_hint": "Usado só para a sua conta.",
         "phone": "Número de WhatsApp",
         "phone_hint": "O número que abriu este link. Não dá para mudar aqui.",
-        "lang_hint": "O Alfred vai falar com você neste idioma.",
+        "lang_hint": "O Jofie vai falar com você neste idioma.",
         "err_email": "Escreva um e-mail válido.",
         "cards": [
             ("Financeiro", "“Uber 12,50”"),
@@ -280,13 +280,13 @@ _NEW: dict[str, dict] = {
         ],
     },
     "nl": {
-        "h1": "Alfred, je persoonlijke assistent op WhatsApp",
+        "h1": "Jofie, je persoonlijke assistent op WhatsApp",
         "form_h": "Maak je account aan",
         "email": "E-mail",
         "email_hint": "Alleen gebruikt voor je account.",
         "phone": "WhatsApp-nummer",
         "phone_hint": "Het nummer dat deze link opende. Het kan hier niet worden gewijzigd.",
-        "lang_hint": "Alfred praat met je in deze taal.",
+        "lang_hint": "Jofie praat met je in deze taal.",
         "err_email": "Vul een geldig e-mailadres in.",
         "cards": [
             ("Financieel", "“Uber 12,50”"),
@@ -303,13 +303,13 @@ _NEW: dict[str, dict] = {
         ],
     },
     "fr": {
-        "h1": "Alfred, ton assistant personnel sur WhatsApp",
+        "h1": "Jofie, ton assistant personnel sur WhatsApp",
         "form_h": "Crée ton compte",
         "email": "E-mail",
         "email_hint": "Utilisé uniquement pour ton compte.",
         "phone": "Numéro WhatsApp",
         "phone_hint": "Le numéro qui a ouvert ce lien. Il ne peut pas être changé ici.",
-        "lang_hint": "Alfred te parlera dans cette langue.",
+        "lang_hint": "Jofie te parlera dans cette langue.",
         "err_email": "Saisis une adresse e-mail valide.",
         "cards": [
             ("Finances", "« Uber 12,50 »"),
@@ -326,13 +326,13 @@ _NEW: dict[str, dict] = {
         ],
     },
     "de": {
-        "h1": "Alfred, dein persönlicher Assistent auf WhatsApp",
+        "h1": "Jofie, dein persönlicher Assistent auf WhatsApp",
         "form_h": "Lege dein Konto an",
         "email": "E-Mail",
         "email_hint": "Nur für dein Konto verwendet.",
         "phone": "WhatsApp-Nummer",
         "phone_hint": "Die Nummer, die diesen Link geöffnet hat. Sie kann hier nicht geändert werden.",
-        "lang_hint": "Alfred spricht in dieser Sprache mit dir.",
+        "lang_hint": "Jofie spricht in dieser Sprache mit dir.",
         "err_email": "Gib eine gültige E-Mail-Adresse ein.",
         "cards": [
             ("Finanzen", "„Uber 12,50“"),
@@ -353,28 +353,33 @@ for _l, _extra in _NEW.items():
     PAGE[_l].update(_extra)
 
 _CSS = """
-:root{color-scheme:light;--bg:#f3f5f8;--card:#fff;--fg:#101828;--muted:#556070;--line:#e1e5eb;--field:#c7ced9;
---accent:#1d4ed8;--tint:#e6edff;--on:#fff;--err:#b3203a;--chat:#e9efe3;--out:#d9fdd3;--link:#027eb5}
+@font-face{font-family:"Figtree";font-weight:400;font-display:swap;src:url("/panel-assets/figtree-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"Figtree";font-weight:600;font-display:swap;src:url("/panel-assets/figtree-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Fredoka";font-weight:500;font-display:swap;src:url("/panel-assets/fredoka-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"Fredoka";font-weight:600;font-display:swap;src:url("/panel-assets/fredoka-latin-600-normal.woff2") format("woff2")}
+:root{color-scheme:light;--bg:#fff9f8;--card:#fff;--fg:#3b2547;--muted:#6e5a79;--line:#e9dce3;--field:#c9b6c2;
+--accent:#c23a63;--tint:#ffeef1;--err:#b4233c;--chat:#ffeef1;--out:#bfebd9;--link:#c23a63}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 Figtree,system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:30rem;margin:0 auto;padding:1rem 1rem 2rem;display:flex;flex-direction:column;gap:1.25rem}
-.brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.25rem}
-.logo{width:2rem;height:2rem;border-radius:.55rem;background:var(--accent);color:var(--on);display:grid;place-items:center}
-h1{font-size:2rem;line-height:1.12;margin:0;text-wrap:balance}
+.brand{display:flex;align-items:center;gap:.6rem;font-family:Fredoka,system-ui,sans-serif;font-weight:600;font-size:1.6rem;color:var(--fg)}
+.wordmark{height:2.5rem;width:auto;display:block;overflow:visible}
+h1,h2{font-family:Fredoka,system-ui,sans-serif;font-weight:600}
+h1{font-size:2.1rem;line-height:1.12;margin:0;text-wrap:balance}
 h2{font-size:1.4rem;margin:0}
 form{background:var(--card);border:1px solid var(--line);border-radius:1.1rem;padding:1.25rem 1rem;display:flex;flex-direction:column;gap:1rem}
 .f{display:flex;flex-direction:column;gap:.35rem}
 label.l{font-weight:600}
 .hint{color:var(--muted);font-size:.85rem;margin:0}
 input[type=text],input[type=email],select{width:100%;height:3rem;font:inherit;padding:0 .85rem;border:1px solid var(--field);border-radius:.6rem;background:var(--card);color:var(--fg)}
-input[readonly]{background:#edf0f5;color:var(--muted)}
+input[readonly]{background:#f6eef2;color:var(--muted)}
 hr{border:0;border-top:1px solid var(--line);margin:0}
 .check{display:flex;gap:.7rem;align-items:flex-start;font-size:.9rem}
 .check input{margin-top:.2rem;width:1.35rem;height:1.35rem;flex:none;accent-color:var(--accent)}
 .check a{color:var(--accent)}
 .req{color:var(--err);font-weight:600}
 .opt{color:var(--muted)}
-button,.btn{display:block;width:100%;text-align:center;font:inherit;font-weight:600;padding:.9rem 1rem;border:0;border-radius:.75rem;background:var(--accent);color:var(--on);text-decoration:none;cursor:pointer}
+button,.btn{display:block;width:100%;text-align:center;font:inherit;font-weight:600;padding:.9rem 1rem;border:0;border-radius:999px;background:linear-gradient(90deg,#ffb49b,#ff7fa2);color:#3b2547;text-decoration:none;cursor:pointer}
 .err{color:var(--err);margin:0;font-weight:600}
 .note{color:var(--muted);font-size:.85rem;margin:0;text-align:center}
 .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}
@@ -382,7 +387,7 @@ button,.btn{display:block;width:100%;text-align:center;font:inherit;font-weight:
 .ic{width:2.25rem;height:2.25rem;border-radius:.6rem;background:var(--tint);color:var(--accent);display:grid;place-items:center}
 .card b{font-weight:600}
 .card span{font-size:.85rem;color:var(--muted)}
-.chat{background:var(--chat);border-radius:.9rem;padding:.9rem;display:flex;flex-direction:column;gap:.5rem;font-size:.9rem;color:#111b21}
+.chat{background:var(--chat);border-radius:.9rem;padding:.9rem;display:flex;flex-direction:column;gap:.5rem;font-size:.9rem;color:var(--fg)}
 .chat div{padding:.5rem .75rem;border-radius:.75rem;max-width:92%;white-space:pre-line;background:#fff}
 .chat .me{align-self:flex-end;background:var(--out)}
 .chat small{color:var(--muted)}
@@ -407,12 +412,16 @@ def _norm_lang(lang: str | None) -> str:
     return lang if lang in LANGS else "en"
 
 
+ICON_LINK = """<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23FFC9AE'/%3E%3Cstop offset='.5' stop-color='%23FF9BAE'/%3E%3Cstop offset='1' stop-color='%23F0709A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='%232F1D3B'/%3E%3Crect x='15' y='34' width='9' height='16' rx='4.5' fill='url(%23a)'/%3E%3Crect x='28' y='24' width='9' height='26' rx='4.5' fill='url(%23a)'/%3E%3Crect x='41' y='14' width='9' height='36' rx='4.5' fill='url(%23a)'/%3E%3Ccircle cx='19.5' cy='22' r='4.5' fill='%23FFF4EE'/%3E%3C/svg%3E">"""
+
+
 def _page(lang: str, title: str, body: str, status: int = 200) -> HTMLResponse:
     html = (
         f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         '<meta name="color-scheme" content="light">'
         '<meta name="robots" content="noindex,nofollow">'
+        f"{ICON_LINK}"
         f"<title>{escape(title)}</title><style>{_CSS}</style></head><body><main>{body}</main></body></html>"
     )
     return HTMLResponse(html, status_code=status)
@@ -434,8 +443,11 @@ def _mask(phone: str) -> str:
     return f"+{d[:2]} {d[2:3]}•• ••• ••{d[-2:]}" if len(d) >= 6 else "+•• ••• •••"
 
 
+WORDMARK_SVG = """<svg class="wordmark" viewBox="-24.0 -6.0 282.5 132.0" role="img" aria-label="Jofie"><defs><linearGradient id="gw" x1="0" y1="0" x2="1" y2="0.35"><stop offset="0" stop-color="#FFB49B"/><stop offset="1" stop-color="#FF7FA2"/></linearGradient></defs><path d="M-5.16 119.28Q-7.32 119.28 -9.36 118.86Q-11.40 118.44 -12.66 116.58Q-13.92 114.72 -13.92 110.40Q-13.92 106.32 -12.66 104.46Q-11.40 102.60 -9.30 102.12Q-7.20 101.64 -4.92 101.64Q-3.36 101.64 -1.56 101.28Q0.24 100.92 1.80 99.78Q3.36 98.64 4.38 96.48Q5.40 94.32 5.40 90.84V42.72Q5.40 40.68 5.82 38.76Q6.24 36.84 8.16 35.64Q10.08 34.44 14.28 34.44Q18.60 34.44 20.46 35.76Q22.32 37.08 22.68 39.12Q23.04 41.16 23.04 43.44V91.32Q23.04 98.28 20.58 103.50Q18.12 108.72 14.04 112.26Q9.96 115.80 4.98 117.54Q0.00 119.28 -5.16 119.28Z M61.44 95.64Q55.80 95.64 50.22 93.42Q44.64 91.20 40.08 87.12Q35.52 83.04 32.88 77.34Q30.24 71.64 30.24 64.68Q30.24 58.20 32.64 52.62Q35.04 47.04 39.36 42.72Q43.68 38.40 49.26 35.94Q54.84 33.48 61.20 33.48Q69.84 33.48 76.86 37.62Q83.88 41.76 88.08 48.84Q92.28 55.92 92.28 64.56Q92.28 71.88 89.58 77.58Q86.88 83.28 82.38 87.36Q77.88 91.44 72.42 93.54Q66.96 95.64 61.44 95.64ZM61.20 77.52Q64.08 77.52 67.08 76.08Q70.08 74.64 72.12 71.76Q74.16 68.88 74.16 64.44Q74.16 60.60 72.48 57.72Q70.80 54.84 67.86 53.22Q64.92 51.60 61.08 51.60Q57.48 51.60 54.66 53.28Q51.84 54.96 50.10 57.90Q48.36 60.84 48.36 64.56Q48.36 68.88 50.34 71.82Q52.32 74.76 55.32 76.14Q58.32 77.52 61.20 77.52Z M115.08 94.80Q110.88 94.80 108.96 93.48Q107.04 92.16 106.62 90.06Q106.20 87.96 106.20 85.56V52.92H102.00Q98.52 52.80 97.14 50.82Q95.76 48.84 95.76 44.16Q95.76 39.84 97.44 37.74Q99.12 35.64 102.48 35.64H106.20V29.40Q106.20 25.32 107.52 21.36Q108.84 17.40 111.72 14.22Q114.60 11.04 119.04 9.12Q123.48 7.20 129.84 7.20Q132.12 7.20 134.22 7.62Q136.32 8.04 137.58 9.90Q138.84 11.76 138.84 16.20Q138.84 20.64 137.52 22.50Q136.20 24.36 134.10 24.78Q132.00 25.20 129.72 25.20Q128.16 25.20 127.14 25.38Q126.12 25.56 125.52 25.92Q124.92 26.28 124.62 27.12Q124.32 27.96 124.32 29.16V35.40L132.24 35.16Q134.52 35.16 136.56 35.58Q138.60 36.00 139.92 37.92Q141.24 39.84 141.24 44.28Q141.24 48.36 139.98 50.28Q138.72 52.20 136.68 52.74Q134.64 53.28 132.24 53.28L124.32 53.04V85.92Q124.32 88.20 123.84 90.24Q123.36 92.28 121.44 93.54Q119.52 94.80 115.08 94.80Z M156.72 94.68Q152.28 94.68 150.42 93.42Q148.56 92.16 148.14 90.06Q147.72 87.96 147.72 85.68V43.80Q147.72 41.40 148.14 39.36Q148.56 37.32 150.48 36.06Q152.40 34.80 156.84 34.80Q161.16 34.80 163.02 36.12Q164.88 37.44 165.30 39.48Q165.72 41.52 165.72 44.04V85.80Q165.72 88.08 165.30 90.18Q164.88 92.28 163.02 93.48Q161.16 94.68 156.72 94.68Z M205.32 95.76Q196.92 95.76 190.86 93.00Q184.80 90.24 180.96 85.74Q177.12 81.24 175.26 75.72Q173.40 70.20 173.40 64.68Q173.40 55.68 177.48 48.72Q181.56 41.76 188.76 37.74Q195.96 33.72 205.32 33.72Q212.28 33.72 217.38 35.94Q222.48 38.16 225.78 41.70Q229.08 45.24 230.70 49.32Q232.32 53.40 232.32 57.12Q232.32 63.72 229.14 66.90Q225.96 70.08 221.04 70.08H192.48Q192.72 73.20 194.70 75.36Q196.68 77.52 199.68 78.72Q202.68 79.92 206.04 79.92Q208.92 79.92 211.08 79.62Q213.24 79.32 214.80 78.78Q216.36 78.24 217.68 77.70Q219.00 77.16 220.02 76.80Q221.04 76.44 222.00 76.32Q223.80 76.20 225.30 77.34Q226.80 78.48 228.00 80.76Q228.84 82.08 229.14 83.28Q229.44 84.48 229.44 85.68Q229.44 88.56 226.50 90.84Q223.56 93.12 218.22 94.44Q212.88 95.76 205.32 95.76ZM192.48 60.24H211.44Q213.36 60.24 214.26 59.58Q215.16 58.92 215.16 57.00Q215.16 54.84 213.84 53.22Q212.52 51.60 210.30 50.70Q208.08 49.80 205.20 49.80Q201.48 49.80 198.60 51.24Q195.72 52.68 194.10 55.08Q192.48 57.48 192.48 60.24Z" fill="currentColor"/><circle cx="14.16" cy="16.74" r="9.85" fill="url(#gw)"/><circle cx="156.72" cy="16.74" r="9.98" fill="url(#gw)"/></svg>"""
+
+
 def _brand() -> str:
-    return '<div class="brand"><div class="logo">A</div>Alfred</div>'
+    return '<div class="brand">' + WORDMARK_SVG + "</div>"
 
 
 def render_form(
@@ -534,7 +546,7 @@ def signup_url(token: uuid.UUID) -> str:
 
 
 async def send_invite(member: Member, lang: str, *, again: bool = False) -> None:
-    """The one message a not-yet-registered number gets: what Alfred is, and the button."""
+    """The one message a not-yet-registered number gets: what Jofie is, and the button."""
     lang = _norm_lang(lang)
     token = issue_token(member)
     key = "signup_again" if again else "signup_invite"

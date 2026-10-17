@@ -4,7 +4,7 @@
 Rule-based, no LLM. What is understood:
 
 * a plan, written as lines ``Segunda - Peito: Supino 4x10 60kg, Crucifixo 3x12 14kg`` after a
-  header such as "plano de treino:"; Alfred answers with a preview and two buttons, and only the
+  header such as "plano de treino:"; Jofie answers with a preview and two buttons, and only the
   confirmation writes anything (the previous plan is archived, not deleted);
 * "treino de hoje" · "meu plano de treino";
 * a load actually used: "carga supino 62 kg" · "usei 62 kg no supino";

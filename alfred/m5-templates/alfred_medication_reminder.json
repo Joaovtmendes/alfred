@@ -9,61 +9,61 @@
     "en": {
       "language": "en",
       "components": [
-        { "type": "HEADER", "format": "TEXT", "text": "Alfred reminder" },
+        { "type": "HEADER", "format": "TEXT", "text": "Jofie reminder" },
         {
           "type": "BODY",
-          "text": "⏰ Reminder: {{1}}\n\nTap to open Alfred and reply if you've done it.",
+          "text": "⏰ Reminder: {{1}}\n\nTap to open Jofie and reply if you've done it.",
           "example": { "body_text": [["take your medication"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — your AI assistant" }
+        { "type": "FOOTER", "text": "Jofie — your AI assistant" }
       ]
     },
     "pt_BR": {
       "language": "pt_BR",
       "components": [
-        { "type": "HEADER", "format": "TEXT", "text": "Lembrete Alfred" },
+        { "type": "HEADER", "format": "TEXT", "text": "Lembrete Jofie" },
         {
           "type": "BODY",
-          "text": "⏰ Lembrete: {{1}}\n\nAbra o Alfred e responda quando estiver feito.",
+          "text": "⏰ Lembrete: {{1}}\n\nAbra o Jofie e responda quando estiver feito.",
           "example": { "body_text": [["toma o teu medicamento"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — o seu assistente pessoal" }
+        { "type": "FOOTER", "text": "Jofie — o seu assistente pessoal" }
       ]
     },
     "nl": {
       "language": "nl",
       "components": [
-        { "type": "HEADER", "format": "TEXT", "text": "Alfred herinnering" },
+        { "type": "HEADER", "format": "TEXT", "text": "Jofie herinnering" },
         {
           "type": "BODY",
-          "text": "⏰ Herinnering: {{1}}\n\nOpen Alfred en antwoord als je klaar bent.",
+          "text": "⏰ Herinnering: {{1}}\n\nOpen Jofie en antwoord als je klaar bent.",
           "example": { "body_text": [["neem je medicatie"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — jouw persoonlijke assistent" }
+        { "type": "FOOTER", "text": "Jofie — jouw persoonlijke assistent" }
       ]
     },
     "fr": {
       "language": "fr",
       "components": [
-        { "type": "HEADER", "format": "TEXT", "text": "Rappel Alfred" },
+        { "type": "HEADER", "format": "TEXT", "text": "Rappel Jofie" },
         {
           "type": "BODY",
-          "text": "⏰ Rappel : {{1}}\n\nOuvre Alfred et réponds quand c'est fait.",
+          "text": "⏰ Rappel : {{1}}\n\nOuvre Jofie et réponds quand c'est fait.",
           "example": { "body_text": [["prends tes médicaments"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — ton assistant personnel" }
+        { "type": "FOOTER", "text": "Jofie — ton assistant personnel" }
       ]
     },
     "de": {
       "language": "de",
       "components": [
-        { "type": "HEADER", "format": "TEXT", "text": "Alfred Erinnerung" },
+        { "type": "HEADER", "format": "TEXT", "text": "Jofie Erinnerung" },
         {
           "type": "BODY",
-          "text": "⏰ Erinnerung: {{1}}\n\nÖffne Alfred und antworte, wenn du fertig bist.",
+          "text": "⏰ Erinnerung: {{1}}\n\nÖffne Jofie und antworte, wenn du fertig bist.",
           "example": { "body_text": [["nimm deine Medikamente"]] }
         },
-        { "type": "FOOTER", "text": "Alfred — dein persönlicher Assistent" }
+        { "type": "FOOTER", "text": "Jofie — dein persönlicher Assistent" }
       ]
     }
   }

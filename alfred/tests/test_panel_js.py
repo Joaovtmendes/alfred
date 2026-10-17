@@ -638,7 +638,7 @@ async def test_theme_switch_toggles_and_remembers_the_choice() -> None:
         }
         theme = await page.evaluate("document.documentElement.dataset.theme")
         bg = await page.evaluate("getComputedStyle(document.body).backgroundColor")
-        assert bg == {"light": "rgb(243, 245, 248)", "dark": "rgb(13, 17, 23)"}[theme]
+        assert bg == {"light": "rgb(255, 249, 248)", "dark": "rgb(42, 26, 51)"}[theme]
         await page.reload()
         await page.wait_for_selector("[data-card=upcoming]")
         assert await page.evaluate("document.documentElement.dataset.theme") == theme  # remembered
