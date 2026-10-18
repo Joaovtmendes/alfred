@@ -649,7 +649,31 @@ class Appointment(Base):
     notes: Mapped[str | None] = mapped_column(Text)
     # active | done | cancelled
     status: Mapped[str] = mapped_column(String(12), nullable=False, default="active")
+    # Google Calendar event created for this appointment (only when the member connected Google)
+    google_event_id: Mapped[str | None] = mapped_column(String(1024))
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class GoogleConnection(Base):
+    """A member's Google Calendar connection (OAuth refresh token, encrypted when a key is set).
+
+    One row per member. Deleted on "disconnect", on erasure and when Google says the grant is gone.
+    """
+
+    __tablename__ = "google_connection"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("member.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    refresh_token: Mapped[str] = mapped_column(EncryptedText, nullable=False)
+    scope: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    connected_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 

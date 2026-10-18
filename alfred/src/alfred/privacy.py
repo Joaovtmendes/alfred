@@ -19,7 +19,7 @@ from alfred.models import Household, Member
 # member_id / author_id point at the person; audit_log is anonymised by FK (SET NULL).
 _PERSON_COLUMNS = ("member_id", "author_id")
 _SKIP_ERASE = {"member", "household", "audit_log"}
-_SECRET_COLUMNS = {"dashboard_token", "export_token"}
+_SECRET_COLUMNS = {"dashboard_token", "export_token", "refresh_token"}
 
 
 def _person_column(table: Table):
@@ -46,6 +46,9 @@ async def erase_member(session: AsyncSession, member: Member) -> None:
     The caller must not touch ORM objects afterwards; ``session.expunge_all()`` is done here.
     """
     member_id, household_id = member.id, member.household_id
+    from alfred.google_calendar import revoke_member
+
+    await revoke_member(session, member_id)  # the Google grant goes with the data
     others = await session.scalar(
         select(func.count())
         .select_from(Member)

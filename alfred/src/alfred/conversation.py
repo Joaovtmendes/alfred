@@ -21,6 +21,7 @@ import structlog
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred import google_calendar as _gcal
 from alfred.accounting import STRINGS as _ACCT_STRINGS
 from alfred.accounting import default_scope, handle_accounting_command
 from alfred.agenda import STRINGS as _AGENDA_STRINGS
@@ -61,6 +62,7 @@ from alfred.followup import (
 from alfred.followup import (
     STRINGS as _FOLLOWUP_STRINGS,
 )
+from alfred.google_calendar import STRINGS as _GCAL_STRINGS
 from alfred.home import STRINGS as _HOME_STRINGS
 from alfred.home import handle_home_button, handle_home_command
 from alfred.insights import STRINGS as _INSIGHT_STRINGS
@@ -1572,6 +1574,7 @@ _derive_singular(
 )
 
 _STRINGS.update(_SIGNUP_STRINGS)  # sign-up page invite and welcome (signup.py)
+_STRINGS.update(_GCAL_STRINGS)  # Google Calendar connect/disconnect (google_calendar.py)
 _STRINGS.update(_BUDGET_STRINGS)  # V2-01 texts live next to their logic in budgets.py
 _STRINGS.update(_RECURRING_STRINGS)  # V2-02, same idea
 _STRINGS.update(_MSUM_STRINGS)  # V2-04
@@ -4410,6 +4413,22 @@ async def handle_inbound(
         if recurring_reply is not None:
             await send_text(to, recurring_reply)
             await _save_outbound(member, recurring_reply, session)
+            return
+
+        # 4e-0h2. Google Calendar — "conectar google agenda" / "desconectar google agenda"
+        gcal_cmd = _gcal.match_command(body_plain)
+        if gcal_cmd == "connect":
+            gtext, gbutton, gurl = await _gcal.connect_reply(member, lang, session)
+            if gurl:
+                await send_cta_url(to, gtext, gbutton or "Google", gurl)
+            else:
+                await send_text(to, gtext)
+            await _save_outbound(member, gtext, session)
+            return
+        if gcal_cmd == "disconnect":
+            gtext = await _gcal.disconnect(member, lang, session)
+            await send_text(to, gtext)
+            await _save_outbound(member, gtext, session)
             return
 
         # 4e-0i. V2-06 — agenda: "dentista quinta às 14h" / "minha agenda" / "cancela o dentista"
