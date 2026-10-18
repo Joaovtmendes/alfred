@@ -11,14 +11,14 @@ from __future__ import annotations
 from html import escape
 
 from fastapi import APIRouter, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from alfred.settings import settings
 
 router = APIRouter(tags=["legal"])
 
-POLICY_VERSION = "2.1"
-POLICY_DATE = "2026-10-16"
+POLICY_VERSION = "2.2"
+POLICY_DATE = "2026-10-18"
 CONTROLLER = "JVM Solutions, Biesbosch 179, 1181 JB Amstelveen, Nederland"
 # Public contact for data requests — set PRIVACY_CONTACT_EMAIL in the environment.
 CONTACT = settings.privacy_contact_email or "[privacy contact e-mail]"
@@ -112,6 +112,14 @@ POLICY: dict[str, dict] = {
                 "Error monitoring",
                 [
                     "When enabled, an error-monitoring provider (Sentry) receives technical error reports to keep the service reliable. We configure it to avoid sending message contents.",
+                ],
+            ),
+            (
+                "Google Calendar (optional)",
+                [
+                    "If you choose to connect Google Calendar, Jofie asks Google for permission to view and create events on your calendar. We use this access only to show your agenda and to add or change the events you ask for in the chat. Without your connection Jofie never touches your calendar.",
+                    "Jofie's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. We do not sell Google data, do not use it for advertising, do not use it to train AI models, and no person reads it unless you ask us to, the law requires it, or it is needed for security.",
+                    "Event titles you ask Jofie about are sent as text to our AI provider to answer you. You can disconnect at any time in your Google account (myaccount.google.com/permissions) or by asking us; disconnecting, and 'delete my data', remove the stored access.",
                 ],
             ),
             (
@@ -239,6 +247,14 @@ POLICY: dict[str, dict] = {
                 ],
             ),
             (
+                "Google Agenda (optioneel)",
+                [
+                    "Als je Google Agenda koppelt, vraagt Jofie Google om toestemming om afspraken in je agenda te bekijken en aan te maken. We gebruiken die toegang alleen om je agenda te tonen en afspraken toe te voegen of te wijzigen waar je in de chat om vraagt. Zonder jouw koppeling komt Jofie nooit aan je agenda.",
+                    "Het gebruik en de overdracht door Jofie van informatie die van Google-API's is ontvangen, voldoet aan het Google API Services User Data Policy, inclusief de Limited Use-vereisten. We verkopen Google-gegevens niet, gebruiken ze niet voor reclame, gebruiken ze niet om AI-modellen te trainen, en geen mens leest ze tenzij jij dat vraagt, de wet het eist of het nodig is voor de beveiliging.",
+                    "Titels van afspraken waar je Jofie naar vraagt worden als tekst naar onze AI-aanbieder gestuurd om je te antwoorden. Je kunt de koppeling altijd verbreken in je Google-account (myaccount.google.com/permissions) of door het ons te vragen; verbreken en 'verwijder mijn gegevens' wissen de opgeslagen toegang.",
+                ],
+            ),
+            (
                 "Meer gegevens die je kunt vastleggen",
                 [
                     "Schulden en leningen: de naam die je van de andere persoon opgeeft, het bedrag en een notitie. Leg alleen vast wat jou aangaat; die persoon heeft dezelfde rechten over zijn of haar naam en kan ons vragen die te wissen. Ook bewaren we trainingsschema's en de gewichten die je tilt, reisbestemmingen, data, routes, paklijsten en reisbudgetten, maandbudgetten, vaste lasten en termijnen, en analyseweergaven die je opslaat. Het dashboard toont dit alles aan iedereen die je link heeft.",
@@ -362,6 +378,14 @@ POLICY: dict[str, dict] = {
                 ],
             ),
             (
+                "Google Agenda (opcional)",
+                [
+                    "Se você conectar o Google Agenda, o Jofie pede permissão ao Google para ver e criar eventos na sua agenda. Usamos esse acesso apenas para mostrar sua agenda e para adicionar ou alterar os eventos que você pedir no chat. Sem a sua conexão, o Jofie nunca acessa sua agenda.",
+                    "O uso e a transferência, pelo Jofie, de informações recebidas das APIs do Google seguem a Política de Dados do Usuário dos Serviços de API do Google (Google API Services User Data Policy), incluindo os requisitos de Uso Limitado. Não vendemos dados do Google, não os usamos para publicidade, não os usamos para treinar modelos de IA e nenhuma pessoa os lê, a menos que você peça, a lei exija ou seja necessário por segurança.",
+                    "Os títulos de eventos sobre os quais você pergunta ao Jofie são enviados como texto ao nosso provedor de IA para responder a você. Você pode desconectar a qualquer momento na sua conta Google (myaccount.google.com/permissions) ou pedindo a nós; desconectar e 'apagar meus dados' removem o acesso guardado.",
+                ],
+            ),
+            (
                 "Mais dados que você pode registrar",
                 [
                     "Dívidas e empréstimos: o nome que você informa da outra pessoa, o valor e uma nota. Registre apenas o que diz respeito a você; essa pessoa tem os mesmos direitos sobre o próprio nome e pode pedir que o apaguemos. Também guardamos planos de treino e as cargas que você usa, destinos, datas, roteiros, listas de mala e orçamentos de viagem, orçamentos mensais, contas fixas e parcelas, e as visões de análise que você salva. O painel mostra tudo isso a quem tiver o seu link.",
@@ -433,11 +457,17 @@ def render_policy(lang: str) -> str:
     return "".join(parts)
 
 
-@router.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
-async def privacy(lang: str = Query(default="en", max_length=5)) -> HTMLResponse:
-    return HTMLResponse(
-        render_policy(lang.lower()), headers={"Cache-Control": "public, max-age=3600"}
-    )
+PRIVACY_URLS = {
+    "en": "https://jofie.nl/privacy/",
+    "nl": "https://jofie.nl/privacy/nl/",
+    "pt": "https://jofie.nl/privacy/pt/",
+}
+
+
+@router.get("/privacy", include_in_schema=False)
+async def privacy(lang: str = Query(default="en", max_length=5)) -> RedirectResponse:
+    """The policy lives on the public site (same domain as the home page); keep old links working."""
+    return RedirectResponse(PRIVACY_URLS.get(lang.lower(), PRIVACY_URLS["en"]), status_code=307)
 
 
 TERMS_URL = "https://jofie.nl/terms/"
@@ -452,7 +482,7 @@ def render_terms() -> str:
         "<h1>Jofie — Terms of Use</h1>"
         '<p class="meta">English is the official version.</p>'
         f'<p>Read the full Terms of Use at <a href="{TERMS_URL}">{TERMS_URL}</a>.</p>'
-        f'<p>Privacy: <a href="/privacy">/privacy</a></p>'
+        f'<p>Privacy: <a href="{PRIVACY_URLS["en"]}">{PRIVACY_URLS["en"]}</a></p>'
         "</main></body></html>"
     )
 
