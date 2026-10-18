@@ -13,6 +13,8 @@ Notas:
   - Cada run usa um run_id único → sem colisões de wa_message_id
   - O número destino (+31631152144) recebe todas as respostas normalmente
   - Respeita a ordem sequencial dos casos dentro de cada bloco
+  - Conta nova: o script abre com "oi" e pausa até você criar a conta pela página de cadastro;
+    com conta já criada use --sem-abertura
 """
 
 import argparse
@@ -178,11 +180,21 @@ def send_tap(label: str, button_id: str, run_id: str, delay: float = DEFAULT_DEL
 
 
 def abertura(run_id, delay):
-    """Boas-vindas — "oi" e "sim" primeiro: depois de apagar os dados a conta é nova e só
-    responde ao resto depois do aceite (sem isto o teste inteiro cai no pedido de consentimento)."""
-    print("\n══ Abertura — oi + sim (conta nova) ══")
+    """Abertura pelo cadastro: o número novo recebe o convite com o botão "Create account" e só
+    responde ao resto depois de a conta existir. O script não consegue preencher a página (o link
+    com o token só chega no WhatsApp), então pausa até a conta ser criada à mão."""
+    print("\n══ Abertura — convite de cadastro (conta nova) ══")
     send("Z01 oi", "oi", run_id, delay)
-    send("Z02 aceitar", "sim", run_id, delay)
+    print(
+        "\nNo WhatsApp: toque em [Create account], preencha a página (nome, e-mail, idioma, "
+        "caixa de privacidade) e confirme.\nQuando chegar a mensagem de boas-vindas com o botão "
+        "do painel, volte aqui."
+    )
+    if sys.stdin.isatty():
+        input("Enter para continuar os blocos... ")
+    else:
+        print("(sem terminal interativo: aguardando 120 s pela criação da conta)")
+        time.sleep(120)
 
 
 def plano(selecionados, sem_abertura=False):
@@ -714,7 +726,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sem-abertura",
         action="store_true",
-        help='Não enviar "oi" e "sim" antes dos blocos (conta já aceitou os termos).',
+        help="Não abrir pelo convite de cadastro (a conta já foi criada pela página).",
     )
     parser.add_argument(
         "--relatorio",

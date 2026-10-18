@@ -19,13 +19,17 @@ def script(monkeypatch):
     return mod
 
 
-def test_the_plan_opens_with_oi_and_sim(script, monkeypatch):
+def test_the_plan_opens_with_oi_and_waits_for_the_sign_up(script, monkeypatch):
     sent = []
+    waited = []
     monkeypatch.setattr(script, "send", lambda label, text, run_id, delay=0: sent.append(text))
+    monkeypatch.setattr(script.sys.stdin, "isatty", lambda: False, raising=False)
+    monkeypatch.setattr(script.time, "sleep", lambda s: waited.append(s))
     steps = script.plano(["A", "K"])
     assert steps[0] is script.abertura and steps[1:] == [script.bloco_a, script.bloco_k]
     steps[0]("run", 0)
-    assert sent == ["oi", "sim"]
+    assert sent == ["oi"]  # "sim" no longer opens an account: the sign-up page does
+    assert waited == [120]
 
 
 def test_the_opening_can_be_skipped(script):
