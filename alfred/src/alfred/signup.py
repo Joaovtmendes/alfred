@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.audit import audit
 from alfred.db import get_session
-from alfred.legal import POLICY_VERSION
+from alfred.legal import POLICY_VERSION, PRIVACY_URLS
 from alfred.models import CalendarOptIn, Member
 from alfred.panel_tokens import ensure_panel_token
 from alfred.settings import settings
@@ -468,7 +468,11 @@ def render_form(
         f'<option value="{code}"{" selected" if code == lang else ""}>{n}</option>'
         for code, n in LANG_NAMES.items()
     )
-    privacy = p["privacy"].replace("{url}", f"/privacy?lang={lang}").replace("{terms}", "/terms")
+    privacy = (
+        p["privacy"]
+        .replace("{url}", PRIVACY_URLS.get(lang, PRIVACY_URLS["en"]))
+        .replace("{terms}", "/terms")
+    )
     err = f'<p class="err" role="alert">{escape(p[error])}</p>' if error else ""
     cards = "".join(
         f'<div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" '

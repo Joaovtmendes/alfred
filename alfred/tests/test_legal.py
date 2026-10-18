@@ -5,22 +5,22 @@ from __future__ import annotations
 import pytest
 from httpx import AsyncClient
 
-from alfred.legal import POLICY
+from alfred.legal import POLICY, PRIVACY_URLS
 
 
 @pytest.mark.parametrize("lang", ["en", "nl", "pt"])
-async def test_privacy_page_renders_each_language(client: AsyncClient, lang: str) -> None:
-    resp = await client.get("/privacy", params={"lang": lang})
-    assert resp.status_code == 200
-    assert resp.headers["content-type"].startswith("text/html")
-    assert POLICY[lang]["title"] in resp.text
-    assert f'lang="{lang}"' in resp.text
+async def test_privacy_redirects_to_the_public_site_in_each_language(
+    client: AsyncClient, lang: str
+) -> None:
+    resp = await client.get("/privacy", params={"lang": lang}, follow_redirects=False)
+    assert resp.status_code == 307
+    assert resp.headers["location"] == PRIVACY_URLS[lang]
+    assert resp.headers["location"].startswith("https://jofie.nl/privacy/")
 
 
 async def test_privacy_unknown_language_falls_back_to_english(client: AsyncClient) -> None:
-    resp = await client.get("/privacy", params={"lang": "xx"})
-    assert resp.status_code == 200
-    assert POLICY["en"]["title"] in resp.text
+    resp = await client.get("/privacy", params={"lang": "xx"}, follow_redirects=False)
+    assert resp.headers["location"] == PRIVACY_URLS["en"]
 
 
 def test_every_language_has_the_same_sections() -> None:
@@ -31,7 +31,7 @@ def test_every_language_has_the_same_sections() -> None:
 def test_policy_1_6_covers_the_v2_data_categories_couple_and_statements_in_every_language() -> None:
     from alfred.legal import POLICY_VERSION
 
-    assert POLICY_VERSION == "2.1"
+    assert POLICY_VERSION == "2.2"
     for lang, policy in POLICY.items():
         text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
         assert any(w in text for w in ("bank statement", "bankafschrift", "extrato banc")), lang
@@ -79,3 +79,10 @@ def test_policy_1_9_covers_deadline_reminders_in_every_language() -> None:
             w in text for w in ("deadline reminders", "deadline-herinneringen", "avisos de prazos")
         ), lang
         assert any(w in text for w in ("quarterly btw", "kwartaal-btw", "btw trimestral")), lang
+
+
+def test_policy_2_2_covers_google_calendar_limited_use_in_every_language() -> None:
+    for lang, policy in POLICY.items():
+        text = " ".join(" ".join(paras) for _, paras in policy["sections"]).lower()
+        assert "google api services user data policy" in text, lang
+        assert "limited use" in text or "uso limitado" in text, lang
