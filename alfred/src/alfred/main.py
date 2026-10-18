@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 
 from alfred.crypto import warn_if_unprotected
 from alfred.dashboard import router as dashboard_router
+from alfred.google_calendar import router as google_router
 from alfred.internal import router as internal_router
 from alfred.legal import router as legal_router
 from alfred.observability import init_sentry
@@ -61,6 +62,7 @@ app.include_router(dashboard_router)
 app.include_router(panel_router)
 app.include_router(legal_router)
 app.include_router(signup_router)
+app.include_router(google_router)
 app.include_router(internal_router)
 
 

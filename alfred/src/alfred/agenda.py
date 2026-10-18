@@ -19,6 +19,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred import google_calendar as gcal
 from alfred.audit import audit
 from alfred.clock import _MONTHS, local_tz, now_local, to_local, weekday_abbr
 from alfred.models import Appointment, Member, Message
@@ -401,6 +402,7 @@ async def handle_agenda_command(
             hits[0].reminded_at = None
             session.add(hits[0])
             await session.flush()
+            await gcal.on_moved(session, hits[0])
             audit(session, "appointment_moved", member.id)
             return AgendaReply(
                 _t("agenda_moved", lang, title=hits[0].title, when=_fmt_when(new, lang))
@@ -413,6 +415,7 @@ async def handle_agenda_command(
         if len(hits) == 1:
             hits[0].status = "cancelled"
             session.add(hits[0])
+            await gcal.on_cancelled(session, hits[0])
             audit(session, "appointment_cancelled", member.id)
             return AgendaReply(_t("agenda_cancelled", lang, title=hits[0].title))
         if len(hits) > 1:
@@ -475,6 +478,7 @@ async def _create(
     )
     session.add(appt)
     await session.flush()
+    await gcal.on_created(session, appt)
     audit(session, "appointment_created", member.id)
     text = _t(
         "agenda_created",
@@ -562,6 +566,7 @@ async def handle_button(
     if action == "appt_undo":
         appt.status = "cancelled"
         session.add(appt)
+        await gcal.on_cancelled(session, appt)
         audit(session, "appointment_cancelled", member.id)
         return _t("agenda_cancelled", lang, title=appt.title)
     return _t("button_ok_reply", lang)

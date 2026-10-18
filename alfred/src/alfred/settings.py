@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     usd_to_eur: float = 0.92
     aws_region: str = "eu-central-1"  # Bedrock only — Frankfurt, data residency
 
+    # Google Calendar (optional): OAuth client of the Google Cloud project; empty → feature off
+    google_client_id: str = ""
+    google_client_secret: SecretStr = SecretStr("")
+    google_redirect_uri: str = ""  # default: {base_url}/google/callback
+
     # Time — every "today"/"this week" and reminder time is in this zone
     timezone: str = "Europe/Amsterdam"
 
