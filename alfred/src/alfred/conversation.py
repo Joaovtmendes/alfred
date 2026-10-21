@@ -20,6 +20,7 @@ from datetime import UTC, date, datetime, time, timedelta
 import structlog
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import set_committed_value
 
 from alfred import google_calendar as _gcal
 from alfred.accounting import STRINGS as _ACCT_STRINGS
@@ -952,6 +953,20 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": "Fine, I logged nothing.",
         "fr": "D'accord, je n'ai rien noté.",
         "de": "Gut, ich habe nichts notiert.",
+    },
+    "ask_amount_item": {
+        "pt": "Quanto foi {item}? Pode mandar só o valor, por exemplo: 75.",
+        "nl": "Hoeveel was {item}? Je mag alleen het bedrag sturen, bijvoorbeeld: 75.",
+        "en": "How much was {item}? You can send just the amount, for example: 75.",
+        "fr": "Combien était {item} ? Tu peux envoyer seulement le montant, par ex. : 75.",
+        "de": "Wie viel war {item}? Du kannst nur den Betrag schicken, z. B.: 75.",
+    },
+    "category_which": {
+        "pt": "Não sei a qual lançamento você se refere. Diga o nome, por exemplo: “Padaria é Transporte”.",
+        "nl": "Ik weet niet welke uitgave je bedoelt. Noem de naam, bijvoorbeeld: “Bakker is Vervoer”.",
+        "en": "I'm not sure which entry you mean. Say its name, for example: “Bakery is Transport”.",
+        "fr": "Je ne sais pas de quelle dépense il s'agit. Dis son nom, par ex. : « Boulangerie est Transport ».",
+        "de": "Ich weiß nicht, welchen Eintrag du meinst. Nenne den Namen, z. B.: „Bäckerei ist Verkehr“.",
     },
     "purchase_ask_price": {
         "pt": "Quanto custou {item}? Mande com o valor, por exemplo: “{item} 4,50”.",
@@ -3143,6 +3158,21 @@ _BANK_BALANCE_RE = re.compile(
     r"^(?:my\s+)?(?:bank|account)\s+balance\b.*\d|^(?:mijn\s+)?(?:banksaldo|saldo op mijn rekening)\b.*\d|"
     r"^(?:mon\s+)?solde\s+(?:bancaire|du\s+compte)\b.*\d|^(?:mein\s+)?kontostand\b.*\d"
 )
+ASK_AMOUNT_KIND = "ask_amount"  # PendingAction: "paguei gás" without a price waits for the amount
+ASK_AMOUNT_MINUTES = 10
+_PAID_NO_AMOUNT_RE = re.compile(
+    r"^(?:eu\s+)?(?:paguei|gastei|paid|spent|betaalde|heb\s+betaald|paye|ai\s+paye|bezahlt|habe\s+bezahlt)\s+"
+    r"(?:o\s+|a\s+|os\s+|as\s+|um\s+|uma\s+|de\s+|do\s+|da\s+|the\s+|for\s+|voor\s+|het\s+|de\s+|"
+    r"le\s+|la\s+|les\s+|pour\s+|der\s+|die\s+|das\s+|fur\s+)?"
+    r"(?P<item>[^\W\d_][^\d\u20ac$,.!?]{1,38}?)\s*[.!]?$"
+)
+_PAID_ITEM_STOP = frozenset(
+    {"tudo", "ontem", "hoje", "agora", "ja", "nada", "isso", "isto", "it", "this", "that", "alles",
+     "niets", "tout", "rien", "nichts", "tudo isso"}
+)  # fmt: skip
+_AMOUNT_ONLY_RE = re.compile(
+    r"^\s*(?:\u20ac\s*)?(?P<amt>\d+(?:[.,]\d{1,2})?)\s*(?:\u20ac|euros?)?\s*$"
+)
 _PURCHASE_NO_PRICE_RE = re.compile(
     r"^(?:eu\s+)?(?:comprei|compramos|bought|i\s+bought|gekocht|ik\s+heb\s+gekocht|j\s*ai\s+achete|"
     r"ich\s+habe\s+gekauft|gekauft)\s+\d+(?:[.,]\d+)?\s*(?:kg|g|gr|l|litros?|liters?|un|unidades?)\s+"
@@ -3870,6 +3900,14 @@ def _clean_activity(text: str) -> str:
     return out
 
 
+def _override_body(message, text: str) -> None:
+    """Use ``text`` as the message body for this run without marking the stored row dirty."""
+    if hasattr(message, "_sa_instance_state"):
+        set_committed_value(message, "body", text)
+    else:
+        message.body = text
+
+
 def _fmt_eur(amount: float) -> str:
     """Format a float as PT-style euro: €1.234,56"""
     sign = "-" if amount < 0 else ""  # "-€133,60", never "€-133,60"
@@ -4360,6 +4398,8 @@ async def _handle_category_correction(
         ).scalar_one_or_none()
         if last is None or not last.merchant:
             return None
+        if last.created_at < datetime.now(UTC) - timedelta(hours=6):
+            return _t("category_which", lang)  # B-071: "isso" never reaches back to an old entry
         raw_merchant, merchant_key, known = last.merchant, last.merchant.lower(), True
 
     if not known:
@@ -6597,6 +6637,23 @@ async def handle_inbound(
                     await _save_outbound(member, reply, session)
                     return
 
+        # 4e-0d. The amount that answers "Quanto foi X?" (B-070): becomes that expense
+        if m_ans := _AMOUNT_ONLY_RE.match(body):
+            ask_row = await session.scalar(
+                select(PendingAction).where(
+                    PendingAction.member_id == member.id,
+                    PendingAction.kind == ASK_AMOUNT_KIND,
+                    PendingAction.expires_at > datetime.now(UTC),
+                )
+            )
+            if ask_row is not None:
+                await session.delete(ask_row)
+                await session.flush()
+                rebuilt = f"{ask_row.payload.get('item', '')} {m_ans.group('amt')}"
+                _override_body(message, rebuilt)  # the stored row keeps what was typed
+                body = rebuilt.lower()
+                body_plain = strip_accents(body)
+
         # 4e-0e. Several transactions in one message: "mercado 20 e farmácia 10".
         if _looks_multi(body):
             items = await extract_expenses_multi(message.body or "", lang=member.language or "en")
@@ -6646,6 +6703,30 @@ async def handle_inbound(
                 )
                 return
 
+        if (m_paid := _PAID_NO_AMOUNT_RE.match(body_plain.strip())) and (
+            m_paid.group("item").strip() not in _PAID_ITEM_STOP
+            and len(m_paid.group("item").split()) <= 4
+        ):
+            # B-070: "paguei gás" with no pending bill and no price remembers what it asked about
+            item = _original_text(message, m_paid.start("item"), m_paid.end("item")).strip()
+            await session.execute(
+                delete(PendingAction).where(
+                    PendingAction.member_id == member.id, PendingAction.kind == ASK_AMOUNT_KIND
+                )
+            )
+            session.add(
+                PendingAction(
+                    member_id=member.id,
+                    kind=ASK_AMOUNT_KIND,
+                    payload={"item": item[:60]},
+                    expires_at=datetime.now(UTC) + timedelta(minutes=ASK_AMOUNT_MINUTES),
+                )
+            )
+            await session.flush()
+            reply = _t("ask_amount_item", lang, item=item)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
         if m_buy := _PURCHASE_NO_PRICE_RE.match(body_plain.strip()):
             # M-27: "comprei 2 kg de arroz" is a purchase without its price, not body weight
             item = _original_text(message, m_buy.start("item"), m_buy.end("item"))
