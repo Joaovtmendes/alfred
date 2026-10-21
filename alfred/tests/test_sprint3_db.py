@@ -246,7 +246,7 @@ async def test_undo_button_deletes_only_that_expense(lab):
 async def test_undo_button_twice_says_gone(lab):
     _, exp = await _one_expense(lab)
     await lab.tap(f"undo:{exp.id}")
-    assert "já tinha sido apagado" in await lab.tap(f"undo:{exp.id}")
+    assert "já foi apagado ou desfeito" in await lab.tap(f"undo:{exp.id}")
 
 
 async def test_ok_and_edit_buttons_keep_the_expense(lab):
@@ -260,4 +260,4 @@ async def test_button_with_unknown_expense_id_deletes_nothing(lab):
     import uuid as _uuid
 
     reply = await lab.tap(f"undo:{_uuid.uuid4()}")
-    assert "já tinha sido apagado" in reply
+    assert "já foi apagado ou desfeito" in reply

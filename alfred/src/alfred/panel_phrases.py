@@ -729,13 +729,13 @@ def _lang(lang: str | None) -> str:
 
 
 def fmt_eur(value: float | Decimal, lang: str) -> str:
-    """European money in every language: ``€ 1.234,56``; negatives ``− € 5,00``.
+    """European money in every language, as in the chat: ``€1.234,56``; negatives ``-€5,00``.
 
     ``lang`` is accepted for symmetry with the rules; the format is the same in all five.
     """
     rounded = round(float(value), 2)
     cents = f"{abs(rounded):,.2f}".replace(",", "§").replace(".", ",").replace("§", ".")
-    return f"{'− ' if rounded < 0 else ''}€ {cents}"
+    return f"{'-' if rounded < 0 else ''}€{cents}"
 
 
 def unit(kind: str, n: int, lang: str) -> str:

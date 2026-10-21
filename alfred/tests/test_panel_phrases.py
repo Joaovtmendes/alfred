@@ -48,10 +48,10 @@ def test_chat_suggestions_are_quoted_commands_with_straight_quotes() -> None:
 
 @pytest.mark.parametrize("lang", LANGS)
 def test_european_money_in_every_language(lang) -> None:
-    assert pp.fmt_eur(1234.5, lang) == "€ 1.234,50"
-    assert pp.fmt_eur(0, lang) == "€ 0,00"
-    assert pp.fmt_eur(-5, lang) == "− € 5,00"
-    assert pp.fmt_eur(1234567.891, lang) == "€ 1.234.567,89"
+    assert pp.fmt_eur(1234.5, lang) == "€1.234,50"
+    assert pp.fmt_eur(0, lang) == "€0,00"
+    assert pp.fmt_eur(-5, lang) == "-€5,00"
+    assert pp.fmt_eur(1234567.891, lang) == "€1.234.567,89"
 
 
 def test_budget_rule_thresholds() -> None:
@@ -64,7 +64,7 @@ def test_budget_rule_thresholds() -> None:
     assert exact and exact.severity == "attention" and exact.key == "budget_over"
     over = pp.rule_budget_over("Restaurantes", 123, 100, "pt")
     assert over and over.severity == "attention"
-    assert "€ 123,00" in over.text and "123%" in over.text
+    assert "€123,00" in over.text and "123%" in over.text
     assert over.chat and over.chat.startswith('"')
 
 
@@ -73,18 +73,18 @@ def test_rules_render_in_every_language(lang) -> None:
     p = pp.rule_budget_over("X", 120, 100, lang)
     assert p and "{" not in p.text and p.chat == pp.CHAT["budget"][lang]
     q = pp.rule_balance_vs_projection(1842.30, 1120.0, lang)
-    assert q and "€ 1.120,00" in q.text and "{" not in q.text
+    assert q and "€1.120,00" in q.text and "{" not in q.text
 
 
 def test_unknown_language_falls_back_to_pt() -> None:
     p = pp.rule_balance_vs_projection(10.0, 5.0, "es")
-    assert p and p.text == pp.PHRASES["balance_projection"]["pt"].format(projected="€ 5,00")
+    assert p and p.text == pp.PHRASES["balance_projection"]["pt"].format(projected="€5,00")
 
 
 def test_projection_rule_needs_data() -> None:
     assert pp.rule_balance_vs_projection(1842.30, None, "pt") is None
     p = pp.rule_balance_vs_projection(1842.30, 1120.0, "pt")
-    assert p and "€ 1.120,00" in p.text and "estimativa" in p.text.lower()
+    assert p and "€1.120,00" in p.text and "estimativa" in p.text.lower()
     assert p.chat == pp.CHAT["balance_projection"]["pt"] and p.severity == "info"
 
 
@@ -247,15 +247,15 @@ def test_rules_stay_silent_below_their_data_threshold(call, expected_none) -> No
 def test_rule_wording_and_severity() -> None:
     mom = pp.rule_category_move([("Restaurantes", 148, 96)], 6, "em setembro", "pt")
     assert (
-        mom and mom.text == "Restaurantes é o que mais cresceu: € 52,00 a mais do que em setembro."
+        mom and mom.text == "Restaurantes é o que mais cresceu: €52,00 a mais do que em setembro."
     )
     fall = pp.rule_category_move([("Transporte", 61, 94)], 6, "no período anterior", "pt")
-    assert fall and fall.key == "categories_fall" and "€ 33,00" in fall.text
+    assert fall and fall.key == "categories_fall" and "€33,00" in fall.text
     assert pp.rule_mom_driver("R", 52, 55, "pt").text.endswith("quase toda a diferença.")
     assert pp.rule_mom_driver("R", 30, 55, "pt").text.endswith("a maior parte da diferença.")
     ok = pp.rule_upcoming(3, 298, 0, 0, "Energia", "pt")
     assert ok and ok.severity == "info" and ok.chat == '"paguei Energia"'
-    assert "3 contas" in ok.text and "€ 298,00" in ok.text and "Nada está atrasado" in ok.text
+    assert "3 contas" in ok.text and "€298,00" in ok.text and "Nada está atrasado" in ok.text
     late = pp.rule_upcoming(3, 298, 1, 118, "Energia", "pt")
     assert late and late.severity == "attention" and "1 conta em atraso" in late.text
     owed = pp.rule_owed("Marta", 34.5, 9, "pt")
@@ -275,15 +275,15 @@ def test_a_name_with_quotes_cannot_break_out_of_the_suggested_command() -> None:
 
 
 def test_edge_numbers_format_without_surprises() -> None:
-    assert pp.fmt_eur(-0.004, "pt") == "€ 0,00"
-    assert pp.fmt_eur(-120.5, "en") == "− € 120,50"
-    assert pp.fmt_eur(pp.Decimal("1842.30"), "de") == "€ 1.842,30"
+    assert pp.fmt_eur(-0.004, "pt") == "€0,00"
+    assert pp.fmt_eur(-120.5, "en") == "-€120,50"
+    assert pp.fmt_eur(pp.Decimal("1842.30"), "de") == "€1.842,30"
     neg = pp.rule_balance_vs_projection(-10.0, -250.0, "pt")
-    assert neg and "− € 250,00" in neg.text
+    assert neg and "-€250,00" in neg.text
     zero = pp.rule_balance_vs_projection(0.0, 0.0, "nl")
-    assert zero and "€ 0,00" in zero.text
+    assert zero and "€0,00" in zero.text
     thin = pp.rule_balance_vs_projection(0.0, None, "pt", insufficient=True, committed=0.0)
-    assert thin and thin.key == "projection_insufficient" and "€ 0,00" in thin.text
+    assert thin and thin.key == "projection_insufficient" and "€0,00" in thin.text
     assert pp.rule_balance_vs_projection(0.0, None, "pt") is None
 
 

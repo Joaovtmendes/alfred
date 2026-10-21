@@ -43,6 +43,7 @@ from alfred.clock import (
     prev_month_start,
     to_local,
     today_local,
+    use_member_timezone,
     week_start,
     weekday_abbr,
 )
@@ -775,7 +776,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "pt": "Desfazer",
         "nl": "Ongedaan maken",
         "en": "Undo",
-        "fr": "Annuler",
+        "fr": "Défaire",
         "de": "Rückgängig",
     },
     "btn_edit": {
@@ -834,11 +835,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Dieser Button gilt nicht mehr: schon benutzt oder abgelaufen.",
     },
     "button_gone": {
-        "pt": "Esse registro já tinha sido apagado.",
-        "nl": "Die registratie bestaat niet meer.",
-        "en": "That entry no longer exists.",
-        "fr": "Cet enregistrement n'existe plus.",
-        "de": "Dieser Eintrag existiert nicht mehr.",
+        "pt": "Não encontrei esse registro: ele já foi apagado ou desfeito.",
+        "nl": "Ik vind die registratie niet meer: ze is al verwijderd of ongedaan gemaakt.",
+        "en": "I can't find that entry: it was already deleted or undone.",
+        "fr": "Je ne retrouve pas cet enregistrement : il a déjà été supprimé ou défait.",
+        "de": "Diesen Eintrag finde ich nicht mehr: Er wurde schon gelöscht oder rückgängig gemacht.",
     },
     "expense_deleted": {
         "pt": (
@@ -967,6 +968,42 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": "I'm not sure which entry you mean. Say its name, for example: “Bakery is Transport”.",
         "fr": "Je ne sais pas de quelle dépense il s'agit. Dis son nom, par ex. : « Boulangerie est Transport ».",
         "de": "Ich weiß nicht, welchen Eintrag du meinst. Nenne den Namen, z. B.: „Bäckerei ist Verkehr“.",
+    },
+    "bare_word_ask": {
+        "pt": "“{word}” sozinha eu não registro. Quer que eu anote “{phrase}”?",
+        "nl": "“{word}” alleen noteer ik niet. Zal ik “{phrase}” noteren?",
+        "en": "I don't log “{word}” on its own. Should I log “{phrase}”?",
+        "fr": "Je n'enregistre pas « {word} » seul. Je note « {phrase} » ?",
+        "de": "„{word}“ allein trage ich nicht ein. Soll ich „{phrase}“ eintragen?",
+    },
+    "btn_bare_yes": {
+        "pt": "Sim, anotar",
+        "nl": "Ja, noteer",
+        "en": "Yes, log it",
+        "fr": "Oui, note",
+        "de": "Ja, eintragen",
+    },
+    "btn_bare_no": {"pt": "Não", "nl": "Nee", "en": "No", "fr": "Non", "de": "Nein"},
+    "bare_word_no": {
+        "pt": "Certo, não anotei nada.",
+        "nl": "Prima, ik heb niets genoteerd.",
+        "en": "Fine, I logged nothing.",
+        "fr": "D'accord, je n'ai rien noté.",
+        "de": "Gut, ich habe nichts notiert.",
+    },
+    "tz_set": {
+        "pt": "Fuso horário: {zone}. Agora, aí, são {time}.",
+        "nl": "Tijdzone: {zone}. Bij jou is het nu {time}.",
+        "en": "Timezone: {zone}. It is {time} where you are.",
+        "fr": "Fuseau horaire : {zone}. Chez toi, il est {time}.",
+        "de": "Zeitzone: {zone}. Bei dir ist es jetzt {time}.",
+    },
+    "tz_unknown": {
+        "pt": "Não reconheci esse fuso. Diga a cidade ou o nome completo, por exemplo: “fuso horário Lisboa” ou “fuso horário America/Sao_Paulo”.",
+        "nl": "Die tijdzone ken ik niet. Noem de stad of de volledige naam, bijvoorbeeld: “tijdzone Lissabon” of “tijdzone America/Sao_Paulo”.",
+        "en": "I don't know that timezone. Say the city or the full name, for example: “timezone Lisbon” or “timezone America/Sao_Paulo”.",
+        "fr": "Je ne connais pas ce fuseau. Dis la ville ou le nom complet, par ex. : « fuseau horaire Lisbonne » ou « fuseau horaire America/Sao_Paulo ».",
+        "de": "Diese Zeitzone kenne ich nicht. Nenne die Stadt oder den vollen Namen, z. B.: „Zeitzone Lissabon“ oder „Zeitzone America/Sao_Paulo“.",
     },
     "purchase_ask_price": {
         "pt": "Quanto custou {item}? Mande com o valor, por exemplo: “{item} 4,50”.",
@@ -3173,6 +3210,66 @@ _PAID_ITEM_STOP = frozenset(
 _AMOUNT_ONLY_RE = re.compile(
     r"^\s*(?:\u20ac\s*)?(?P<amt>\d+(?:[.,]\d{1,2})?)\s*(?:\u20ac|euros?)?\s*$"
 )
+BARE_KIND = "bare_word"  # PendingAction: a lone "água"/"treino"/"remédio" waits for a yes
+BARE_MINUTES = 10
+# A-74: a word alone never records. Words that would log something get a yes/no first.
+_BARE_RECORD_WORDS: dict[str, str] = {
+    "agua": "water", "water": "water", "eau": "water", "wasser": "water",
+    "treino": "workout", "treinar": "workout", "workout": "workout", "training": "workout",
+    "trainen": "workout", "entrainement": "workout", "sport": "workout", "academia": "workout",
+    "remedio": "med", "medicamento": "med", "medication": "med", "medicatie": "med",
+    "medicijn": "med", "medicament": "med", "medikament": "med", "pilula": "med",
+}  # fmt: skip
+_BARE_PHRASES: dict[str, dict[str, str]] = {
+    "water": {"pt": "tomei 1 copo de água", "nl": "ik dronk 1 glas water",
+              "en": "I drank 1 glass of water", "fr": "j'ai bu 1 verre d'eau",
+              "de": "ich habe 1 Glas Wasser getrunken"},
+    "workout": {"pt": "treinei hoje", "nl": "ik heb vandaag getraind",
+                "en": "I worked out today", "fr": "j'ai fait du sport aujourd'hui",
+                "de": "ich habe heute trainiert"},
+    "med": {"pt": "tomei o remédio", "nl": "ik heb mijn medicijn genomen",
+            "en": "I took my medication", "fr": "j'ai pris mon médicament",
+            "de": "ich habe mein Medikament genommen"},
+}  # fmt: skip
+_TZ_CMD_RE = re.compile(
+    r"^(?:meu\s+|mijn\s+|my\s+|mon\s+|mein\s+)?(?:fuso(?:\s+horario)?|timezone|time\s+zone|tijdzone|"
+    r"fuseau(?:\s+horaire)?|zeitzone)(?:\s+(?:e|eh|is|est|ist|para|to|em|in|auf|naar|=|:))?\s*"
+    r"(?P<zone>[a-z][a-z /_.'-]*)?$"
+)
+_TZ_ALIASES: dict[str, str] = {
+    "lisboa": "Europe/Lisbon", "lisbon": "Europe/Lisbon", "lissabon": "Europe/Lisbon",
+    "lisbonne": "Europe/Lisbon", "portugal": "Europe/Lisbon",
+    "amsterdam": "Europe/Amsterdam", "holanda": "Europe/Amsterdam", "netherlands": "Europe/Amsterdam",
+    "nederland": "Europe/Amsterdam", "paises baixos": "Europe/Amsterdam", "pays-bas": "Europe/Amsterdam",
+    "brasil": "America/Sao_Paulo", "brazil": "America/Sao_Paulo", "brasilia": "America/Sao_Paulo",
+    "sao paulo": "America/Sao_Paulo", "rio": "America/Sao_Paulo", "rio de janeiro": "America/Sao_Paulo",
+    "london": "Europe/London", "londres": "Europe/London", "londen": "Europe/London",
+    "paris": "Europe/Paris", "parijs": "Europe/Paris", "franca": "Europe/Paris", "france": "Europe/Paris",
+    "berlin": "Europe/Berlin", "berlim": "Europe/Berlin", "alemanha": "Europe/Berlin",
+    "germany": "Europe/Berlin", "duitsland": "Europe/Berlin", "deutschland": "Europe/Berlin",
+    "madrid": "Europe/Madrid", "espanha": "Europe/Madrid", "spain": "Europe/Madrid",
+    "new york": "America/New_York", "nova york": "America/New_York", "nyc": "America/New_York",
+    "los angeles": "America/Los_Angeles", "dublin": "Europe/Dublin",
+}  # fmt: skip
+
+
+def _timezone_from_text(text: str) -> str | None:
+    """ "lisboa" / "são paulo" / "America/Sao_Paulo" → an IANA name, else None."""
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    key = " ".join(strip_accents(text.lower()).split())
+    if key in _TZ_ALIASES:
+        return _TZ_ALIASES[key]
+    if "/" in key:
+        name = "/".join(part.strip().replace(" ", "_").title() for part in key.split("/"))
+        try:
+            ZoneInfo(name)
+        except (ZoneInfoNotFoundError, ValueError, OSError):
+            return None
+        return name
+    return None
+
+
 _PURCHASE_NO_PRICE_RE = re.compile(
     r"^(?:eu\s+)?(?:comprei|compramos|bought|i\s+bought|gekocht|ik\s+heb\s+gekocht|j\s*ai\s+achete|"
     r"ich\s+habe\s+gekauft|gekauft)\s+\d+(?:[.,]\d+)?\s*(?:kg|g|gr|l|litros?|liters?|un|unidades?)\s+"
@@ -4738,6 +4835,43 @@ async def _handle_button_reply(
         await _save_outbound(member, imp_btn.text, session)
         return True
 
+    if action in ("bare_yes", "bare_no"):  # A-74 a lone word, confirmed or not
+        try:
+            bare_id = uuid.UUID(raw_id)
+        except ValueError:
+            return True
+        bare = await session.scalar(
+            select(PendingAction).where(
+                PendingAction.id == bare_id,
+                PendingAction.member_id == member.id,
+                PendingAction.kind == BARE_KIND,
+                PendingAction.expires_at > datetime.now(UTC),
+            )
+        )
+        if bare is None:
+            reply = _t("button_used", lang)
+        elif action == "bare_no":
+            await session.delete(bare)
+            reply = _t("bare_word_no", lang)
+        else:
+            phrase = str(bare.payload.get("phrase") or "")
+            await session.delete(bare)
+            await session.flush()
+            again = Message(
+                id=uuid.uuid4(),
+                wa_message_id=f"bare-{uuid.uuid4()}",
+                household_id=member.household_id,
+                author_id=member.id,
+                direction="inbound",
+                body=phrase,
+                created_at=datetime.now(UTC),
+            )
+            await handle_inbound(member, again, session)
+            return True
+        await send_text(to, reply)
+        await _save_outbound(member, reply, session)
+        return True
+
     if action in ("plan_ok", "plan_cancel", "plan_adjust"):  # V2-35 training plan preview
         plan_out = await handle_training_button(action, raw_id, member, lang, session)
         if plan_out.buttons:
@@ -4849,6 +4983,7 @@ async def handle_inbound(
     if await handle_flow_onboarding(member, message, session):
         return
 
+    use_member_timezone(getattr(member, "timezone", None))  # A-66: "today" is the person's own
     to = member.wa_phone
     # A-81: a burst (a stuck phone, a script) is answered once, then ignored for the minute
     burst = await _inbound_last_minute(session, member.id)
@@ -5049,6 +5184,35 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        # 4-0i. A-74: a lone "água" / "treino" / "remédio" asks before anything is recorded
+        bare_key = _BARE_RECORD_WORDS.get(body_plain.strip(" .!?"))
+        if bare_key is not None:
+            phrase = _BARE_PHRASES[bare_key].get(lang) or _BARE_PHRASES[bare_key]["en"]
+            await session.execute(
+                delete(PendingAction).where(
+                    PendingAction.member_id == member.id, PendingAction.kind == BARE_KIND
+                )
+            )
+            row = PendingAction(
+                member_id=member.id,
+                kind=BARE_KIND,
+                payload={"phrase": phrase},
+                expires_at=datetime.now(UTC) + timedelta(minutes=BARE_MINUTES),
+            )
+            session.add(row)
+            await session.flush()
+            reply = _t("bare_word_ask", lang, word=body.strip(" .!?"), phrase=phrase)
+            await send_buttons(
+                to,
+                reply,
+                [
+                    (f"bare_yes:{row.id}", _t("btn_bare_yes", lang)),
+                    (f"bare_no:{row.id}", _t("btn_bare_no", lang)),
+                ],
+            )
+            await _save_outbound(member, reply, session)
+            return
+
         # 4-0b. GDPR: "apagar meus dados" (two steps, buttons) / "exportar meus dados"
         if _WIPE_RE.match(body_plain.strip()) or _EXPORT_RE.match(body_plain.strip()):
             await _gdpr_reply(member, body_plain, session, lang)
@@ -5085,6 +5249,28 @@ async def handle_inbound(
             reply = _t("consent_rejected", lang)
             await send_text(to, reply)
             logger.info("conversation.stop_requested", member_id=str(member.id))
+            return
+
+        # 4a2. A-66 — "fuso horário Lisboa": the person's own timezone
+        if m_tz := _TZ_CMD_RE.match(body_plain.strip(" .!?")):
+            zone_text = (m_tz.group("zone") or "").strip()
+            zone = _timezone_from_text(zone_text) if zone_text else member.timezone
+            if zone_text and zone is None:
+                reply = _t("tz_unknown", lang)
+            else:
+                if zone_text:
+                    member.timezone = zone
+                    session.add(member)
+                    audit(session, "timezone_set", member.id, zone=zone)
+                use_member_timezone(zone)
+                reply = _t(
+                    "tz_set",
+                    lang,
+                    zone=zone or settings.timezone,
+                    time=now_local().strftime("%H:%M"),
+                )
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
             return
 
         # 4b. Saldo command

@@ -209,7 +209,7 @@ async def _all_texts(locator) -> list[str]:
 
 
 async def _text(page, selector: str) -> str:
-    # The page keeps "€ 5,00" unbreakable (no-break spaces); the tests read it with plain spaces.
+    # The page keeps "€5,00" unbreakable (no-break spaces); the tests read it with plain spaces.
     return (await page.inner_text(selector)).replace("\u00a0", " ")
 
 
@@ -218,12 +218,12 @@ async def test_balance_card_shows_hero_estimate_tiles_bar_and_the_alfred_phrase(
     try:
         await page.wait_for_selector("[data-card=balance]")
         card = "[data-card=balance]"
-        assert "€ 1.842,30" in await _text(page, f"{card} .hero")
-        assert "~ € 1.120" in await _text(page, f"{card} .proj-side")
-        assert "faixa € 1.030 a € 1.210" in await _text(page, f"{card} .proj-side")
+        assert "€1.842,30" in await _text(page, f"{card} .hero")
+        assert "~ €1.120" in await _text(page, f"{card} .proj-side")
+        assert "faixa €1.030 a €1.210" in await _text(page, f"{card} .proj-side")
         tiles = await _all_texts(page.locator(f"{card} .tile"))
-        assert "€ 3.840,00" in tiles[0] and "igual a setembro" in tiles[0]
-        assert "€ 1.997,70" in tiles[1] and "4% acima de setembro" in tiles[1]
+        assert "€3.840,00" in tiles[0] and "igual a setembro" in tiles[0]
+        assert "€1.997,70" in tiles[1] and "4% acima de setembro" in tiles[1]
         assert await page.locator(f"{card} .legend li").count() == 3  # realised, bills, variable
         flex = await page.eval_on_selector_all(
             f"{card} .bar.stacked > span", "e => e.map(x => parseFloat(x.style.flexGrow))"
@@ -243,7 +243,7 @@ async def test_on_a_phone_the_end_of_month_total_sits_below_the_legend() -> None
         legend = await page.locator("[data-card=balance] .legend").bounding_box()
         total = await page.locator("[data-card=balance] .total").bounding_box()
         assert total["y"] >= legend["y"] + legend["height"]  # "fim do mês" BELOW the legend
-        assert "~ € 1.120" in await _text(page, "[data-card=balance] .total")
+        assert "~ €1.120" in await _text(page, "[data-card=balance] .total")
         assert not await page.locator("[data-card=balance] .proj-side").is_visible()
         # the legend is a readable column: every label and amount fully inside the card
         for li in await page.locator("[data-card=balance] .legend li").all():
@@ -365,22 +365,22 @@ async def test_money_cards() -> None:
         tx = "[data-card=transactions]"
         await page.click(f"{tx} .daychips button:has-text('Todos')")
         days = await _all_texts(page.locator(f"{tx} .day"))
-        assert "Hoje, 2 out" in days[0] and "+ € 3.797,82" in days[0]  # the day's total
+        assert "Hoje, 2 out" in days[0] and "+€3.797,82" in days[0]  # the day's total
         assert "1 out" in days[1] and "30 set" in days[2]
         rows = await _all_texts(page.locator(f"{tx} .entry"))
         assert (
             "Albert Heijn" in rows[0]
             and "supermercado · pago" in rows[0].lower()
-            and "− € 42,18" in rows[0]
+            and "-€42,18" in rows[0]
         )
-        assert "+ € 3.840,00" in rows[1] and "recebido" in rows[1]
+        assert "+€3.840,00" in rows[1] and "recebido" in rows[1]
         assert "a pagar" in rows[-1]
         assert "mostre meus gastos de outubro" in await _text(page, tx)
         assert "exportar meus dados" in await _text(page, tx)  # the copy comes through the chat
         assert await page.locator(f"{tx} .pager button").count() == 0  # single page: no pager
         assert await page.locator("[data-card=top_expenses] .brow").count() == 5
         mom = await _text(page, "[data-card=month_vs_month]")
-        assert "€ 1.997" in mom and "▲ 9% contra setembro" in mom and "igual a setembro" in mom
+        assert "€1.997" in mom and "▲ 9% contra setembro" in mom and "igual a setembro" in mom
         assert "62" in await _text(page, "[data-card=fixed_variable] .hero")
         legend = await _all_texts(page.locator("[data-card=fixed_variable] .legend li"))
         assert len(legend) == 2 and "1.238" in legend[0] and "760" in legend[1]
@@ -391,16 +391,16 @@ async def test_money_cards() -> None:
         assert await page.locator("[data-card=avg_ticket]").count() == 0
         budgets = page.locator("[data-card=budgets] .brow")
         assert await budgets.count() == 3
-        assert "€ 148 de € 120 · 123%" in (await budgets.nth(0).inner_text()).replace("\u00a0", " ")
+        assert "€148 de €120 · 123%" in (await budgets.nth(0).inner_text()).replace("\u00a0", " ")
         assert "74" in await _text(page, "[data-card=budgets] .hero")
         assert (
             await page.locator("[data-card=budgets] .track > u").count() == 6
         )  # 80% and 100% marks
         assert await page.locator("[data-card=budgets] .track > i.warm").count() == 1
-        assert "€ 34,50" in await _text(page, "[data-card=owed] .hero")
+        assert "€34,50" in await _text(page, "[data-card=owed] .hero")
         assert "há 9 dias" in await _text(page, "[data-card=owed]")
         rec = await _text(page, "[data-card=recurring]")
-        assert "parcela 1 de 13" in rec and "€ 218,00 por mês · 2 itens" in rec
+        assert "parcela 1 de 13" in rec and "€218,00 por mês · 2 itens" in rec
         assert "Marta" in await _text(page, "[data-card=owed]")
     finally:
         await _close(pwm, browser)
@@ -746,14 +746,14 @@ async def test_days_without_settled_entries_show_no_zero_total_and_a_running_mon
         await _close(pwm, browser)
 
 
-async def test_the_euro_sign_never_separates_from_its_number_or_its_sign() -> None:
+async def test_the_euro_sign_is_written_like_the_chat_with_no_space() -> None:
     pwm, browser, page = await _open(_handlers())
     try:
         await page.wait_for_selector("[data-card=balance] .hero")
         raw = await page.inner_text("[data-card=balance] .hero")
-        assert "€ " in raw and "€ " not in raw
+        assert "€" in raw and "€ " not in raw and "€\u00a0" not in raw
         for t in await page.locator("#panel [data-card]").all_inner_texts():
-            assert "− € " not in t and "+ € " not in t
+            assert "- €" not in t and "+ €" not in t and "− €" not in t
     finally:
         await _close(pwm, browser)
 
@@ -872,7 +872,7 @@ async def test_trip_plan_cards_show_itinerary_packing_and_planned_against_spent(
         assert await page.locator("[data-card=itinerary] .appt").count() == 8
         assert await page.locator("[data-card=itinerary] .day-head").count() == 5
         assert await page.locator("[data-card=plan_budget] .cat").count() == 4
-        assert "€ 180 / € 450" in (await _text(page, "[data-card=plan_budget]")).replace(
+        assert "€180 / €450" in (await _text(page, "[data-card=plan_budget]")).replace(
             "\u00a0", " "
         )
     finally:
@@ -1119,10 +1119,10 @@ async def test_the_home_tab_draws_contracts_and_cost_and_never_runs_a_provider_n
         await page.wait_for_selector("[data-card=home_contracts]")
         text = await _text(page, "[data-card=home_contracts]")
         assert "Internet · Ziggo" in text and "termina em 05/01/2027 · 83 dias" in text
-        assert "€ 55,50 por mês" in text and "<img" in text  # shown as text
+        assert "€55,50 por mês" in text and "<img" in text  # shown as text
         assert await page.locator("[data-card=home_contracts] img").count() == 0
         assert not await page.evaluate("window.__pwned")
         cost_text = await _text(page, "[data-card=home_cost]")
-        assert "€ 55" in cost_text and "≈ € 666 por ano" in cost_text
+        assert "€55" in cost_text and "≈ €666 por ano" in cost_text
     finally:
         await _close(pwm, browser)

@@ -735,7 +735,7 @@
     ],
     "phrase": {
      "key": "trip_budget",
-     "text": "20% do orçamento da viagem já foi usado: € 180,00 de € 900,00.",
+     "text": "20% do orçamento da viagem já foi usado: €180,00 de €900,00.",
      "chat": "\"minhas viagens\"",
      "severity": "info"
     }
@@ -896,7 +896,7 @@
     ],
     "phrase": {
      "key": "plan_budget_ok",
-     "text": "Habitação usou 40% do planejado: € 180,00 de € 450,00.",
+     "text": "Habitação usou 40% do planejado: €180,00 de €450,00.",
      "chat": "\"orçamento da viagem\"",
      "severity": "info"
     }

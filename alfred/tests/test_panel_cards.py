@@ -224,8 +224,7 @@ async def test_categories_card_numbers_trend_and_phrase(lab, client, today) -> N
     assert c["others"] == {"amount": 38.0, "count": 1}  # gezondheid beyond the top 5
     assert c["values"]["total"] == 1803.0 and c["values"]["previous_total"] == 1772.0
     assert (
-        c["phrase"]["text"]
-        == "Restaurante é o que mais cresceu: € 52,00 a mais do que em setembro."
+        c["phrase"]["text"] == "Restaurante é o que mais cresceu: €52,00 a mais do que em setembro."
     )
     assert c["phrase"]["chat"] == '"mês contra mês"'
     assert not any(
@@ -252,7 +251,7 @@ async def test_budgets_card(lab, client, today) -> None:
         "days_in_month": 31,
     }
     assert c["phrase"]["key"] == "budget_over" and c["phrase"]["severity"] == "attention"
-    assert c["phrase"]["text"] == "Restaurante passou do orçamento: € 148,00 de € 120,00 (123%)."
+    assert c["phrase"]["text"] == "Restaurante passou do orçamento: €148,00 de €120,00 (123%)."
     only = _card(
         await _get(client, await _token(lab.member_id), "money", "?categories=transport"),
         "budgets",
@@ -293,7 +292,7 @@ async def test_upcoming_card_items_and_phrase(lab, client, today) -> None:
         "horizon_days": 30,
     }
     assert c["phrase"]["key"] == "upcoming_ok" and c["phrase"]["chat"] == '"paguei Energia"'
-    assert "5 contas" in c["phrase"]["text"] and "€ 1.548,00" in c["phrase"]["text"]
+    assert "5 contas" in c["phrase"]["text"] and "€1.548,00" in c["phrase"]["text"]
     # a category filter keeps only the fixed items of that category
     ge = _card(
         await _get(client, await _token(lab.member_id), "summary", "?categories=gezondheid"),
@@ -346,7 +345,7 @@ async def test_owed_phrase_names_what_the_person_owes_in_total(lab, client, toda
     )  # fmt: skip
     owed = _card(await _get(client, await _token(lab.member_id), "money"), "owed")
     assert owed["values"] == {"total": 32.0, "count": 3}
-    assert "Marta deve € 25,00 a você há 43 dias" in owed["phrase"]["text"]
+    assert "Marta deve €25,00 a você há 43 dias" in owed["phrase"]["text"]
     assert owed["phrase"]["chat"] == '"Marta pagou 25,00"'
 
 
@@ -382,9 +381,7 @@ async def test_transactions_card_groups_by_day_with_the_whole_day_sum(lab, clien
         pending_day["entries"][0]["status"] == "to_pay"
         and pending_day["entries"][0]["settled"] is False
     )
-    assert (
-        c["phrase"]["text"] == "15 lançamentos em outubro. O maior gasto foi Aluguel, € 1.150,00."
-    )
+    assert c["phrase"]["text"] == "15 lançamentos em outubro. O maior gasto foi Aluguel, €1.150,00."
 
 
 @db
