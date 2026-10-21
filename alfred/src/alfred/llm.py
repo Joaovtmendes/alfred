@@ -384,7 +384,7 @@ async def _extract_expense_anthropic(text: str, lang: str = "en") -> dict | None
 The user writes in Portuguese, Dutch, English, French, or German — handle all five.
 
 If the message contains a financial transaction, return ONLY valid JSON (no other text):
-{"is_expense": true, "type": "expense"|"income", "amount": <float>, "currency": "EUR"|"USD"|"GBP", "merchant": "<store/person or null>", "category": "<category>", "description": "<short description>", "days_ago": <int, 0=today, 1=yesterday>}
+{"is_expense": true, "type": "expense"|"income", "amount": <float>, "currency": "EUR"|"USD"|"GBP", "merchant": "<store/person or null>", "category": "<category>", "description": "<short description>", "days_ago": <int, 0=today, 1=yesterday>, "pending_in_days": <int or null: null if the money already moved; N days from today when it will only be received/paid later, e.g. "vou receber 300 em dois dias" -> 2>}
 
 Categories: supermarkt, restaurant, transport, gezondheid, entertainment, wonen, kleding, abonnement, inkomen, overig
 
@@ -462,11 +462,12 @@ _MULTI_SYSTEM = """You split ONE WhatsApp message into its separate financial tr
 The user writes in Portuguese, Dutch, English, French, or German.
 
 Return ONLY valid JSON (no other text):
-{"items": [{"type": "expense"|"income", "amount": <float>, "currency": "EUR"|"USD"|"GBP", "merchant": "<store/person or null>", "category": "<category>", "description": "<short description>", "days_ago": <int>}]}
+{"items": [{"type": "expense"|"income", "amount": <float>, "currency": "EUR"|"USD"|"GBP", "merchant": "<store/person or null>", "category": "<category>", "description": "<short description>", "days_ago": <int>, "pending_in_days": <int or null>}]}
 
 Categories: supermarkt, restaurant, transport, gezondheid, entertainment, wonen, kleding, abonnement, inkomen, overig
 Only include items that have BOTH an amount and something it was spent on / received for.
 If the message is not a list of transactions, return {"items": []}.
+"pending_in_days": null when the money already moved (paguei, recebi, gastei). A number of days from today (0 = today) when it will only be received or paid later ("vou receber 300 em dois dias" -> 2, "a pagar a luz na sexta"). Such an item keeps days_ago 0.
 Do not invent amounts. Amounts are positive numbers; the sign lives in "type"."""
 
 MAX_MULTI_ITEMS = 30  # the caller keeps the first 10 and says so

@@ -77,7 +77,8 @@ ignora, excepto `START`. O "sim" curto de consentimento no chat deixou de existi
 | 4e-0k | visões guardadas V2-14 | `analysis.py` `handle_view_command` |
 | 4e-1 | correcção de categoria ("Jumbo é supermarkt") | `parsing.py` |
 | 4e-2 … 4e-5d | notas, tarefas, dashboard | M10, M11 |
-| 4e-6 … 4e-8b | metas e hábitos (regex e LLM) | M9 |
+| 4e-0s4b | metas financeiras: criar com valor e prazo, "guardei 500 na reserva", "tenho 2000 na reserva", "metas financeiras" | `goals.py` |
+| 4e-6 … 4e-8b | metas e hábitos (regex e LLM); ao registrar, mostra os dias da semana (✅⬜▫️) | M9, `goals.py` |
 | 4e-9 … 4e-9e | saúde: medicação, humor, sono, água | M8 |
 | 4e-10 … 4e-11d | treinos | M7 |
 | 4e-0c(2), 4e-0d | comandos reais que o LLM improvisava; correcção de valor ("errei, foram 42") | |
@@ -110,7 +111,7 @@ linha `message` (V2-18) para o estado de entrega chegar depois pelo webhook (`st
 Tudo pertence a um `member` (e este a um `household`). Tabelas: `household`, `member`,
 `message` (inclui `kind`, `delivery_status`), `expense` (inclui `status`: paid / to_pay /
 received / to_receive; relatórios só contam paid e received), `merchant_category_overrides`,
-`scheduled_job`, `workout_session`, `health_log`, `goal`, `habit_log`, `note`, `task`, `trip`,
+`scheduled_job`, `workout_session`, `health_log`, `goal`, `goal_contribution` (aportes: `add` soma, `set` define o saldo; é o que mede a meta financeira), `habit_log`, `note`, `task`, `trip`,
 `llm_usage`, `audit_log` e, do V2, `budget`, `recurring_item`, `appointment`, `saved_view`,
 `iou`, `pending_batch` e, do V2-35, `workout_plan`, `workout_plan_day`,
 `workout_plan_item`, `workout_load`, `trip_item`, `trip_pack_item`, `trip_budget_line` (único por
@@ -120,7 +121,7 @@ tabela nova entra sozinha.
 Também: `google_connection` (Google Agenda opcional, `google_calendar.py`; token cifrado, desligar
 ou apagar dados revoga a concessão), `member.email`, `member.signup_token*`, `member.health_consent_at`,
 `member.timezone` (A-66). Migrações em `alfred/alembic/versions/` numa cadeia linear; o head actual é
-`d8e9f0a1b2c3` (fuso por membro; antes `c7d8e9f0a1b2` Google Agenda, `b6c7d8e9f0a1` e-mail do
+`e9f0a1b2c3d4` (aportes de metas financeiras; antes `d8e9f0a1b2c3` fuso por membro; antes `c7d8e9f0a1b2` Google Agenda, `b6c7d8e9f0a1` e-mail do
 cadastro). Cada item V2 tem uma migração própria.
 
 ## Painel v2
@@ -183,8 +184,8 @@ states, trip}, "cards": [...]}`. Todo cartão tem `id` estável, `empty`, `phras
 |---|---|
 | `summary` | `balance` (com `compare` e `projection`), `categories`, `goals`, `week`, `upcoming` |
 | `agenda` | `week`, `load` (Respiro e pico: compromissos por dia nos próximos 7 dias), `tasks`, `deadlines` (Prazos da semana: tarefas com prazo nos próximos 7 dias, por dia), `month_map`, `reminders`, `notes` |
-| `money` | `transactions` (50 por página, `?page=N`; visão por dia com filtro de dia no topo, no navegador), `month_vs_month`, `top_expenses`, `categories`, `budgets`, `fixed_variable`, `owed`, `daily`, `recurring` |
-| `health` | `goals`, `workouts`, `training`, `water` |
+| `money` | `transactions` (50 por página, `?page=N`; visão por dia com filtro de dia no topo, no navegador), `month_vs_month`, `top_expenses`, `categories`, `budgets`, `money_goals` (metas financeiras: guardado, % e quanto por mês), `fixed_variable`, `owed`, `daily`, `recurring` |
+| `health` | `goals` (só metas de rotina, com os 7 dias da semana), `workouts`, `training`, `water` |
 
 A ordem é a da API em todas as telas (sem `order` em CSS; há teste de contrato). Nenhum cartão tem
 "ver como tabela".

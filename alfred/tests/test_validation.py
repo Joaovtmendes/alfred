@@ -28,7 +28,7 @@ def _exp(**kw):
 
 def test_valid_expense_passes_through() -> None:
     out = sanitize_expense(_exp())
-    assert out == {**_exp(), "days_ago": 0}
+    assert out == {**_exp(), "days_ago": 0, "pending_in_days": None}
 
 
 @pytest.mark.parametrize("amount", [0, -5, "abc", None, float("nan"), float("inf"), 5e9, True])

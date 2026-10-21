@@ -358,7 +358,7 @@ async def test_money_has_the_cards_in_order(lab, client, today) -> None:
     body = await _get(client, await _token(lab.member_id), "money")
     assert [c["id"] for c in body["cards"]] == [
         "transactions", "month_vs_month", "top_expenses", "categories", "budgets",
-        "fixed_variable", "owed", "daily", "recurring",
+        "money_goals", "fixed_variable", "owed", "daily", "recurring",
     ]  # fmt: skip
 
 
@@ -497,6 +497,7 @@ async def test_empty_member_gets_empty_cards_that_teach_the_chat_in_their_langua
                         "empty_recurring": "add_recurring",
                         "empty_owed": "add_owed",
                         "empty_goals": "add_goal",
+                        "empty_money_goals": "add_money_goal",
                         "empty_agenda": "add_appointment",
                     }[h["key"]]
                 ][lang]

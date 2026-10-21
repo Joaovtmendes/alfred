@@ -1685,6 +1685,28 @@
       "source": "Hard test 18-20/10 (não reproduzido)",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-072",
+      "title": "'vou receber 300 do freelancer em dois dias' era gravado como recebido hoje (receita futura fora do a receber); 'ajustar freelancer para daqui 2 dias' não era entendido",
+      "severity": "alta",
+      "area": "receitas",
+      "step": "print do WhatsApp 21/10",
+      "status": "fixed",
+      "source": "Print enviado pelo usuário 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-073",
+      "title": "Meta financeira ficava em Hábitos e não tinha progresso próprio; metas de rotina não mostravam os dias da semana nem a lista ✓/○ ao registrar",
+      "severity": "media",
+      "area": "metas",
+      "step": "print do WhatsApp 21/10",
+      "status": "fixed",
+      "source": "Pedido do usuário 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }

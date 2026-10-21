@@ -322,6 +322,13 @@ PHRASES: dict[str, dict[str, str]] = {
         "fr": "Tu n'as pas encore d'objectifs actifs. Crées-en un dans le chat.",
         "de": "Du hast noch keine aktiven Ziele. Lege im Chat eines an.",
     },
+    "empty_money_goals": {
+        "pt": "Você ainda não tem metas financeiras. Crie uma pelo chat.",
+        "nl": "Je hebt nog geen financiële doelen. Maak er een via de chat.",
+        "en": "You have no financial goals yet. Create one in the chat.",
+        "fr": "Tu n'as pas encore d'objectifs financiers. Crées-en un dans le chat.",
+        "de": "Du hast noch keine finanziellen Ziele. Lege im Chat eines an.",
+    },
     "empty_trips": {
         "pt": "Nenhuma viagem registrada. Crie uma pelo chat, com o orçamento se quiser.",
         "nl": "Geen reizen vastgelegd. Maak er een via de chat, desgewenst met budget.",
@@ -543,6 +550,13 @@ CHAT: dict[str, dict[str, str]] = {
         "en": '"note: idea for the weekend"',
         "fr": '"note: idée pour le week-end"',
         "de": '"Notiz: Idee fürs Wochenende"',
+    },
+    "add_money_goal": {
+        "pt": '"meta: reserva de emergência 5000 até dezembro"',
+        "nl": '"doel: noodfonds 5000 tot december"',
+        "en": '"goal: emergency fund 5000 by December"',
+        "fr": "\"objectif: fonds d'urgence 5000 jusqu'en décembre\"",
+        "de": '"Ziel: Notgroschen 5000 bis Dezember"',
     },
     "add_goal": {
         "pt": '"meta: treinar 3 vezes por semana"',
@@ -1277,6 +1291,7 @@ EMPTY: dict[str, tuple[str, str]] = {
     "water": ("empty_water", "log_water"),
     "workouts": ("empty_workouts", "log_workout"),
     "goals": ("empty_goals", "add_goal"),
+    "money_goals": ("empty_money_goals", "add_money_goal"),
     "trips": ("empty_trips", "add_trip"),
     "training": ("empty_training", "add_plan"),
     "itinerary": ("empty_itinerary", "add_itinerary"),

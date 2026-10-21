@@ -52,11 +52,11 @@ from __future__ import annotations
 import uuid
 from collections import Counter, defaultdict
 from datetime import date, timedelta
-from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import case, func, select
+from sqlalchemy import func, select
 
+from alfred import goals as goals_view
 from alfred import panel_phrases as pp
 from alfred.clock import day_start, to_local, week_start
 from alfred.models import (
@@ -517,67 +517,24 @@ async def workouts_card(ctx) -> dict[str, Any]:
     return card
 
 
-def _is_money_goal(goal: Goal) -> bool:
-    """A savings/amount goal ("juntar 5000€"): it is not measured in check-in days."""
-    unit = (goal.target_unit or "").lower()
-    return "€" in goal.title or "eur" in unit or "€" in unit or "euro" in unit
-
-
-def _target_amount(goal: Goal) -> float | None:
-    raw = (goal.target_value or "").replace(" ", "").replace(",", ".")
-    try:
-        value = float(raw)
-    except ValueError:
-        return None
-    return value if 0 < value < 1e9 else None
-
-
-def _money_progress(goal: Goal, saved: Decimal | None) -> dict[str, Any]:
-    """Savings progress: the settled balance (income minus spending) since the goal was set."""
-    target = _target_amount(goal) if _is_money_goal(goal) else None
-    if target is None or saved is None:
-        return {}
-    got = max(float(saved), 0.0)
-    return {
-        "saved": round(got, 2),
-        "target_amount": round(target, 2),
-        "saved_pct": min(int(got * 100 / target), 100),
-    }
-
-
-async def _net_saved_since(ctx, goals: list[Goal]) -> dict[uuid.UUID, Decimal]:
-    out: dict[uuid.UUID, Decimal] = {}
-    for g in goals:
-        if not _is_money_goal(g):
-            continue
-        net = func.coalesce(
-            func.sum(
-                case((Expense.transaction_type == "income", Expense.amount), else_=-Expense.amount)
-            ),
-            0,
-        )
-        stmt = select(net).where(
-            Expense.member_id == ctx.mid,
-            Expense.status.in_(SETTLED),
-            Expense.expense_date >= g.created_at,
-        )
-        out[g.id] = dec((await ctx.session.execute(stmt)).scalar_one())
-    return out
-
-
 async def goals_card(ctx) -> dict[str, Any]:
-    goals = (
-        (
-            await ctx.session.execute(
-                select(Goal)
-                .where(Goal.member_id == ctx.mid, Goal.active.is_(True))
-                .order_by(Goal.created_at)
-                .limit(50)
+    """Habit and routine goals (check-in days). Money goals have their own card in Dinheiro."""
+    goals = [
+        g
+        for g in (
+            (
+                await ctx.session.execute(
+                    select(Goal)
+                    .where(Goal.member_id == ctx.mid, Goal.active.is_(True))
+                    .order_by(Goal.created_at)
+                    .limit(50)
+                )
             )
+            .scalars()
+            .all()
         )
-        .scalars()
-        .all()
-    )
+        if not goals_view.is_money_goal(g)
+    ]
     since30 = ctx.today - timedelta(days=29)
     since7 = ctx.today - timedelta(days=6)
     stmt = (
@@ -593,8 +550,8 @@ async def goals_card(ctx) -> dict[str, Any]:
     logs: dict[uuid.UUID, list[date]] = defaultdict(list)
     for gid, day in (await ctx.session.execute(stmt)).all():
         logs[gid].append(day)
+    week = goals_view.week_days(ctx.today)
     items = []
-    saved_net = await _net_saved_since(ctx, goals)
     for g in goals:
         days = set(logs.get(g.id, []))  # one check-in per day counts once
         target = " ".join(x for x in (g.target_value, g.target_unit) if x) or None
@@ -603,10 +560,12 @@ async def goals_card(ctx) -> dict[str, Any]:
                 "title": g.title,
                 "target": target,
                 "deadline": g.deadline.isoformat() if g.deadline else None,
-                "money": _is_money_goal(g),
-                **_money_progress(g, saved_net.get(g.id)),
                 "logs_7d": sum(1 for d in days if d >= since7),
                 "logs_30d": len(days),
+                # Monday..Sunday of the current week: "done" | "missed" | "later"
+                "week": [
+                    "done" if d in days else ("later" if d > ctx.today else "missed") for d in week
+                ],
             }
         )
     items.sort(key=lambda i: (-i["logs_7d"], -i["logs_30d"], i["title"]))
@@ -614,6 +573,21 @@ async def goals_card(ctx) -> dict[str, Any]:
     if items and items[0]["logs_7d"] > 0:
         card["phrase"] = _phrase(pp.rule_goal(items[0]["title"], items[0]["logs_7d"], ctx.lang))
     return card
+
+
+async def money_goals_card(ctx) -> dict[str, Any]:
+    """Financial goals (emergency fund, "save 5000"): progress = what the member put aside."""
+    goals = await goals_view.money_goals(ctx.session, ctx.mid)
+    saved = await goals_view.saved_amounts(ctx.session, ctx.mid, [g.id for g in goals])
+    items = [
+        {"title": g.title, **goals_view.progress_for(g, saved.get(g.id, 0.0), ctx.today)}
+        for g in goals
+    ]
+    total = round(sum(i["saved"] for i in items), 2)
+    return _card(
+        "money_goals", not goals, {"count": len(goals), "saved_total": total}, ctx, "money_goals",
+        items=items[:6],
+    )  # fmt: skip
 
 
 # ── Viagens ───────────────────────────────────────────────────────────────────

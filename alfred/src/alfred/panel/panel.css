@@ -168,6 +168,10 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:8px
 .brow .h{display:flex;justify-content:space-between;gap:10px}
 .brow .h .n{font-weight:600}
 .brow .h .v{font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+.weekdots{display:flex;gap:6px}
+.weekdots .wd{width:14px;height:14px;border-radius:50%;box-sizing:border-box;border:2px solid var(--muted)}
+.weekdots .wd.done{background:var(--accent);border-color:var(--accent)}
+.weekdots .wd.later{border:2px dotted var(--surface2);opacity:.8}
 .brow .h .v.over{color:var(--neg);font-weight:600}
 .brow.sm .track{height:10px}
 .cap{font-size:12px;color:var(--muted)}

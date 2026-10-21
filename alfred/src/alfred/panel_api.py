@@ -793,6 +793,7 @@ async def money(
         await top_expenses_card(ctx),
         await categories_card(ctx, 8),
         await budgets_card(ctx),
+        await pt.money_goals_card(ctx),
         await fixed_variable_card(ctx),
         await owed_card(ctx),
         await daily_card(ctx),

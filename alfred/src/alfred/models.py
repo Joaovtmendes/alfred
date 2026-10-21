@@ -441,6 +441,25 @@ class HabitLog(Base):
     goal: Mapped[Goal | None] = relationship(back_populates="habit_logs")
 
 
+class GoalContribution(Base):
+    """Money put aside for a financial goal: ``add`` (+ amount) or ``set`` (balance is amount)."""
+
+    __tablename__ = "goal_contribution"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
+    )
+    goal_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("goal.id"), nullable=False, index=True
+    )
+    kind: Mapped[str] = mapped_column(String(3), nullable=False)  # add | set
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 # ── M10 — Produtividade ──────────────────────────────────────────────────────
 
 

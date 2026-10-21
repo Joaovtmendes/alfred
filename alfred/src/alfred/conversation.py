@@ -22,6 +22,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
+from alfred import goals as goals_view
 from alfred import google_calendar as _gcal
 from alfred.accounting import STRINGS as _ACCT_STRINGS
 from alfred.accounting import default_scope, handle_accounting_command
@@ -37,6 +38,7 @@ from alfred.budgets import STRINGS as _BUDGET_STRINGS
 from alfred.budgets import alert_after_expense, handle_budget_command
 from alfred.clock import (
     day_start,
+    local_tz,
     month_name,
     month_start,
     now_local,
@@ -62,6 +64,8 @@ from alfred.followup import (
     handle_deeper_button,
     handle_feedback_button,
 )
+from alfred.goals import STRINGS as _GOALS_STRINGS
+from alfred.goals import handle_goal_command
 from alfred.google_calendar import STRINGS as _GCAL_STRINGS
 from alfred.home import STRINGS as _HOME_STRINGS
 from alfred.home import handle_home_button, handle_home_command
@@ -1923,6 +1927,7 @@ _STRINGS.update(_FOLLOWUP_STRINGS)  # V2-20 / V2-23
 _STRINGS.update(_INVOICE_STRINGS)  # V2-12 part 2
 _STRINGS.update(_SERVICE_STRINGS)  # V2-36
 _STRINGS.update(_HOME_STRINGS)  # V2-27
+_STRINGS.update(_GOALS_STRINGS)  # financial goals + week marks
 _STRINGS.update(_CAL_STRINGS)  # V2-21
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
@@ -5545,6 +5550,15 @@ async def handle_inbound(
             await _save_outbound(member, home_out.text, session)
             return
 
+        # 4e-0s4b. financial goals: "guardei 300 na reserva" / "já tenho 1200 na reserva" / "metas financeiras"
+        goal_out = await handle_goal_command(
+            message.body or "", body_plain, member, lang, session, today_local()
+        )
+        if goal_out is not None:
+            await send_text(to, goal_out.text)
+            await _save_outbound(member, goal_out.text, session)
+            return
+
         # 4e-0s5. V2-21 — Dutch deadlines: "prazos" / "prazo btw" / "ligar avisos de prazos"
         cal_out = await handle_calendar_command(body_plain, member, lang, session, today_local())
         if cal_out is not None:
@@ -5899,8 +5913,11 @@ async def handle_inbound(
         if m_goal:
             goal_title = m_goal.group(1).strip()
             goal = Goal(id=uuid.uuid4(), member_id=member.id, title=goal_title, active=True)
+            goals_view.prepare_new_goal(goal, today_local())
             session.add(goal)
             reply = _t("goal_created", lang, title=goal_title)
+            if goals_view.is_money_goal(goal):
+                reply += "\n" + _t("goal_money_hint", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -5919,10 +5936,9 @@ async def handle_inbound(
             if not active_goals:
                 reply = _t("goals_list_empty", lang)
             else:
-                lines = [_t("goals_list_header", lang, n=len(active_goals))]
-                for g in active_goals:
-                    lines.append(_t("goals_list_row", lang, title=g.title))
-                reply = "\n".join(lines)
+                reply = await goals_view.render_goals(
+                    session, member, lang, today_local(), list(active_goals)
+                )
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -6165,7 +6181,7 @@ async def handle_inbound(
             if linked_goal:
                 reply = _t(
                     "habit_logged_with_goal", lang, activity=habit_activity, goal=linked_goal.title
-                )
+                ) + await goals_view.marks_line(session, member, linked_goal, lang, today_local())
             else:
                 reply = _t("habit_logged", lang, activity=habit_activity)
             await send_text(to, reply)
@@ -6226,6 +6242,8 @@ async def handle_inbound(
                 if linked_goal2:
                     reply = _t(
                         "habit_logged_with_goal", lang, activity=h_activity, goal=linked_goal2.title
+                    ) + await goals_view.marks_line(
+                        session, member, linked_goal2, lang, today_local()
                     )
                 else:
                     reply = _t("habit_logged", lang, activity=h_activity)
@@ -6435,6 +6453,37 @@ async def handle_inbound(
                     activity=activity_name(workout_data["activity_type"], lang),
                     duration=detail,
                 )
+                # the workout also ticks the routine goal it belongs to ("correr 10 km")
+                routine = (
+                    (
+                        await session.execute(
+                            select(Goal).where(Goal.member_id == member.id, Goal.active.is_(True))
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                wo_goal = goals_view.goal_for_workout(list(routine), workout_data["activity_type"])
+                if wo_goal is not None:
+                    if not await _habit_already_logged(
+                        session,
+                        member.id,
+                        activity_name(workout_data["activity_type"], lang),
+                        wo_date,
+                    ):
+                        session.add(
+                            HabitLog(
+                                id=uuid.uuid4(),
+                                member_id=member.id,
+                                goal_id=wo_goal.id,
+                                activity=activity_name(workout_data["activity_type"], lang),
+                                log_date=wo_date,
+                            )
+                        )
+                    reply += (
+                        f"\n{_t('goal_workout_line', lang, goal=wo_goal.title)}"
+                        + await goals_view.marks_line(session, member, wo_goal, lang, today_local())
+                    )
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
                 logger.info(
@@ -6980,6 +7029,18 @@ async def handle_inbound(
             if not days_ago:  # "paguei 130 de seguro saúde, data 05/10": the date written
                 days_ago = _written_days_ago(body) or 0
             expense_date = now_local() - timedelta(days=days_ago)
+            pending_days = expense_data.get("pending_in_days")
+            pending_status = None
+            if (
+                pending_days is not None
+            ):  # "vou receber 300 em dois dias": due later, not in the balance
+                pending_status = "to_receive" if txn_type == "income" else "to_pay"
+                days_ago = 0
+                expense_date = datetime.combine(
+                    today_local() + timedelta(days=int(pending_days)),
+                    time(12, 0),
+                    tzinfo=local_tz(),
+                )
 
             # M14 — auto-tag with the active trip. Looked up BEFORE the expense is
             # created so it is inserted once, already tagged.
@@ -7004,6 +7065,7 @@ async def handle_inbound(
                 trip_id=active_trip.id if active_trip else None,
                 shared=shared_now,
                 scope=default_scope(member, expense_data["category"], txn_type),
+                **({"status": pending_status} if pending_status else {}),
             )
             session.add(expense)
 
@@ -7014,12 +7076,21 @@ async def handle_inbound(
             )
             amt_fmt = _fmt_eur(expense_data["amount"])
             key = "income_recorded" if txn_type == "income" else "expense_recorded"
-            reply = _t(key, lang, amount=amt_fmt, name=name)
+            if pending_status:
+                reply = _t(
+                    "ledger_added_recv" if txn_type == "income" else "ledger_added_pay",
+                    lang,
+                    name=name,
+                    amount=amt_fmt,
+                    due=f"{expense_date:%d/%m}",
+                )
+            else:
+                reply = _t(key, lang, amount=amt_fmt, name=name)
             if shared_now:
                 reply += _t("home_auto_suffix", lang)
             if days_ago > 0:
                 reply += _t("days_ago_suffix", lang, n=days_ago)
-            if txn_type == "expense":
+            if txn_type == "expense" and not pending_status:
                 await session.flush()  # make the new row visible to the month total below
                 reply += await _month_category_context(
                     session, member, expense_date, expense_data.get("category"), lang

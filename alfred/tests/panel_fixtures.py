@@ -440,6 +440,21 @@ def empty_card(
     }
 
 
+_MONEY_GOALS = {
+    "id": "money_goals",
+    "empty": False,
+    "values": {"count": 2, "saved_total": 2300.0},
+    "items": [
+        {"title": "reserva de emergência 5000", "saved": 2200.0, "target_amount": 5000.0,
+         "deadline": "2026-12-31", "saved_pct": 44, "remaining": 2800.0, "done": False,
+         "per_month": 1400.0},
+        {"title": "juntar 300€", "saved": 100.0, "target_amount": 300.0, "deadline": None,
+         "saved_pct": 33, "remaining": 200.0, "done": False},
+    ],
+    "phrase": None,
+}  # fmt: skip
+
+
 # ── Card order of the approved panel (the same in the API, the DOM and on every screen) ──
 # Resumo: balance, categories, goals, week, upcoming. Dinheiro: transactions, month_vs_month,
 # top_expenses, categories, budgets, fixed_variable, owed, daily, recurring.
@@ -466,6 +481,7 @@ def _reshape() -> None:
         by_money["top_expenses"],
         by_money["categories"],
         budgets,
+        copy.deepcopy(_MONEY_GOALS),
         by_money["fixed_variable"],
         by_money["owed"],
         by_money["daily"],

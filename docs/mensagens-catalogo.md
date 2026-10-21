@@ -2334,6 +2334,115 @@
 - **fr** — C'est fait, j'ai retiré l'objectif *{title}* de ta liste.
 - **de** — Erledigt, das Ziel *{title}* ist nicht mehr in deiner Liste.
 
+## `goal_money_added`
+
+- **pt** — Anotei {amount} na meta *{title}*. Agora: {saved} de {target} ({pct}%).
+- **nl** — Genoteerd: {amount} bij doel *{title}*. Nu: {saved} van {target} ({pct}%).
+- **en** — Added {amount} to *{title}*. Now: {saved} of {target} ({pct}%).
+- **fr** — {amount} ajouté à *{title}*. Maintenant : {saved} sur {target} ({pct} %).
+- **de** — {amount} zu *{title}* notiert. Jetzt: {saved} von {target} ({pct} %).
+
+## `goal_money_done`
+
+- **pt** —  meta atingida
+- **nl** —  doel bereikt
+- **en** —  goal reached
+- **fr** —  objectif atteint
+- **de** —  Ziel erreicht
+
+## `goal_money_due`
+
+- **pt** —  · até {due}, cerca de {per} por mês
+- **nl** —  · tot {due}, ongeveer {per} per maand
+- **en** —  · by {due}, about {per} a month
+- **fr** —  · d'ici le {due}, environ {per} par mois
+- **de** —  · bis {due}, etwa {per} pro Monat
+
+## `goal_money_empty`
+
+- **pt** — Você ainda não tem meta financeira. Crie uma assim: "meta: reserva de emergência 5000 euros". Depois diga "guardei 300 na reserva" e eu acompanho.
+- **nl** — Je hebt nog geen financieel doel. Maak er een: "doel: noodfonds 5000 euro". Zeg daarna "300 bij het noodfonds gedaan".
+- **en** — You have no financial goal yet. Create one: "goal: emergency fund 5000 euros". Then say "put 300 in the emergency fund" and I'll track it.
+- **fr** — Tu n'as pas encore d'objectif financier. Crée-en un : « objectif : fonds d'urgence 5000 euros ». Puis dis « j'ai mis 300 dans le fonds d'urgence ».
+- **de** — Du hast noch kein Finanzziel. Lege eins an: "Ziel: Notgroschen 5000 Euro". Sag dann "300 in den Notgroschen gelegt".
+
+## `goal_money_hint`
+
+- **pt** — Para somar o que você guarda, diga: "guardei 300 na meta". Se você já tem um saldo, diga: "já tenho 1200 na meta".
+- **nl** — Om op te tellen wat je opzij zet, zeg: "300 bij het doel gedaan". Heb je al een saldo, zeg: "ik heb al 1200 bij het doel".
+- **en** — To add what you put aside, say: "put 300 in the goal". If you already have a balance, say: "I already have 1200 in the goal".
+- **fr** — Pour ajouter ce que tu mets de côté, dis : « j'ai mis 300 dans l'objectif ». Si tu as déjà un solde : « j'ai déjà 1200 dans l'objectif ».
+- **de** — Um dein Erspartes zu zählen, sag: "300 ins Ziel gelegt". Hast du schon etwas: "ich habe schon 1200 im Ziel".
+
+## `goal_money_notarget`
+
+- **pt** — Anotei {amount} na meta *{title}*. Total: {saved}. Para eu mostrar a barra, diga o alvo: "meta: juntar 5000 euros".
+- **nl** — Genoteerd: {amount} bij *{title}*. Totaal: {saved}. Noem het doelbedrag voor de balk: "doel: 5000 euro sparen".
+- **en** — Added {amount} to *{title}*. Total: {saved}. Tell me the target to see the bar: "goal: save 5000 euros".
+- **fr** — {amount} ajouté à *{title}*. Total : {saved}. Dis-moi l'objectif pour la barre : « objectif : épargner 5000 euros ».
+- **de** — {amount} zu *{title}* notiert. Summe: {saved}. Nenne das Ziel für den Balken: "Ziel: 5000 Euro sparen".
+
+## `goal_money_rest`
+
+- **pt** —  faltam {left}
+- **nl** —  nog {left}
+- **en** —  {left} to go
+- **fr** —  il reste {left}
+- **de** —  noch {left}
+
+## `goal_money_row`
+
+- **pt** — • {title}: {saved} de {target} ({pct}%)
+  >   {bar}{rest}
+- **nl** — • {title}: {saved} van {target} ({pct}%)
+  >   {bar}{rest}
+- **en** — • {title}: {saved} of {target} ({pct}%)
+  >   {bar}{rest}
+- **fr** — • {title} : {saved} sur {target} ({pct} %)
+  >   {bar}{rest}
+- **de** — • {title}: {saved} von {target} ({pct} %)
+  >   {bar}{rest}
+
+## `goal_money_set`
+
+- **pt** — Combinado: você tem {saved} na meta *{title}*, de {target} ({pct}%).
+- **nl** — Afgesproken: je hebt {saved} bij doel *{title}*, van {target} ({pct}%).
+- **en** — Done: you have {saved} in *{title}*, out of {target} ({pct}%).
+- **fr** — C'est noté : tu as {saved} dans *{title}*, sur {target} ({pct} %).
+- **de** — Notiert: Du hast {saved} bei *{title}*, von {target} ({pct} %).
+
+## `goal_money_which`
+
+- **pt** — Qual meta financeira? Você tem: {names}. Diga, por exemplo: "guardei 300 na reserva".
+- **nl** — Welk financieel doel? Je hebt: {names}. Zeg bijvoorbeeld: "300 bij de reserve gedaan".
+- **en** — Which financial goal? You have: {names}. Say, for example: "put 300 in the reserve".
+- **fr** — Quel objectif financier ? Tu as : {names}. Dis par exemple : « j'ai mis 300 dans la réserve ».
+- **de** — Welches Finanzziel? Du hast: {names}. Sag zum Beispiel: "300 in die Reserve gelegt".
+
+## `goal_week_line`
+
+- **pt** — {marks} · {n} de 7 dias esta semana
+- **nl** — {marks} · {n} van 7 dagen deze week
+- **en** — {marks} · {n} of 7 days this week
+- **fr** — {marks} · {n} sur 7 jours cette semaine
+- **de** — {marks} · {n} von 7 Tagen diese Woche
+
+## `goal_workout_line`
+
+- **pt** — Conta para a meta: {goal}.
+- **nl** — Telt mee voor het doel: {goal}.
+- **en** — Counts toward your goal: {goal}.
+- **fr** — Compte pour l'objectif : {goal}.
+- **de** — Zählt für das Ziel: {goal}.
+
+## `goals_legend`
+
+- **pt** — ✅ feito · ⬜ faltou · ▫️ ainda por vir (segunda a domingo)
+- **nl** — ✅ gedaan · ⬜ gemist · ▫️ nog te komen (maandag t/m zondag)
+- **en** — ✅ done · ⬜ missed · ▫️ still to come (Monday to Sunday)
+- **fr** — ✅ fait · ⬜ manqué · ▫️ à venir (lundi à dimanche)
+- **de** — ✅ erledigt · ⬜ verpasst · ▫️ noch offen (Montag bis Sonntag)
+
 ## `goals_list_empty`
 
 - **pt** — Você ainda não tem metas. Crie uma assim: *meta: quero X*
@@ -2357,6 +2466,38 @@
 - **en** — • {title}
 - **fr** — • {title}
 - **de** — • {title}
+
+## `goals_money_head`
+
+- **pt** — Metas financeiras
+- **nl** — Financiële doelen
+- **en** — Financial goals
+- **fr** — Objectifs financiers
+- **de** — Finanzziele
+
+## `goals_money_only_head`
+
+- **pt** — Suas metas financeiras ({n}):
+- **nl** — Je financiële doelen ({n}):
+- **en** — Your financial goals ({n}):
+- **fr** — Tes objectifs financiers ({n}) :
+- **de** — Deine Finanzziele ({n}):
+
+## `goals_routine_head`
+
+- **pt** — Rotina: {done} de {n} feitas hoje
+- **nl** — Routine: {done} van {n} vandaag gedaan
+- **en** — Routine: {done} of {n} done today
+- **fr** — Routine : {done} sur {n} faits aujourd'hui
+- **de** — Routine: {done} von {n} heute erledigt
+
+## `goals_title`
+
+- **pt** — Suas metas ({n}):
+- **nl** — Je doelen ({n}):
+- **en** — Your goals ({n}):
+- **fr** — Tes objectifs ({n}) :
+- **de** — Deine Ziele ({n}):
 
 ## `greet_reply`
 
@@ -4498,6 +4639,22 @@
 - **en** — Heads up: {n} overdue to pay ({total}). See them with "what do i have to pay".
 - **fr** — Attention : {n} à payer en retard ({total}). Vois-les avec « ce que j'ai à payer ».
 - **de** — Achtung: {n} überfällige Zahlungen ({total}). Sieh nach mit "was muss ich noch zahlen".
+
+## `pending_tag_pay`
+
+- **pt** — a pagar em {due}
+- **nl** — te betalen op {due}
+- **en** — to pay on {due}
+- **fr** — à payer le {due}
+- **de** — zu zahlen am {due}
+
+## `pending_tag_recv`
+
+- **pt** — a receber em {due}
+- **nl** — te ontvangen op {due}
+- **en** — to receive on {due}
+- **fr** — à recevoir le {due}
+- **de** — zu erhalten am {due}
 
 ## `period_current_week`
 

@@ -16,13 +16,13 @@ import math
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.audit import audit
-from alfred.clock import now_local
+from alfred.clock import local_tz, now_local, today_local
 from alfred.models import Expense, Member, PendingAction, PendingBatch, Trip
 from alfred.parsing import to_amount
 from alfred.validation import MAX_AMOUNT
@@ -67,20 +67,33 @@ def _store(item: dict) -> dict:
         "category": item.get("category") or "overig",
         "description": item.get("description"),
         "days_ago": int(item.get("days_ago") or 0),
+        "pending_in_days": item.get("pending_in_days"),
     }
+
+
+def _pending_tag(item: dict, lang: str) -> str:
+    """ " · a receber em 23/10" for an entry whose money only moves later, "" otherwise."""
+    days = item.get("pending_in_days")
+    if days is None:
+        return ""
+    from alfred.conversation import _t
+
+    due = today_local() + timedelta(days=int(days))
+    key = "pending_tag_recv" if item["type"] == "income" else "pending_tag_pay"
+    return " · " + _t(key, lang, due=f"{due:%d/%m}")
 
 
 def _name(item: dict) -> str:
     return item.get("merchant") or item.get("description") or item.get("category") or "?"
 
 
-def _lines(items: list[dict]) -> str:
+def _lines(items: list[dict], lang: str = "pt") -> str:
     from alfred.conversation import _fmt_eur
 
     out = []
     for i, it in enumerate(items, 1):
         sign = "+" if it["type"] == "income" else ""
-        out.append(f"{i}. {_name(it)}: {sign}{_fmt_eur(it['amount'])}")
+        out.append(f"{i}. {_name(it)}: {sign}{_fmt_eur(it['amount'])}{_pending_tag(it, lang)}")
     return "\n".join(out)
 
 
@@ -98,7 +111,7 @@ def _draft_text(items: list[dict], lang: str, title: str | None = None) -> str:
     from alfred.conversation import _t
 
     head = title or _t("batch_title", lang, n=len(items))
-    return f"{head}\n{_lines(items)}\n\n{_t('batch_ask', lang)}"
+    return f"{head}\n{_lines(items, lang)}\n\n{_t('batch_ask', lang)}"
 
 
 # ── storage ───────────────────────────────────────────────────────────────────
@@ -189,6 +202,15 @@ async def record_items(
         new_id = uuid.uuid4()
         if ids_out is not None:
             ids_out.append(new_id)
+        # "vou receber 300 em dois dias": a pending entry on its due day, out of the balance
+        pending_days = it.get("pending_in_days")
+        extra: dict = {}
+        if pending_days is not None:
+            due = today_local() + timedelta(days=int(pending_days))
+            extra = {
+                "expense_date": datetime.combine(due, time(12, 0), tzinfo=local_tz()),
+                "status": "to_receive" if it["type"] == "income" else "to_pay",
+            }
         session.add(
             Expense(
                 id=new_id,
@@ -200,17 +222,22 @@ async def record_items(
                 merchant=it["merchant"],
                 category=it["category"],
                 description=it["description"],
-                expense_date=now_local() - timedelta(days=it["days_ago"]),
+                **{"expense_date": now_local() - timedelta(days=it["days_ago"]), **extra},
                 trip_id=trip.id if trip else None,
                 shared=shared,
             )
         )
-        if it["amount"] >= settings.high_value_threshold and it["type"] != "income":
+        if (
+            it["amount"] >= settings.high_value_threshold
+            and it["type"] != "income"
+            and pending_days is None
+        ):
             any_high = True
     await session.flush()
     audit(session, "batch_confirmed", member.id)
     lines = [
         f"• {_name(it)}: {'+' if it['type'] == 'income' else ''}{_fmt_eur(it['amount'])}"
+        f"{_pending_tag(it, lang)}"
         for it in items
     ]
     reply = "\n".join([_t("multi_recorded_title", lang, n=len(items)), *lines])
@@ -372,6 +399,24 @@ _CHANGE = re.compile(
 )  # fmt: skip
 
 
+_WHEN = re.compile(
+    r"^(?:ajustar|ajusta|muda|mudar|altera|alterar|adjust|change|pas aan|aanpassen|ajuste)?\s*"
+    r"(?P<who>.+?)\s+(?:para|pra|em|daqui a|daqui|in|over|dans|en|binnen|nach)\s+"
+    r"(?:(?:daqui\s+)?(?:a\s+)?|dentro de\s+)?(?P<n>\d{1,3}|um|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|zero)\s+"
+    r"(?:dias?|days?|dagen|jours?|tage?n?)$"
+)
+_NUM_WORDS = {"zero": 0, "um": 1, "dois": 2, "duas": 2, "tres": 3, "quatro": 4, "cinco": 5, "seis": 6,
+              "sete": 7, "oito": 8, "nove": 9, "dez": 10}  # fmt: skip
+
+
+def _plain(text: str) -> str:
+    import unicodedata
+
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text.lower()) if unicodedata.category(c) != "Mn"
+    )
+
+
 def _ordinal(token: str, count: int) -> int | None:
     """1-based index named by ``token`` ("segundo", "2", "2o", "last"), or None."""
     token = token.strip().strip(".")
@@ -402,7 +447,8 @@ async def handle_batch_text(
     is_no = key in _NO or key in _NO_PHRASES
     rm = _REMOVE.match(plain)
     ch = _CHANGE.match(plain)
-    if not (is_yes or is_no or rm or ch):
+    when = _WHEN.match(plain)
+    if not (is_yes or is_no or rm or ch or when):
         return None  # cheap exit: most messages never touch the database here
     batch = await pending_batch(session, member.id)
     if batch is None:
@@ -424,7 +470,18 @@ async def handle_batch_text(
             return BatchReply(_t("batch_cancelled", lang))
         return await _recorded(session, member, items, lang)
 
-    if rm:
+    if when and not (rm or ch):
+        who = when.group("who").strip()
+        idx = _ordinal(who, len(items))
+        if idx is None:
+            hits = [k for k, it in enumerate(items, 1) if who and who in _plain(_name(it))]
+            idx = hits[0] if len(hits) == 1 else None
+        if idx is None or not 1 <= idx <= len(items):
+            return None  # "ajustar ..." about something else
+        n = when.group("n")
+        days = int(n) if n.isdigit() else _NUM_WORDS[n]
+        items[idx - 1] = {**items[idx - 1], "pending_in_days": days, "days_ago": 0}
+    elif rm:
         idx = _ordinal(rm.group("ord"), len(items))
         if idx is None or not 1 <= idx <= len(items):
             return None  # "tira ..." about something else
@@ -470,6 +527,20 @@ STRINGS: dict[str, dict[str, str]] = {
         "Confirm and I'll add them. Nothing has been added yet.",
         "Tu confirmes ? Rien n'est encore ajouté.",
         "Soll ich sie übernehmen? Bisher steht nichts in deiner Übersicht.",
+    ),
+    "pending_tag_recv": _all(
+        "a receber em {due}",
+        "te ontvangen op {due}",
+        "to receive on {due}",
+        "à recevoir le {due}",
+        "zu erhalten am {due}",
+    ),
+    "pending_tag_pay": _all(
+        "a pagar em {due}",
+        "te betalen op {due}",
+        "to pay on {due}",
+        "à payer le {due}",
+        "zu zahlen am {due}",
     ),
     "batch_btn_ok": _all("Confirmar", "Bevestigen", "Confirm", "Confirmer", "Bestätigen"),
     "batch_btn_edit": _all("Ajustar", "Aanpassen", "Adjust", "Ajuster", "Anpassen"),

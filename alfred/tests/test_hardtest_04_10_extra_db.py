@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import func, select
 
-from alfred.models import Expense, Goal, HabitLog
+from alfred.models import Goal, HabitLog
 from tests.labkit import Lab
 from tests.test_panel_cards import _card, _get, _token
 
@@ -34,7 +34,7 @@ async def test_the_same_habit_twice_in_a_day_is_one_check_in(lab: Lab):
 @pytest.mark.asyncio
 @pytest.mark.bug("H0410-X")
 async def test_a_savings_goal_shows_progress_in_euro(lab: Lab, client):
-    """Defect 12: "poupar 5000€" showed nothing; it now shows what was saved since it was set."""
+    """Defect 12: "poupar 5000€" showed nothing; it shows what the member put aside."""
     await lab.add(
         Goal(
             member_id=lab.member_id,
@@ -45,22 +45,11 @@ async def test_a_savings_goal_shows_progress_in_euro(lab: Lab, client):
         )
     )
 
-    def row(kind, amount, month):
-        return Expense(
-            member_id=lab.member_id,
-            household_id=lab.household_id,
-            transaction_type=kind,
-            amount=amount,
-            merchant="x",
-            category="inkomen" if kind == "income" else "overig",
-            status="received" if kind == "income" else "paid",
-            expense_date=datetime(2026, month, 10, 12, tzinfo=UTC),
-        )
-
-    await lab.add(row("income", 3000, 9), row("expense", 800, 9), row("expense", 5000, 8))
     body = await _get(client, await _token(lab.member_id), "health")
-    item = _card(body, "goals")["items"][0]
-    assert item["money"] is True
+    assert _card(body, "goals")["items"] == []  # money goals are not habits (B-073)
+    await lab.say("guardei 2200 na meta poupar 5000")
+    body = await _get(client, await _token(lab.member_id), "money")
+    item = _card(body, "money_goals")["items"][0]
     assert item["saved"] == 2200.0 and item["target_amount"] == 5000.0 and item["saved_pct"] == 44
 
 
