@@ -293,3 +293,30 @@ async def test_books_export_link_serves_xlsx_once(lab: Lab, client) -> None:
         await client.post(f"/api/d/{token}/books-export?year=2026&format=xlsx")
     ).status_code == 404
     await engine.dispose()
+
+
+@db
+@pytest.mark.bug("B-105")
+async def test_comparison_with_an_empty_previous_month_does_not_show_a_zero_line(lab: Lab) -> None:
+    from datetime import datetime
+
+    from alfred.clock import now_local
+
+    await lab.add(
+        Expense(
+            member_id=lab.member_id,
+            household_id=lab.household_id,
+            transaction_type="expense",
+            amount=20.0,
+            currency="EUR",
+            category="overig",
+            expense_date=now_local() if now_local().day > 1 else datetime.now(now_local().tzinfo),
+        )
+    )
+    from alfred.conversation import _build_comparison
+    from alfred.models import Member
+
+    async with AsyncSessionLocal() as session:
+        member = await session.get(Member, lab.member_id)
+        out = await _build_comparison(member, session)
+    assert "€0,00 (0)" not in out and "sem dados no mês anterior" in out

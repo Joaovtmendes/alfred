@@ -4458,12 +4458,10 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
         pct = abs(diff) / prev_total * 100
         diff_str = f"_{_fmt_eur(diff)} (-{pct:.0f}%) vs {prev_label}_"
 
-    lines = [
-        f"{_t('comparison_title', lang)}\n",
-        f"• {prev_label}: {_fmt_eur(prev_total)} ({prev_n})",
-        f"• {cur_label}: {_fmt_eur(cur_total)} ({cur_n})",
-        f"\n{diff_str}",
-    ]
+    lines = [f"{_t('comparison_title', lang)}\n"]
+    if prev_n:  # F08-16: an empty month is said in words, not shown as "€0,00 (0)"
+        lines.append(f"• {prev_label}: {_fmt_eur(prev_total)} ({prev_n})")
+    lines += [f"• {cur_label}: {_fmt_eur(cur_total)} ({cur_n})", f"\n{diff_str}"]
     return "\n".join(lines)
 
 

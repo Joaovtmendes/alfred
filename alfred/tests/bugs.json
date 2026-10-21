@@ -2048,6 +2048,17 @@
       "source": "Hard test 20/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-105",
+      "title": "comparação de meses mostrava 'mês anterior €0,00 (0)' quando não havia dados",
+      "severity": "baixa",
+      "area": "consultas",
+      "step": "hard test F08-16",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }
