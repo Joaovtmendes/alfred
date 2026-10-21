@@ -35,7 +35,10 @@ A lista completa, com explicação, está em `alfred/.env.example`. As críticas
 | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` | o Alfred não consegue responder |
 | `LLM_API_KEY` | respostas de erro no lugar de LLM |
 | `BASE_URL` | o link do dashboard não é enviado |
-| `TIMEZONE` | default `Europe/Amsterdam` |
+| `TIMEZONE` | default `Europe/Amsterdam`; cada membro pode ter o seu (`member.timezone`, comando "meu fuso é …") |
+| `PRIVACY_CONTACT_EMAIL` | default `support@jofie.nl` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | sem elas o Google Agenda não aparece (opcional) |
+| `MESSAGES_PER_MINUTE` | opcional, default 20 |
 | `DASHBOARD_TOKEN_TTL_DAYS` | default 7; se o Railway ainda tiver 90 herdado, o link vale 90 dias (conferir) |
 | `WHATSAPP_DISPLAY_NUMBER` | só dígitos do número exibido da WABA; sem ele o painel v2 não mostra o botão "Conversar no WhatsApp" |
 
@@ -55,7 +58,8 @@ A lista completa, com explicação, está em `alfred/.env.example`. As críticas
 
 ## Lembretes (cron)
 
-- Horas dos lembretes = hora local de Amsterdão, como o utilizador escreveu.
+- Horas dos lembretes = hora local do membro (`member.timezone`, padrão Amsterdã) nos jobs agendados; os avisos diários de contas, serviços, contratos e prazos ainda usam Amsterdã.
+- `send_bill_reminders`: avisos de contas a pagar, só dentro da janela de 24 h.
 - O cron corre a cada 15 min e envia os jobs cuja hora passou há menos de 25 min e
   que ainda não foram enviados hoje (`last_sent_at`). Re-execuções são seguras.
 - Resumo semanal: segundas às 09:00 locais, excepto para quem já tem o seu próprio
