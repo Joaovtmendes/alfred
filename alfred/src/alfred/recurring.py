@@ -331,7 +331,9 @@ async def handle_recurring_command(
     return None
 
 
-async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -> str | Reply:
+async def _create(
+    p: Parsed, member: Member, lang: str, session: AsyncSession, first: date | None = None
+) -> str | Reply:
     from alfred.conversation import _fmt_eur, _t
 
     count = await session.scalar(
@@ -363,7 +365,7 @@ async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -
             ],
         )
     today = today_local()
-    due = first_due(p.frequency, p.due_day, today)
+    due = first or first_due(p.frequency, p.due_day, today)
     session.add(
         RecurringItem(
             id=uuid.uuid4(),

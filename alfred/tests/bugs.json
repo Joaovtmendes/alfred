@@ -1740,6 +1740,28 @@
       "source": "Hard test 20/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-077",
+      "title": "'a pagar internet 45' gravava vencimento hoje sem perguntar",
+      "severity": "media",
+      "area": "contas",
+      "step": "hard test F06-28, F04-48",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-078",
+      "title": "conta a pagar não perguntava se repete todo mês",
+      "severity": "media",
+      "area": "contas",
+      "step": "hard test F06-28, F04-48",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }

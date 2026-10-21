@@ -22,7 +22,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
-from alfred import balance_view, questions
+from alfred import balance_view, bills, questions
 from alfred import goals as goals_view
 from alfred import google_calendar as _gcal
 from alfred.accounting import STRINGS as _ACCT_STRINGS
@@ -1952,7 +1952,8 @@ _STRINGS.update(_SERVICE_STRINGS)  # V2-36
 _STRINGS.update(_HOME_STRINGS)  # V2-27
 _STRINGS.update(_GOALS_STRINGS)
 _STRINGS.update(questions.STRINGS)
-_STRINGS.update(balance_view.STRINGS)  # financial goals + week marks
+_STRINGS.update(balance_view.STRINGS)
+_STRINGS.update(bills.STRINGS)  # financial goals + week marks
 _STRINGS.update(_CAL_STRINGS)  # V2-21
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
@@ -5650,8 +5651,12 @@ async def handle_inbound(
         # 4e-0n. V2-16 — "luz 80 a pagar dia 5" / "paguei a luz" / "o que tenho a pagar"
         ledger_reply = await handle_ledger_command(body, body_plain, member, lang, session)
         if ledger_reply is not None:
-            await send_text(to, ledger_reply)
-            await _save_outbound(member, ledger_reply, session)
+            if isinstance(ledger_reply, Reply):
+                await _send_reply(to, ledger_reply)
+                await _save_outbound(member, ledger_reply.text, session)
+            else:
+                await send_text(to, ledger_reply)
+                await _save_outbound(member, ledger_reply, session)
             return
 
         # 4e-0g. V2-02 — contas fixas: "aluguel 1200 todo dia 1" / "paguei o aluguel" / "minhas contas fixas"

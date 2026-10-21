@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.agenda import parse_when
 from alfred.audit import audit
 from alfred.clock import local_tz, now_local, today_local
+from alfred.couple import Reply
 from alfred.models import (
     PENDING,
     SETTLED,
@@ -200,6 +201,11 @@ class NewPending:
     name: str
     amount: float
     due: date
+    dated: bool = True  # False: the member gave no date (F06-28: ask for it)
+
+
+# nl/fr/de "dag 1" / "jour 1" / "Tag 1" read like the English "day 1" (same length: spans stay valid)
+_DAY_WORD = re.compile(r"\b(dag|jour|tag)(\s+\d{1,2}\b)", re.I)
 
 
 def parse_pending(body: str, body_plain: str, today: date) -> NewPending | str | None:
@@ -227,7 +233,10 @@ def parse_pending(body: str, body_plain: str, today: date) -> NewPending | str |
             plain[start:],
             body[start:] if len(body) == len(plain) else plain[start:],
         )
-    when = parse_when(plain_rest, datetime.combine(today, time(0, 0), tzinfo=local_tz()))
+    when = parse_when(
+        _DAY_WORD.sub(lambda m: "day".ljust(len(m.group(1))) + m.group(2), plain_rest),
+        datetime.combine(today, time(0, 0), tzinfo=local_tz()),
+    )
     spans = list(when.spans)
     cleaned = _cut(plain_rest, spans)
     # the amount is the first number left once the date pieces are cut out
@@ -247,7 +256,7 @@ def parse_pending(body: str, body_plain: str, today: date) -> NewPending | str |
     name = _name_from(body_rest, plain_rest, spans)
     if not name:
         return "no_name"
-    return NewPending(kind, name, amount, when.day or today)
+    return NewPending(kind, name, amount, when.day or today, dated=when.day is not None)
 
 
 def _tokens(text: str) -> set[str]:
@@ -314,7 +323,7 @@ async def pending_summary(
 
 async def handle_ledger_command(
     body: str, body_plain: str, member: Member, lang: str, session: AsyncSession
-) -> str | None:
+) -> str | Reply | None:
     from alfred.conversation import _t
 
     plain = " ".join(body_plain.split()).strip(" .!?")
@@ -329,7 +338,16 @@ async def handle_ledger_command(
     if new == "no_name":
         return _t("ledger_no_name", lang)
     if isinstance(new, NewPending):
-        return await _create(new, member, lang, session)
+        from alfred import bills
+
+        if new.kind == TO_PAY and not new.dated:  # F06-28: "a pagar internet 45" — due when?
+            return await bills.ask_due(session, member, lang, new)
+        text = await _create(new, member, lang, session)
+        if new.kind == TO_PAY:  # F04-48: bills usually repeat — ask once
+            return await bills.with_repeat_question(
+                session, member, lang, new.name, new.amount, new.due, text
+            )
+        return text
 
     settle = parse_settle(body_plain)
     if settle is not None:

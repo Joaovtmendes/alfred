@@ -117,7 +117,7 @@ async def test_receivable_becomes_received_income(lab: Lab) -> None:
 
 @db
 async def test_paid_amount_overrides_the_stored_one(lab: Lab) -> None:
-    await lab.say("a pagar luz 120")
+    await lab.say("a pagar luz 120 hoje")
     await lab.say("paguei a luz 110")
     (e,) = await _exps(lab)
     assert (e.status, float(e.amount)) == ("paid", 110.0)
@@ -147,7 +147,7 @@ async def test_unmatched_paguei_still_reaches_the_other_handlers(lab: Lab) -> No
 @db
 async def test_limit_of_pending_items(lab: Lab) -> None:
     await lab.add(*[_row(lab, f"c{i}", 1, "to_pay") for i in range(MAX_PENDING)])
-    reply = await lab.say("a pagar extra 10")
+    reply = await lab.say("a pagar extra 10 hoje")
     assert str(MAX_PENDING) in reply
     assert len(await _exps(lab)) == MAX_PENDING
 
