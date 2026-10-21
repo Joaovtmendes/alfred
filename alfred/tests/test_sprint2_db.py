@@ -81,7 +81,7 @@ async def test_top_categorias_shows_top_three_localised(lab: Lab) -> None:
     )
     reply = await lab.say("top categorias este mes")
     lab.llm_reply.assert_not_awaited()
-    assert "Habitação" in reply and "Supermercado" in reply and "Restaurante" in reply
+    assert "Moradia" in reply and "Supermercado" in reply and "Restaurante" in reply
     assert "Transporte" not in reply
     assert "Wonen" not in reply  # Dutch identifiers are not shown to a pt user
 

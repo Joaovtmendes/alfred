@@ -163,7 +163,6 @@ async def test_saldo_da_casa_is_not_the_personal_balance(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-28")
-@pytest.mark.xfail(strict=True, reason="A-28 aberto: remova junto com a correção")
 async def test_a_question_about_stored_data_is_not_swallowed_by_the_guard(lab: Lab) -> None:
     lab.llm_reply.return_value = (
         "Tudo o que está anotado sobre você fica guardado na Europa, registrado só para você."
@@ -201,7 +200,6 @@ async def test_the_article_is_not_part_of_the_name(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-37")
-@pytest.mark.xfail(strict=True, reason="A-37 aberto: remova junto com a correção")
 async def test_a_portuguese_statement_header_is_recognised(lab: Lab) -> None:
     out = await lab.doc("extrato.csv", "Data;Descricao;Valor\n2026-10-01;Albert Heijn;-23,45\n")
     assert "csv" not in out.lower() or "reconheci" not in out.lower()
@@ -243,7 +241,6 @@ async def test_criar_viagem_with_a_budget_and_no_symbol(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-49")
-@pytest.mark.xfail(strict=True, reason="A-49 aberto: remova junto com a correção")
 async def test_short_commands_never_reach_the_habit_model(lab: Lab) -> None:
     for text in ("oi", "voltei", "apaga"):
         await lab.say(text)
@@ -271,7 +268,6 @@ async def test_a_sentence_starting_with_dashboard_is_not_the_link_command(lab: L
 
 @db
 @pytest.mark.bug("A-69")
-@pytest.mark.xfail(strict=True, reason="A-69 aberto: remova junto com a correção")
 async def test_meus_gastos_is_a_command(lab: Lab) -> None:
     out = await lab.say("meus gastos")
     assert "[llm]" not in out
@@ -287,7 +283,6 @@ async def test_stop_with_a_full_stop_still_stops(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("BUG-08")
-@pytest.mark.xfail(strict=True, reason="BUG-08 aberto: remova junto com a correção")
 async def test_gibberish_is_rejected_without_calling_the_model(lab: Lab) -> None:
     await lab.say("asdfjklqwerty")
     assert lab.llm_reply.await_count == 0 and lab.classify.await_count == 0

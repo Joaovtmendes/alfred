@@ -110,7 +110,7 @@ async def test_month_vs_month_with_rises_and_new_categories(lab: Lab) -> None:
     )
     reply = await lab.say("mês contra mês por categoria")
     assert "Restaurante: €100,00 · €40,00 (+150%)" in reply
-    assert "Kleding" in reply or "Vestuário" in reply
+    assert "Kleding" in reply or "Roupas" in reply
     assert "(novo)" in reply  # clothing had nothing last month
     rises = reply.splitlines()[-1]
     assert rises.startswith("Maiores altas:") and rises.count("(+") == 2

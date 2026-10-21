@@ -26,7 +26,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.agenda import parse_when
 from alfred.audit import audit
 from alfred.clock import local_tz, now_local, today_local
-from alfred.models import PENDING, SETTLED, Expense, Member, PendingAction
+from alfred.models import (
+    PENDING,
+    SETTLED,
+    AuditLog,
+    Expense,
+    Member,
+    Message,
+    PendingAction,
+    RecurringItem,
+)
 from alfred.parsing import strip_accents, to_amount
 from alfred.validation import MAX_AMOUNT
 
@@ -495,6 +504,103 @@ async def _settle(
     return text
 
 
+# ── A-46: reminders for bills to pay (pending entries and fixed bills not marked paid) ─────
+
+
+@dataclass(frozen=True)
+class BillReminder:
+    ref: str  # "p:<expense id>:due|late" or "r:<recurring id>:<due>:late" — idempotency key
+    member_id: uuid.UUID
+    wa_phone: str
+    lang: str
+    text: str
+    in_window: bool
+
+
+async def bill_reminders(session: AsyncSession, now: datetime) -> list[BillReminder]:
+    """A pending bill on its due day and once the day after; a fixed bill once the day after its
+    due date when it was not marked paid. Each message goes out at most once (audit key)."""
+    from alfred.conversation import _fmt_eur, _t
+    from alfred.recurring import REMINDER_FROM_HOUR, REMINDER_UNTIL_HOUR, WINDOW_HOURS
+
+    if not REMINDER_FROM_HOUR <= now.hour < REMINDER_UNTIL_HOUR:
+        return []
+    today = now.date()
+    yesterday = today - timedelta(days=1)
+    cands: list[dict] = []
+    pend = (
+        await session.execute(
+            select(Expense, Member.wa_phone, Member.language)
+            .join(Member, Expense.member_id == Member.id)
+            .where(Expense.status == TO_PAY, Member.consent_state == "accepted")
+        )
+    ).all()
+    for e, phone, lang in pend:
+        due = e.expense_date.astimezone(local_tz()).date()
+        which = "due" if due == today else "late" if due == yesterday else None
+        if which:
+            cands.append({"ref": f"p:{e.id}:{which}", "member": e.member_id, "phone": phone,
+                          "lang": lang or "en", "amount": float(e.amount), "due": due,
+                          "name": _label(e), "which": which})  # fmt: skip
+    bills = (
+        await session.execute(
+            select(RecurringItem, Member.wa_phone, Member.language)
+            .join(Member, RecurringItem.member_id == Member.id)
+            .where(
+                RecurringItem.active.is_(True),
+                RecurringItem.next_due_date == yesterday,
+                Member.consent_state == "accepted",
+            )
+        )
+    ).all()
+    for item, phone, lang in bills:
+        cands.append({"ref": f"r:{item.id}:{yesterday}:late", "member": item.member_id,
+                      "phone": phone, "lang": lang or "en", "amount": float(item.amount),
+                      "due": yesterday, "name": item.name, "which": "late"})  # fmt: skip
+    out: list[BillReminder] = []
+    cutoff = now - timedelta(hours=WINDOW_HOURS)
+    for c in cands:
+        member_id = c["member"]
+        done = await session.scalar(
+            select(AuditLog.id)
+            .where(
+                AuditLog.member_id == member_id,
+                AuditLog.event == "bill_reminded",
+                AuditLog.detail["ref"].astext == c["ref"],
+            )
+            .limit(1)
+        )
+        if done is not None:
+            continue
+        last_in = await session.scalar(
+            select(func.max(Message.created_at)).where(
+                Message.author_id == member_id, Message.direction == "inbound"
+            )
+        )
+        key = "bill_due_today" if c["which"] == "due" else "bill_late"
+        out.append(
+            BillReminder(
+                ref=c["ref"],
+                member_id=member_id,
+                wa_phone=c["phone"],
+                lang=c["lang"],
+                text=_t(
+                    key,
+                    c["lang"],
+                    name=c["name"],
+                    amount=_fmt_eur(c["amount"]),
+                    due=f"{c['due']:%d/%m}",
+                ),
+                in_window=bool(last_in and last_in.astimezone(now.tzinfo) >= cutoff),
+            )
+        )
+    return out
+
+
+def mark_bill_reminded(session: AsyncSession, r: BillReminder) -> None:
+    audit(session, "bill_reminded", r.member_id, ref=r.ref)
+
+
 async def count_pending(session: AsyncSession, member_id: uuid.UUID) -> int:
     return int(
         await session.scalar(
@@ -540,6 +646,20 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Marked as received: {name} {amount}.",
         "Marqué comme reçu : {name} {amount}.",
         "Als erhalten markiert: {name} {amount}.",
+    ),
+    "bill_due_today": _all(
+        'Lembrete: {name} ({amount}) vence hoje. Quando pagar, me diga "paguei {name}".',
+        'Herinnering: {name} ({amount}) vervalt vandaag. Betaald? Zeg "betaald {name}".',
+        'Reminder: {name} ({amount}) is due today. Once paid, tell me "paid {name}".',
+        "Rappel : {name} ({amount}) arrive à échéance aujourd'hui. Une fois payé, dis « payé {name} ».",
+        "Erinnerung: {name} ({amount}) ist heute fällig. Wenn bezahlt, sag „bezahlt {name}“.",
+    ),
+    "bill_late": _all(
+        '{name} ({amount}) venceu ontem ({due}) e ainda não está marcada como paga. Se já pagou, diga "paguei {name}".',
+        '{name} ({amount}) verviel gisteren ({due}) en staat nog niet als betaald. Al betaald? Zeg "betaald {name}".',
+        '{name} ({amount}) was due yesterday ({due}) and isn\'t marked paid yet. If you paid, say "paid {name}".',
+        "{name} ({amount}) était dû hier ({due}) et n'est pas encore marqué payé. Si c'est fait, dis « payé {name} ».",
+        "{name} ({amount}) war gestern ({due}) fällig und ist noch nicht als bezahlt markiert. Schon bezahlt? Sag „bezahlt {name}“.",
     ),
     "ledger_ambiguous": _all(
         'Qual deles? Tenho: {options}. Diga o valor, por exemplo "paguei 120 da luz".',

@@ -11,9 +11,10 @@
     {
       "id": "BUG-03",
       "title": "'hoje' devolve consulta semanal em vez de diária",
-      "status": "open",
+      "status": "fixed",
       "source": "Hard test 28/09",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "BUG-04",
@@ -46,9 +47,10 @@
     {
       "id": "BUG-08",
       "title": "Texto sem sentido ('asdfjklqwerty') gasta chamadas do modelo",
-      "status": "open",
+      "status": "fixed",
       "source": "Hard test 28/09",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "C-01",
@@ -62,10 +64,11 @@
     {
       "id": "C-02",
       "title": "Checklist e hard_test.py abrem com 'sim', que com cadastro obrigatório só reenvia o link",
-      "status": "open",
+      "status": "fixed",
       "source": "Pós hard test 08/10",
       "legacy": true,
-      "severity": "baixa"
+      "severity": "baixa",
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-01",
@@ -217,11 +220,12 @@
     {
       "id": "A-17",
       "title": "Sem comando para revogar o link do painel; linhas antigas nunca expiram",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Painel: link",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-18",
@@ -327,11 +331,12 @@
     {
       "id": "A-28",
       "title": "Resposta com 'registrado/anotado' é descartada mesmo em pergunta",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Guarda do modelo",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-29",
@@ -404,29 +409,32 @@
     {
       "id": "A-36",
       "title": "Convite preso por 7 dias; lote e recibo não recebem 'sempre da casa'",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Modo casal",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-37",
       "title": "Cabeçalho em português, linhas ignoradas sem aviso, .TAB recusado",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Extrato CSV",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-38",
       "title": "Duplicado com nome diferente não é avisado",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Extrato CSV",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-39",
@@ -502,11 +510,12 @@
     {
       "id": "A-46",
       "title": "Conta a pagar nunca avisa; conta fixa avisa uma vez só",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Avisos de contas",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-47",
@@ -531,11 +540,12 @@
     {
       "id": "A-49",
       "title": "Falso positivo do modelo grava hábito para 'oi', 'voltei', 'apaga'",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Hábito pelo modelo",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-50",
@@ -550,11 +560,12 @@
     {
       "id": "A-51",
       "title": "'ok/certo/pode' solto confirma o recibo e frase com 'no' cancela",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Recibo por foto",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-52",
@@ -579,20 +590,22 @@
     {
       "id": "A-54",
       "title": "Categorias e Flow em português de Portugal",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Texto pt-PT",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-55",
       "title": "Identificador interno em holandês vaza para o usuário",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Texto nl",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-56",
@@ -658,11 +671,12 @@
     {
       "id": "A-62",
       "title": "'plano de treino de hoje' é lido como plano; rascunho esquecido captura edição",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Plano de treino",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-63",
@@ -687,11 +701,12 @@
     {
       "id": "A-65",
       "title": "Sequência usa data UTC e o registro usa Amsterdã",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Hábitos: sequência",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-66",
@@ -715,47 +730,52 @@
     {
       "id": "A-68",
       "title": "Lote com 6 a 10 itens sem desfazer; valor alto sem 'Está certo'",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Lote",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-69",
       "title": "'meus gastos' não é comando; lista corta em 10 sem dizer",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Resumo e listas",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-70",
       "title": "'Saldo' não é saldo de conta e não explica o que é",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Saldo",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-71",
       "title": "Só despesas = 100% no negativo desde o primeiro gasto",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Dias no positivo",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-72",
       "title": "Texto de cobrança em pt pede 'envie um Tikkie' ao devedor",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Cobrança",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-73",
@@ -789,29 +809,32 @@
     {
       "id": "A-76",
       "title": "Cinco 👍 gravam cinco avaliações; reação com emoji ignorada",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Feedback",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-77",
       "title": "Botões de serviço não invalidam depois do primeiro toque",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Serviços e contratos",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-78",
       "title": "Hospedagem cai em Habitação; total planejado diferente do orçamento",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Viagem: orçamento",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-79",
@@ -836,11 +859,12 @@
     {
       "id": "A-81",
       "title": "Sem limite de mensagens por minuto por usuário",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Sem limite",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "H3009-1",

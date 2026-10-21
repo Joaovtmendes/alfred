@@ -268,7 +268,7 @@ async def test_daily_cap_stops_inflated_counts(lab: Lab) -> None:
         .select_from(ReplyFeedback)
         .where(ReplyFeedback.member_id == lab.member_id)
     )
-    assert n == 20
+    assert n == 1  # A-76: the same 👍 tapped again is the same rating
 
 
 @db

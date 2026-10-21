@@ -748,8 +748,10 @@ async def _edit_plan(
         .order_by(PendingAction.created_at.desc())
     )
     if draft is not None and draft.expires_at < now_local():
-        await session.delete(draft)
-        return Reply(_t("plan_expired", lang))
+        await session.delete(draft)  # A-62: a forgotten draft no longer catches the edit
+        draft = None
+        if await _active_plan(session, member.id) is None:
+            return Reply(_t("plan_expired", lang))
 
     if draft is not None:
         days = copy.deepcopy(draft.payload["days"])  # a new object, so the JSONB change is flushed

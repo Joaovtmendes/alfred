@@ -89,6 +89,21 @@ async def blue_days(session: AsyncSession, member_id, today: date) -> BlueDays |
     return count_blue({date.fromisoformat(d): _dec(v) for d, v in rows}, first, today)
 
 
+async def _has_income_this_month(session: AsyncSession, member_id, today: date) -> bool:
+    start = datetime.combine(today.replace(day=1), time.min, tzinfo=local_tz())
+    found = await session.scalar(
+        select(Expense.id)
+        .where(
+            Expense.member_id == member_id,
+            Expense.transaction_type == "income",
+            Expense.status.in_(SETTLED),
+            Expense.expense_date >= start,
+        )
+        .limit(1)
+    )
+    return found is not None
+
+
 # ── month vs month ────────────────────────────────────────────────────────────
 
 _DAYS = re.compile(
@@ -164,7 +179,7 @@ async def handle_insight_command(
         data = await blue_days(session, member.id, today_local())
         if data is None:
             return _t("blue_none", lang)
-        return _t(
+        text = _t(
             "blue_result",
             lang,
             blue=data.blue,
@@ -173,6 +188,9 @@ async def handle_insight_command(
             longest=data.longest,
             balance=_fmt(data.balance),
         )
+        if not await _has_income_this_month(session, member.id, today_local()):
+            text += _t("blue_no_income", lang)  # A-71: only expenses → the balance only falls
+        return text
     if _MOM.search(plain):
         return await month_vs_month(member, lang, session)
     return None
@@ -189,6 +207,13 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "This month: {blue} days positive and {neg} negative, of {elapsed} (running balance from day 1). Longest positive streak: {longest} days. Balance so far: {balance}.",
         "Ce mois-ci : {blue} jours en positif et {neg} en négatif sur {elapsed} (solde cumulé depuis le jour 1). Plus longue série en positif : {longest} jours. Solde à ce jour : {balance}.",
         "Diesen Monat: {blue} Tage im Plus und {neg} im Minus von {elapsed} (laufender Saldo seit Tag 1). Längste Serie im Plus: {longest} Tage. Saldo bisher: {balance}.",
+    ),
+    "blue_no_income": _all(
+        " Ainda não há receita lançada este mês, então o saldo só desce: lance o salário ou outras entradas para a conta fazer sentido.",
+        " Er staat deze maand nog geen inkomen, dus het saldo daalt alleen: voeg je salaris of andere inkomsten toe.",
+        " There's no income this month yet, so the balance only goes down: add your salary or other income for this to make sense.",
+        " Aucun revenu ce mois-ci pour l'instant, donc le solde ne fait que baisser : ajoute ton salaire ou d'autres entrées.",
+        " Diesen Monat ist noch kein Einkommen eingetragen, darum sinkt der Saldo nur: trag dein Gehalt oder andere Einnahmen ein.",
     ),
     "blue_none": _all(
         "Ainda não há lançamentos neste mês para medir os dias no positivo e no negativo.",

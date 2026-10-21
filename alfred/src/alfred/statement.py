@@ -36,7 +36,7 @@ from alfred.whatsapp import MediaTooLarge, download_media
 
 DRAFT_HOURS = 24
 MAX_PER_HOUR = 10
-_TEXT_EXT = (".csv", ".txt", ".tsv")
+_TEXT_EXT = (".csv", ".txt", ".tsv", ".tab")  # A-37: ABN AMRO exports .TAB
 _TEXT_MIME = ("text/csv", "text/plain", "text/tab-separated-values", "application/csv")
 _BANKS = {"ing": "ING", "rabobank": "Rabobank", "abn": "ABN AMRO", "bunq": "bunq"}
 
@@ -228,6 +228,19 @@ async def _make_draft(
                         taken.add(e.id)
                         flag = "maybe"
                         break
+            if flag == "new":
+                # A-38: "mercado 23,45" typed and the bank line "Albert Heijn 23,45" share no word;
+                # the same amount within a day is still worth a "maybe"
+                for e in manual:
+                    if (
+                        e.id not in taken
+                        and e.transaction_type == kind
+                        and Decimal(str(e.amount)) == abs(r.amount)
+                        and abs((clock.to_local(e.expense_date).date() - r.day).days) <= 1
+                    ):
+                        taken.add(e.id)
+                        flag = "maybe"
+                        break
         items.append(
             {
                 "d": r.day.isoformat(),
@@ -292,6 +305,10 @@ async def _make_draft(
             else ""
         ),
     )
+    if parsed.skipped:  # A-37: lines without a date or an amount are said, not dropped in silence
+        text += _t(
+            "imp_skipped_one" if parsed.skipped == 1 else "imp_skipped", lang, n=parsed.skipped
+        )
     buttons: list[tuple[str, str]] = []
     if counts["new"]:
         buttons.append((f"imp_ok:{batch.id}", _t("imp_btn_ok", lang, n=counts["new"])))
@@ -458,6 +475,20 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "\n• Possible duplicates of your own entries: {maybe}",
         "\n• Doublons possibles avec tes saisies : {maybe}",
         "\n• Mögliche Dubletten deiner eigenen Einträge: {maybe}",
+    ),
+    "imp_skipped": _all(
+        "\n{n} linhas ficaram de fora (sem data, sem valor ou valor zero).",
+        "\n{n} regels overgeslagen (geen datum, geen bedrag of bedrag nul).",
+        "\n{n} lines were left out (no date, no amount or a zero amount).",
+        "\n{n} lignes ignorées (sans date, sans montant ou montant nul).",
+        "\n{n} Zeilen ausgelassen (ohne Datum, ohne Betrag oder Betrag null).",
+    ),
+    "imp_skipped_one": _all(
+        "\n1 linha ficou de fora (sem data, sem valor ou valor zero).",
+        "\n1 regel overgeslagen (geen datum, geen bedrag of bedrag nul).",
+        "\n1 line was left out (no date, no amount or a zero amount).",
+        "\n1 ligne ignorée (sans date, sans montant ou montant nul).",
+        "\n1 Zeile ausgelassen (ohne Datum, ohne Betrag oder Betrag null).",
     ),
     "imp_other_line": _all(
         "\n{other} saídas ficaram em *Outros*, sem categoria; você pode ajustar depois.",

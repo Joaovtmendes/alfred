@@ -29,7 +29,7 @@ def _m(age_days: float | None):
         (3.6, False, True),  # 3.4 days left: less than half
         (6.9, False, True),
         (7.1, True, True),
-        (None, False, False),  # legacy NULL timestamp is never "expired"
+        (None, False, True),  # legacy NULL: never "expired", but renewed on the next ask (A-17)
     ],
 )
 def test_expiry_and_renewal_thresholds(age, expired, renew) -> None:

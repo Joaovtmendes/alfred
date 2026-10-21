@@ -13,10 +13,10 @@ _LABELS: dict[str, dict[str, str]] = {
     "transport": {"pt": "Transporte", "nl": "Vervoer", "en": "Transport", "fr": "Transport", "de": "Verkehr"},
     "gezondheid": {"pt": "Saúde", "nl": "Gezondheid", "en": "Health", "fr": "Santé", "de": "Gesundheit"},
     "entertainment": {"pt": "Lazer", "nl": "Entertainment", "en": "Entertainment", "fr": "Loisirs", "de": "Freizeit"},
-    "wonen": {"pt": "Habitação", "nl": "Wonen", "en": "Housing", "fr": "Logement", "de": "Wohnen"},
-    "kleding": {"pt": "Vestuário", "nl": "Kleding", "en": "Clothing", "fr": "Vêtements", "de": "Kleidung"},
-    "abonnement": {"pt": "Subscrições", "nl": "Abonnement", "en": "Subscriptions", "fr": "Abonnements", "de": "Abos"},
-    "inkomen": {"pt": "Rendimento", "nl": "Inkomen", "en": "Income", "fr": "Revenu", "de": "Einkommen"},
+    "wonen": {"pt": "Moradia", "nl": "Wonen", "en": "Housing", "fr": "Logement", "de": "Wohnen"},
+    "kleding": {"pt": "Roupas", "nl": "Kleding", "en": "Clothing", "fr": "Vêtements", "de": "Kleidung"},
+    "abonnement": {"pt": "Assinaturas", "nl": "Abonnement", "en": "Subscriptions", "fr": "Abonnements", "de": "Abos"},
+    "inkomen": {"pt": "Renda", "nl": "Inkomen", "en": "Income", "fr": "Revenu", "de": "Einkommen"},
     "overig": {"pt": "Outros", "nl": "Overig", "en": "Other", "fr": "Autres", "de": "Sonstiges"},
 }  # fmt: skip
 

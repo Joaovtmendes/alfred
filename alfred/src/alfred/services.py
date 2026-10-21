@@ -390,7 +390,13 @@ async def handle_service_button(
         if rec.status != "active":
             return Reply(_t("button_used", lang))
         if action == "svc_wd_no":
+            if rec.withdrawal_until is not None:  # A-77: "Não" after "Sim" really removes it
+                rec.withdrawal_until = None
+                session.add(rec)
+                return Reply(_t("svc_wd_removed", lang))
             return Reply(_t("svc_wd_skip", lang))
+        if rec.withdrawal_until is not None:
+            return Reply(_t("button_used", lang))
         rec.withdrawal_until = rec.service_date + timedelta(days=WITHDRAWAL_DAYS)
         session.add(rec)
         return Reply(_t("svc_wd_set", lang, d=f"{rec.withdrawal_until:%d/%m/%Y}"))
@@ -633,6 +639,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "I didn't get that. Example: *save service: plumber, 180 €, warranty 12 months* (date is today; add *10/09* for another).",
         "Je n'ai pas compris. Exemple : *garde service : plombier, 180 €, garantie 12 mois* (la date est aujourd'hui ; ajoute *10/09* pour une autre).",
         "Das habe ich nicht verstanden. Beispiel: *speichere service: Klempner, 180 €, garantie 12 monate* (Datum ist heute; für ein anderes *10/09* ergänzen).",
+    ),
+    "svc_wd_removed": _all5(
+        "Certo, tirei o prazo de arrependimento.",
+        "Goed, ik heb de bedenktijd weggehaald.",
+        "Okay, I removed the cooling-off period.",
+        "D'accord, j'ai retiré le délai de rétractation.",
+        "Okay, ich habe die Widerrufsfrist entfernt.",
     ),
     "svc_warranty_max": _all5(
         "Eu guardo garantias de até {n} anos. Mande de novo com um prazo menor.",

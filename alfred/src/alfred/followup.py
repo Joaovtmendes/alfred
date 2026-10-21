@@ -161,6 +161,13 @@ async def _budget(member: Member, category: str | None, lang: str, session: Asyn
     )
 
 
+async def top_text(
+    member: Member, start: datetime, end_excl: datetime | None, lang: str, session: AsyncSession
+) -> str:
+    """A-69: "maiores gastos" typed gives what the button gives."""
+    return await _top(member, start, end_excl, None, lang, session)
+
+
 async def handle_deeper_button(
     action: str, raw_id: str, member: Member, lang: str, session: AsyncSession
 ) -> str:
@@ -219,6 +226,18 @@ async def handle_feedback_button(
         .where(ReplyFeedback.member_id == member.id, ReplyFeedback.created_at >= since)
     )
     if (recent or 0) >= FEEDBACK_PER_DAY:
+        return Reply(_t("fb_thanks", lang))
+    # A-76: tapping the same 👍 again (or five times) is one rating, not five
+    again = await session.scalar(
+        select(ReplyFeedback.id)
+        .where(
+            ReplyFeedback.member_id == member.id,
+            ReplyFeedback.rating == ("up" if action == "fb_up" else "down"),
+            ReplyFeedback.created_at >= datetime.now(UTC) - timedelta(minutes=10),
+        )
+        .limit(1)
+    )
+    if again is not None:
         return Reply(_t("fb_thanks", lang))
     row = ReplyFeedback(
         id=uuid.uuid4(),

@@ -37,7 +37,6 @@ async def test_the_terms_link_opens_the_terms_themselves(client) -> None:
 
 @pytest.mark.bug("A-54")
 @pytest.mark.parametrize("word", ["Subscrições", "Rendimento", "Habitação", "Vestuário"])
-@pytest.mark.xfail(strict=True, reason="A-54 aberto: remova junto com a correção")
 def test_portuguese_labels_are_brazilian(word) -> None:
     labels = [
         category_label(c, "pt") for c in ("abonnement", "inkomen", "wonen", "kleding", "overig")

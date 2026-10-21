@@ -318,7 +318,31 @@ async def handle_couple_command(
         return await _always(parse_categories(m.group(1)), member, lang, session)
     if plain in _LEAVE:
         return await _leave_ask(member, lang, session)
+    if plain in _CANCEL_INVITE:
+        return await _cancel_invite(member, lang, session)
     return None
+
+
+_CANCEL_INVITE = {
+    "cancelar convite", "cancela o convite", "cancela convite", "cancelar o convite", "cancel invitation",
+    "cancel the invite", "cancel invite", "uitnodiging annuleren", "annuler l'invitation",
+    "annuler invitation", "einladung abbrechen", "einladung zurückziehen",
+}  # fmt: skip
+
+
+async def _cancel_invite(member: Member, lang: str, session: AsyncSession) -> Reply:
+    """A-36: the inviter can undo an invitation the other person never accepted."""
+    mine = await session.scalar(
+        select(PartnerLink).where(
+            PartnerLink.inviter_id == member.id, PartnerLink.status.in_((INVITED, PENDING))
+        )
+    )
+    if mine is None:
+        return Reply(_t("couple_no_invite", lang), [])
+    mine.status = ENDED
+    mine.ended_at = datetime.now(UTC)
+    audit(session, "couple_invite_cancelled", member.id)
+    return Reply(_t("couple_invite_cancelled", lang), [])
 
 
 def _new_code() -> str:
@@ -755,11 +779,25 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Oder tippe hier: {url}\n",
     ),
     "couple_invite_pending": _all(
-        "Já existe um convite em andamento: a outra pessoa só precisa aceitar.",
-        "Er loopt al een uitnodiging: de ander hoeft alleen nog te accepteren.",
-        "An invitation is already under way: the other person just needs to accept.",
-        "Une invitation est déjà en cours : l'autre personne n'a plus qu'à accepter.",
-        "Es läuft schon eine Einladung: die andere Person muss nur noch annehmen.",
+        "Já existe um convite em andamento: a outra pessoa só precisa aceitar. Para começar de novo, diga *cancelar convite*.",
+        "Er loopt al een uitnodiging: de ander hoeft alleen nog te accepteren. Opnieuw beginnen: *uitnodiging annuleren*.",
+        "An invitation is already under way: the other person just needs to accept. To start over, say *cancel invitation*.",
+        "Une invitation est déjà en cours : l'autre personne n'a plus qu'à accepter. Pour recommencer, dis *annuler l'invitation*.",
+        "Es läuft schon eine Einladung: die andere Person muss nur noch annehmen. Neu anfangen: *Einladung abbrechen*.",
+    ),
+    "couple_invite_cancelled": _all(
+        "Convite cancelado. Quando quiser, diga *convidar parceiro* para gerar outro código.",
+        "Uitnodiging geannuleerd. Zeg *nodig mijn partner uit* voor een nieuwe code.",
+        "Invitation cancelled. Say *invite partner* whenever you want a new code.",
+        "Invitation annulée. Dis *inviter partenaire* pour un nouveau code.",
+        "Einladung abgebrochen. Sag *Partner einladen* für einen neuen Code.",
+    ),
+    "couple_no_invite": _all(
+        "Você não tem nenhum convite em aberto.",
+        "Je hebt geen openstaande uitnodiging.",
+        "You have no open invitation.",
+        "Tu n'as aucune invitation en cours.",
+        "Du hast keine offene Einladung.",
     ),
     "couple_already": _all(
         "Você já divide o financeiro com {name}. Para encerrar, escreva *sair da casa*.",

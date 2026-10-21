@@ -172,7 +172,9 @@ async def test_a_different_amount_or_name_is_not_a_possible_duplicate(lab: Lab) 
             )
         )
     reply = await lab.doc("extrato.csv", ING)
-    assert "Novas: 3" in reply and "Possíveis duplicados" not in reply
+    # a different amount is never a duplicate; the same amount on the same day under another
+    # name ("Kapper" typed, "Albert Heijn" on the bank line) is now a *possible* one (A-38)
+    assert "Novas: 2" in reply and "Possíveis duplicados de lançamentos seus: 1" in reply
 
 
 # ── cancel, expire, ownership ─────────────────────────────────────────────────

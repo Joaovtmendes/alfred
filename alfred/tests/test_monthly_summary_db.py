@@ -74,7 +74,7 @@ async def test_summary_has_totals_top_categories_and_change(lab: Lab) -> None:
     text = await _summary(lab)
     assert "Receitas €3.000,00" in text and "Despesas €800,00" in text and "Saldo €2.200,00" in text
     assert "Supermercado €400,00" in text and "Restaurante €250,00" in text
-    assert "Vestuário" not in text  # only the top three
+    assert "Roupas" not in text  # only the top three
     assert "+100%" in text  # 800 vs 400
     assert "meu dashboard" in text
 

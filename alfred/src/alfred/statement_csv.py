@@ -143,20 +143,23 @@ def _norm(header: str) -> str:
 # column synonyms, normalised
 _DATE_COLS = (
     "datum", "date", "transactiedatum", "boekdatum", "boekingsdatum", "transaction date", "booking date",
+    "data", "data movimento", "data do movimento", "data lancamento", "data da transacao",
 )  # fmt: skip
 _AMOUNT_COLS = (
     "bedrag", "bedrag (eur)", "amount", "amount (eur)", "transactiebedrag", "waarde", "value",
+    "valor", "valor (eur)", "montante", "quantia", "montant", "betrag",
 )  # fmt: skip
 _DEBIT_COLS = ("af", "debit", "debet")
 _CREDIT_COLS = ("bij", "credit")
 _DIRECTION_COLS = ("af bij", "debit/credit", "debit credit", "af/bij")
 _NAME_COLS = (
     "naam / omschrijving", "name / description", "naam tegenpartij", "name", "naam", "counterparty name",
-    "tegenpartij", "counterparty", "begunstigde", "payee",
+    "tegenpartij", "counterparty", "begunstigde", "payee", "nome", "favorecido", "estabelecimento",
 )  # fmt: skip
 _DESC_COLS = (
     "omschrijving", "omschrijving-1", "description", "mededelingen", "notifications", "details",
-    "betalingskenmerk", "reference",
+    "betalingskenmerk", "reference", "descricao", "descrição", "historico", "detalhes", "libelle",
+    "beschreibung", "verwendungszweck",
 )  # fmt: skip
 
 

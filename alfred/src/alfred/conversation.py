@@ -390,6 +390,13 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "fr": "• Dépenses : {amount}",
         "de": "• Ausgaben: {amount}",
     },
+    "saldo_note": {
+        "pt": "_Receitas menos despesas do período, não o saldo do banco._",
+        "nl": "_Inkomsten min uitgaven van de periode, niet je banksaldo._",
+        "en": "_Income minus expenses for the period, not your bank balance._",
+        "fr": "_Revenus moins dépenses de la période, pas le solde bancaire._",
+        "de": "_Einnahmen minus Ausgaben im Zeitraum, nicht dein Kontostand._",
+    },
     "saldo_balance": {
         "pt": "\n*Saldo: {sign}{amount}*",
         "nl": "\n*Saldo: {sign}{amount}*",
@@ -473,7 +480,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         ),
     },
     "category_income_refused": {
-        "pt": '*{merchant}* foi registrado como despesa, então não fica em *Rendimento*. Se foi dinheiro que entrou, apague e mande de novo como entrada, por exemplo "recebi 20 de {merchant}".',
+        "pt": '*{merchant}* foi registrado como despesa, então não fica em *Renda*. Se foi dinheiro que entrou, apague e mande de novo como entrada, por exemplo "recebi 20 de {merchant}".',
         "nl": '*{merchant}* staat als uitgave, dus het gaat niet naar *Inkomen*. Was het geld dat binnenkwam? Verwijder het en stuur het opnieuw als inkomsten, bijvoorbeeld "ontvangen 20 van {merchant}".',
         "en": '*{merchant}* was saved as an expense, so it can\'t go under *Income*. If it was money coming in, delete it and send it again as income, for example "received 20 from {merchant}".',
         "fr": "*{merchant}* est enregistré comme dépense, donc il ne va pas dans *Revenus*. Si c'était de l'argent reçu, supprime-le et renvoie-le comme revenu, par exemple \"reçu 20 de {merchant}\".",
@@ -1661,6 +1668,20 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "fr": "Le tableau de bord n'est pas encore configuré. Contacte l'administrateur.",
         "de": "Das Dashboard ist noch nicht konfiguriert. Kontaktiere den Administrator.",
     },
+    "rate_limited": {
+        "pt": "Recebi muitas mensagens em pouco tempo. Vou esperar um minuto antes de responder de novo.",
+        "nl": "Ik kreeg veel berichten in korte tijd. Ik wacht een minuut voordat ik weer antwoord.",
+        "en": "I got a lot of messages in a short time. I'll wait a minute before answering again.",
+        "fr": "J'ai reçu beaucoup de messages en peu de temps. J'attends une minute avant de répondre.",
+        "de": "Ich habe viele Nachrichten in kurzer Zeit bekommen. Ich warte eine Minute, bevor ich wieder antworte.",
+    },
+    "dashboard_revoked": {
+        "pt": "Pronto: o link antigo do painel parou de funcionar. Este é o novo, só para você.",
+        "nl": "Klaar: de oude dashboardlink werkt niet meer. Dit is de nieuwe, alleen voor jou.",
+        "en": "Done: the old dashboard link no longer works. Here is the new one, just for you.",
+        "fr": "C'est fait : l'ancien lien du tableau de bord ne marche plus. Voici le nouveau, rien que pour toi.",
+        "de": "Erledigt: Der alte Dashboard-Link funktioniert nicht mehr. Hier ist der neue, nur für dich.",
+    },
     "not_understood": {
         "pt": "Não entendi. Pode dizer de outro jeito?",
         "nl": "Ik begreep je niet. Kun je het anders formuleren?",
@@ -2037,6 +2058,18 @@ def _detect_language(text: str) -> str | None:
 
 _SUMMARY_WORDS = {
     "resumo",
+    # A-69: the everyday ways to ask for it
+    "meus gastos",
+    "minhas despesas",
+    "despesas",
+    "meu resumo",
+    "my expenses",
+    "expenses",
+    "mijn uitgaven",
+    "uitgaven",
+    "mes dépenses",
+    "mes depenses",
+    "meine ausgaben",
     "overzicht",
     "summary",
     "samenvatting",
@@ -2164,7 +2197,20 @@ _STOP_WORDS = {
     "aufhören",
     "aufhoren",
 }
+
+
 # bare greetings (accent-free) → the greeting as the member would read it back, by language
+def _keyboard_mash(body_plain: str, lang: str = "pt") -> bool:
+    """One word of letters that no language here would write: no vowel, or 5+ consonants in a row
+    ("asdfjklqwerty", "ahshdjejabs"). Laughter ("kkkkk", "hahaha") is left to the reply."""
+    word = body_plain.strip(" .!?")
+    if not re.fullmatch(r"[a-z]{6,40}", word) or len(set(word)) <= 2:
+        return False
+    run = max((len(r) for r in re.findall(r"[bcdfghjklmnpqrstvwxz]+", word)), default=0)
+    limit = 6 if lang in ("nl", "de") else 5  # Dutch/German compounds: "kunststof", "angstschrei"
+    return not re.search(r"[aeiouy]", word) or run >= limit
+
+
 _GREETINGS: dict[str, str] = {
     "oi": "Oi", "ola": "Olá", "opa": "Opa", "oie": "Oi", "e ai": "E aí", "bom dia": "Bom dia",
     "boa tarde": "Boa tarde", "boa noite": "Boa noite", "hoi": "Hoi", "hallo": "Hallo",
@@ -2352,6 +2398,14 @@ _VALID_CATEGORIES = frozenset(
 # Canonical mapping for alias→canonical category
 _CAT_ALIAS: dict[str, str] = {
     "supermercado": "supermarkt",
+    # A-54: the older pt-PT names keep working in corrections
+    "subscrições": "abonnement",
+    "subscricoes": "abonnement",
+    "rendimento": "inkomen",
+    "habitação": "wonen",
+    "habitacao": "wonen",
+    "vestuário": "kleding",
+    "vestuario": "kleding",
     "supermercaat": "supermarkt",
     "supermarché": "supermarkt",
     "alimentação": "restaurant",
@@ -2983,6 +3037,13 @@ _NOTES_QUERY_WORDS = {
 }
 
 # \u2500\u2500 M11 \u2014 Dashboard keywords \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+_PANEL_REVOKE_RE = re.compile(
+    r"^(?:(?:gera|gerar|quero|manda|me manda)\s+)?(?:um\s+)?(?:novo\s+link|link\s+novo)\s+(?:do|para o)\s+"
+    r"(?:painel|dashboard)|(?:revoga|revogar|cancela|cancelar|troca|trocar|invalida|invalidar)\s+"
+    r"(?:o\s+)?link\s+do\s+(?:painel|dashboard)|new\s+(?:dashboard|panel)\s+link|"
+    r"revoke\s+(?:the\s+)?(?:dashboard|panel)\s+link|nieuwe\s+(?:dashboard|paneel)\s*link|"
+    r"nouveau\s+lien\s+du\s+(?:tableau|panneau)|neuer\s+(?:dashboard|panel)\s*link$"
+)
 _DASHBOARD_WORDS: set[str] = {
     "meu dashboard",
     "o meu dashboard",
@@ -3177,6 +3238,38 @@ def _common_prefix(a: str, b: str) -> int:
             break
         n += 1
     return n
+
+
+_BARE_DAY_WORDS = frozenset(
+    {"hoje", "ontem", "today", "yesterday", "vandaag", "gisteren", "heute", "gestern",
+     "aujourd hui", "aujourdhui", "hier"}
+)  # fmt: skip
+_TOP_EXPENSES_RE = re.compile(
+    r"^(?:quais (?:sao |foram )?)?(?:os )?(?:meus |minhas )?(?:maiores (?:gastos|despesas)|"
+    r"(?:my )?(?:biggest|largest|top) expenses|(?:mijn )?grootste uitgaven|"
+    r"(?:mes )?plus grosses depenses|(?:meine )?gro(?:ss|ß)ten ausgaben)\b[^?]{0,40}\??$"
+)
+
+
+# A habit is something done: a verb in the past ("meditei", "li 30 páginas", "I ran", "ik heb
+# gelezen", "j'ai lu", "ich habe gelesen") or a habit noun with a time ("yoga 20 min").
+_HABIT_VERB_RE = re.compile(
+    r"\b(?:[a-z]{2,}(?:ei|ou|i)|li|fiz|fui|tomei|did|done|[a-z]{3,}ed|ran|read|went|"
+    r"heb|ben|gedaan|ai|suis|habe|bin)\b"
+)
+_NOT_HABIT_WORDS = frozenset(
+    "voltei apaga apagar desfaz desfazer hoje ontem amanha resumo saldo ajuda menu painel stop "
+    "sair parar start cancela cancelar ok sim nao obrigado obrigada valeu".split()
+)
+
+
+def _could_be_habit(body_plain: str) -> bool:
+    words = re.findall(r"[a-z]+", body_plain)
+    if not words or (len(words) <= 2 and all(w in _NOT_HABIT_WORDS for w in words)):
+        return False
+    if TRIP_END_RE.match(body_plain.strip()) or DELETE_LAST_EXPENSE_RE.match(body_plain.strip()):
+        return False
+    return bool(_HABIT_VERB_RE.search(body_plain)) or len(words) >= 2
 
 
 def _is_bare_command(body: str, keywords: set[str]) -> bool:
@@ -3702,6 +3795,27 @@ def _has_zero_or_negative_amount(body: str) -> bool:
     return bool(_ZERO_OR_NEG_RE.search(body))
 
 
+# On a question ("o que você tem anotado sobre mim?", "onde ficam meus dados?") words like
+# "anotado" / "guardado" describe, they do not claim; only "I just did it" forms are blocked.
+_FIRST_PERSON_CLAIM_RE = re.compile(
+    r"\b(?:registei|registrei|anotei|guardei|salvei|gravei|apaguei|deletei|removi|cancelei|marquei|"
+    r"i(?:'ve| have)? (?:saved|recorded|logged|deleted|removed|cancelled)|"
+    r"ik heb (?:\w+ )?(?:opgeslagen|genoteerd|verwijderd)|j'ai (?:enregistr|not|supprim)\w*|"
+    r"ich habe (?:\w+ )?(?:gespeichert|notiert|gelöscht))\b",
+    re.IGNORECASE,
+)
+_QUESTION_START_RE = re.compile(
+    r"^(?:o que|que|onde|como|quando|quanto|quantos|quantas|qual|quais|por ?que|porque|quem|"
+    r"what|where|how|when|which|who|why|wat|waar|hoe|wanneer|welke|wie|waarom|"
+    r"qu'est|où|comment|quand|quel|quelle|pourquoi|was|wo|wie|wann|welche|warum)\b"
+)
+
+
+def _is_question(body_plain: str) -> bool:
+    t = body_plain.strip()
+    return t.endswith("?") or bool(_QUESTION_START_RE.match(t))
+
+
 def _claims_recorded(reply: str) -> bool:
     """True when free-form LLM text says something was recorded/saved.
 
@@ -4085,6 +4199,13 @@ async def _build_saldo(member: Member, session: AsyncSession, window=None) -> st
     if not records:
         if window is not None:
             return _t("no_records_period", lang, phrase=_window_phrase(window, lang))
+        from alfred.ledger_status import pending_summary
+
+        pend = await pending_summary(session, member.id)
+        if pend.to_pay or pend.to_receive:  # A-70: only pending bills is still something to say
+            return _t(
+                "pending_forecast", lang, pay=_fmt_eur(pend.to_pay), recv=_fmt_eur(pend.to_receive)
+            )
         return _t("no_records_month", lang)
 
     total_in = _cents(sum(e.amount for e in records if e.transaction_type == "income"))
@@ -4098,6 +4219,7 @@ async def _build_saldo(member: Member, session: AsyncSession, window=None) -> st
         _t("saldo_income", lang, amount=_fmt_eur(total_in)),
         _t("saldo_expenses", lang, amount=_fmt_eur(total_out)),
         _t("saldo_balance", lang, sign=sign, amount=_fmt_eur(abs(balance))),
+        _t("saldo_note", lang),  # A-70: it is the period's in minus out, not the bank balance
     ]
     from alfred.ledger_status import pending_summary
 
@@ -4660,6 +4782,23 @@ async def _gdpr_reply(member: Member, body_plain: str, session: AsyncSession, la
     await _save_outbound(member, reply, session)
 
 
+async def _inbound_last_minute(session: AsyncSession, member_id) -> int:
+    if not isinstance(session, AsyncSession):  # unit tests with a stand-in session
+        return 0
+    return int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Message)
+            .where(
+                Message.author_id == member_id,
+                Message.direction == "inbound",
+                Message.created_at >= datetime.now(UTC) - timedelta(minutes=1),
+            )
+        )
+        or 0
+    )
+
+
 async def handle_inbound(
     member: Member,
     message: Message,
@@ -4671,6 +4810,15 @@ async def handle_inbound(
         return
 
     to = member.wa_phone
+    # A-81: a burst (a stuck phone, a script) is answered once, then ignored for the minute
+    burst = await _inbound_last_minute(session, member.id)
+    if burst > settings.messages_per_minute:
+        if burst == settings.messages_per_minute + 1:
+            reply = _t("rate_limited", member.language or "en")
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+        logger.info("conversation.rate_limited", member_id=str(member.id), n=burst)
+        return
     body = unicodedata.normalize("NFC", (message.body or "").strip()).lower()
     # Accent-free twin (same length as ``body``): command regexes are written without
     # accents so "está"/"água"/"medicação" match; slice captured text from ``body``.
@@ -4850,6 +4998,13 @@ async def handle_inbound(
             name = (member.preferred_name or "").strip()
             word = greet if greet_lang_matches(greet, lang) else _t("greet_word", lang)
             reply = _t("greet_reply", lang, hello=word + (f", {name}" if name else ""))
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4-0h. BUG-08: a keyboard mash ("asdfjklqwerty") is answered here, with no model call
+        if _keyboard_mash(body_plain, lang) or _looks_like_gibberish(body_plain):
+            reply = _t("not_understood", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -5483,15 +5638,19 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-        # 4e-5d. M11 — dashboard link: "meu dashboard"
-        if _is_plain_command(body, _DASHBOARD_WORDS):
+        # 4e-5d. M11 — dashboard link: "meu dashboard"; A-17: "novo link do painel" revokes
+        revoke = bool(_PANEL_REVOKE_RE.match(body_plain.strip(" .!?")))
+        if revoke or _is_plain_command(body, _DASHBOARD_WORDS):
             import uuid as _uuid
 
             from alfred.dashboard import ensure_dashboard_token
+            from alfred.panel_tokens import revoke_panel_token
             from alfred.settings import settings as _settings
 
-            # Missing or expired (TTL) → issue a fresh one; the old link stops working.
-            await ensure_dashboard_token(session, member)
+            if revoke:
+                await revoke_panel_token(session, member)
+            else:  # Missing or expired (TTL) → issue a fresh one; the old link stops working.
+                await ensure_dashboard_token(session, member)
             import os as _os
 
             base_url = (
@@ -5503,7 +5662,7 @@ async def handle_inbound(
             else:
                 url = f"{base_url}/d/{member.dashboard_token}"
                 # Button first; send_cta_url itself falls back to ONE text with the link.
-                reply = _t("dashboard_cta", lang)
+                reply = _t("dashboard_revoked", lang) if revoke else _t("dashboard_cta", lang)
                 await send_cta_url(to, reply, _t("btn_open_panel", lang), url)
                 reply = _t("dashboard_link", lang, url=url)  # what the history keeps
             await _save_outbound(member, reply, session)
@@ -5693,10 +5852,9 @@ async def handle_inbound(
             if not unique_dates:
                 reply = _t("habit_streak_none", lang, activity=streak_kw or "hábito")
             else:
-                from datetime import date as _date2
                 from datetime import timedelta as _td2
 
-                today = _date2.today()
+                today = today_local()  # A-65: Amsterdam date, like the log itself
                 yesterday = today - _td2(days=1)
                 most_recent = unique_dates[0]
                 if most_recent < yesterday:
@@ -5809,6 +5967,7 @@ async def handle_inbound(
             and not _has_zero_or_negative_amount(body)  # "café 0" is an invalid amount, not a habit
             and not _looks_like_bare_amount(body)  # "cinema 24" is an expense, not a habit
             and not body.rstrip().endswith("?")  # a question is not a log
+            and _could_be_habit(body_plain)  # A-49: "voltei", "apaga", "hoje" never reach the model
         ):
             habit_data = await extract_habit(body, lang=member.language or "en")
             if habit_data:
@@ -6338,6 +6497,27 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        if body_plain.strip(" .!?") in _BARE_DAY_WORDS:  # BUG-03: "hoje" alone is today's spending
+            reply = await _build_summary(
+                member, session, window=parse_period(body_plain.strip(" .!?"), today_local())
+            )
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        if _TOP_EXPENSES_RE.match(body_plain.strip()):
+            from alfred.followup import top_text
+
+            win = parse_period(body_plain, today_local())
+            if win is not None:
+                t_start, t_end, _lbl = _window_range(win, lang)
+            else:
+                t_start, t_end, _lbl = _period_range("current_month", lang)
+            reply = await top_text(member, t_start, t_end, lang, session)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
         if TOP_CATEGORIES_RE.match(body_plain.strip()):
             win = parse_period(body_plain, today_local())
             reply = await _build_summary(
@@ -6561,7 +6741,9 @@ async def handle_inbound(
             session.add(expense)
 
             name = (
-                expense_data["merchant"] or expense_data["description"] or expense_data["category"]
+                expense_data["merchant"]
+                or expense_data["description"]
+                or category_label(expense_data["category"], lang)  # A-55: never "overig"
             )
             amt_fmt = _fmt_eur(expense_data["amount"])
             key = "income_recorded" if txn_type == "income" else "expense_recorded"
@@ -6734,7 +6916,12 @@ async def handle_inbound(
             return
         history = await _load_history(member, session, exclude_id=message.id)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
-        if _claims_recorded(reply) or _ACTION_CLAIM_RE.search(reply):
+        claim = (
+            (_FIRST_PERSON_CLAIM_RE.search(reply) or _ACTION_CLAIM_RE.search(reply))  # A-28
+            if _is_question(body_plain)
+            else (_claims_recorded(reply) or _ACTION_CLAIM_RE.search(reply))
+        )
+        if claim:
             # Nothing was written on this path: never let the model confirm a phantom record.
             alert("conversation.llm_false_record_claim", member_id=str(member.id))
             reply = _t(_fallback_key(body), lang)

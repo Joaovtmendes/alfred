@@ -334,6 +334,19 @@ async def _tick(raw: str, member: Member, lang: str, session: AsyncSession) -> s
     return _t("tp_packed", lang, name=row.name, left=left)
 
 
+_TRIP_LABELS = {  # A-78: on a trip, "wonen" is where you sleep, not housing
+    "wonen": {"pt": "Hospedagem", "nl": "Verblijf", "en": "Accommodation", "fr": "Hébergement", "de": "Unterkunft"},
+    "entertainment": {"pt": "Passeios", "nl": "Uitjes", "en": "Outings", "fr": "Sorties", "de": "Ausflüge"},
+}  # fmt: skip
+_TRIP_WORDS = {"passeio": "entertainment", "passeios": "entertainment", "hotel": "wonen",
+               "airbnb": "wonen", "hostel": "wonen", "pousada": "wonen"}  # fmt: skip
+
+
+def trip_category_label(category: str, lang: str) -> str:
+    names = _TRIP_LABELS.get(category)
+    return (names.get(lang) or names["en"]) if names else category_label(category, lang)
+
+
 async def _set_budget(
     raw_cat: str, raw_amount: str, member: Member, lang: str, session: AsyncSession
 ) -> str:
@@ -342,7 +355,7 @@ async def _set_budget(
     trip, msg = await _need_trip(member, lang, session)
     if trip is None:
         return msg or ""
-    category = resolve_category(raw_cat)
+    category = _TRIP_WORDS.get(strip_accents(raw_cat.strip().lower())) or resolve_category(raw_cat)
     if category is None:
         return _t("tp_budget_unknown", lang)
     amount = to_amount(raw_amount)
@@ -364,7 +377,7 @@ async def _set_budget(
     return _t(
         "tp_budget_set",
         lang,
-        cat=category_label(category, lang),
+        cat=trip_category_label(category, lang),
         amount=_fmt(amount),
         dest=trip.destination,
     )
@@ -408,7 +421,9 @@ async def _list_budget(member: Member, lang: str, session: AsyncSession) -> str:
         s = float(spent.get(ln.category) or 0)
         total_plan += float(ln.amount)
         total_spent += s
-        out.append(f"• {category_label(ln.category, lang)}: {_fmt(s)} / {_fmt(float(ln.amount))}")
+        out.append(
+            f"• {trip_category_label(ln.category, lang)}: {_fmt(s)} / {_fmt(float(ln.amount))}"
+        )
     return (
         _t(
             "tp_budget_header",
@@ -419,6 +434,11 @@ async def _list_budget(member: Member, lang: str, session: AsyncSession) -> str:
         )
         + "\n"
         + "\n".join(out)
+        + (  # A-78: the trip's own budget is a different number from the sum of the lines
+            _t("tp_budget_overall", lang, amount=_fmt(float(trip.budget)))
+            if trip.budget and abs(float(trip.budget) - total_plan) >= 0.01
+            else ""
+        )
     )
 
 
@@ -534,6 +554,13 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Budget for {dest}: spent {spent} of {plan} planned.",
         "Budget de {dest} : dépensé {spent} sur {plan} prévus.",
         "Budget für {dest}: ausgegeben {spent} von {plan} geplant.",
+    ),
+    "tp_budget_overall": _all(
+        "\nOrçamento geral da viagem: {amount}.",
+        "\nTotale reisbudget: {amount}.",
+        "\nOverall trip budget: {amount}.",
+        "\nBudget global du voyage : {amount}.",
+        "\nGesamtbudget der Reise: {amount}.",
     ),
     "tp_budget_empty": _all(
         "Ainda não há orçamento por categoria em {dest}. Exemplo: “orçamento da viagem hospedagem 300”.",

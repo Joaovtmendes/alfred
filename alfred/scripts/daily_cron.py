@@ -230,6 +230,35 @@ async def send_payment_reminders(now_local: datetime) -> tuple[int, int]:
     return sent, errors
 
 
+async def send_bill_reminders(now_local: datetime) -> tuple[int, int]:
+    """A-46 — a bill "a pagar" on its due day and the day after; a fixed bill the day after its
+    due date when it was not paid. Plain text inside the 24 h window only (no template yet)."""
+    from alfred.db import AsyncSessionLocal
+    from alfred.ledger_status import bill_reminders, mark_bill_reminded
+    from alfred.whatsapp import send_text
+
+    async with AsyncSessionLocal() as session:
+        reminders = await bill_reminders(session, now_local)
+
+    sent = errors = 0
+    for r in reminders:
+        if not r.in_window:
+            logger.info("cron.bill_reminder_skipped_no_window", ref=r.ref)
+            continue
+        try:
+            resp = await send_text(r.wa_phone, r.text)
+        except Exception as exc:
+            logger.error("cron.bill_reminder_failed", ref=r.ref, error=str(exc))
+            errors += 1
+            continue
+        sent += 1
+        await _log_out(r.wa_phone, resp, r.text, "reminder", None)
+        async with AsyncSessionLocal() as session:
+            mark_bill_reminded(session, r)
+            await session.commit()
+    return sent, errors
+
+
 async def send_monthly_summaries(now_local: datetime) -> tuple[int, int]:
     """V2-04 — last month's summary on day 1 (retried until day 3). Returns (sent, errors).
 
@@ -597,6 +626,7 @@ async def run_cron() -> int:
 
     for extra in (
         send_payment_reminders,
+        send_bill_reminders,
         send_monthly_summaries,
         send_appointment_reminders,
         send_service_reminders,

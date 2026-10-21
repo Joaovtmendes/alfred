@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.audit import audit
 from alfred.clock import now_local
-from alfred.models import Expense, Member, PendingBatch, Trip
+from alfred.models import Expense, Member, PendingAction, PendingBatch, Trip
 from alfred.parsing import to_amount
 from alfred.validation import MAX_AMOUNT
 
@@ -158,6 +158,8 @@ async def _take(session: AsyncSession, member_id: uuid.UUID, batch_id: uuid.UUID
 
 
 MAX_UNDO_IDS = 5  # a reply-button id holds at most 256 characters
+MAX_MULTI_UNDO = 50
+UNDO_KIND = "batch_undo"
 
 
 async def record_items(
@@ -169,13 +171,21 @@ async def record_items(
 ) -> str:
     from alfred.budgets import alerts_for_categories
     from alfred.conversation import _fmt_eur, _t
+    from alfred.couple import active_link, is_home_by_default
     from alfred.settings import settings
 
     trip = await session.scalar(
         select(Trip).where(Trip.member_id == member.id, Trip.active.is_(True))
     )
+    linked = await active_link(session, member.id) is not None
     any_high = False
     for it in items:
+        # A-36: a list or a receipt follows "sempre da casa" like a single entry
+        shared = (
+            linked
+            and it["type"] == "expense"
+            and await is_home_by_default(session, member, it["category"])
+        )
         new_id = uuid.uuid4()
         if ids_out is not None:
             ids_out.append(new_id)
@@ -192,6 +202,7 @@ async def record_items(
                 description=it["description"],
                 expense_date=now_local() - timedelta(days=it["days_ago"]),
                 trip_id=trip.id if trip else None,
+                shared=shared,
             )
         )
         if it["amount"] >= settings.high_value_threshold and it["type"] != "income":
@@ -217,11 +228,21 @@ async def _recorded(
     """The confirmation, with [Undo all] when the ids fit in a button."""
     ids: list[uuid.UUID] = []
     text = await record_items(session, member, items, lang, ids)
-    if 0 < len(ids) <= MAX_UNDO_IDS:
-        from alfred.conversation import _t
+    from alfred.conversation import _t
 
+    if 0 < len(ids) <= MAX_UNDO_IDS:
         payload = ",".join(str(i) for i in ids)
         return BatchReply(text, [(f"batch_undo:{payload}", _t("batch_btn_undo_all", lang))])
+    if ids:  # A-68: 6 to 10 entries do not fit in a button id; the button points at a stored list
+        holder = PendingAction(
+            member_id=member.id,
+            kind=UNDO_KIND,
+            payload={"ids": [str(i) for i in ids]},
+            expires_at=now_local() + timedelta(days=1),
+        )
+        session.add(holder)
+        await session.flush()
+        return BatchReply(text, [(f"batch_undo:p{holder.id}", _t("batch_btn_undo_all", lang))])
     return BatchReply(text)
 
 
@@ -229,8 +250,23 @@ async def undo_recorded(raw_ids: str, member: Member, lang: str, session: AsyncS
     """Delete the entries of a just-confirmed batch (only this member's; a second tap finds none)."""
     from alfred.conversation import _t
 
+    if raw_ids.startswith("p"):  # a stored list (A-68)
+        try:
+            holder = await session.scalar(
+                select(PendingAction).where(
+                    PendingAction.id == uuid.UUID(raw_ids[1:]),
+                    PendingAction.member_id == member.id,
+                    PendingAction.kind == UNDO_KIND,
+                )
+            )
+        except ValueError:
+            holder = None
+        if holder is None:
+            return _t("batch_gone", lang)
+        raw_ids = ",".join(holder.payload.get("ids") or [])
+        await session.delete(holder)
     ids: list[uuid.UUID] = []
-    for part in raw_ids.split(",")[:MAX_UNDO_IDS]:
+    for part in raw_ids.split(",")[:MAX_MULTI_UNDO]:
         try:
             ids.append(uuid.UUID(part))
         except ValueError:
