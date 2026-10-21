@@ -60,7 +60,7 @@ def test_clean_items_drops_zero_negative_huge_and_foreign() -> None:
         _it(5, "a"),
         _it(0, "b"),
         _it(-3, "c"),
-        _it(2_000_000, "d"),
+        _it(200_000_000, "d"),  # above MAX_AMOUNT (99.999.999 since M-06)
         _it(4, "e", currency="USD"),
         _it(float("nan"), "f"),
         _it(7, "g"),

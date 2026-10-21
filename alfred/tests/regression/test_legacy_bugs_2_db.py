@@ -27,14 +27,16 @@ async def _count(lab: Lab, model) -> int:
 
 
 @pytest.mark.bug("A-14")
-async def test_the_terms_page_the_couple_invite_mentions_exists(client) -> None:
-    resp = await client.get("/terms")
-    assert resp.status_code == 200
+@pytest.mark.bug("B-002")
+async def test_the_terms_link_opens_the_terms_themselves(client) -> None:
+    # B-002 (hard test 18/10): the app page only had a link; it now goes straight to the Terms
+    resp = await client.get("/terms", follow_redirects=False)
+    assert resp.status_code in (302, 307)
+    assert resp.headers["location"] == "https://jofie.nl/terms/"
 
 
 @pytest.mark.bug("A-54")
 @pytest.mark.parametrize("word", ["Subscrições", "Rendimento", "Habitação", "Vestuário"])
-@pytest.mark.xfail(strict=True, reason="A-54 aberto: remova junto com a correção")
 def test_portuguese_labels_are_brazilian(word) -> None:
     labels = [
         category_label(c, "pt") for c in ("abonnement", "inkomen", "wonen", "kleding", "overig")
@@ -44,13 +46,11 @@ def test_portuguese_labels_are_brazilian(word) -> None:
 
 @pytest.mark.bug("A-20")
 @pytest.mark.parametrize("text", ["Bom dia", "bom dia!", "boa tarde"])
-@pytest.mark.xfail(strict=True, reason="A-20 aberto: remova junto com a correção")
 def test_portuguese_greetings_are_recognised(text) -> None:
     assert _detect_language(text) == "pt"
 
 
 @pytest.mark.bug("A-20")
-@pytest.mark.xfail(strict=True, reason="A-20 aberto: remova junto com a correção")
 def test_a_word_containing_another_language_name_is_not_that_language() -> None:
     assert _detect_language("quanto custa o plano comercial?") != "fr"
 
@@ -60,7 +60,6 @@ def test_a_word_containing_another_language_name_is_not_that_language() -> None:
 
 @db
 @pytest.mark.bug("A-41")
-@pytest.mark.xfail(strict=True, reason="A-41 aberto: remova junto com a correção")
 async def test_rescheduling_a_meeting_is_not_a_training_plan_edit(lab: Lab) -> None:
     out = await lab.say("muda a reunião de segunda para sexta")
     assert "Não entendi a mudança" not in out
@@ -83,7 +82,6 @@ async def test_deleting_a_workout_does_not_cancel_a_future_appointment(lab: Lab)
 
 @db
 @pytest.mark.bug("A-40")
-@pytest.mark.xfail(strict=True, reason="A-40 aberto: remova junto com a correção")
 async def test_agenda_with_a_title_and_time_creates_the_appointment(lab: Lab) -> None:
     await lab.say("agenda dentista amanhã às 14h")
     assert await _count(lab, Appointment) == 1
@@ -91,7 +89,6 @@ async def test_agenda_with_a_title_and_time_creates_the_appointment(lab: Lab) ->
 
 @db
 @pytest.mark.bug("A-34")
-@pytest.mark.xfail(strict=True, reason="A-34 aberto: remova junto com a correção")
 async def test_a_utility_bill_is_not_a_client_invoice(lab: Lab) -> None:
     await lab.say("fatura de luz 80")
     assert await _count(lab, ClientInvoice) == 0
@@ -99,7 +96,6 @@ async def test_a_utility_bill_is_not_a_client_invoice(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-50")
-@pytest.mark.xfail(strict=True, reason="A-50 aberto: remova junto com a correção")
 async def test_a_photo_sent_as_a_document_is_not_called_a_csv(lab: Lab) -> None:
     out = await lab.doc("recibo.jpg", b"\xff\xd8\xff", mime="image/jpeg")
     assert "csv" not in out.lower()
@@ -114,7 +110,6 @@ async def test_a_zero_budget_is_refused(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-63")
-@pytest.mark.xfail(strict=True, reason="A-63 aberto: remova junto com a correção")
 async def test_a_note_that_mentions_a_reminder_stays_a_note(lab: Lab) -> None:
     await lab.say("nota: lembrete tomar remédio às 08:00")
     assert await _count(lab, Note) == 1
@@ -123,7 +118,6 @@ async def test_a_note_that_mentions_a_reminder_stays_a_note(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-64")
-@pytest.mark.xfail(strict=True, reason="A-64 aberto: remova junto com a correção")
 async def test_the_word_transporte_does_not_make_a_workout_reminder(lab: Lab) -> None:
     await lab.say("lembrete: pegar o transporte às 08:00")
     kinds = [
@@ -137,7 +131,6 @@ async def test_the_word_transporte_does_not_make_a_workout_reminder(lab: Lab) ->
 
 @db
 @pytest.mark.bug("A-80")
-@pytest.mark.xfail(strict=True, reason="A-80 aberto: remova junto com a correção")
 async def test_a_greeting_costs_at_most_one_model_call(lab: Lab) -> None:
     await lab.say("oi")
     calls = sum(

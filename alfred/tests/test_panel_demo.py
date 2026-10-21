@@ -92,6 +92,7 @@ async def test_demo_fills_every_card_of_resumo_and_dinheiro(client, monkeypatch)
     from datetime import date
 
     monkeypatch.setattr("alfred.panel_api.today_local", lambda: date(2026, 10, 14))
+    monkeypatch.setattr(seed, "today_local", lambda: date(2026, 10, 14))  # same clock as the panel
     _dashboard_limiter._hits.clear()
     token = await seed.run()
     await engine.dispose()

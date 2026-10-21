@@ -51,20 +51,33 @@ async def _get_member(token_str: str, session: AsyncSession) -> Member:
     return member
 
 
-def _link_gone(lang: str | None) -> HTMLResponse:
+def _link_gone(lang: str | None, nonce: str | None = None) -> HTMLResponse:
     """What a person sees when tapping an old or wrong link: how to get a new one, not JSON."""
+    from alfred.signup import brand_page
+
     lang = normalize_lang(lang)
     t = ui(lang)
-    body = (
-        f'<!doctype html><html lang="{lang}"><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<meta name="color-scheme" content="light dark">'
-        f"<title>{escape(t['link_expired_title'])}</title>"
-        "<body><main>"
-        f"<h1>{escape(t['link_expired_title'])}</h1><p>{escape(t['link_expired_text'])}</p>"
-        "</main></body></html>"
+    return brand_page(
+        lang,
+        t["link_expired_title"],
+        f"<h1>{escape(t['link_expired_title'])}</h1>"
+        f"<p class='lead'>{escape(t['link_expired_text'])}</p>",
+        status=404,
+        nonce=nonce,
     )
-    return HTMLResponse(body, status_code=404)
+
+
+def _export_gone() -> HTMLResponse:
+    """A spent or unknown export link: a branded page in English (the token names no member)."""
+    from alfred.signup import brand_page
+
+    t = ui("en")
+    return brand_page(
+        "en",
+        t["link_expired_title"],
+        f"<h1>{escape(t['link_expired_title'])}</h1><p class='lead'>{escape(t['export_gone_text'])}</p>",
+        status=404,
+    )
 
 
 @router.get(
@@ -76,19 +89,17 @@ async def dashboard_export_page(
     """Confirmation page. Link previews and bots only GET, so they cannot spend the link."""
     member = await peek_export_token(session, token)
     if member is None:
-        raise HTTPException(status_code=404, detail="Link not found")
+        return _export_gone()
+    from alfred.signup import brand_page
+
     lang = normalize_lang(member.language)
     t = ui(lang)
-    body = (
-        f'<!doctype html><html lang="{lang}"><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        f"<title>{t['export_title']}</title>"
-        "<body>"
-        f"<h1>{t['export_title']}</h1><p>{t['export_text']}</p>"
-        '<form method="post"><button type="submit">'
-        f"{t['export_button']}</button></form></body></html>"
+    return brand_page(
+        lang,
+        t["export_title"],
+        f"<h1>{escape(t['export_title'])}</h1><p class='lead'>{escape(t['export_text'])}</p>"
+        f'<form method="post"><button type="submit">{escape(t["export_button"])}</button></form>',
     )
-    return HTMLResponse(body)
 
 
 @router.post(
@@ -128,19 +139,19 @@ async def books_export_page(
     """V2-12 — confirmation page of the accountant CSV (a GET never spends the single-use link)."""
     member = await peek_export_token(session, token)
     if member is None:
-        raise HTTPException(status_code=404, detail="Link not found")
+        return _export_gone()
+    from alfred.signup import brand_page
+
     lang = normalize_lang(member.language)
     t = ui(lang)
-    body = (
-        f'<!doctype html><html lang="{lang}"><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        f"<title>{t['books_export_title']}</title>"
-        "<body>"
-        f"<h1>{t['books_export_title']}</h1><p>{t['books_export_text']}</p>"
+    return brand_page(
+        lang,
+        t["books_export_title"],
+        f"<h1>{escape(t['books_export_title'])}</h1>"
+        f"<p class='lead'>{escape(t['books_export_text'])}</p>"
         f'<form method="post" action="?year={_books_year(year)}"><button type="submit">'
-        f"{t['books_export_button']}</button></form></body></html>"
+        f"{escape(t['books_export_button'])}</button></form>",
     )
-    return HTMLResponse(body)
 
 
 @router.post(
@@ -188,7 +199,7 @@ async def dashboard_page(
 ) -> HTMLResponse:
     member = await _find_member(token, session)
     if member is None or token_expired(member):
-        return _link_gone(member.language if member else None)
+        return _link_gone(member.language if member else None, request.state.csp_nonce)
     lang = normalize_lang(member.language)
     return HTMLResponse(
         panel.render_v2(

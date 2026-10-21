@@ -97,7 +97,7 @@ async def test_create_update_and_remove_a_budget(lab: Lab) -> None:
 @db
 async def test_unknown_or_income_category_lists_the_valid_ones(lab: Lab) -> None:
     reply = await lab.say("orçamento xyzzy 100")
-    assert "Supermercado" in reply and "Rendimento" not in reply
+    assert "Supermercado" in reply and "Renda" not in reply
     assert (
         await lab.scalar(
             select(func.count()).select_from(Budget).where(Budget.member_id == lab.member_id)

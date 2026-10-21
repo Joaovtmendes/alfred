@@ -122,7 +122,7 @@ async def test_adjust_button_keeps_the_draft_and_explains(lab: Lab) -> None:
     )
     out = await lab.tap(f"plan_adjust:{draft[0]}")
     assert "troca o supino" in out and "15 minutos" in out
-    assert [b[0].split(":")[0] for b in lab.buttons[-1]] == ["plan_ok", "plan_cancel"]
+    assert lab.buttons[-1] == []  # M-19: the buttons come back with the adjusted preview
 
 
 @db

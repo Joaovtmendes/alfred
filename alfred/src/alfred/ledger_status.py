@@ -26,7 +26,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.agenda import parse_when
 from alfred.audit import audit
 from alfred.clock import local_tz, now_local, today_local
-from alfred.models import PENDING, SETTLED, Expense, Member
+from alfred.models import (
+    PENDING,
+    SETTLED,
+    AuditLog,
+    Expense,
+    Member,
+    Message,
+    PendingAction,
+    RecurringItem,
+)
 from alfred.parsing import strip_accents, to_amount
 from alfred.validation import MAX_AMOUNT
 
@@ -63,9 +72,23 @@ _CONNECTORS = {
     "do", "da", "de", "dos", "das", "from", "van", "von", "vom", "du", "des", "der", "die", "voor",
     "pour", "fur", "para", "pra", "pro", "the", "o", "a", "as", "os", "le", "la", "les", "het", "een", "um", "uma", "on", "em", "op", "am", "au", "aux", "ao", "aos",
 }  # fmt: skip
-_PAID_VERBS = {"paguei", "paid", "betaald", "betaalde", "paye", "bezahlt", "bezahlte"}
+_PAID_VERBS = {
+    "paguei",
+    "paid",
+    "betaald",
+    "betaalde",
+    "paye",
+    "bezahlt",
+    "bezahlte",
+    "paga",
+    "pago",
+    "quitada",
+    "quitado",
+}  # "luz 120 já foi paga"
 _RECV_VERBS = {"recebi", "received", "ontvangen", "recu", "erhalten", "bekommen", "recebido"}
 _FILLER = {
+    "foi",
+    "esta",
     "i",
     "ik",
     "heb",
@@ -311,7 +334,51 @@ async def handle_ledger_command(
     settle = parse_settle(body_plain)
     if settle is not None:
         return await _settle(settle, member, lang, session)
+    if _BARE_AMOUNT.match(plain):  # B-008: "120" right after "Qual deles?" picks that one
+        pick = await _take_pick(session, member.id)
+        if pick is not None:
+            amount = to_amount(_BARE_AMOUNT.match(plain).group(1))
+            return await _settle((pick[0], pick[1], amount), member, lang, session)
     return None
+
+
+PICK_KIND = "ledger_pick"
+PICK_TTL = timedelta(minutes=15)
+_BARE_AMOUNT = re.compile(r"^(?:€\s*)?(\d[\d.,]*)\s*(?:€|eur|euros?)?$")
+
+
+async def _remember_pick(session: AsyncSession, member_id, kind: str, tokens: set[str]) -> None:
+    from sqlalchemy import delete
+
+    await session.execute(
+        delete(PendingAction).where(
+            PendingAction.member_id == member_id, PendingAction.kind == PICK_KIND
+        )
+    )
+    session.add(
+        PendingAction(
+            member_id=member_id,
+            kind=PICK_KIND,
+            payload={"kind": kind, "tokens": sorted(tokens)},
+            expires_at=datetime.now(local_tz()) + PICK_TTL,
+        )
+    )
+    await session.flush()
+
+
+async def _take_pick(session: AsyncSession, member_id) -> tuple[str, set[str]] | None:
+    row = await session.scalar(
+        select(PendingAction).where(
+            PendingAction.member_id == member_id,
+            PendingAction.kind == PICK_KIND,
+            PendingAction.expires_at > datetime.now(local_tz()),
+        )
+    )
+    if row is None:
+        return None
+    await session.delete(row)
+    await session.flush()
+    return str(row.payload.get("kind")), set(row.payload.get("tokens") or [])
 
 
 async def _create(new: NewPending, member: Member, lang: str, session: AsyncSession) -> str:
@@ -384,12 +451,40 @@ async def _settle(
     ]
     if not cands:
         return None  # not ours: the debts / fixed bills / income handlers decide
+    if kind == "pay":
+        # B-020: a pending "Luz" and a fixed bill "Luz" both fit "paguei a luz"; paying the
+        # pending one silently (it was the €120, the bill was €80) is a guess, so ask.
+        from alfred.recurring import _active_items, _pay, match_items
+
+        bills = match_items(
+            " ".join(sorted(tokens)), await _active_items(session, member.id), loose=True
+        )
+        if bills:
+            if amount is not None:
+                same_bill = [b for b in bills if _dec(b.amount) == _dec(amount)]
+                same_pend = [e for e in cands if _dec(e.amount) == _dec(amount)]
+                if len(same_bill) == 1 and not same_pend:
+                    return await _pay(same_bill[0], member, lang, session)
+            else:
+                options = ", ".join(
+                    [
+                        f"{_label(e)} {_fmt(_dec(e.amount))} ({_t('ledger_kind_pending', lang)})"
+                        for e in cands[:3]
+                    ]
+                    + [
+                        f"{b.name} {_fmt(_dec(b.amount))} ({_t('ledger_kind_bill', lang)})"
+                        for b in bills[:3]
+                    ]
+                )
+                await _remember_pick(session, member.id, kind, tokens)
+                return _t("ledger_ambiguous", lang, options=options)
     if len(cands) > 1 and amount is not None:
         exact = [e for e in cands if _dec(e.amount) == _dec(amount)]
         if exact:
             cands = exact[:1]
     if len(cands) > 1:
         options = ", ".join(f"{_label(e)} {_fmt(_dec(e.amount))}" for e in cands[:5])
+        await _remember_pick(session, member.id, kind, tokens)
         return _t("ledger_ambiguous", lang, options=options)
     entry = cands[0]
     if amount is not None and 0 < amount <= MAX_AMOUNT:
@@ -409,6 +504,103 @@ async def _settle(
     return text
 
 
+# ── A-46: reminders for bills to pay (pending entries and fixed bills not marked paid) ─────
+
+
+@dataclass(frozen=True)
+class BillReminder:
+    ref: str  # "p:<expense id>:due|late" or "r:<recurring id>:<due>:late" — idempotency key
+    member_id: uuid.UUID
+    wa_phone: str
+    lang: str
+    text: str
+    in_window: bool
+
+
+async def bill_reminders(session: AsyncSession, now: datetime) -> list[BillReminder]:
+    """A pending bill on its due day and once the day after; a fixed bill once the day after its
+    due date when it was not marked paid. Each message goes out at most once (audit key)."""
+    from alfred.conversation import _fmt_eur, _t
+    from alfred.recurring import REMINDER_FROM_HOUR, REMINDER_UNTIL_HOUR, WINDOW_HOURS
+
+    if not REMINDER_FROM_HOUR <= now.hour < REMINDER_UNTIL_HOUR:
+        return []
+    today = now.date()
+    yesterday = today - timedelta(days=1)
+    cands: list[dict] = []
+    pend = (
+        await session.execute(
+            select(Expense, Member.wa_phone, Member.language)
+            .join(Member, Expense.member_id == Member.id)
+            .where(Expense.status == TO_PAY, Member.consent_state == "accepted")
+        )
+    ).all()
+    for e, phone, lang in pend:
+        due = e.expense_date.astimezone(local_tz()).date()
+        which = "due" if due == today else "late" if due == yesterday else None
+        if which:
+            cands.append({"ref": f"p:{e.id}:{which}", "member": e.member_id, "phone": phone,
+                          "lang": lang or "en", "amount": float(e.amount), "due": due,
+                          "name": _label(e), "which": which})  # fmt: skip
+    bills = (
+        await session.execute(
+            select(RecurringItem, Member.wa_phone, Member.language)
+            .join(Member, RecurringItem.member_id == Member.id)
+            .where(
+                RecurringItem.active.is_(True),
+                RecurringItem.next_due_date == yesterday,
+                Member.consent_state == "accepted",
+            )
+        )
+    ).all()
+    for item, phone, lang in bills:
+        cands.append({"ref": f"r:{item.id}:{yesterday}:late", "member": item.member_id,
+                      "phone": phone, "lang": lang or "en", "amount": float(item.amount),
+                      "due": yesterday, "name": item.name, "which": "late"})  # fmt: skip
+    out: list[BillReminder] = []
+    cutoff = now - timedelta(hours=WINDOW_HOURS)
+    for c in cands:
+        member_id = c["member"]
+        done = await session.scalar(
+            select(AuditLog.id)
+            .where(
+                AuditLog.member_id == member_id,
+                AuditLog.event == "bill_reminded",
+                AuditLog.detail["ref"].astext == c["ref"],
+            )
+            .limit(1)
+        )
+        if done is not None:
+            continue
+        last_in = await session.scalar(
+            select(func.max(Message.created_at)).where(
+                Message.author_id == member_id, Message.direction == "inbound"
+            )
+        )
+        key = "bill_due_today" if c["which"] == "due" else "bill_late"
+        out.append(
+            BillReminder(
+                ref=c["ref"],
+                member_id=member_id,
+                wa_phone=c["phone"],
+                lang=c["lang"],
+                text=_t(
+                    key,
+                    c["lang"],
+                    name=c["name"],
+                    amount=_fmt_eur(c["amount"]),
+                    due=f"{c['due']:%d/%m}",
+                ),
+                in_window=bool(last_in and last_in.astimezone(now.tzinfo) >= cutoff),
+            )
+        )
+    return out
+
+
+def mark_bill_reminded(session: AsyncSession, r: BillReminder) -> None:
+    audit(session, "bill_reminded", r.member_id, ref=r.ref)
+
+
 async def count_pending(session: AsyncSession, member_id: uuid.UUID) -> int:
     return int(
         await session.scalar(
@@ -425,6 +617,8 @@ def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str | tuple[s
 
 
 STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
+    "ledger_kind_pending": _all("a pagar", "te betalen", "to pay", "à payer", "zu zahlen"),
+    "ledger_kind_bill": _all("conta fixa", "vaste last", "fixed bill", "charge fixe", "Fixkosten"),
     "ledger_added_pay": _all(
         'Anotei a pagar: {name} {amount}, vence {due}. Não entra no saldo até você pagar ("paguei {name}").',
         'Genoteerd om te betalen: {name} {amount}, vervalt {due}. Telt pas mee in je saldo als je betaald hebt ("betaald {name}").',
@@ -452,6 +646,20 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Marked as received: {name} {amount}.",
         "Marqué comme reçu : {name} {amount}.",
         "Als erhalten markiert: {name} {amount}.",
+    ),
+    "bill_due_today": _all(
+        'Lembrete: {name} ({amount}) vence hoje. Quando pagar, me diga "paguei {name}".',
+        'Herinnering: {name} ({amount}) vervalt vandaag. Betaald? Zeg "betaald {name}".',
+        'Reminder: {name} ({amount}) is due today. Once paid, tell me "paid {name}".',
+        "Rappel : {name} ({amount}) arrive à échéance aujourd'hui. Une fois payé, dis « payé {name} ».",
+        "Erinnerung: {name} ({amount}) ist heute fällig. Wenn bezahlt, sag „bezahlt {name}“.",
+    ),
+    "bill_late": _all(
+        '{name} ({amount}) venceu ontem ({due}) e ainda não está marcada como paga. Se já pagou, diga "paguei {name}".',
+        '{name} ({amount}) verviel gisteren ({due}) en staat nog niet als betaald. Al betaald? Zeg "betaald {name}".',
+        '{name} ({amount}) was due yesterday ({due}) and isn\'t marked paid yet. If you paid, say "paid {name}".',
+        "{name} ({amount}) était dû hier ({due}) et n'est pas encore marqué payé. Si c'est fait, dis « payé {name} ».",
+        "{name} ({amount}) war gestern ({due}) fällig und ist noch nicht als bezahlt markiert. Schon bezahlt? Sag „bezahlt {name}“.",
     ),
     "ledger_ambiguous": _all(
         'Qual deles? Tenho: {options}. Diga o valor, por exemplo "paguei 120 da luz".',

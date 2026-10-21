@@ -93,6 +93,17 @@ _SET_RE = re.compile(
     r"(?:[€]\s*)?(?P<amt>\d[\d.,]*)\s*(?:€|eur|euros?)?"
     r"(?:\s*(?:por\s+mes|mensais|mensal|per\s+maand|maandelijks|a\s+month|monthly|par\s+mois|pro\s+monat))?\s*[.!]*$"
 )  # fmt: skip
+# B-017: "orçamento de 400 para mercado" (amount first). The model answered "Atualizado: €400,00
+# por mês em Supermercado" and nothing changed, so the next alert still used the old €85.
+_SET_AMT_FIRST_RE = re.compile(
+    r"^(?:(?:define|defina|definir|muda|mude|mudar|altera|altere|ajusta|ajuste|coloca|set|change|update|"
+    r"stel|zet|wijzig|fixe|definis|setze|aendere)\s+)?"
+    r"(?:(?:o|um|meu|my|a|mijn|een|mon|un|mein|ein)\s+)?" + _WORD + r"\s+(?:de\s+|of\s+|van\s+)?"
+    r"(?:[€]\s*)?(?P<amt>\d[\d.,]*)\s*(?:€|eur|euros?)?\s+"
+    r"(?:para|pra|em|no|na|com|for|on|voor|op|pour|sur|fuer|fur|auf|in)\s+(?:o\s+|a\s+|the\s+|de\s+|le\s+|la\s+)?"
+    r"(?P<cat>[a-z][a-z ]{1,28}?)"
+    r"(?:\s*(?:por\s+mes|mensais|mensal|per\s+maand|maandelijks|a\s+month|monthly|par\s+mois|pro\s+monat))?\s*[.!]*$"
+)  # fmt: skip
 _REMOVE_RE = re.compile(
     r"^(?:tira|tire|tirar|remove|remova|remover|apaga|apague|apagar|exclui|exclua|delete|verwijder|"
     r"supprime|supprimer|loesche|loeschen|elimina)\s+"
@@ -113,7 +124,7 @@ def is_list_request(body_plain: str) -> bool:
 
 def parse_set(body_plain: str) -> tuple[str, float] | None | str:
     """(raw_category, amount) for a "set budget" message; None when it is not one."""
-    m = _SET_RE.match(body_plain.strip())
+    m = _SET_RE.match(body_plain.strip()) or _SET_AMT_FIRST_RE.match(body_plain.strip())
     if not m:
         return None
     amount = to_amount(m.group("amt"))
@@ -311,7 +322,6 @@ async def _list(member: Member, lang: str, session: AsyncSession) -> str:
         limit = _dec(b.monthly_limit)
         spent = await month_spent(session, member.id, b.category, today)
         pct = percent(spent, limit)
-        proj = project_month_end(spent, today)
         row = _t(
             "budget_row",
             lang,
@@ -320,8 +330,11 @@ async def _list(member: Member, lang: str, session: AsyncSession) -> str:
             limit=_fmt_eur(float(limit)),
             pct=pct,
         )
-        if proj is not None and spent > 0:
-            row += _t("budget_row_proj", lang, proj=_fmt_eur(float(proj)))
+        # M-11 (J, 20/10): what is left or how much it went over, not a month-end projection
+        if spent > limit:
+            row += _t("budget_row_over", lang, amount=_fmt_eur(float(spent - limit)))
+        else:
+            row += _t("budget_row_left", lang, amount=_fmt_eur(float(limit - spent)))
         lines.append(row)
     return "\n".join(lines)
 
@@ -390,6 +403,20 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": "• {cat}: {spent} of {limit} ({pct}%)",
         "fr": "• {cat} : {spent} sur {limit} ({pct} %)",
         "de": "• {cat}: {spent} von {limit} ({pct} %)",
+    },
+    "budget_row_left": {
+        "pt": " · faltam {amount}",
+        "nl": " · nog {amount} over",
+        "en": " · {amount} left",
+        "fr": " · reste {amount}",
+        "de": " · noch {amount} übrig",
+    },
+    "budget_row_over": {
+        "pt": " · passou {amount}",
+        "nl": " · {amount} erover",
+        "en": " · {amount} over",
+        "fr": " · dépassé de {amount}",
+        "de": " · {amount} drüber",
     },
     "budget_row_proj": {
         "pt": " · fecha o mês em ~{proj}",

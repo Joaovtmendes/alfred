@@ -201,8 +201,10 @@ async def test_too_big_and_failed_download_have_their_own_answers(lab: Lab) -> N
 
 
 @db
-async def test_ten_files_an_hour_then_a_pause(lab: Lab) -> None:
-    for _ in range(10):
+async def test_the_hourly_file_cap_then_a_pause(lab: Lab) -> None:
+    from alfred.media_input import MAX_PER_HOUR
+
+    for _ in range(MAX_PER_HOUR):  # M-26: 20 an hour since the hard test of 20/10
         await lab.media("image", PHOTO, {"kind": "other"})
     out = await lab.media("image", PHOTO, READING)
     assert out == _t("media_rate", "pt")

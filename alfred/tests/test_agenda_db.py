@@ -185,7 +185,7 @@ async def test_undo_and_ok_buttons(lab: Lab) -> None:
     assert (await _appts(lab))[0].status == "cancelled"
     from alfred.conversation import _STRINGS
 
-    assert await lab.tap(f"appt_undo:{a.id}") in (_STRINGS["button_gone"]["pt"],)
+    assert await lab.tap(f"appt_undo:{a.id}") in (_STRINGS["button_used"]["pt"],)
 
 
 @db

@@ -246,3 +246,24 @@ async def test_the_form_asks_for_name_email_and_language_and_masks_the_number(cl
     assert phone not in html and "readonly" in html
     assert "Financial" in html and "Example conversation" in html
     await _cleanup(mid)
+
+
+@pytest.mark.bug("B-003")
+@pytest.mark.parametrize(
+    ("form", "field_id", "key"),
+    [({"email": "joao@"}, 'id="e"', "err_email"), ({"name": "Jo@o!!"}, 'id="n"', "err_name")],
+)
+async def test_the_error_sits_under_the_wrong_field(client, form, field_id, key) -> None:
+    # hard test 18/10: the message sat above the button, and an e-mail error showed the name's
+    from alfred.signup import PAGE
+
+    mid, token, _ = await _new_member()
+    with patch(CTA, new_callable=AsyncMock), patch(TEXT, new_callable=AsyncMock):
+        resp = await client.post(f"/cadastro/{token}", data=_form(**form))
+    html = resp.text
+    field = html.index(field_id)
+    err = html.index('role="alert"')
+    assert field < err < html.index("<button")
+    assert 'aria-invalid="true"' in html[field : err + 1]
+    assert PAGE["pt"][key] in html and html.count('role="alert"') == 1
+    await _cleanup(mid)

@@ -25,7 +25,7 @@ from alfred.training import Reply
 from alfred.training_media import plan_reply
 from alfred.whatsapp import MediaTooLarge, download_media
 
-MAX_PER_HOUR = 10
+MAX_PER_HOUR = 20  # M-26: 10 was reached in one sitting of the hard test
 MAX_IMAGE_BYTES = 5_000_000
 MAX_PDF_BYTES = 10_000_000
 IMAGE_MIME = ("image/jpeg", "image/png", "image/webp")
@@ -46,8 +46,29 @@ def is_media_file(raw: dict) -> bool:
     if kind == "document":
         doc = raw.get("document") or {}
         name = str(doc.get("filename") or "").lower()
-        return str(doc.get("mime_type") or "").lower() == PDF_MIME or name.endswith(".pdf")
+        mime = str(doc.get("mime_type") or "").lower().split(";")[0].strip()
+        # B-045: a photo sent with WhatsApp's "Document" option is still a photo
+        return mime == PDF_MIME or name.endswith(".pdf") or _image_doc_mime(doc) is not None
     return False
+
+
+_IMAGE_EXT = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
+
+
+def _image_doc_mime(doc: dict) -> str | None:
+    mime = str(doc.get("mime_type") or "").lower().split(";")[0].strip()
+    if mime in IMAGE_MIME:
+        return mime
+    name = str(doc.get("filename") or "").lower()
+    for ext, m in _IMAGE_EXT.items():
+        if name.endswith(ext):
+            return m
+    return None
 
 
 async def handle_media_file(
@@ -62,7 +83,8 @@ async def handle_media_file(
             return Reply(_t("media_bad_type", lang))
     else:
         media = raw.get("document") or {}
-        mime, limit = PDF_MIME, MAX_PDF_BYTES
+        img = _image_doc_mime(media)
+        mime, limit = (img, MAX_IMAGE_BYTES) if img else (PDF_MIME, MAX_PDF_BYTES)
 
     since = datetime.now(UTC) - timedelta(hours=1)
     recent = await session.scalar(

@@ -34,9 +34,20 @@ def token_expired(member: Member, now: datetime | None = None) -> bool:
 def needs_renewal(member: Member, now: datetime | None = None) -> bool:
     """True when less than half of the validity is left (or the token is already expired)."""
     issued = member.dashboard_token_created_at
-    if issued is None:
-        return False
+    if issued is None:  # A-17: a legacy link without a date is renewed on the next request
+        return True
     return (now or datetime.now(UTC)) - issued > _ttl() / 2
+
+
+async def revoke_panel_token(
+    session: AsyncSession, member: Member, now: datetime | None = None
+) -> None:
+    """A-17: "novo link do painel" — the old link stops working now, a new one is issued."""
+    await session.execute(select(Member.id).where(Member.id == member.id).with_for_update())
+    member.dashboard_token = uuid.uuid4()
+    member.dashboard_token_created_at = now or datetime.now(UTC)
+    audit(session, "dashboard_link_revoked", member.id)
+    await session.flush()
 
 
 async def ensure_panel_token(

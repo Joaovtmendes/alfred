@@ -56,7 +56,12 @@ class Lab:
             "document": {"id": "media123", "filename": filename, "mime_type": mime},
         }
         payload = data.encode() if isinstance(data, str) else data
-        with patch("alfred.statement.download_media", AsyncMock(return_value=payload)):
+        self.reading = AsyncMock(return_value=None)
+        with (
+            patch("alfred.statement.download_media", AsyncMock(return_value=payload)),
+            patch("alfred.media_input.download_media", AsyncMock(return_value=payload)),
+            patch("alfred.media_input.read_member_file", self.reading),
+        ):
             return await self._run(make_message(body=None, raw=raw))
 
     async def media(

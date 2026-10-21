@@ -45,7 +45,7 @@ _CREATE = re.compile(
     r"^(?:(?:registra|registrar|nova|novo|emiti|emitir|criei|criar|new|create|issued|nieuwe|maak|cree|neue)\s+)?"
     rf"{_ONE}\s+"
     r"(?:(?:(?:n[o°º]?\.?|nr\.?|no\.?|numero|number|nummer)\s*|#)(?P<num>[a-z0-9][a-z0-9/_-]{0,19})\s+|(?P<num2>\d{2,4}[-/]\d{1,6})\s+)?"
-    r"(?:para|pro|pra|to|voor|pour|an|de|from|van|von)\s+(?P<client>.+?)\s+"
+    r"(?:para|pro|pra|to|voor|pour|an)\s+(?P<client>.+?)\s+"  # A-34: "fatura de luz" is a bill
     r"(?:(?:de|of|van|von|for|pour)\s+)?(?:€\s*)?(?P<amt>\d[\d.,]*)\s*(?:€|eur|euros?)?"
     r"(?:\s+(?:com\s+|with\s+|mit\s+|avec\s+|met\s+)?(?:btw|iva|vat|tva|mwst)\s*(?P<btw>\d{1,2})\s*%?)?"
     r"(?:\s+(?:vence|vencimento|due|vervalt|echeance|faellig|em|in|within|binnen|dans|innerhalb)\s+(?P<due>.+))?$"
@@ -328,23 +328,23 @@ async def handle_invoice_button(
     try:
         inv_id = uuid.UUID(raw_id)
     except ValueError:
-        return _t("button_gone", lang)
+        return _t("button_used", lang)
     inv = await session.scalar(
         select(ClientInvoice).where(
             ClientInvoice.id == inv_id, ClientInvoice.member_id == member.id
         )
     )
     if inv is None:
-        return _t("button_gone", lang)
+        return _t("button_used", lang)
     if action == "inv_undo":
         if inv.paid_on is not None:
-            return _t("button_gone", lang)
+            return _t("button_used", lang)
         label = _label(inv)
         await session.delete(inv)
         audit(session, "invoice_deleted", member.id)
         return _t("inv_deleted", lang, who=label)
     if inv.paid_on is None:
-        return _t("button_gone", lang)
+        return _t("button_used", lang)
     if inv.income_id:
         await session.execute(
             delete(Expense).where(Expense.id == inv.income_id, Expense.member_id == member.id)

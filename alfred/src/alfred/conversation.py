@@ -28,7 +28,7 @@ from alfred.agenda import STRINGS as _AGENDA_STRINGS
 from alfred.agenda import handle_agenda_command
 from alfred.agenda import handle_button as handle_agenda_button
 from alfred.analysis import STRINGS as _ANALYSIS_STRINGS
-from alfred.analysis import handle_analysis_question, handle_view_command
+from alfred.analysis import handle_analysis_question, handle_view_command, looks_like_analysis
 from alfred.audit import audit
 from alfred.batch import STRINGS as _BATCH_STRINGS
 from alfred.batch import clean_items, create_draft, handle_batch_button, handle_batch_text
@@ -53,14 +53,12 @@ from alfred.couple import (
     is_home_by_default,
 )
 from alfred.followup import (
-    MIN_CHAT_LEN,
-    deeper_buttons,
-    feedback_buttons,
-    handle_deeper_button,
-    handle_feedback_button,
+    STRINGS as _FOLLOWUP_STRINGS,
 )
 from alfred.followup import (
-    STRINGS as _FOLLOWUP_STRINGS,
+    deeper_buttons,
+    handle_deeper_button,
+    handle_feedback_button,
 )
 from alfred.google_calendar import STRINGS as _GCAL_STRINGS
 from alfred.home import STRINGS as _HOME_STRINGS
@@ -74,7 +72,12 @@ from alfred.iou import handle_iou_command
 from alfred.labels import activity_label as activity_name
 from alfred.labels import category_label
 from alfred.lang_cmd import STRINGS as _LANG_STRINGS
-from alfred.lang_cmd import parse_language_command
+from alfred.lang_cmd import (
+    is_bare_language_name,
+    is_language_menu_request,
+    parse_language_choice,
+    parse_language_command,
+)
 from alfred.ledger_status import STRINGS as _LEDGER_STRINGS
 from alfred.ledger_status import handle_ledger_command
 from alfred.llm import (
@@ -102,18 +105,20 @@ from alfred.models import (
     PendingAction,
     Task,
     Trip,
+    TripBudgetLine,
     WorkoutSession,
 )
 from alfred.monthly_summary import STRINGS as _MSUM_STRINGS
 from alfred.monthly_summary import handle_monthly_summary_command
 from alfred.nl_calendar import STRINGS as _CAL_STRINGS
-from alfred.nl_calendar import handle_calendar_command
+from alfred.nl_calendar import handle_calendar_button, handle_calendar_command
 from alfred.observability import alert
 from alfred.outbox import STRINGS as _OUTBOX_STRINGS
 from alfred.outbox import handle_outbox_command
 from alfred.parsing import (
     CORRECTION_PRONOUNS,
     DELETE_LAST_EXPENSE_RE,
+    INCOME_QUERY_RE,
     MONTH_WORDS,
     TOP_CATEGORIES_RE,
     TRIP_END_RE,
@@ -128,11 +133,12 @@ from alfred.parsing import (
     parse_trip_start_date,
     strip_accents,
     to_amount,
+    trip_bare_budget,
 )
 from alfred.receipt import STRINGS as _RECEIPT_STRINGS
 from alfred.recurrence import cadence_label, parse_recurrence
 from alfred.recurring import STRINGS as _RECURRING_STRINGS
-from alfred.recurring import handle_recurring_command
+from alfred.recurring import handle_recurring_button, handle_recurring_command
 from alfred.score import STRINGS as _SCORE_STRINGS
 from alfred.score import handle_score_command
 from alfred.services import STRINGS as _SERVICE_STRINGS
@@ -194,6 +200,28 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             '• "übersicht" — Monatsausgaben anzeigen\n'
             '• "hilfe" — alle Befehle anzeigen'
         ),
+    },
+    "greet_word": {"pt": "Oi", "nl": "Hoi", "en": "Hi", "fr": "Bonjour", "de": "Hallo"},
+    "greet_reply": {
+        "pt": "{hello}! Em que posso ajudar? Pode me mandar um gasto, como “mercado 20”, perguntar o *saldo* ou dizer *ajuda*.",
+        "nl": "{hello}! Waarmee kan ik helpen? Stuur een uitgave, zoals “boodschappen 20”, vraag je *saldo* of zeg *help*.",
+        "en": "{hello}! How can I help? Send me an expense, like “groceries 20”, ask for your *balance* or say *help*.",
+        "fr": "{hello} ! Je peux t'aider ? Envoie une dépense, comme « courses 20 », demande ton *solde* ou dis *aide*.",
+        "de": "{hello}! Wobei kann ich helfen? Schick mir eine Ausgabe wie „Einkauf 20“, frag nach dem *Saldo* oder sag *hilfe*.",
+    },
+    "resumed_welcome": {
+        "pt": "Que bom ter você de volta! Está tudo como você deixou. Me diga o que precisa.",
+        "nl": "Fijn dat je terug bent! Alles staat nog zoals je het liet. Waarmee kan ik helpen?",
+        "en": "Good to have you back! Everything is as you left it. What do you need?",
+        "fr": "Content de te revoir ! Tout est comme tu l'as laissé. De quoi as-tu besoin ?",
+        "de": "Schön, dass du wieder da bist! Alles ist so, wie du es verlassen hast. Was brauchst du?",
+    },
+    "leave_explain": {
+        "pt": "Se quiser que eu pare de mandar mensagens, envie *STOP* (para voltar, *START*). Se quiser apagar tudo o que guardei, diga *apagar meus dados*.",
+        "nl": "Wil je dat ik geen berichten meer stuur? Stuur *STOP* (terug met *START*). Wil je alles wissen wat ik heb bewaard? Zeg *verwijder mijn gegevens*.",
+        "en": "If you want me to stop messaging, send *STOP* (to come back, *START*). To erase everything I keep, say *delete my data*.",
+        "fr": "Pour que j'arrête d'envoyer des messages, envoie *STOP* (pour revenir, *START*). Pour tout effacer, dis *supprimer mes données*.",
+        "de": "Wenn ich keine Nachrichten mehr schicken soll, sende *STOP* (zurück mit *START*). Um alles zu löschen, sag *meine Daten löschen*.",
     },
     "consent_rejected": {
         "pt": "Entendido, não vou processar mais mensagens. Para voltar, envie *START*.",
@@ -272,18 +300,18 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         ),
     },
     "no_records_scope": {
-        "pt": "Ainda não há registros de *{category}* ({period_label}).",
-        "nl": "Geen registraties in *{category}* in {period_label}.",
-        "en": "No records in *{category}* in {period_label}.",
-        "fr": "Aucun enregistrement dans *{category}* pour {period_label}.",
-        "de": "Keine Einträge in *{category}* in {period_label}.",
+        "pt": "Não encontrei nada em *{category}* {phrase}.",
+        "nl": "Ik vond niets in *{category}* {phrase}.",
+        "en": "I found nothing in *{category}* {phrase}.",
+        "fr": "Je n'ai rien trouvé dans *{category}* {phrase}.",
+        "de": "Ich habe {phrase} nichts in *{category}* gefunden.",
     },
     "no_records_period": {
-        "pt": "Ainda não há registros ({period_label}).",
-        "nl": "Geen registraties in {period_label}.",
-        "en": "No records in {period_label}.",
-        "fr": "Aucun enregistrement pour {period_label}.",
-        "de": "Keine Einträge in {period_label}.",
+        "pt": "Não encontrei nenhum lançamento {phrase}.",
+        "nl": "Ik vond geen registraties {phrase}.",
+        "en": "I found no entries {phrase}.",
+        "fr": "Je n'ai trouvé aucune opération {phrase}.",
+        "de": "Ich habe {phrase} keine Einträge gefunden.",
     },
     "no_records_month": {
         "pt": "Ainda não tenho nada este mês. Envie a primeira despesa quando quiser.",
@@ -361,6 +389,13 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": "• Expenses: {amount}",
         "fr": "• Dépenses : {amount}",
         "de": "• Ausgaben: {amount}",
+    },
+    "saldo_note": {
+        "pt": "_Receitas menos despesas do período, não o saldo do banco._",
+        "nl": "_Inkomsten min uitgaven van de periode, niet je banksaldo._",
+        "en": "_Income minus expenses for the period, not your bank balance._",
+        "fr": "_Revenus moins dépenses de la période, pas le solde bancaire._",
+        "de": "_Einnahmen minus Ausgaben im Zeitraum, nicht dein Kontostand._",
     },
     "saldo_balance": {
         "pt": "\n*Saldo: {sign}{amount}*",
@@ -444,6 +479,13 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
             "Eingetragen: {amount} von *{name}*.",
         ),
     },
+    "category_income_refused": {
+        "pt": '*{merchant}* foi registrado como despesa, então não fica em *Renda*. Se foi dinheiro que entrou, apague e mande de novo como entrada, por exemplo "recebi 20 de {merchant}".',
+        "nl": '*{merchant}* staat als uitgave, dus het gaat niet naar *Inkomen*. Was het geld dat binnenkwam? Verwijder het en stuur het opnieuw als inkomsten, bijvoorbeeld "ontvangen 20 van {merchant}".',
+        "en": '*{merchant}* was saved as an expense, so it can\'t go under *Income*. If it was money coming in, delete it and send it again as income, for example "received 20 from {merchant}".',
+        "fr": "*{merchant}* est enregistré comme dépense, donc il ne va pas dans *Revenus*. Si c'était de l'argent reçu, supprime-le et renvoie-le comme revenu, par exemple \"reçu 20 de {merchant}\".",
+        "de": '*{merchant}* ist als Ausgabe gespeichert und kommt deshalb nicht unter *Einkommen*. War es Geld, das reinkam? Lösche es und schick es neu als Einnahme, zum Beispiel "20 von {merchant} erhalten".',
+    },
     "category_corrected": {
         "pt": "Combinado, a partir de agora *{merchant}* fica em *{category}*.",
         "nl": "✓ Begrepen! {merchant} → *{category}*. Ik onthoud dit voor de volgende keer.",
@@ -494,7 +536,7 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "gestern",
     },
     "currency_unsupported": {
-        "pt": 'Por enquanto só trabalho em euros, então não guardei os {cur}. Envie novamente convertido em € (ex.: "Jumbo 23,50")?',
+        "pt": 'Por enquanto só trabalho em euros, então não guardei esse valor em {cur}. Se quiser, mande de novo convertido em €, por exemplo "Jumbo 23,50".',
         "nl": 'Ik registreer voorlopig alleen euro\'s — {cur} is niet opgeslagen. Reken om naar € en stuur opnieuw (bijv. "Jumbo 23,50").',
         "en": 'I only record euros for now — {cur} was not saved. Convert to € and send it again (e.g. "Jumbo 23.50").',
         "fr": "Je n'enregistre que des euros pour l'instant — {cur} n'a pas été enregistré. Convertis en € et renvoie (ex. « Jumbo 23,50 »).",
@@ -506,6 +548,20 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": " That's {total} spent so far this month.",
         "fr": " Cela fait {total} dépensés ce mois-ci.",
         "de": " Das sind {total} Ausgaben in diesem Monat.",
+    },
+    "day_total_context": {
+        "pt": " Hoje você já gastou {total}.",
+        "nl": " Vandaag heb je al {total} uitgegeven.",
+        "en": " That's {total} spent today.",
+        "fr": " Cela fait {total} dépensés aujourd'hui.",
+        "de": " Heute sind das {total} Ausgaben.",
+    },
+    "day_total_context_other": {
+        "pt": " Nesse dia você gastou {total}.",
+        "nl": " Die dag gaf je {total} uit.",
+        "en": " That day you spent {total}.",
+        "fr": " Ce jour-là, tu as dépensé {total}.",
+        "de": " An dem Tag hast du {total} ausgegeben.",
     },
     "month_category_context": {
         "pt": (
@@ -616,11 +672,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "{n} Buchungen erfasst:",
     },
     "multi_skipped_currency": {
-        "pt": "Não guardei {cur} (só trabalho em euros): {name}.",
-        "nl": "Niet opgeslagen ({cur}, alleen euro's): {name}.",
-        "en": "Not saved ({cur}, euros only): {name}.",
-        "fr": "Non enregistré ({cur}, euros uniquement) : {name}.",
-        "de": "Nicht gespeichert ({cur}, nur Euro): {name}.",
+        "pt": "Não guardei {name}: estava em {cur} e por enquanto só trabalho em euros.",
+        "nl": "{name} heb ik niet opgeslagen: dat was in {cur} en ik werk voorlopig alleen in euro's.",
+        "en": "I didn't save {name}: it was in {cur} and for now I only work in euros.",
+        "fr": "Je n'ai pas enregistré {name} : c'était en {cur} et pour l'instant je travaille seulement en euros.",
+        "de": "{name} habe ich nicht gespeichert: Das war in {cur}, und ich arbeite vorerst nur in Euro.",
     },
     "fallback_no_record": {
         "pt": "Não consegui anotar nada. Envie uma despesa por linha, com valor e descrição, por exemplo:\nMercado 20\nFarmácia 10",
@@ -769,6 +825,13 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "fr": "Donne-moi le bon montant, par ex. : *actually 25*",
         "de": "Nenne mir den richtigen Betrag, z. B.: *actually 25*",
     },
+    "button_used": {
+        "pt": "Esse botão não vale mais: já foi usado ou expirou.",
+        "nl": "Die knop werkt niet meer: hij is al gebruikt of verlopen.",
+        "en": "That button no longer works: it was already used or it expired.",
+        "fr": "Ce bouton ne fonctionne plus : il a déjà servi ou il a expiré.",
+        "de": "Dieser Button gilt nicht mehr: schon benutzt oder abgelaufen.",
+    },
     "button_gone": {
         "pt": "Esse registro já tinha sido apagado.",
         "nl": "Die registratie bestaat niet meer.",
@@ -812,12 +875,139 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "fr": "Les {n} dernières dépenses",
         "de": "Letzte {n} Ausgaben",
     },
+    "last_expenses_title_one": {
+        "pt": "Sua última despesa",
+        "nl": "Laatste uitgave",
+        "en": "Your last expense",
+        "fr": "Ta dernière dépense",
+        "de": "Deine letzte Ausgabe",
+    },
+    "last_incomes_title": {
+        "pt": "Suas últimas {n} receitas",
+        "nl": "Laatste {n} inkomsten",
+        "en": "Last {n} incomes",
+        "fr": "Tes {n} derniers revenus",
+        "de": "Letzte {n} Einnahmen",
+    },
+    "last_incomes_title_one": {
+        "pt": "Sua última receita",
+        "nl": "Laatste inkomsten",
+        "en": "Your last income",
+        "fr": "Ton dernier revenu",
+        "de": "Deine letzte Einnahme",
+    },
+    "income_none": {
+        "pt": "Você ainda não registrou nenhuma receita.",
+        "nl": "Je hebt nog geen inkomsten geregistreerd.",
+        "en": "You have not recorded any income yet.",
+        "fr": "Tu n'as encore enregistré aucun revenu.",
+        "de": "Du hast noch keine Einnahmen erfasst.",
+    },
     "top_categories_title": {
         "pt": "Top categorias — {period_label}",
         "nl": "Top categorieën — {period_label}",
         "en": "Top categories — {period_label}",
         "fr": "Top catégories — {period_label}",
         "de": "Top-Kategorien — {period_label}",
+    },
+    "period_today_yesterday": {
+        "pt": "hoje e ontem",
+        "nl": "vandaag en gisteren",
+        "en": "today and yesterday",
+        "fr": "aujourd'hui et hier",
+        "de": "heute und gestern",
+    },
+    "period_last_days": {
+        "pt": "últimos {n} dias",
+        "nl": "afgelopen {n} dagen",
+        "en": "last {n} days",
+        "fr": "{n} derniers jours",
+        "de": "letzte {n} Tage",
+    },
+    "list_more": {
+        "pt": "… e mais {n}.",
+        "nl": "… en nog {n}.",
+        "en": "… and {n} more.",
+        "fr": "… et {n} de plus.",
+        "de": "… und {n} weitere.",
+    },
+    "negative_as_income_ask": {
+        "pt": "Valor negativo não entra como despesa. Foi dinheiro que entrou? Posso anotar {amount} de *{name}* como receita.",
+        "nl": "Een negatief bedrag boek ik niet als uitgave. Kwam er geld binnen? Dan noteer ik {amount} van *{name}* als inkomsten.",
+        "en": "A negative amount doesn't go in as spending. Was it money coming in? I can log {amount} from *{name}* as income.",
+        "fr": "Un montant négatif n'entre pas comme dépense. C'était une entrée d'argent ? Je peux noter {amount} de *{name}* comme revenu.",
+        "de": "Ein negativer Betrag zählt nicht als Ausgabe. War es Geld, das reinkam? Ich kann {amount} von *{name}* als Einnahme notieren.",
+    },
+    "btn_neg_income": {
+        "pt": "Anotar receita",
+        "nl": "Als inkomsten",
+        "en": "Log as income",
+        "fr": "Noter en revenu",
+        "de": "Als Einnahme",
+    },
+    "btn_neg_no": {"pt": "Não", "nl": "Nee", "en": "No", "fr": "Non", "de": "Nein"},
+    "negative_dropped": {
+        "pt": "Certo, não anotei nada.",
+        "nl": "Prima, ik heb niets genoteerd.",
+        "en": "Fine, I logged nothing.",
+        "fr": "D'accord, je n'ai rien noté.",
+        "de": "Gut, ich habe nichts notiert.",
+    },
+    "purchase_ask_price": {
+        "pt": "Quanto custou {item}? Mande com o valor, por exemplo: “{item} 4,50”.",
+        "nl": "Wat kostte {item}? Stuur het met het bedrag, bijvoorbeeld: “{item} 4,50”.",
+        "en": "How much was the {item}? Send it with the amount, for example: “{item} 4.50”.",
+        "fr": "Combien a coûté {item} ? Envoie-le avec le montant, par ex. : « {item} 4,50 ».",
+        "de": "Was hat {item} gekostet? Schick es mit dem Betrag, z. B.: „{item} 4,50“.",
+    },
+    "bank_balance_not_tracked": {
+        "pt": "Ainda não acompanho o saldo da sua conta no banco. Aqui, *saldo* é o que entrou menos o que saiu no mês. Se esse valor foi um gasto ou uma entrada, me diga assim: “mercado 300” ou “recebi 300”.",
+        "nl": "Je banksaldo houd ik nog niet bij. Hier is *saldo* wat er deze maand binnenkwam min wat eruit ging. Was dit bedrag een uitgave of inkomsten? Zeg dan bijvoorbeeld “boodschappen 300” of “300 ontvangen”.",
+        "en": "I don't track your bank account balance yet. Here, *balance* is what came in minus what went out this month. If that amount was spending or income, tell me like this: “groceries 300” or “received 300”.",
+        "fr": "Je ne suis pas encore le solde de ton compte bancaire. Ici, le *solde* est ce qui est entré moins ce qui est sorti dans le mois. Si ce montant était une dépense ou une entrée, dis-le ainsi : « courses 300 » ou « reçu 300 ».",
+        "de": "Deinen Kontostand verfolge ich noch nicht. Hier ist der *Saldo* das, was im Monat reinkam, minus das, was rausging. War der Betrag eine Ausgabe oder eine Einnahme? Dann schreib z. B. „Einkauf 300“ oder „300 erhalten“.",
+    },
+    "phrase_month": {
+        "pt": "em {month}",
+        "nl": "in {month}",
+        "en": "in {month}",
+        "fr": "en {month}",
+        "de": "im {month}",
+    },
+    "month_of_year": {
+        "pt": "{month} de {year}",
+        "nl": "{month} {year}",
+        "en": "{month} {year}",
+        "fr": "{month} {year}",
+        "de": "{month} {year}",
+    },
+    "phrase_year": {
+        "pt": "em {year}",
+        "nl": "in {year}",
+        "en": "in {year}",
+        "fr": "en {year}",
+        "de": "im Jahr {year}",
+    },
+    "phrase_last_days": {
+        "pt": "nos últimos {n} dias",
+        "nl": "de afgelopen {n} dagen",
+        "en": "in the last {n} days",
+        "fr": "ces {n} derniers jours",
+        "de": "in den letzten {n} Tagen",
+    },
+    "phrase_this_week": {
+        "pt": "esta semana",
+        "nl": "deze week",
+        "en": "this week",
+        "fr": "cette semaine",
+        "de": "diese Woche",
+    },
+    "phrase_last_week": {
+        "pt": "na semana passada",
+        "nl": "vorige week",
+        "en": "last week",
+        "fr": "la semaine dernière",
+        "de": "letzte Woche",
     },
     "period_today": {
         "pt": "hoje",
@@ -843,29 +1033,29 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     # ── M7 — Treino ─────────────────────────────────────────────────────────
     "workout_saved": {
         "pt": (
-            "Muito bem! Treino anotado: {activity}, {duration}. 💪",
-            "Treino anotado: {activity}, {duration}.",
-            "Registrado: {activity}, {duration}. Bom trabalho!",
+            "Muito bem! Treino anotado: {activity}{duration}. 💪",
+            "Treino anotado: {activity}{duration}.",
+            "Registrado: {activity}{duration}. Bom trabalho!",
         ),
         "nl": (
-            "Mooi! Training genoteerd: {activity}, {duration}. 💪",
-            "Training genoteerd: {activity}, {duration}.",
-            "Vastgelegd: {activity}, {duration}. Goed bezig!",
+            "Mooi! Training genoteerd: {activity}{duration}. 💪",
+            "Training genoteerd: {activity}{duration}.",
+            "Vastgelegd: {activity}{duration}. Goed bezig!",
         ),
         "en": (
-            "Nice! Workout noted: {activity}, {duration}. 💪",
-            "Workout noted: {activity}, {duration}.",
-            "Logged: {activity}, {duration}. Nice work!",
+            "Nice! Workout noted: {activity}{duration}. 💪",
+            "Workout noted: {activity}{duration}.",
+            "Logged: {activity}{duration}. Nice work!",
         ),
         "fr": (
-            "Bravo ! Séance notée : {activity}, {duration}. 💪",
-            "Séance notée : {activity}, {duration}.",
-            "Enregistré : {activity}, {duration}. Beau travail !",
+            "Bravo ! Séance notée : {activity}{duration}. 💪",
+            "Séance notée : {activity}{duration}.",
+            "Enregistré : {activity}{duration}. Beau travail !",
         ),
         "de": (
-            "Stark! Training notiert: {activity}, {duration}. 💪",
-            "Training notiert: {activity}, {duration}.",
-            "Eingetragen: {activity}, {duration}. Gut gemacht!",
+            "Stark! Training notiert: {activity}{duration}. 💪",
+            "Training notiert: {activity}{duration}.",
+            "Eingetragen: {activity}{duration}. Gut gemacht!",
         ),
     },
     "workout_summary_header": {
@@ -1187,6 +1377,13 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "fr": "Entraînement supprimé.",
         "de": "Training gelöscht.",
     },
+    "workout_delete_which": {
+        "pt": 'No dia {day} há mais de um treino: {names}. Diga qual, por exemplo "apaga a corrida de segunda".',
+        "nl": 'Op {day} staan meerdere trainingen: {names}. Zeg welke, bijvoorbeeld "verwijder de hardlopen van maandag".',
+        "en": 'There is more than one workout on {day}: {names}. Say which, for example "delete the running on monday".',
+        "fr": 'Il y a plusieurs entraînements le {day} : {names}. Dis lequel, par exemple "supprime la course de lundi".',
+        "de": 'Am {day} gibt es mehrere Trainings: {names}. Sag welches, zum Beispiel "lösche Laufen vom Montag".',
+    },
     "workout_delete_not_found": {
         "pt": "Não achei nenhum treino recente para apagar.",
         "nl": "Geen recente training gevonden om te verwijderen.",
@@ -1202,11 +1399,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Du hast *{activity}* {n}x in den letzten 7 Tagen gemacht.",
     },
     "workout_month_header": {
-        "pt": "Treinos de {month}: {n} sessões, {km} km, {min} min:",
-        "nl": "Trainingen {month} — {n} sessies, {km}km, {min}min:",
-        "en": "Workouts {month} — {n} sessions, {km}km, {min}min:",
-        "fr": "Entraînements {month} — {n} séances, {km}km, {min}min :",
-        "de": "Trainings {month} — {n} Einheiten, {km}km, {min}min:",
+        "pt": "*Treinos de {month}*\n{n} sessões · {min} min · {km} km\n",
+        "nl": "*Trainingen {month}*\n{n} sessies · {min} min · {km} km\n",
+        "en": "*Workouts {month}*\n{n} sessions · {min} min · {km} km\n",
+        "fr": "*Entraînements {month}*\n{n} séances · {min} min · {km} km\n",
+        "de": "*Trainings {month}*\n{n} Einheiten · {min} Min. · {km} km\n",
     },
     # ── M8 — Saude queries ────────────────────────────────────────────────────
     "health_mood_history": {
@@ -1281,11 +1478,74 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Gewohnheit protokolliert: *{activity}* (Ziel: {goal})",
     },
     "goal_completed": {
-        "pt": "Meta cumprida: *{title}*! 🎉",
-        "nl": "Doel bereikt: *{title}* \U0001f389",
-        "en": "Goal completed: *{title}* \U0001f389",
-        "fr": "Objectif atteint : *{title}* \U0001f389",
-        "de": "Ziel erreicht: *{title}* \U0001f389",
+        "pt": "Meta cumprida: *{title}*! 🎉 Ela sai da sua lista de metas ativas.",
+        "nl": "Doel bereikt: *{title}* \U0001f389 Het gaat van je lijst met actieve doelen.",
+        "en": "Goal completed: *{title}* \U0001f389 It leaves your list of active goals.",
+        "fr": "Objectif atteint : *{title}* \U0001f389 Il quitte ta liste d'objectifs actifs.",
+        "de": "Ziel erreicht: *{title}* \U0001f389 Es verschwindet aus deiner Liste aktiver Ziele.",
+    },
+    "lembrete_cancel_ambiguous": {
+        "pt": "Mais de um lembrete combina:\n{items}\nQual deles? Mande, por exemplo, *cancela lembrete tomar vitamina*.",
+        "nl": "Meer dan één herinnering past:\n{items}\nWelke? Stuur bijvoorbeeld *annuleer herinnering vitamine*.",
+        "en": "More than one reminder fits:\n{items}\nWhich one? Send, for example, *cancel reminder take vitamin*.",
+        "fr": "Plusieurs rappels correspondent :\n{items}\nLequel ? Envoie par ex. *annule rappel vitamine*.",
+        "de": "Mehrere Erinnerungen passen:\n{items}\nWelche? Schreib z. B. *Erinnerung Vitamin löschen*.",
+    },
+    "habit_q_yes": {
+        "pt": "Sim, {day} já está registrado: *{activity}* ✓",
+        "nl": "Ja, *{activity}* staat {day} al genoteerd. ✓",
+        "en": "Yes, *{activity}* is already logged {day}. ✓",
+        "fr": "Oui, *{activity}* est déjà noté {day}. ✓",
+        "de": "Ja, *{activity}* ist {day} schon eingetragen. ✓",
+    },
+    "habit_q_no": {
+        "pt": "Ainda não tenho *{activity}* registrado {day}. Se já fez, me diga sem a interrogação que eu anoto.",
+        "nl": "Ik heb *{activity}* {day} nog niet. Al gedaan? Stuur het zonder vraagteken.",
+        "en": "I don't have *{activity}* {day} yet. If you did it, just tell me without the question mark.",
+        "fr": "Je n'ai pas encore *{activity}* {day}. Si c'est fait, dis-le-moi sans le point d'interrogation.",
+        "de": "Ich habe {day} noch kein *{activity}*. Schon erledigt? Schreib es ohne Fragezeichen.",
+    },
+    "goal_deleted": {
+        "pt": "Pronto, tirei a meta *{title}* da sua lista.",
+        "nl": "Klaar, het doel *{title}* staat niet meer in je lijst.",
+        "en": "Done, I removed the goal *{title}* from your list.",
+        "fr": "C'est fait, j'ai retiré l'objectif *{title}* de ta liste.",
+        "de": "Erledigt, das Ziel *{title}* ist nicht mehr in deiner Liste.",
+    },
+    "goal_delete_ambiguous": {
+        "pt": "Achei mais de uma meta assim:\n{items}\nDiga o nome completo.",
+        "nl": "Ik vond meer dan één doel:\n{items}\nNoem de volledige naam.",
+        "en": "I found more than one goal like that:\n{items}\nSay the full name.",
+        "fr": "J'ai trouvé plusieurs objectifs :\n{items}\nDonne le nom complet.",
+        "de": "Ich habe mehrere Ziele gefunden:\n{items}\nNenne den vollen Namen.",
+    },
+    "note_deleted": {
+        "pt": "Pronto, apaguei a nota: _{body}_",
+        "nl": "Klaar, notitie verwijderd: _{body}_",
+        "en": "Done, note deleted: _{body}_",
+        "fr": "C'est fait, note supprimée : _{body}_",
+        "de": "Erledigt, Notiz gelöscht: _{body}_",
+    },
+    "note_delete_not_found": {
+        "pt": "Não achei essa nota. Diga “minhas notas” para ver a lista.",
+        "nl": "Die notitie vond ik niet. Zeg “mijn notities” voor de lijst.",
+        "en": "I couldn't find that note. Say “my notes” to see the list.",
+        "fr": "Je n'ai pas trouvé cette note. Dis « mes notes » pour voir la liste.",
+        "de": "Diese Notiz habe ich nicht gefunden. Sag „meine Notizen“ für die Liste.",
+    },
+    "note_delete_ambiguous": {
+        "pt": "Achei mais de uma nota assim:\n{items}\nDiga uma palavra que só uma delas tem.",
+        "nl": "Ik vond meer dan één notitie:\n{items}\nNoem een woord dat er maar in één staat.",
+        "en": "I found more than one note like that:\n{items}\nSay a word only one of them has.",
+        "fr": "J'ai trouvé plusieurs notes :\n{items}\nDonne un mot qu'une seule contient.",
+        "de": "Ich habe mehrere Notizen gefunden:\n{items}\nNenne ein Wort, das nur eine enthält.",
+    },
+    "note_secret_hint": {
+        "pt": "Dica: para senhas e PINs, um gerenciador de senhas é mais seguro do que uma nota.",
+        "nl": "Tip: voor wachtwoorden en pincodes is een wachtwoordmanager veiliger dan een notitie.",
+        "en": "Tip: for passwords and PINs, a password manager is safer than a note.",
+        "fr": "Astuce : pour les mots de passe et codes PIN, un gestionnaire de mots de passe est plus sûr qu'une note.",
+        "de": "Tipp: Für Passwörter und PINs ist ein Passwortmanager sicherer als eine Notiz.",
     },
     "goal_complete_not_found": {
         "pt": "Não achei essa meta ativa.",
@@ -1408,6 +1668,20 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "fr": "Le tableau de bord n'est pas encore configuré. Contacte l'administrateur.",
         "de": "Das Dashboard ist noch nicht konfiguriert. Kontaktiere den Administrator.",
     },
+    "rate_limited": {
+        "pt": "Recebi muitas mensagens em pouco tempo. Vou esperar um minuto antes de responder de novo.",
+        "nl": "Ik kreeg veel berichten in korte tijd. Ik wacht een minuut voordat ik weer antwoord.",
+        "en": "I got a lot of messages in a short time. I'll wait a minute before answering again.",
+        "fr": "J'ai reçu beaucoup de messages en peu de temps. J'attends une minute avant de répondre.",
+        "de": "Ich habe viele Nachrichten in kurzer Zeit bekommen. Ich warte eine Minute, bevor ich wieder antworte.",
+    },
+    "dashboard_revoked": {
+        "pt": "Pronto: o link antigo do painel parou de funcionar. Este é o novo, só para você.",
+        "nl": "Klaar: de oude dashboardlink werkt niet meer. Dit is de nieuwe, alleen voor jou.",
+        "en": "Done: the old dashboard link no longer works. Here is the new one, just for you.",
+        "fr": "C'est fait : l'ancien lien du tableau de bord ne marche plus. Voici le nouveau, rien que pour toi.",
+        "de": "Erledigt: Der alte Dashboard-Link funktioniert nicht mehr. Hier ist der neue, nur für dich.",
+    },
     "not_understood": {
         "pt": "Não entendi. Pode dizer de outro jeito?",
         "nl": "Ik begreep je niet. Kun je het anders formuleren?",
@@ -1515,11 +1789,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "heute",
     },
     "trip_expense_total": {
-        "pt": " [viagem {dest}: {total} no total]",
-        "nl": " [reis {dest}: {total} totaal]",
-        "en": " [trip {dest}: {total} total]",
-        "fr": " [voyage {dest} : {total} au total]",
-        "de": " [Reise {dest}: {total} gesamt]",
+        "pt": "\n✈️ Viagem {dest}: {total} gastos até agora",
+        "nl": "\n✈️ Reis {dest}: {total} uitgegeven tot nu toe",
+        "en": "\n✈️ Trip {dest}: {total} spent so far",
+        "fr": "\n✈️ Voyage {dest} : {total} dépensés jusqu'ici",
+        "de": "\n✈️ Reise {dest}: bisher {total} ausgegeben",
     },
     "category_hint_overig": {
         "pt": "\nNão tenho certeza da categoria de *{merchant}*. Se quiser mudar: “{merchant} é lazer”.",
@@ -1680,15 +1954,21 @@ async def _month_category_context(
                 total=_fmt_eur(float(total)),
                 category=category_label(category, lang),
             )
-    month_total = await session.scalar(
-        select(sa_func.coalesce(sa_func.sum(Expense.amount), 0)).where(*base)
+    # M-12 (J, 20/10): the whole-month figure confused ("No mês, você já gastou €2.070,44" after
+    # a cinema ticket); the day's total says something the member recognises.
+    day0 = datetime.combine(local.date(), time.min, tzinfo=local.tzinfo)
+    day_total = await session.scalar(
+        select(sa_func.coalesce(sa_func.sum(Expense.amount), 0)).where(
+            *base, Expense.expense_date >= day0, Expense.expense_date < day0 + timedelta(days=1)
+        )
     )
-    return _t("month_total_context", lang, total=_fmt_eur(float(month_total or 0)))
+    key = "day_total_context" if local.date() == today_local() else "day_total_context_other"
+    return _t(key, lang, total=_fmt_eur(float(day_total or 0)))
 
 
 # Whole-word greetings the substring lists above miss ("oi" alone has no space around it).
 _FIRST_WORDS = {
-    "pt": {"oi", "olá", "ola", "opa", "obrigado", "obrigada", "bomdia"},
+    "pt": {"oi", "olá", "ola", "opa", "obrigado", "obrigada", "bomdia", "bom", "boa", "tarde"},
     "nl": {"hoi", "hallo", "goedemorgen", "dankjewel"},
     "en": {"hi", "hello", "hey", "hiya", "thanks", "help"},
 }
@@ -1702,24 +1982,21 @@ def _detect_language(text: str) -> str | None:
     for lang, known in _FIRST_WORDS.items():  # whole words first: "hallo" contains "allo"
         if words & known:
             return lang
-    if any(
-        w in t
-        for w in [
-            "bonjour",
-            "salut",
-            "allô",
-            "allo",
-            "merci",
-            "bilan",
-            "solde",
-            "aide",
-            " oui",
-            "oui ",
-            "dépense",
-            "depense",
-            "résumé",
-        ]
-    ):
+    # whole words: "comercial" contains "merci" and was read as French (A-20)
+    if words & {
+        "bonjour",
+        "salut",
+        "allô",
+        "allo",
+        "merci",
+        "bilan",
+        "solde",
+        "aide",
+        "oui",
+        "dépense",
+        "depense",
+        "résumé",
+    }:
         return "fr"
     if any(
         w in t
@@ -1781,6 +2058,18 @@ def _detect_language(text: str) -> str | None:
 
 _SUMMARY_WORDS = {
     "resumo",
+    # A-69: the everyday ways to ask for it
+    "meus gastos",
+    "minhas despesas",
+    "despesas",
+    "meu resumo",
+    "my expenses",
+    "expenses",
+    "mijn uitgaven",
+    "uitgaven",
+    "mes dépenses",
+    "mes depenses",
+    "meine ausgaben",
     "overzicht",
     "summary",
     "samenvatting",
@@ -1908,6 +2197,51 @@ _STOP_WORDS = {
     "aufhören",
     "aufhoren",
 }
+
+
+# bare greetings (accent-free) → the greeting as the member would read it back, by language
+def _keyboard_mash(body_plain: str, lang: str = "pt") -> bool:
+    """One word of letters that no language here would write: no vowel, or 5+ consonants in a row
+    ("asdfjklqwerty", "ahshdjejabs"). Laughter ("kkkkk", "hahaha") is left to the reply."""
+    word = body_plain.strip(" .!?")
+    if not re.fullmatch(r"[a-z]{6,40}", word) or len(set(word)) <= 2:
+        return False
+    run = max((len(r) for r in re.findall(r"[bcdfghjklmnpqrstvwxz]+", word)), default=0)
+    limit = 6 if lang in ("nl", "de") else 5  # Dutch/German compounds: "kunststof", "angstschrei"
+    return not re.search(r"[aeiouy]", word) or run >= limit
+
+
+_GREETINGS: dict[str, str] = {
+    "oi": "Oi", "ola": "Olá", "opa": "Opa", "oie": "Oi", "e ai": "E aí", "bom dia": "Bom dia",
+    "boa tarde": "Boa tarde", "boa noite": "Boa noite", "hoi": "Hoi", "hallo": "Hallo",
+    "goedemorgen": "Goedemorgen", "goedemiddag": "Goedemiddag", "goedenavond": "Goedenavond",
+    "hi": "Hi", "hello": "Hello", "hey": "Hey", "good morning": "Good morning",
+    "good afternoon": "Good afternoon", "good evening": "Good evening", "bonjour": "Bonjour",
+    "salut": "Salut", "bonsoir": "Bonsoir", "coucou": "Coucou", "guten morgen": "Guten Morgen",
+    "guten tag": "Guten Tag", "guten abend": "Guten Abend", "servus": "Servus", "moin": "Moin",
+}  # fmt: skip
+_GREET_LANG = {
+    "pt": {"Oi", "Olá", "Opa", "E aí", "Bom dia", "Boa tarde", "Boa noite"},
+    "nl": {"Hoi", "Hallo", "Goedemorgen", "Goedemiddag", "Goedenavond", "Hey"},
+    "en": {"Hi", "Hello", "Hey", "Good morning", "Good afternoon", "Good evening"},
+    "fr": {"Bonjour", "Salut", "Bonsoir", "Coucou"},
+    "de": {"Hallo", "Guten Morgen", "Guten Tag", "Guten Abend", "Servus", "Moin", "Hey"},
+}
+
+
+def greet_lang_matches(word: str, lang: str) -> bool:
+    return word in _GREET_LANG.get(lang, set())
+
+
+_STOP_PHRASES = {
+    "parar de enviar", "pare de enviar", "parar de mandar", "pare de mandar", "pare de me mandar mensagens",
+    "parar mensagens", "nao quero mais receber mensagens", "nao quero mais mensagens",
+    "stop sending", "stop messaging me", "stop messages", "unsubscribe",
+    "stop met sturen", "stuur niets meer", "arrete d envoyer", "arrete de m envoyer des messages",
+    "hor auf zu schreiben", "keine nachrichten mehr",
+}  # fmt: skip
+_LEAVE_WORDS = {"sair", "quero sair", "sai", "leave", "quit", "exit", "afmelden", "uitschrijven",
+                "quitter", "verlassen", "abmelden"}  # fmt: skip
 _CONSENT_YES = {
     "sim",
     "yes",
@@ -1948,7 +2282,15 @@ _LEMBRETE_WORDS = {
 _LEMBRETE_RE = re.compile(
     r"(?:configura\s+lembrete|lembrete|set\s+reminder|reminder|herinnering|"
     r"rappel|configurer\s+rappel|erinnerung(?:\s+setzen)?)"
-    r"[:\s]+(.+?)\s+(?:às|at|om|à|um|a)\s+(\d{1,2}:\d{2})\b",
+    r"[:\s]+(.+?)\s+(?:às|as|at|om|à|um|a)\s+(\d{1,2}:\d{2})\b",
+    re.IGNORECASE,
+)
+# B-025: "lembrete: reunião às 9h" / "às 9h30" / "om 9 uur" (the canonical form wanted "09:00",
+# so the model answered "Vou te lembrar … amanhã, às 09:00" and nothing was created)
+_LEMBRETE_LOOSE_RE = re.compile(
+    r"^\s*(?:configura\s+lembrete|lembrete|set\s+reminder|reminder|herinnering|"
+    r"rappel|configurer\s+rappel|erinnerung(?:\s+setzen)?)\s*:\s*"
+    r"(.+?)\s+(?:às|as|at|om|à|um|a)\s+(\d{1,2})(?:\s*h\s*(\d{2})?|\s*(?:uur|uhr|heures?))\b(.*)$",
     re.IGNORECASE,
 )
 
@@ -1974,10 +2316,26 @@ class _LembreteMatch:
 
 
 def _match_lembrete(body: str):
-    """ "lembrete: X às 08:00" (canonical) or a natural "me lembra de X às 8h"."""
+    """ "lembrete: X às 08:00" (canonical) or a natural "me lembra de X às 8h".
+
+    A message that names a DAY ("amanhã", "sexta", "15/11") is a one-off: the agenda takes it
+    (A-43: "lembrete: dentista amanhã às 14:00" became a daily reminder).
+    """
+    from alfred.agenda import parse_when
+
+    if re.match(r"^\s*(?:nota|note|notitie|notiz)\s*:", body, re.IGNORECASE):
+        return None  # A-63: "nota: lembrete trocar o filtro às 08:00" is a note
+    rec = parse_recurrence(body)
+    cadence = bool(rec.day_of_month) or rec.mask != 127 or rec.text != body.strip()
+    if not cadence and parse_when(strip_accents(body.lower()), now_local()).day is not None:
+        return None
     m = _LEMBRETE_RE.search(body)
     if m:
         return m
+    loose = _LEMBRETE_LOOSE_RE.match(body)
+    if loose and 0 <= int(loose.group(2)) <= 23:
+        text = (loose.group(1) + " " + (loose.group(4) or "")).strip()
+        return _LembreteMatch(text, f"{int(loose.group(2)):02d}:{int(loose.group(3) or 0):02d}")
     n = _LEMBRETE_NATURAL_RE.match(body)
     if not n:
         return None
@@ -2040,6 +2398,14 @@ _VALID_CATEGORIES = frozenset(
 # Canonical mapping for alias→canonical category
 _CAT_ALIAS: dict[str, str] = {
     "supermercado": "supermarkt",
+    # A-54: the older pt-PT names keep working in corrections
+    "subscrições": "abonnement",
+    "subscricoes": "abonnement",
+    "rendimento": "inkomen",
+    "habitação": "wonen",
+    "habitacao": "wonen",
+    "vestuário": "kleding",
+    "vestuario": "kleding",
     "supermercaat": "supermarkt",
     "supermarché": "supermarkt",
     "alimentação": "restaurant",
@@ -2162,14 +2528,31 @@ _AMOUNT_CORRECTION_RE = re.compile(
 )
 
 
+def _label_aliases() -> dict[str, str]:
+    """Every shown category name ("Transporte", "Lazer", "Vervoer"…) points back to its id."""
+    from alfred.labels import _LABELS
+
+    out: dict[str, str] = {}
+    for cat, names in _LABELS.items():
+        for name in names.values():
+            out.setdefault(name.lower(), cat)
+            out.setdefault(strip_accents(name.lower()), cat)
+    return out
+
+
 def _canonical_category(raw: str) -> str | None:
     """Return canonical category for a raw user string, or None if not recognised."""
     lower = raw.lower().strip()
     if lower in _CAT_ALIAS:
         return _CAT_ALIAS[lower]
+    if lower in _LABEL_ALIASES:  # "isso é transporte" (the name the member reads in replies)
+        return _LABEL_ALIASES[lower]
     if lower in {c for c in _VALID_CATEGORIES if not _CAT_ALIAS.get(lower)}:
         return lower
     return None
+
+
+_LABEL_ALIASES = _label_aliases()
 
 
 # ── M7 — Treino keywords ────────────────────────────────────────────────────
@@ -2262,9 +2645,20 @@ _BARE_YES_RE = re.compile(
 )
 
 
+_NOT_MONEY_UNIT_RE = re.compile(
+    r"\d\s*(?:h|hs|hora|horas|hour|hours|uur|stunden?|min|mins|minutos?|minutes?|minuten|km|kg|"
+    r"x\b|vezes|times|keer|fois|mal|reps?|series|séries|sets?|passos|steps)\b|"
+    r"\b(?:academia|gym|treino|carga|supino|sportschool|training|workout)\b",
+    re.IGNORECASE,
+)
+
+
 def _fallback_key(body: str) -> str:
-    """Expense hint only when the message looks like an expense (has a number)."""
-    return "fallback_no_record" if _NUMBER_RE.search(body) else "fallback_unknown"
+    """Expense hint only when the message looks like an expense: a number that is not minutes,
+    hours, kilos or a workout (B-035: "fui à academia 1 hora" got the expense example)."""
+    if _NUMBER_RE.search(body) and not _NOT_MONEY_UNIT_RE.search(body):
+        return "fallback_no_record"
+    return "fallback_unknown"
 
 
 def _norm_words(text: str) -> list[str]:
@@ -2350,7 +2744,10 @@ _NOTE_RE = re.compile(
     re.IGNORECASE,
 )
 _TASK_RE = re.compile(
-    r"^(?:tarefa|task|taak|aufgabe|tâche)(?:\s*:\s*|\s+)(.+)",
+    r"^(?:tarefa|task|taak|aufgabe|tâche)(?:\s*:\s*|\s+"
+    # A-63: "tarefa difícil essa" is a comment about a task, not a new one (a colon still makes it one)
+    r"(?!(?:dif[ií]cil|f[aá]cil|chata|boa|ruim|complicada|longa|pesada|essa|esta|dessa|desta|"
+    r"feita|conclu[ií]da|hard|easy|done|moeilijk|makkelijk|difficile|facile|schwer|leicht)\b))(.+)",
     re.IGNORECASE,
 )
 _DONE_RE = re.compile(
@@ -2511,6 +2908,14 @@ _WORKOUT_DELETE_RE = re.compile(
     r"aujourd.hui|hier|ultimo|last|laatste|dernier|letzte[nrs]?)?\s*[.!?]*$",
     re.IGNORECASE,
 )
+_WORKOUT_DELETE_DAY_RE = re.compile(
+    r"^(?:apaga|apagar|apague|delete|verwijder|supprime|supprimer|losch|loesche)\s+"
+    r"(?:(?:o|a|the|het|de|le|la|mein|meine)\s+)?(?P<what>[a-z]+)\s+"
+    r"(?:de|da|do|on|van|op|du|vom|am)\s+(?P<day>segunda|terca|quarta|quinta|sexta|sabado|domingo|"
+    r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|maandag|dinsdag|woensdag|donderdag|"
+    r"vrijdag|zaterdag|zondag|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|montag|dienstag|"
+    r"mittwoch|donnerstag|freitag|samstag|sonntag)(?:[- ]feira)?\s*[.!?]*$"
+)
 _WORKOUT_ACTIVITY_RE = re.compile(
     r"(?:quantas\s+vezes|how\s+many\s+times|hoe\s+vaak|combien\s+de\s+fois|wie\s+oft)\s+"
     r"(?:corri|ran|liep|couru|gelaufen|fui\s+ao\s+ginasio|went\s+to\s+gym|"
@@ -2564,6 +2969,20 @@ _UNSUPPORTED_HEALTH_RE = re.compile(
     r"poids|tension|blutdruck)\b|\b\d+(?:[.,]\d+)?\s*kg\b",
     re.IGNORECASE,
 )
+_MEDICATION_TALK_RE = re.compile(
+    r"\b(?:tomei|tomar|rem[eé]dio|medica[cç][aã]o|comprimido|took|medicine|pill|ingenomen|medicijn|"
+    r"pris|m[eé]dicament|genommen|tablette)\b",
+    re.IGNORECASE,
+)
+
+
+def _unsupported_health(text: str) -> bool:
+    """Weight / blood pressure (not tracked) — but "tomei o remédio da pressão" is medication."""
+    if not _UNSUPPORTED_HEALTH_RE.search(text):
+        return False
+    return not (_MEDICATION_TALK_RE.search(text) and not re.search(r"\d", text))
+
+
 _HABIT_FREQ_RE = re.compile(
     r"(?:quantas\s+vezes|how\s+many\s+times|hoe\s+vaak|combien\s+de\s+fois|wie\s+oft)\s+"
     r"(?:(?:eu\s+)?fiz|did\s+i\s+do|deed\s+ik|ai-je\s+fait|habe\s+ich\s+gemacht|"
@@ -2618,6 +3037,13 @@ _NOTES_QUERY_WORDS = {
 }
 
 # \u2500\u2500 M11 \u2014 Dashboard keywords \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+_PANEL_REVOKE_RE = re.compile(
+    r"^(?:(?:gera|gerar|quero|manda|me manda)\s+)?(?:um\s+)?(?:novo\s+link|link\s+novo)\s+(?:do|para o)\s+"
+    r"(?:painel|dashboard)|(?:revoga|revogar|cancela|cancelar|troca|trocar|invalida|invalidar)\s+"
+    r"(?:o\s+)?link\s+do\s+(?:painel|dashboard)|new\s+(?:dashboard|panel)\s+link|"
+    r"revoke\s+(?:the\s+)?(?:dashboard|panel)\s+link|nieuwe\s+(?:dashboard|paneel)\s*link|"
+    r"nouveau\s+lien\s+du\s+(?:tableau|panneau)|neuer\s+(?:dashboard|panel)\s*link$"
+)
 _DASHBOARD_WORDS: set[str] = {
     "meu dashboard",
     "o meu dashboard",
@@ -2637,11 +3063,31 @@ _DASHBOARD_WORDS: set[str] = {
     "abrir o painel",
     "link do painel",
 }
+_YESTERDAY_WORD_RE = re.compile(r"\b(?:ontem|yesterday|gisteren|hier|gestern)\b")
+_DEL_VERB = (
+    r"(?:apaga|apagar|apague|exclui|excluir|exclua|remove|remover|deleta|deletar|delete|tira|tirar|"
+    r"verwijder|supprime|supprimer|efface|losch|losche|loesche|entferne)"
+)
 _TASK_DELETE_RE = re.compile(
-    r"(?:apaga|apagar|delete|verwijder|supprimer|losch)\s+"
-    r"(?:a\s+)?(?:tarefa|task|taak|aufgabe|tache)\s+(.+)",
+    rf"^{_DEL_VERB}\s+(?:a\s+|minha\s+|the\s+|de\s+|la\s+|die\s+)?(?:tarefa|task|taak|aufgabe|tache)"
+    r"\s+(?:n(?:umero|o|º|r)?\.?\s*)?(.+)",
     re.IGNORECASE,
 )
+# B-028: "apaga a nota do wifi" — the model said "Nota deletada" and nothing was deleted
+_NOTE_DELETE_RE = re.compile(
+    rf"^{_DEL_VERB}\s+(?:a\s+|minha\s+|the\s+|my\s+|de\s+|la\s+|die\s+)?"
+    r"(?:nota|note|notitie|notiz)\s+(?:do\s+|da\s+|de\s+|dos\s+|das\s+|sobre\s+|about\s+|"
+    r"over\s+|van\s+|sur\s+|du\s+|uber\s+|zum\s+|zur\s+)?(.+)",
+    re.IGNORECASE,
+)
+# B-030: "apaga a meta correr 10 km" — same: the model claimed it, the goal stayed
+_GOAL_DELETE_RE = re.compile(
+    rf"^{_DEL_VERB}\s+(?:a\s+|minha\s+|the\s+|my\s+|de\s+|la\s+|die\s+|het\s+|mijn\s+)?"
+    r"(?:meta|objetivo|goal|doel|ziel|objectif)\s+(?:de\s+|do\s+|da\s+)?(.+)",
+    re.IGNORECASE,
+)
+# M-15: a note that looks like a password gets a short word of care
+_SECRET_RE = re.compile(r"\b(?:senha|password|wachtwoord|mot de passe|passwort|pin|wifi|wi-fi)\b")
 
 _JOB_TYPE_MAP: dict[str, str] = {
     "medicamento": "medication_reminder",
@@ -2668,7 +3114,8 @@ def _detect_job_type(text: str) -> str:
     """Detect reminder job_type from text keywords; default medication_reminder."""
     lower = text.lower()
     for kw, jtype in _JOB_TYPE_MAP.items():
-        if kw in lower:
+        # whole words: "transporte" contains "sport" and used to become a workout reminder (A-64)
+        if re.search(rf"\b{re.escape(kw)}\b", lower):
             return jtype
     return "medication_reminder"
 
@@ -2683,6 +3130,29 @@ def _is_command(body: str, keywords: set[str]) -> bool:
     return False
 
 
+# Words that make a question an analysis (V2-14) rather than a plain list or total.
+_ANALYSIS_HINT_RE = re.compile(
+    r"compar|\bvs\b|\bversus\b|\bcontra\b|por mes|por categoria|media|per month|average|"
+    r"per maand|gemiddeld|par mois|moyenne|pro monat|durchschnitt|trimestre|quarter|kwartaal"
+)
+# "saldo da conta 300" / "tenho 300 na conta" / "my bank balance is 300": a bank balance, which the
+# app does not keep (its "saldo" is income minus spending of the month).
+_BANK_BALANCE_RE = re.compile(
+    r"^(?:meu\s+|o\s+)?saldo\s+(?:da|na|do|no)\s+(?:minha\s+|meu\s+)?(?:conta|banco)\b.*\d|"
+    r"^tenho\s+[\d.,]+\s*(?:€|euros?)?\s+na\s+conta\b|"
+    r"^(?:my\s+)?(?:bank|account)\s+balance\b.*\d|^(?:mijn\s+)?(?:banksaldo|saldo op mijn rekening)\b.*\d|"
+    r"^(?:mon\s+)?solde\s+(?:bancaire|du\s+compte)\b.*\d|^(?:mein\s+)?kontostand\b.*\d"
+)
+_PURCHASE_NO_PRICE_RE = re.compile(
+    r"^(?:eu\s+)?(?:comprei|compramos|bought|i\s+bought|gekocht|ik\s+heb\s+gekocht|j\s*ai\s+achete|"
+    r"ich\s+habe\s+gekauft|gekauft)\s+\d+(?:[.,]\d+)?\s*(?:kg|g|gr|l|litros?|liters?|un|unidades?)\s+"
+    r"(?:de\s+|of\s+|van\s+|d\s*|du\s+|von\s+)?(?P<item>[^\d]+?)\s*[.!]?$"
+)
+_SPEND_QUESTION_RE = re.compile(
+    r"^(?:quanto\s+(?:eu\s+)?gastei|gastos?\b|minhas\s+despesas|despesas\b|how\s+much\s+did\s+i\s+spend|"
+    r"my\s+(?:spending|expenses)|hoeveel\s+heb\s+ik\s+uitgegeven|uitgaven\b|combien\s+j\s*ai\s+depense|"
+    r"depenses\b|wie\s*viel\s+habe\s+ich\s+ausgegeben|ausgaben\b)"
+)
 _SALDO_ELSEWHERE_RE = re.compile(r"\b(?:casa|ano|anual|year|jaar|annee|jahr)\b")
 
 
@@ -2770,6 +3240,38 @@ def _common_prefix(a: str, b: str) -> int:
     return n
 
 
+_BARE_DAY_WORDS = frozenset(
+    {"hoje", "ontem", "today", "yesterday", "vandaag", "gisteren", "heute", "gestern",
+     "aujourd hui", "aujourdhui", "hier"}
+)  # fmt: skip
+_TOP_EXPENSES_RE = re.compile(
+    r"^(?:quais (?:sao |foram )?)?(?:os )?(?:meus |minhas )?(?:maiores (?:gastos|despesas)|"
+    r"(?:my )?(?:biggest|largest|top) expenses|(?:mijn )?grootste uitgaven|"
+    r"(?:mes )?plus grosses depenses|(?:meine )?gro(?:ss|ß)ten ausgaben)\b[^?]{0,40}\??$"
+)
+
+
+# A habit is something done: a verb in the past ("meditei", "li 30 páginas", "I ran", "ik heb
+# gelezen", "j'ai lu", "ich habe gelesen") or a habit noun with a time ("yoga 20 min").
+_HABIT_VERB_RE = re.compile(
+    r"\b(?:[a-z]{2,}(?:ei|ou|i)|li|fiz|fui|tomei|did|done|[a-z]{3,}ed|ran|read|went|"
+    r"heb|ben|gedaan|ai|suis|habe|bin)\b"
+)
+_NOT_HABIT_WORDS = frozenset(
+    "voltei apaga apagar desfaz desfazer hoje ontem amanha resumo saldo ajuda menu painel stop "
+    "sair parar start cancela cancelar ok sim nao obrigado obrigada valeu".split()
+)
+
+
+def _could_be_habit(body_plain: str) -> bool:
+    words = re.findall(r"[a-z]+", body_plain)
+    if not words or (len(words) <= 2 and all(w in _NOT_HABIT_WORDS for w in words)):
+        return False
+    if TRIP_END_RE.match(body_plain.strip()) or DELETE_LAST_EXPENSE_RE.match(body_plain.strip()):
+        return False
+    return bool(_HABIT_VERB_RE.search(body_plain)) or len(words) >= 2
+
+
 def _is_bare_command(body: str, keywords: set[str]) -> bool:
     """True when body is *only* a command keyword (plus punctuation / a polite word).
 
@@ -2842,7 +3344,7 @@ async def _handle_trip(
         if active:
             return _t("trip_already_active", lang, dest=active.destination)
 
-        budget = parse_budget(body)
+        budget = parse_budget(body) or trip_bare_budget(body)
         trip = Trip(
             id=uuid.uuid4(),
             member_id=member.id,
@@ -2938,8 +3440,10 @@ async def _handle_trip(
         ]
         for r in rows:
             lines.append(
-                f"  {to_local(r.expense_date).strftime('%d/%m')}  {r.merchant or r.category}"
-                f" ({r.category})  {_fmt_eur(r.amount)}"
+                # A-55: the category as the member reads it, never the internal "overig"
+                f"  {to_local(r.expense_date).strftime('%d/%m')}  "
+                f"{r.merchant or category_label(r.category, lang)}"
+                f" ({category_label(r.category, lang)})  {_fmt_eur(r.amount)}"
             )
         lines.append(
             _t(
@@ -3067,6 +3571,21 @@ _RECORDED_CLAIM_RE = re.compile(
     r"geregistreerd|opgeslagen|genoteerd|vastgelegd|enregistr[ée]e?s?|not[ée]e?s?\b|erfasst|gespeichert|notiert|eingetragen|noted",
     re.IGNORECASE,
 )
+# B-004/B-028/B-029/B-030/B-051: on the free-reply path nothing was deleted, cancelled, switched
+# off or previewed either ("Apaguei: €1.200,00 em cinema", "Nota deletada", "Você foi
+# desconectado", a made-up "Entendi este contrato: …"). Such a reply is replaced.
+_ACTION_CLAIM_RE = re.compile(
+    r"apaguei|apagad[oa]s?|delet(?:ei|ad[oa]s?)|removi|removid[oa]s?|exclu[ií]d[oa]s?|"
+    r"cancelei|cancelad[oa]s?|desconectad[oa]|vou parar|parei de|desativad[oa]|"
+    r"seu saldo [ée]|guardei|salvei|marquei|gravei|gravad[oa]s?|confirmad[oa]s?:|marcad[oa]s? como pag|"
+    r"vou te lembrar|vou lembrar voc|i'll remind you|ik herinner je|je te rappellerai|"
+    r"desfeito|undone|ongedaan|"
+    r"\bpag[oa]s? em \d|atualizad[oa]s?:|\bupdated:|bijgewerkt:|mis à jour :|aktualisiert:|"
+    r"entendi est[ea] (?:contrato|servi[cç]o)|ainda n[ãa]o gravei|"
+    r"\bdeleted\b|\bremoved\b|\bcancel+ed\b|disconnected|unsubscribed|i(?:'| wi)ll stop|"
+    r"verwijderd|geannuleerd|supprim[ée]e?s?|annul[ée]e?s?|gel[öo]scht|storniert",
+    re.IGNORECASE,
+)
 _NUMBER_RE = re.compile(r"\d+(?:[.,]\d{1,2})?")
 # The LLM sometimes invents a confirmation flow ("aguarda confirmação", "reply sim/não"): the app
 # has no pending state, so such a reply promises something that can never happen.
@@ -3092,6 +3611,11 @@ _LONE_AMOUNT_RE = re.compile(
     r"^\s*[€$£]?\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:€|eur(?:os?)?)?\s*$"
 )
 EDIT_KIND = "edit_amount"  # PendingAction kind: the entry whose [Editar] was tapped
+LANG_MENU_KIND = "lang_menu"  # PendingAction kind: the 1–5 language menu is waiting for a number
+NEG_KIND = "negative_income"  # PendingAction kind: "reembolso -15" offered as money in
+_NEGATIVE_ITEM_RE = re.compile(
+    r"^(?P<name>[^\W\d_][^\d-]*?)\s+-\s*€?\s*(?P<amt>\d+(?:[.,]\d{1,2})?)\s*(?:€|eur(?:os?)?)?\s*[.!]?$"
+)
 EDIT_MINUTES = 15
 # Money in another currency named in the text; the model sometimes still answers EUR.
 _FOREIGN_CURRENCY = (
@@ -3106,6 +3630,53 @@ def _foreign_currency(body: str) -> str | None:
         if rx.search(body):
             return code
     return None
+
+
+def _join_names(names: list[str], lang: str) -> str:
+    """ "táxi", "táxi e uber", "táxi, uber e metrô" in the member's language."""
+    word = {"pt": "e", "nl": "en", "en": "and", "fr": "et", "de": "und"}.get(lang, "and")
+    if len(names) <= 1:
+        return "".join(names)
+    return ", ".join(names[:-1]) + f" {word} " + names[-1]
+
+
+def _fix_item_currencies(text: str, items: list[dict]) -> list[dict]:
+    """B-007: in "mercado 20 e 10 dólares de táxi" the model marked BOTH items USD.
+
+    A foreign currency belongs only to the item named next to it; when the text names fewer
+    currencies than the model marked, the others are euros again.
+    """
+    plain = strip_accents(text.lower())
+    spots = [m.start() for rx, _ in _FOREIGN_CURRENCY for m in rx.finditer(plain)]
+    marked = [i for i in items if i["currency"] != "EUR"]
+    if not marked or len(spots) >= len(marked):
+        return items
+    keep: set[int] = set()
+    for pos in spots:
+        best, best_d = None, None
+        for idx, it in enumerate(items):
+            name = strip_accents(str(it.get("merchant") or it.get("description") or "").lower())
+            where = plain.find(name) if name else -1
+            if where < 0:
+                continue
+            dist = abs(where - pos)
+            if best_d is None or dist < best_d:
+                best, best_d = idx, dist
+        if best is not None:
+            keep.add(best)
+    return [
+        it if (it["currency"] == "EUR" or idx in keep) else {**it, "currency": "EUR"}
+        for idx, it in enumerate(items)
+    ]
+
+
+async def _lang_menu_open(session: AsyncSession, member: Member) -> bool:
+    row = await session.scalar(
+        select(PendingAction).where(
+            PendingAction.member_id == member.id, PendingAction.kind == LANG_MENU_KIND
+        )
+    )
+    return row is not None and row.expires_at >= datetime.now(UTC)
 
 
 async def _take_edit_target(session: AsyncSession, member: Member) -> Expense | None:
@@ -3148,6 +3719,73 @@ def _original_text(message, start: int, end: int) -> str:
     return original[start:end].strip()
 
 
+# B-054: "<words> <number>" is not a purchase when it opens like a sentence ("o primeiro foi
+# 40", "para 25") or carries a command, question or period word ("corrige para 25", "tira o 5",
+# "gastos em 2025"). Prepositions inside a name stay ("almoço no Tivoli 30").
+_BARE_LEAD_WORDS = frozenset(
+    "o a os as um uma de do da dos das em no na nos nas para pra pro por com e é eu "
+    "minha minhas meu meus esse essa este esta isso isto me te se lhe".split()
+)
+_BARE_STOP_WORDS = frozenset(
+    "foi foram era tira tirar troca trocar muda mudar corrige corrigir errei erro apaga apagar "
+    "cancela cancelar remove remover edita editar altera alterar desfaz desfazer volta voltar "
+    "marca marcar põe gasto gastos gastei despesa despesas receita receitas recebi quanto "
+    "quantos qual quais meta metas tarefa tarefas nota notas orçamento orçamentos lembrete "
+    "lembretes saldo resumo carga treino plano viagem roteiro bagagem contrato serviço garantia "
+    "agenda hábito primeiro primeira segundo segunda terceiro quarto quinto último última ano "
+    "mês semana dias hoje ontem amanhã pagou paguei pago pagar deve devo devia recebeu "
+    "emprestei humor sono dormi água agua bebi peso pressão km min minutos horas corri "
+    "caminhei nadei musculação academia supino agachamento".split()
+)
+
+
+_WRITTEN_DATE_RE = re.compile(
+    r"(?:\b(?:dia|data|em|no dia|on|op|le|am|date|datum)\s+|,\s*)(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\b"
+)
+
+
+def _written_days_ago(body: str) -> int | None:
+    """Days back for an explicit past date ("data 05/10", ", 05/10"), within the last year."""
+    m = _WRITTEN_DATE_RE.search(body)
+    if not m:
+        return None
+    today = today_local()
+    try:
+        year = int(m.group(3)) if m.group(3) else today.year
+        year += 2000 if year < 100 else 0
+        day = date(year, int(m.group(2)), int(m.group(1)))
+        if not m.group(3) and day > today:
+            day = date(year - 1, day.month, day.day)
+    except ValueError:
+        return None
+    delta = (today - day).days
+    return delta if 0 < delta <= 365 else None
+
+
+def _bare_amount_expense(text: str) -> dict | None:
+    """ "notebook 1210" → an expense dict for the normal recording path, else None."""
+    m = re.match(r"^\s*(?P<name>[^\W\d_][^\d]*?)\s+(?P<amt>\d+(?:[.,]\d{1,2})?)\s*$", text)
+    if not m:
+        return None
+    words = m.group("name").lower().split()
+    words = [w.strip(".,:;!?") for w in words]
+    if len(words) > 4 or words[0] in _BARE_LEAD_WORDS or _BARE_STOP_WORDS & set(words):
+        return None
+    amount = to_amount(m.group("amt"))
+    name = " ".join(m.group("name").split())[:80]
+    if amount is None or not 0 < amount <= MAX_AMOUNT or not name:
+        return None
+    return {
+        "amount": round(amount, 2),
+        "currency": "EUR",
+        "merchant": name[0].upper() + name[1:],
+        "category": "overig",
+        "description": name,
+        "type": "expense",
+        "days_ago": 0,
+    }
+
+
 def _looks_like_bare_amount(body: str) -> bool:
     return bool(_BARE_AMOUNT_RE.match(body))
 
@@ -3155,6 +3793,27 @@ def _looks_like_bare_amount(body: str) -> bool:
 def _has_zero_or_negative_amount(body: str) -> bool:
     """A message with a bare 0 or a leading-minus amount that the extractors will drop."""
     return bool(_ZERO_OR_NEG_RE.search(body))
+
+
+# On a question ("o que você tem anotado sobre mim?", "onde ficam meus dados?") words like
+# "anotado" / "guardado" describe, they do not claim; only "I just did it" forms are blocked.
+_FIRST_PERSON_CLAIM_RE = re.compile(
+    r"\b(?:registei|registrei|anotei|guardei|salvei|gravei|apaguei|deletei|removi|cancelei|marquei|"
+    r"i(?:'ve| have)? (?:saved|recorded|logged|deleted|removed|cancelled)|"
+    r"ik heb (?:\w+ )?(?:opgeslagen|genoteerd|verwijderd)|j'ai (?:enregistr|not|supprim)\w*|"
+    r"ich habe (?:\w+ )?(?:gespeichert|notiert|gelöscht))\b",
+    re.IGNORECASE,
+)
+_QUESTION_START_RE = re.compile(
+    r"^(?:o que|que|onde|como|quando|quanto|quantos|quantas|qual|quais|por ?que|porque|quem|"
+    r"what|where|how|when|which|who|why|wat|waar|hoe|wanneer|welke|wie|waarom|"
+    r"qu'est|où|comment|quand|quel|quelle|pourquoi|was|wo|wie|wann|welche|warum)\b"
+)
+
+
+def _is_question(body_plain: str) -> bool:
+    t = body_plain.strip()
+    return t.endswith("?") or bool(_QUESTION_START_RE.match(t))
 
 
 def _claims_recorded(reply: str) -> bool:
@@ -3261,22 +3920,80 @@ def _period_range(period: str, lang: str = "en") -> tuple[datetime, datetime | N
     return day_start(month_start(today)), None, month_name(today, lang, year=True)
 
 
+def _period_phrase(period: str, lang: str) -> str:
+    """Sentence form of the LLM's coarse period ("today", "last_week", "current_month"…)."""
+    today = today_local()
+    if period == "today":
+        return _t("period_today", lang)
+    if period == "current_week":
+        return _t("phrase_this_week", lang)
+    if period == "last_week":
+        return _t("phrase_last_week", lang)
+    if period == "last_month":
+        return _t("phrase_month", lang, month=_month_word(prev_month_start(today), lang))
+    return _t("phrase_month", lang, month=_month_word(today, lang))
+
+
 def _window_range(window, lang: str) -> tuple[datetime, datetime | None, str]:
     """(start, end_exclusive, label) for a parsed ``DateWindow``."""
     start, end = day_start(window.start), (day_start(window.end) if window.end else None)
+    return start, end, _window_label(window, lang)
+
+
+def _span(first: date, last: date) -> str:
+    """ "12 a 18/10"-style day span (numbers only, the same in every language)."""
+    if first.month == last.month:
+        return f"{first.day:02d}–{last.strftime('%d/%m')}"
+    return f"{first.strftime('%d/%m')}–{last.strftime('%d/%m')}"
+
+
+def _window_label(window, lang: str) -> str:
+    """Title label of a window: "esta semana, 12–18/10", "últimos 7 dias", "Outubro 2026"."""
+    today = today_local()
     if window.kind == "today":
-        label = _t("period_today", lang)
-    elif window.kind == "yesterday":
-        label = _t("period_yesterday", lang)
-    elif window.kind == "current_week":
-        label = _t("period_current_week", lang)
-    elif window.kind == "last_week":
-        label = _t("period_last_week", lang)
-    elif window.kind == "year":
-        label = str(window.start.year)
-    else:  # current_month / last_month / month
-        label = month_name(window.start, lang, year=True)
-    return start, end, label
+        return _t("period_today", lang)
+    if window.kind == "yesterday":
+        return _t("period_yesterday", lang)
+    if window.kind == "today_yesterday":
+        return _t("period_today_yesterday", lang)
+    if window.kind == "days":
+        return _t("period_last_days", lang, n=window.days)
+    if window.kind == "current_week":
+        return f"{_t('period_current_week', lang)}, {_span(window.start, today)}"
+    if window.kind == "last_week":
+        last = (window.end or today) - timedelta(days=1)
+        return f"{_t('period_last_week', lang)}, {_span(window.start, last)}"
+    if window.kind == "year":
+        return str(window.start.year)
+    return month_name(window.start, lang, year=True)  # current_month / last_month / month
+
+
+def _window_phrase(window, lang: str) -> str:
+    """The same window inside a sentence: "em outubro", "nos últimos 7 dias", "ontem"."""
+    if window is None:
+        return _t("phrase_month", lang, month=_month_word(today_local(), lang))
+    kind = window.kind
+    if kind in ("today", "yesterday", "today_yesterday"):
+        return _window_label(window, lang)
+    if kind == "days":
+        return _t("phrase_last_days", lang, n=window.days)
+    if kind == "current_week":
+        return _t("phrase_this_week", lang)
+    if kind == "last_week":
+        return _t("phrase_last_week", lang)
+    if kind == "year":
+        return _t("phrase_year", lang, year=window.start.year)
+    return _t("phrase_month", lang, month=_month_word(window.start, lang))
+
+
+def _month_word(d: date, lang: str) -> str:
+    """ "outubro" (this year) or "outubro de 2025"; lower case where the language writes it so."""
+    name = month_name(d, lang)
+    if lang in ("pt", "fr", "nl"):
+        name = name.lower()
+    if d.year != today_local().year:
+        return _t("month_of_year", lang, month=name, year=d.year)
+    return name
 
 
 _LAST_MONTH_WORDS = (
@@ -3349,14 +4066,20 @@ async def _build_summary(
     records = result.scalars().all()
 
     if not records:
+        if bounds is not None:
+            phrase = period_label
+        elif window is not None:
+            phrase = _window_phrase(window, lang)
+        else:
+            phrase = _period_phrase(period, lang)
         if category:
             return _t(
                 "no_records_scope",
                 lang,
                 category=category_label(category, lang),
-                period_label=period_label,
+                phrase=phrase,
             )
-        return _t("no_records_period", lang, period_label=period_label)
+        return _t("no_records_period", lang, phrase=phrase)
 
     outflows = [e for e in records if e.transaction_type != "income"]
     inflows = [e for e in records if e.transaction_type == "income"]
@@ -3374,16 +4097,21 @@ async def _build_summary(
             period_label=period_label,
         )
         lines = [f"{title}\n"]
-        for e in outflows[:10]:
+        # A-26: "quanto recebi" is the income category; its rows are inflows, not outflows
+        shown = inflows if category == "inkomen" else outflows
+        shown_total = total_in if category == "inkomen" else total_out
+        for e in shown[:10]:
             date_str = to_local(e.expense_date).strftime("%d/%m")
-            name = e.merchant or e.description or category
+            name = e.merchant or e.description or category_label(category, lang)
             lines.append(f"• {date_str} {name}: {_fmt_eur(e.amount)}")
-        lines.append(f"\n{_t('category_total', lang, amount=_fmt_eur(total_out))}")
+        if len(shown) > 10:
+            lines.append(_t("list_more", lang, n=len(shown) - 10))
+        lines.append(f"\n{_t('category_total', lang, amount=_fmt_eur(shown_total))}")
         lines.append(
             _t(
-                "transactions_count_one" if len(outflows) == 1 else "transactions_count",
+                "transactions_count_one" if len(shown) == 1 else "transactions_count",
                 lang,
-                n=len(outflows),
+                n=len(shown),
             )
         )
     else:
@@ -3418,14 +4146,16 @@ async def _build_summary(
     return "\n".join(lines)
 
 
-async def _build_recent(member: Member, session: AsyncSession, n: int) -> str:
-    """The ``n`` most recent transactions (real rows, newest first)."""
+async def _build_recent(
+    member: Member, session: AsyncSession, n: int, *, income: bool = False
+) -> str:
+    """The ``n`` most recent expenses (or incomes), real rows, newest first."""
     lang = member.language or "en"
     res = await session.execute(
         select(Expense)
         .where(
             Expense.member_id == member.id,
-            Expense.transaction_type == "expense",
+            Expense.transaction_type == ("income" if income else "expense"),
             Expense.status.in_(SETTLED),
         )
         .order_by(Expense.expense_date.desc(), Expense.created_at.desc())
@@ -3433,8 +4163,11 @@ async def _build_recent(member: Member, session: AsyncSession, n: int) -> str:
     )
     rows = res.scalars().all()
     if not rows:
-        return _t("expense_delete_none", lang)
-    lines = [f"{_t('last_expenses_title', lang, n=len(rows))}\n"]
+        return _t("income_none" if income else "expense_delete_none", lang)
+    title_key = "last_incomes_title" if income else "last_expenses_title"
+    if len(rows) == 1:
+        title_key += "_one"
+    lines = [f"{_t(title_key, lang, n=len(rows))}\n"]
     for e in rows:
         name = e.merchant or e.description or category_label(e.category, lang)
         day = to_local(e.expense_date).strftime("%d/%m")
@@ -3442,22 +4175,37 @@ async def _build_recent(member: Member, session: AsyncSession, n: int) -> str:
     return "\n".join(lines)
 
 
-async def _build_saldo(member: Member, session: AsyncSession) -> str:
-    """Show income/expense balance for the current month."""
+async def _build_saldo(member: Member, session: AsyncSession, window=None) -> str:
+    """Income/expense balance of the current month, or of the window the text named
+    ("saldo de setembro", "saldo em 2025")."""
     lang = member.language or "en"
     now = now_local()
-    start = day_start(month_start(now.date()))
+    if window is not None and window.kind not in ("current_month",):
+        start, end_excl, label = _window_range(window, lang)
+    else:
+        start, end_excl, label = day_start(month_start(now.date())), None, None
+        window = None
 
-    result = await session.execute(
-        select(Expense).where(
-            Expense.member_id == member.id,
-            Expense.status.in_(SETTLED),
-            Expense.expense_date >= start,
-        )
-    )
+    filters = [
+        Expense.member_id == member.id,
+        Expense.status.in_(SETTLED),
+        Expense.expense_date >= start,
+    ]
+    if end_excl is not None:
+        filters.append(Expense.expense_date < end_excl)
+    result = await session.execute(select(Expense).where(*filters))
     records = result.scalars().all()
 
     if not records:
+        if window is not None:
+            return _t("no_records_period", lang, phrase=_window_phrase(window, lang))
+        from alfred.ledger_status import pending_summary
+
+        pend = await pending_summary(session, member.id)
+        if pend.to_pay or pend.to_receive:  # A-70: only pending bills is still something to say
+            return _t(
+                "pending_forecast", lang, pay=_fmt_eur(pend.to_pay), recv=_fmt_eur(pend.to_receive)
+            )
         return _t("no_records_month", lang)
 
     total_in = _cents(sum(e.amount for e in records if e.transaction_type == "income"))
@@ -3465,17 +4213,18 @@ async def _build_saldo(member: Member, session: AsyncSession) -> str:
     balance = _cents(total_in - total_out)
     sign = "+" if balance >= 0 else "-"
 
-    month_label = month_name(now.date(), lang, year=True)
+    month_label = label or month_name(now.date(), lang, year=True)
     lines = [
         f"{_t('saldo_title', lang, month=month_label)}\n",
         _t("saldo_income", lang, amount=_fmt_eur(total_in)),
         _t("saldo_expenses", lang, amount=_fmt_eur(total_out)),
         _t("saldo_balance", lang, sign=sign, amount=_fmt_eur(abs(balance))),
+        _t("saldo_note", lang),  # A-70: it is the period's in minus out, not the bank balance
     ]
     from alfred.ledger_status import pending_summary
 
     pend = await pending_summary(session, member.id)
-    if pend.to_pay or pend.to_receive:
+    if window is None and (pend.to_pay or pend.to_receive):
         lines.append(
             "\n"
             + _t(
@@ -3625,6 +4374,8 @@ async def _handle_category_correction(
         if seen is None:
             return None
 
+    if canonical == "inkomen":  # A-24: an expense never moves into the income category
+        return _t("category_income_refused", lang, merchant=raw_merchant.title())
     await _upsert_merchant_override(member, raw_merchant, canonical, session)
     # Patch the most recent expense with this merchant (last 7 days)
     cutoff = datetime.now(UTC) - timedelta(days=7)
@@ -3842,6 +4593,76 @@ async def _handle_button_reply(
         await _save_outbound(member, fb.text, session)
         return True
 
+    if action in ("lang_set", "lang_keep"):  # M-03 a bare language name, confirmed by tap
+        if action == "lang_set" and raw_id in ("pt", "nl", "en", "fr", "de"):
+            member.language = raw_id
+            session.add(member)
+            reply = _t("lang_changed", raw_id)
+        else:
+            reply = _t("lang_kept", lang)
+        await send_text(to, reply)
+        await _save_outbound(member, reply, session)
+        return True
+
+    if action in ("neg_in", "neg_no"):  # M-05 "reembolso -15" offered as income
+        try:
+            pa_id = uuid.UUID(raw_id)
+        except ValueError:
+            pa_id = None
+        pa = (
+            await session.scalar(
+                select(PendingAction).where(
+                    PendingAction.id == pa_id,
+                    PendingAction.member_id == member.id,
+                    PendingAction.kind == NEG_KIND,
+                )
+            )
+            if pa_id
+            else None
+        )
+        if pa is None or pa.expires_at < datetime.now(UTC):
+            reply = _t("button_used", lang)
+        elif action == "neg_no":
+            await session.delete(pa)
+            reply = _t("negative_dropped", lang)
+        else:
+            amount, name = float(pa.payload["amount"]), str(pa.payload.get("name") or "")
+            await session.delete(pa)
+            exp = Expense(
+                id=uuid.uuid4(),
+                member_id=member.id,
+                household_id=member.household_id,
+                transaction_type="income",
+                amount=amount,
+                currency="EUR",
+                merchant=None,
+                category="inkomen",
+                description=name[:255] or None,
+                expense_date=now_local(),
+                scope=default_scope(member, "inkomen", "income"),
+            )
+            session.add(exp)
+            audit(session, "expense_recorded", member.id)
+            reply = _t("income_recorded", lang, amount=_fmt_eur(amount), name=name)
+            await send_buttons(to, reply, [(f"undo:{exp.id}", _t("btn_undo", lang))])
+            await _save_outbound(member, reply, session)
+            return True
+        await send_text(to, reply)
+        await _save_outbound(member, reply, session)
+        return True
+
+    if action in ("rec_upd", "rec_keep"):  # B-018 a fixed bill typed again with a new amount
+        rec_text = await handle_recurring_button(action, raw_id, member, lang, session)
+        await send_text(to, rec_text)
+        await _save_outbound(member, rec_text, session)
+        return True
+
+    if action in ("cal_on", "cal_no"):  # M-23 deadline reminders under "prazos"
+        cal_text = await handle_calendar_button(action, member, lang, session)
+        await send_text(to, cal_text)
+        await _save_outbound(member, cal_text, session)
+        return True
+
     if action in ("appt_ok", "appt_undo"):  # V2-06 agenda confirmation buttons
         reply = await handle_agenda_button(action, raw_id, member, lang, session)
         await send_text(to, reply)
@@ -3961,6 +4782,23 @@ async def _gdpr_reply(member: Member, body_plain: str, session: AsyncSession, la
     await _save_outbound(member, reply, session)
 
 
+async def _inbound_last_minute(session: AsyncSession, member_id) -> int:
+    if not isinstance(session, AsyncSession):  # unit tests with a stand-in session
+        return 0
+    return int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Message)
+            .where(
+                Message.author_id == member_id,
+                Message.direction == "inbound",
+                Message.created_at >= datetime.now(UTC) - timedelta(minutes=1),
+            )
+        )
+        or 0
+    )
+
+
 async def handle_inbound(
     member: Member,
     message: Message,
@@ -3972,6 +4810,15 @@ async def handle_inbound(
         return
 
     to = member.wa_phone
+    # A-81: a burst (a stuck phone, a script) is answered once, then ignored for the minute
+    burst = await _inbound_last_minute(session, member.id)
+    if burst > settings.messages_per_minute:
+        if burst == settings.messages_per_minute + 1:
+            reply = _t("rate_limited", member.language or "en")
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+        logger.info("conversation.rate_limited", member_id=str(member.id), n=burst)
+        return
     body = unicodedata.normalize("NFC", (message.body or "").strip()).lower()
     # Accent-free twin (same length as ``body``): command regexes are written without
     # accents so "está"/"água"/"medicação" match; slice captured text from ``body``.
@@ -4012,7 +4859,18 @@ async def handle_inbound(
         if _WIPE_RE.match(body_plain.strip()) or _EXPORT_RE.match(body_plain.strip()):
             await _gdpr_reply(member, body_plain, session, lang)
             return
-        if body in _RESUME_WORDS:
+        if body.strip(" .!") in _RESUME_WORDS:
+            if member.disclosure_accepted_at is not None:
+                # M-25 (J, 20/10): an account that already exists comes back as it was; the
+                # sign-up page is only for people who never finished it (or erased their data)
+                member.consent_state = "accepted"
+                session.add(member)
+                audit(session, "resumed", member.id)
+                reply = _t("resumed_welcome", lang)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                logger.info("conversation.resumed", member_id=str(member.id))
+                return
             member.consent_state = "pending_signup"
             session.add(member)
             await send_signup_invite(member, lang)
@@ -4059,7 +4917,48 @@ async def handle_inbound(
             return
 
         # 4-0ab. "idioma inglês" / "change to English": switch the language of the replies
+        if parse_language_choice(body) is not None and await _lang_menu_open(session, member):
+            # the answer to the menu (M-04); the DB is only asked when the text could be one
+            choice = parse_language_choice(body)
+            await session.execute(
+                delete(PendingAction).where(
+                    PendingAction.member_id == member.id, PendingAction.kind == LANG_MENU_KIND
+                )
+            )
+            if choice is not None:
+                member.language = choice
+                session.add(member)
+                reply = _t("lang_changed", choice)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
+        if is_language_menu_request(body):  # M-04: "mudar idioma" shows the 1–5 menu
+            session.add(
+                PendingAction(
+                    member_id=member.id,
+                    kind=LANG_MENU_KIND,
+                    payload={},
+                    expires_at=datetime.now(UTC) + timedelta(minutes=EDIT_MINUTES),
+                )
+            )
+            reply = _t("language_ask", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
         new_lang = parse_language_command(body)
+        if new_lang is not None and new_lang != lang and is_bare_language_name(body):
+            # M-03: "português" alone may answer something else — ask before switching
+            reply = _t("lang_confirm", new_lang)
+            await send_buttons(
+                to,
+                reply,
+                [
+                    (f"lang_set:{new_lang}", _t("btn_lang_yes", new_lang)),
+                    (f"lang_keep:{lang}", _t("btn_lang_keep", lang)),
+                ],
+            )
+            await _save_outbound(member, reply, session)
+            return
         if new_lang is not None:
             member.language = new_lang
             session.add(member)
@@ -4093,6 +4992,23 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        # 4-0g. M-02 / A-80: a bare greeting is answered here, by name, with no model call
+        greet = _GREETINGS.get(" ".join(re.findall(r"[a-z]+", body_plain)))
+        if greet is not None:
+            name = (member.preferred_name or "").strip()
+            word = greet if greet_lang_matches(greet, lang) else _t("greet_word", lang)
+            reply = _t("greet_reply", lang, hello=word + (f", {name}" if name else ""))
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4-0h. BUG-08: a keyboard mash ("asdfjklqwerty") is answered here, with no model call
+        if _keyboard_mash(body_plain, lang) or _looks_like_gibberish(body_plain):
+            reply = _t("not_understood", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
         # 4-0b. GDPR: "apagar meus dados" (two steps, buttons) / "exportar meus dados"
         if _WIPE_RE.match(body_plain.strip()) or _EXPORT_RE.match(body_plain.strip()):
             await _gdpr_reply(member, body_plain, session, lang)
@@ -4114,8 +5030,16 @@ async def handle_inbound(
         # M12 — load member's merchant→category overrides once per message
         member_overrides = await _load_merchant_overrides(member, session)
 
-        # 4a. Stop — re-enter rejected state
-        if body in _STOP_WORDS:
+        # 4a-. "sair" / "quero sair": explain the two real exits instead of the model's
+        # invented "Você foi desconectado" (B-051)
+        if body_plain.strip(" .!") in _LEAVE_WORDS:
+            reply = _t("leave_explain", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4a. Stop — re-enter rejected state ("stop.", "parar de enviar": A-75 / B-051)
+        if body.strip(" .!") in _STOP_WORDS or body_plain.strip(" .!") in _STOP_PHRASES:
             member.consent_state = "rejected"
             session.add(member)
             reply = _t("consent_rejected", lang)
@@ -4125,7 +5049,7 @@ async def handle_inbound(
 
         # 4b. Saldo command
         if _is_plain_command(body, _SALDO_WORDS) and not _SALDO_ELSEWHERE_RE.search(body_plain):
-            saldo = await _build_saldo(member, session)
+            saldo = await _build_saldo(member, session, parse_period(body_plain, today_local()))
             await send_text(to, saldo)
             await _save_outbound(member, saldo, session)
             return
@@ -4263,12 +5187,22 @@ async def handle_inbound(
                 .where(_SJ.job_type != "monthly_summary")
             )
             jobs = res.scalars().all()
-            matched = None
-            for j in jobs:
-                text_label = (j.payload or {}).get("text", j.job_type).lower()
-                if cancel_kw in text_label or text_label in cancel_kw:
-                    matched = j
-                    break
+            hits = [
+                j
+                for j in jobs
+                if cancel_kw in (j.payload or {}).get("text", j.job_type).lower()
+                or (j.payload or {}).get("text", j.job_type).lower() in cancel_kw
+            ]
+            exact = [j for j in hits if (j.payload or {}).get("text", "").lower() == cancel_kw]
+            matched = (exact or hits)[0] if len(exact or hits) == 1 else None
+            if len(exact or hits) > 1:  # B-027: "cancela lembrete tomar" fits two — ask which
+                names = "\n".join(
+                    f"• {(j.payload or {}).get('text', j.job_type)}" for j in (exact or hits)[:5]
+                )
+                reply = _t("lembrete_cancel_ambiguous", lang, items=names)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
             if matched:
                 matched.active = False
                 session.add(matched)
@@ -4388,7 +5322,10 @@ async def handle_inbound(
         # 4e-0s5. V2-21 — Dutch deadlines: "prazos" / "prazo btw" / "ligar avisos de prazos"
         cal_out = await handle_calendar_command(body_plain, member, lang, session, today_local())
         if cal_out is not None:
-            await send_text(to, cal_out.text)
+            if cal_out.buttons:
+                await send_buttons(to, cal_out.text, cal_out.buttons)
+            else:
+                await send_text(to, cal_out.text)
             await _save_outbound(member, cal_out.text, session)
             return
 
@@ -4411,8 +5348,12 @@ async def handle_inbound(
             body_plain=body_plain, body=body, member=member, lang=lang, session=session
         )
         if recurring_reply is not None:
-            await send_text(to, recurring_reply)
-            await _save_outbound(member, recurring_reply, session)
+            if isinstance(recurring_reply, str):
+                await send_text(to, recurring_reply)
+                await _save_outbound(member, recurring_reply, session)
+            else:
+                await send_buttons(to, recurring_reply.text, recurring_reply.buttons)
+                await _save_outbound(member, recurring_reply.text, session)
             return
 
         # 4e-0h2. Google Calendar — "conectar google agenda" / "desconectar google agenda"
@@ -4476,6 +5417,8 @@ async def handle_inbound(
             note = Note(id=uuid.uuid4(), member_id=member.id, body=note_body)
             session.add(note)
             reply = _t("note_saved", lang)
+            if _SECRET_RE.search(strip_accents(note_body.lower())):
+                reply += "\n" + _t("note_secret_hint", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -4508,6 +5451,14 @@ async def handle_inbound(
                         due_date_val = None  # not a date ("até logo"): keep the full text
                 if due_date_val is not None:
                     task_body = raw_task[: due_m.start()].strip() or raw_task
+            else:  # A-39: "tarefa: pagar o dentista amanhã às 14h" → due tomorrow
+                from alfred.agenda import clean_title, parse_when
+
+                when = parse_when(strip_accents(raw_task.lower()), now_local())
+                if when.day is not None:
+                    rest = clean_title(raw_task, when.spans)
+                    if rest and len(rest) >= 2:
+                        due_date_val, task_body = when.day, rest[0].lower() + rest[1:]
             task = Task(
                 id=uuid.uuid4(),
                 member_id=member.id,
@@ -4585,7 +5536,15 @@ async def handle_inbound(
                 lines = [_t("tasks_list_header", lang, n=len(open_tasks))]
                 today_date = today_local()
                 for i, t in enumerate(open_tasks, 1):
-                    due_str = _t("tasks_list_due", lang, date=str(t.due_date)) if t.due_date else ""
+                    due_str = (  # A-63: the same "Qui 22/10" as when the task was saved
+                        _t(
+                            "tasks_list_due",
+                            lang,
+                            date=f"{weekday_abbr(t.due_date, lang)} {t.due_date:%d/%m}",
+                        )
+                        if t.due_date
+                        else ""
+                    )
                     is_overdue = bool(t.due_date and t.due_date < today_date)
                     tpl_key = "tasks_list_overdue" if is_overdue else "tasks_list_row"
                     lines.append(_t(tpl_key, lang, n=i, body=t.body, due=due_str))
@@ -4594,10 +5553,10 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-        # 4e-5b. M10 — delete task: "apaga tarefa X"
+        # 4e-5b. M10 — delete task: "apaga tarefa X" / "exclui a tarefa 2"
         m_tdel = _TASK_DELETE_RE.match(body_plain)
         if m_tdel:
-            del_kw = _grp(body, m_tdel).strip()
+            del_kw = _grp(body, m_tdel).strip().strip(".!")
             from sqlalchemy import select as _sel
 
             res_del = await session.execute(
@@ -4605,15 +5564,54 @@ async def handle_inbound(
                 .where(Task.member_id == member.id)
                 .order_by(Task.done_at.is_(None).desc(), Task.created_at.desc())
             )
-            del_task = next(
-                (t for t in res_del.scalars().all() if _fuzzy_contains(del_kw, t.body)), None
-            )
+            all_tasks = res_del.scalars().all()
+            del_task = None
+            if del_kw.isdigit():  # the number shown by "minhas tarefas" (open tasks, oldest first)
+                open_tasks = sorted(
+                    (t for t in all_tasks if t.done_at is None), key=lambda t: t.created_at
+                )
+                idx = int(del_kw)
+                del_task = open_tasks[idx - 1] if 0 < idx <= len(open_tasks) else None
+            else:
+                del_task = next((t for t in all_tasks if _fuzzy_contains(del_kw, t.body)), None)
             if del_task:
                 del_body = del_task.body
                 await session.delete(del_task)
                 reply = _t("task_deleted", lang, body=del_body)
             else:
                 reply = _t("task_delete_not_found", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-5b2. B-028 — delete a note: "apaga a nota do wifi"
+        m_ndel = _NOTE_DELETE_RE.match(body_plain)
+        if m_ndel:
+            kw = _grp(body, m_ndel).strip().strip(".!")
+            notes_all = (
+                (
+                    await session.execute(
+                        select(Note)
+                        .where(Note.member_id == member.id)
+                        .order_by(Note.created_at.desc())
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            hits = [n for n in notes_all if _fuzzy_contains(kw, n.body)]
+            if not hits:
+                reply = _t("note_delete_not_found", lang)
+            elif len(hits) > 1:
+                reply = _t(
+                    "note_delete_ambiguous",
+                    lang,
+                    items="\n".join(f"• {n.body[:60]}" for n in hits[:5]),
+                )
+            else:
+                reply = _t("note_deleted", lang, body=hits[0].body[:80])
+                await session.delete(hits[0])
+                audit(session, "note_deleted", member.id)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -4640,15 +5638,19 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
-        # 4e-5d. M11 — dashboard link: "meu dashboard"
-        if _is_plain_command(body, _DASHBOARD_WORDS):
+        # 4e-5d. M11 — dashboard link: "meu dashboard"; A-17: "novo link do painel" revokes
+        revoke = bool(_PANEL_REVOKE_RE.match(body_plain.strip(" .!?")))
+        if revoke or _is_plain_command(body, _DASHBOARD_WORDS):
             import uuid as _uuid
 
             from alfred.dashboard import ensure_dashboard_token
+            from alfred.panel_tokens import revoke_panel_token
             from alfred.settings import settings as _settings
 
-            # Missing or expired (TTL) → issue a fresh one; the old link stops working.
-            await ensure_dashboard_token(session, member)
+            if revoke:
+                await revoke_panel_token(session, member)
+            else:  # Missing or expired (TTL) → issue a fresh one; the old link stops working.
+                await ensure_dashboard_token(session, member)
             import os as _os
 
             base_url = (
@@ -4660,7 +5662,7 @@ async def handle_inbound(
             else:
                 url = f"{base_url}/d/{member.dashboard_token}"
                 # Button first; send_cta_url itself falls back to ONE text with the link.
-                reply = _t("dashboard_cta", lang)
+                reply = _t("dashboard_revoked", lang) if revoke else _t("dashboard_cta", lang)
                 await send_cta_url(to, reply, _t("btn_open_panel", lang), url)
                 reply = _t("dashboard_link", lang, url=url)  # what the history keeps
             await _save_outbound(member, reply, session)
@@ -4695,6 +5697,41 @@ async def handle_inbound(
                 for g in active_goals:
                     lines.append(_t("goals_list_row", lang, title=g.title))
                 reply = "\n".join(lines)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        # 4e-7a. B-030 — delete a goal: "apaga a meta correr 10 km"
+        m_gdel = _GOAL_DELETE_RE.match(body_plain)
+        if m_gdel:
+            kw = _grp(body, m_gdel).strip().strip(".!")
+            goals_all = (
+                (
+                    await session.execute(
+                        select(Goal)
+                        .where(Goal.member_id == member.id, Goal.active.is_(True))
+                        .order_by(Goal.created_at.desc())
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            hits = [g for g in goals_all if _fuzzy_contains(kw, g.title)]
+            exact = [g for g in hits if strip_accents(g.title.lower()) == strip_accents(kw.lower())]
+            hits = exact or hits  # the full name wins over a longer goal that contains it
+            if not hits:
+                reply = _t("goal_complete_not_found", lang)
+            elif len(hits) > 1:
+                reply = _t(
+                    "goal_delete_ambiguous",
+                    lang,
+                    items="\n".join(f"• {g.title}" for g in hits[:5]),
+                )
+            else:
+                hits[0].active = False  # habit logs keep pointing at it; it leaves the list
+                session.add(hits[0])
+                audit(session, "goal_deleted", member.id)
+                reply = _t("goal_deleted", lang, title=hits[0].title)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -4815,10 +5852,9 @@ async def handle_inbound(
             if not unique_dates:
                 reply = _t("habit_streak_none", lang, activity=streak_kw or "hábito")
             else:
-                from datetime import date as _date2
                 from datetime import timedelta as _td2
 
-                today = _date2.today()
+                today = today_local()  # A-65: Amsterdam date, like the log itself
                 yesterday = today - _td2(days=1)
                 most_recent = unique_dates[0]
                 if most_recent < yesterday:
@@ -4845,8 +5881,37 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        # B-032: "água de hoje" / "sono médio" are questions; they used to be logged as habits
+        health_q = any(
+            rx.search(body_plain)
+            for rx in (
+                _HEALTH_MOOD_QUERY_RE,
+                _HEALTH_SLEEP_QUERY_RE,
+                _HEALTH_MED_QUERY_RE,
+                _HEALTH_WATER_QUERY_RE,
+            )
+        )
+
+        # 4e-8-. B-031: "meditei hoje?" is a question about the log, answered from the data
+        if (
+            not health_q
+            and body.rstrip().endswith("?")
+            and (m_hq := _HABIT_LOG_RE.search(body.rstrip(" ?")))
+        ):
+            q_activity = m_hq.group("activity").strip()
+            when = today_local()
+            if _YESTERDAY_WORD_RE.search(body_plain):
+                when = when - timedelta(days=1)
+            done = await _habit_already_logged(session, member.id, q_activity, when)
+            key = "habit_q_yes" if done else "habit_q_no"
+            day = _t("period_today" if when == today_local() else "period_yesterday", lang)
+            reply = _t(key, lang, activity=q_activity, day=day)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
         # 4e-8. M9 — log de hábito: "meditei hoje" (regex fast-path)
-        m_habit = None if body.rstrip().endswith("?") else _HABIT_LOG_RE.search(body)
+        m_habit = None if body.rstrip().endswith("?") or health_q else _HABIT_LOG_RE.search(body)
         if m_habit and _is_workout_text(body) and _DURATION_RE.search(body_plain):
             m_habit = None  # "fiz yoga durante 20 minutos" is a workout, not the habit "fiz yoga"
         if m_habit:
@@ -4895,12 +5960,14 @@ async def handle_inbound(
         _not_health = not _is_health
         if (
             len(body) < 80
+            and not health_q
             and _not_expense
             and _not_workout
             and _not_health
             and not _has_zero_or_negative_amount(body)  # "café 0" is an invalid amount, not a habit
             and not _looks_like_bare_amount(body)  # "cinema 24" is an expense, not a habit
             and not body.rstrip().endswith("?")  # a question is not a log
+            and _could_be_habit(body_plain)  # A-49: "voltei", "apaga", "hoje" never reach the model
         ):
             habit_data = await extract_habit(body, lang=member.language or "en")
             if habit_data:
@@ -4944,11 +6011,15 @@ async def handle_inbound(
                 return
 
         # 4e-9. M8 — health log: medicação, humor, sono, água
-        if _is_health and _UNSUPPORTED_HEALTH_RE.search(body_plain):
+        if _PURCHASE_NO_PRICE_RE.match(body_plain.strip()):
+            _is_health = False  # M-27: "comprei 2 kg de arroz" is shopping (asked below)
+        if _is_health and _unsupported_health(body_plain):
             reply = _t("health_unsupported", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
+        if health_q:
+            _is_health = False  # a question: go to the queries below, never to the log
         if _is_health and member.health_consent_at is None:  # art. 9: ask before storing
             reply = _t("health_consent_ask", lang)
             await send_buttons(
@@ -5124,11 +6195,19 @@ async def handle_inbound(
                 dur_str = _workout_dur(
                     workout_data.get("duration_minutes"), workout_data.get("distance_km"), lang
                 )
+                detail = f", {dur_str}" if dur_str.strip() else ""  # B-034: no ", ." when empty
+                if wo_date != today:  # M-17: say which day it went to
+                    day_word = (
+                        _t("period_yesterday", lang)
+                        if wo_date == today - _td(days=1)
+                        else f"{weekday_abbr(wo_date, lang)} {wo_date:%d/%m}"
+                    )
+                    detail += f" ({day_word})"
                 reply = _t(
                     "workout_saved",
                     lang,
                     activity=activity_name(workout_data["activity_type"], lang),
-                    duration=dur_str,
+                    duration=detail,
                 )
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
@@ -5184,6 +6263,50 @@ async def handle_inbound(
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
+
+        # 4e-11a. "apaga o treino de segunda" / "apaga a corrida de sábado": that weekday's
+        # most recent date (today counts); several that day → ask which.
+        m_wdel = _WORKOUT_DELETE_DAY_RE.match(body_plain.strip())
+        if m_wdel:
+            from alfred.labels import activity_label
+            from alfred.training import WEEKDAYS
+
+            wd = WEEKDAYS.get(m_wdel.group("day"))
+            if wd is not None:
+                day = today_local() - timedelta(days=(today_local().weekday() - wd) % 7)
+                rows_wd = (
+                    (
+                        await session.execute(
+                            select(WorkoutSession).where(
+                                WorkoutSession.member_id == member.id,
+                                WorkoutSession.workout_date == day,
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                what = m_wdel.group("what")
+                if what not in ("treino", "workout", "training", "entrainement"):
+                    rows_wd = [
+                        w
+                        for w in rows_wd
+                        if what in strip_accents(activity_label(w.activity_type, lang).lower())
+                        or what in strip_accents((w.activity_type or "").lower())
+                    ]
+                if len(rows_wd) == 1:
+                    await session.delete(rows_wd[0])
+                    reply = _t("workout_deleted", lang)
+                elif not rows_wd:
+                    reply = _t("workout_delete_not_found", lang)
+                else:
+                    names = _join_names(
+                        [activity_label(w.activity_type, lang) for w in rows_wd], lang
+                    )
+                    reply = _t("workout_delete_which", lang, day=f"{day:%d/%m}", names=names)
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
 
         # 4e-11b. M7 — delete workout: "apaga o treino de hoje"
         if _WORKOUT_DELETE_RE.search(body_plain):
@@ -5248,7 +6371,8 @@ async def handle_inbound(
                         _t(
                             "workout_summary_row",
                             lang,
-                            date=ws_m.workout_date.strftime("%d/%m"),
+                            date=f"{weekday_abbr(ws_m.workout_date, lang)} "
+                            f"{ws_m.workout_date:%d/%m}",
                             activity=activity_name(ws_m.activity_type, lang),
                             duration=dur_m,
                         )
@@ -5345,9 +6469,51 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        if _BANK_BALANCE_RE.search(body_plain):  # B-006: "saldo da conta 300" is not tracked
+            reply = _t("bank_balance_not_tracked", lang)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
         n_last = parse_last_n(body_plain)
-        if n_last:
-            reply = await _build_recent(member, session, n_last)
+        n_last_in = None if n_last else parse_last_n(body_plain, income=True)
+        if n_last or n_last_in:
+            reply = await _build_recent(
+                member, session, n_last or n_last_in, income=bool(n_last_in)
+            )
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        if INCOME_QUERY_RE.match(body_plain.strip()) and not _ANALYSIS_HINT_RE.search(body_plain):
+            # A-26: the income list, never the spending
+            reply = await _build_summary(
+                member,
+                session,
+                category="inkomen",
+                window=parse_period(body_plain, today_local()),
+            )
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        if body_plain.strip(" .!?") in _BARE_DAY_WORDS:  # BUG-03: "hoje" alone is today's spending
+            reply = await _build_summary(
+                member, session, window=parse_period(body_plain.strip(" .!?"), today_local())
+            )
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+
+        if _TOP_EXPENSES_RE.match(body_plain.strip()):
+            from alfred.followup import top_text
+
+            win = parse_period(body_plain, today_local())
+            if win is not None:
+                t_start, t_end, _lbl = _window_range(win, lang)
+            else:
+                t_start, t_end, _lbl = _period_range("current_month", lang)
+            reply = await top_text(member, t_start, t_end, lang, session)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -5404,7 +6570,11 @@ async def handle_inbound(
                     old_amount = last_exp.amount
                     last_exp.amount = new_amount
                     session.add(last_exp)
-                    name = last_exp.merchant or category_label(last_exp.category, lang)
+                    name = (  # B-005: "cinema", not its category "Lazer"
+                        last_exp.merchant
+                        or last_exp.description
+                        or category_label(last_exp.category, lang)
+                    )
                     reply = _t(
                         "expense_corrected",
                         lang,
@@ -5431,20 +6601,21 @@ async def handle_inbound(
         if _looks_multi(body):
             items = await extract_expenses_multi(message.body or "", lang=member.language or "en")
             if len(items) >= 2:
+                items = _fix_item_currencies(message.body or "", items)
                 skipped: list[str] = []
                 usable: list[dict] = []
+                foreign: dict[str, list[str]] = {}
                 for item in items:
                     if item["currency"] != "EUR":
-                        skipped.append(
-                            _t(
-                                "multi_skipped_currency",
-                                lang,
-                                cur=item["currency"],
-                                name=item["merchant"] or item["description"] or item["category"],
-                            )
+                        foreign.setdefault(item["currency"], []).append(
+                            item["merchant"] or item["description"] or item["category"]
                         )
                     else:
                         usable.append(item)
+                for cur, names in foreign.items():  # B-007: one line, not one per item
+                    skipped.append(
+                        _t("multi_skipped_currency", lang, cur=cur, name=_join_names(names, lang))
+                    )
                 from alfred.batch import MAX_ITEMS as _MAX_BATCH
 
                 if len(usable) > _MAX_BATCH:  # said out loud: the rest used to vanish silently
@@ -5475,6 +6646,42 @@ async def handle_inbound(
                 )
                 return
 
+        if m_buy := _PURCHASE_NO_PRICE_RE.match(body_plain.strip()):
+            # M-27: "comprei 2 kg de arroz" is a purchase without its price, not body weight
+            item = _original_text(message, m_buy.start("item"), m_buy.end("item"))
+            reply = _t("purchase_ask_price", lang, item=item)
+            await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
+        if m_neg := _NEGATIVE_ITEM_RE.match(body.strip()):
+            # A-29: "reembolso -15" is never stored as an expense. M-05: offer it as money in.
+            amount = to_amount(m_neg.group("amt"))
+            name = _original_text(message, m_neg.start("name"), m_neg.end("name")) or "-"
+            if amount and 0 < amount <= MAX_AMOUNT:
+                await session.execute(
+                    delete(PendingAction).where(
+                        PendingAction.member_id == member.id, PendingAction.kind == NEG_KIND
+                    )
+                )
+                pa = PendingAction(
+                    member_id=member.id,
+                    kind=NEG_KIND,
+                    payload={"amount": round(amount, 2), "name": name[:80]},
+                    expires_at=datetime.now(UTC) + timedelta(minutes=EDIT_MINUTES),
+                )
+                session.add(pa)
+                await session.flush()
+                reply = _t("negative_as_income_ask", lang, amount=_fmt_eur(amount), name=name)
+                await send_buttons(
+                    to,
+                    reply,
+                    [
+                        (f"neg_in:{pa.id}", _t("btn_neg_income", lang)),
+                        (f"neg_no:{pa.id}", _t("btn_neg_no", lang)),
+                    ],
+                )
+                await _save_outbound(member, reply, session)
+                return
         if re.search(r"(?<!\S)-\d", body):  # A-29: "reembolso -15" is never stored as an expense
             reply = _t("invalid_amount_check", lang)
             await send_text(to, reply)
@@ -5485,6 +6692,14 @@ async def handle_inbound(
         expense_data = await extract_expense(
             message.body or "", merchant_overrides=member_overrides, lang=member.language or "en"
         )
+        if (
+            expense_data is None
+            and _looks_like_bare_amount(body)
+            and not _NOT_MONEY_UNIT_RE.search(body)
+        ):
+            # B-035: "notebook 1210" — words and one bare number are money even when the model
+            # says no; it is saved under "Outros" and the member is asked for the category.
+            expense_data = _bare_amount_expense(message.body or "")
         if expense_data and expense_data["currency"] == "EUR" and _foreign_currency(body):
             expense_data = {**expense_data, "currency": _foreign_currency(body)}
         if expense_data and expense_data["currency"] != "EUR":
@@ -5495,6 +6710,8 @@ async def handle_inbound(
         if expense_data:
             txn_type = expense_data.get("type", "expense")
             days_ago = expense_data.get("days_ago", 0)
+            if not days_ago:  # "paguei 130 de seguro saúde, data 05/10": the date written
+                days_ago = _written_days_ago(body) or 0
             expense_date = now_local() - timedelta(days=days_ago)
 
             # M14 — auto-tag with the active trip. Looked up BEFORE the expense is
@@ -5524,7 +6741,9 @@ async def handle_inbound(
             session.add(expense)
 
             name = (
-                expense_data["merchant"] or expense_data["description"] or expense_data["category"]
+                expense_data["merchant"]
+                or expense_data["description"]
+                or category_label(expense_data["category"], lang)  # A-55: never "overig"
             )
             amt_fmt = _fmt_eur(expense_data["amount"])
             key = "income_recorded" if txn_type == "income" else "expense_recorded"
@@ -5561,10 +6780,16 @@ async def handle_inbound(
                     dest=active_trip.destination,
                     total=_fmt_eur(trip_total),
                 )
-                if active_trip.budget:
-                    reply = reply.rstrip("]") + (
-                        _budget_remaining(active_trip.budget, trip_total, lang) + "]"
+                trip_budget = active_trip.budget
+                if not trip_budget:  # B-038: a budget planned per category also counts
+                    planned = await session.scalar(
+                        select(sa_func.coalesce(sa_func.sum(TripBudgetLine.amount), 0)).where(
+                            TripBudgetLine.trip_id == active_trip.id
+                        )
                     )
+                    trip_budget = float(planned or 0) or None
+                if trip_budget:
+                    reply += _budget_remaining(trip_budget, trip_total, lang)
             # BUG-09: prompt for category when merchant unknown and category is overig
             if (
                 txn_type == "expense"
@@ -5607,8 +6832,26 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        # 4f-0. A question that asks for an analysis (comparison, average, per month, last N
+        # months…) goes to V2-14 first: the coarse classifier answered them with the month
+        # comparison card and the daily limit / "salva essa visão" never applied (B-013).
+        q_window = parse_period(body_plain, today_local())
+        if looks_like_analysis(body_plain) and (
+            _ANALYSIS_HINT_RE.search(body_plain) or q_window is None
+        ):
+            analysis_first = await handle_analysis_question(
+                message.body or "", body_plain, member, lang, session
+            )
+            if analysis_first is not None:
+                await send_text(to, analysis_first)
+                await _save_outbound(member, analysis_first, session)
+                return
+
         # 4f. Try to classify as a financial query
         query = await classify_query(message.body or "")
+        if query is None and q_window is not None and _SPEND_QUESTION_RE.search(body_plain):
+            # "quanto gastei este ano?" / "gastos em 2025": the plain summary of that window
+            query = {"query_type": "period", "period": "current_month", "category": None}
         if query:
             qtype = query.get("query_type")
             period = query.get("period") or "current_month"
@@ -5618,7 +6861,7 @@ async def handle_inbound(
             deeper = []  # V2-20 buttons, filled by the spending answers
 
             if qtype == "balance":
-                reply = await _build_saldo(member, session)
+                reply = await _build_saldo(member, session, window)
             elif qtype == "category" and category:
                 reply = await _build_summary(
                     member,
@@ -5653,10 +6896,7 @@ async def handle_inbound(
             message.body or "", body_plain, member, lang, session
         )
         if analysis_reply is not None:
-            if len(analysis_reply) <= 900:
-                await send_buttons(to, analysis_reply, feedback_buttons("analysis", lang))
-            else:
-                await send_text(to, analysis_reply)
+            await send_text(to, analysis_reply)  # M-10: no 👍/👎 buttons any more
             await _save_outbound(member, analysis_reply, session)
             return
 
@@ -5668,7 +6908,7 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             logger.info("conversation.invalid_amount", member_id=str(member.id))
             return
-        if _UNSUPPORTED_HEALTH_RE.search(body_plain):
+        if _unsupported_health(body_plain):
             # Weight / blood pressure are not tracked: say so instead of letting the model "record" them.
             reply = _t("health_unsupported", lang)
             await send_text(to, reply)
@@ -5676,26 +6916,25 @@ async def handle_inbound(
             return
         history = await _load_history(member, session, exclude_id=message.id)
         reply = await generate_reply(member, message, history=history)  # noqa: F821
-        llm_answer = True  # stays True only while the model's own words are sent (V2-23)
-        if _claims_recorded(reply):
+        claim = (
+            (_FIRST_PERSON_CLAIM_RE.search(reply) or _ACTION_CLAIM_RE.search(reply))  # A-28
+            if _is_question(body_plain)
+            else (_claims_recorded(reply) or _ACTION_CLAIM_RE.search(reply))
+        )
+        if claim:
             # Nothing was written on this path: never let the model confirm a phantom record.
             alert("conversation.llm_false_record_claim", member_id=str(member.id))
-            llm_answer = False
             reply = _t(_fallback_key(body), lang)
         elif _FAKE_CONFIRM_RE.search(reply):
             # There is no pending-confirmation state: replace the invented flow with a real ask.
             alert("conversation.llm_fake_confirmation", member_id=str(member.id))
-            llm_answer = False
             reply = _t(
                 "invalid_amount_check"
                 if _has_zero_or_negative_amount(body)
                 else _fallback_key(body),
                 lang,
             )
-        if llm_answer and len(reply) >= MIN_CHAT_LEN and len(reply) <= 900:
-            await send_buttons(to, reply, feedback_buttons("chat", lang))  # V2-23
-        else:
-            await send_text(to, reply)
+        await send_text(to, reply)  # M-10: the 👍/👎 buttons were removed (J, 20/10)
         await _save_outbound(member, reply, session)
         logger.info("conversation.reply_sent", member_id=str(member.id))
         return

@@ -407,23 +407,20 @@ async def on_cancelled(session: AsyncSession, appt: Appointment) -> None:
 
 # ── web pages and routes ──────────────────────────────────────────────────────────────────────
 
-_PAGE_CSS = (
-    "body{margin:0;font:16px/1.6 system-ui,-apple-system,sans-serif;background:#fff9f8;color:#3b2547}"
-    "main{max-width:32rem;margin:0 auto;padding:3rem 1.25rem}h1{font-size:1.6rem;line-height:1.2}"
-)
-
 
 def _page(lang: str, head_key: str, text_key: str, status: int = 200) -> HTMLResponse:
+    """M-24: the Google landing pages wear the brand (same shell as the sign-up page)."""
+    from alfred.signup import brand_page
+
     lang = lang if lang in ("pt", "nl", "en", "fr", "de") else "en"
-    html = (
-        f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<meta name="robots" content="noindex">'
-        f"<title>{escape(_t(head_key, lang))} – Jofie</title><style>{_PAGE_CSS}</style></head>"
-        f"<body><main><h1>{escape(_t(head_key, lang))}</h1>"
-        f"<p>{escape(_t(text_key, lang).replace('*', ''))}</p></main></body></html>"
+    return brand_page(
+        lang,
+        _t(head_key, lang),
+        f"<h1>{escape(_t(head_key, lang))}</h1>"
+        f"<p class='lead'>{escape(_t(text_key, lang).replace('*', ''))}</p>",
+        status=status,
+        headers={"Cache-Control": "no-store"},
     )
-    return HTMLResponse(html, status_code=status, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/google/connect", include_in_schema=False, dependencies=[Depends(limit_dashboard)])

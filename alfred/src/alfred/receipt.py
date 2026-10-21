@@ -69,6 +69,31 @@ def _date(value: object) -> date | None:
     return day if 0 <= (today - day).days <= MAX_DAYS_BACK else None
 
 
+_MERCHANT_HINTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(
+            r"supermar|albert heijn|\bah\b|jumbo|lidl|aldi|\bplus\b|dirk|\bspar\b|\bcoop\b|"
+            r"hoogvliet|vomar|picnic|ekoplaza|mercado|mercearia|grocer|epicerie|carrefour|rewe|edeka"
+        ),
+        "supermarkt",
+    ),
+    (
+        re.compile(r"restaurant|restaurante|cafe|café|pizz|sushi|burger|bistro|brasserie"),
+        "restaurant",
+    ),
+    (re.compile(r"apotheek|farmacia|pharmac|drogist|kruidvat|etos"), "gezondheid"),
+    (re.compile(r"\bns\b|\bgvb\b|\bret\b|uber|taxi|shell|\bbp\b|esso|tankstation"), "transport"),
+)
+
+
+def _guess_from_merchant(merchant: str | None) -> str | None:
+    key = (merchant or "").lower()
+    for rx, cat in _MERCHANT_HINTS:
+        if rx.search(key):
+            return cat
+    return None
+
+
 def item_from_reading(reading: dict) -> tuple[dict | None, str | None]:
     """``(entry, problem)``: the entry to draft, or why there is none ("currency" | "total")."""
     currency = reading.get("currency")
@@ -78,14 +103,20 @@ def item_from_reading(reading: dict) -> tuple[dict | None, str | None]:
     if amount is None:
         return None, "total"
     category = str(reading.get("category") or "").lower().strip()
-    if category not in CATEGORIES or category == "inkomen":
-        category = "overig"
+    if category not in CATEGORIES:
+        from alfred.budgets import resolve_category
+
+        category = resolve_category(category) or ""  # "supermarket", "groceries", "mercado"…
+    merchant = _text(reading.get("merchant"), 60)
+    if category not in CATEGORIES or category in ("inkomen", "overig"):
+        # B-039: "Supermarkt De Linde" went to Outros and never reached the grocery budget
+        category = _guess_from_merchant(merchant) or "overig"
     day = _date(reading.get("date"))
     return {
         "type": "expense",
         "amount": amount,
         "currency": "EUR",
-        "merchant": _text(reading.get("merchant"), 60),
+        "merchant": merchant,
         "category": category,
         "description": None,
         "days_ago": (clock.today_local() - day).days if day else 0,

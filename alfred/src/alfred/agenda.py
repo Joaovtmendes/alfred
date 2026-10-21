@@ -61,7 +61,7 @@ _REL_DAYS: dict[str, int] = {
     "apres demain": 2, "uebermorgen": 2, "ubermorgen": 2,
 }  # fmt: skip
 
-_UNITS = r"(?:h|hs|hr|hrs|hora|horas|hour|hours|uur|uren|heure|heures|stunde|stunden|std|min|mins|minuto|minutos|minute|minutes|minuten)"
+_UNITS = r"(?:h|hs|hr|hrs|hora|horas|hour|hours|uur|uren|heure|heures|stunde|stunden|std|min|mins|minuto|minutos|minute|minutes|minuten|dia|dias|day|days|dag|dagen|jour|jours|tag|tage|tagen)"
 _REMIND_RE = re.compile(
     r"(?:(?:me\s+)?(?:avisa|avise|avisar|lembra|lembre|lembrar|remind(?:\s+me)?|herinner(?:\s+me)?|"
     r"previens-moi|previens\s+moi|prevenez-moi|erinnere\s+mich|erinner\s+mich)\s+)?"
@@ -107,7 +107,11 @@ class When:
 
 
 def _unit_minutes(value: int, unit: str) -> int:
-    return value if unit.startswith("min") else value * 60
+    if unit.startswith("min"):
+        return value
+    if unit[:3] in ("dia", "day", "dag", "jou", "tag"):  # B-023: "avisa 1 dia antes"
+        return value * 1440
+    return value * 60
 
 
 def _clamp(year: int, month: int, day: int) -> date | None:
@@ -262,10 +266,20 @@ class NewAppointment:
     remind_minutes: int
 
 
+# A-39: a task, goal, trip or itinerary line with a day and time belongs to its own module, and
+# "muda o X para sexta" that matched no appointment is never a new one called "Muda o X".
+_NOT_APPT_LEAD = re.compile(
+    r"^(?:tarefa|tarefas|meta|metas|objetivo|nota|task|goal|note|taak|doel|tache|but|aufgabe|ziel|"
+    r"(?:criar|cria|crie|nova|novo|create|new|maak|nieuwe|creer|nouveau|neue)\s+viagem|viagem|trip|reis|voyage|reise|"
+    r"roteiro|itinerary|muda|mude|mudar|altera|altere|remarca|remarque|reagenda|reagende|move|mova|"
+    r"reschedule|change|verplaats|verzet|deplace|reporte|verschiebe)\b"
+)
+
+
 def parse_appointment(body: str, body_plain: str, now: datetime) -> NewAppointment | str | None:
     """A new appointment, ``"past"`` when its moment is gone, or None when it is not one."""
     plain = body_plain.strip()
-    if has_money(plain) or "?" in plain or _PAST_VERBS.match(plain):
+    if has_money(plain) or "?" in plain or _PAST_VERBS.match(plain) or _NOT_APPT_LEAD.match(plain):
         return None
     w = parse_when(plain, now)
     if w.day is None or w.hhmm is None:
@@ -369,6 +383,25 @@ class AgendaReply:
     buttons: list[tuple[str, str]] | None = None
 
 
+# "muda o treino de segunda para sexta" belongs to the training plan, not the agenda
+_OTHER_MODULE_WORDS = frozenset(
+    "treino treinos plano lembrete lembretes tarefa tarefas meta metas viagem roteiro orcamento "
+    "conta contas idioma lingua training workout plan reminder task goal trip budget".split()
+)
+
+
+def _is_creation(per: str | None, now: datetime) -> bool:
+    """B-023: "agenda dentista amanhã às 14h" names a thing AND a time: it is a new appointment,
+    not a request to list tomorrow."""
+    if not per:
+        return False
+    w = parse_when(per, now)
+    if w.hhmm is None:
+        return False
+    rest = clean_title(per, w.spans)
+    return bool(rest) and len(rest) >= 2
+
+
 async def handle_agenda_command(
     body: str, body_plain: str, member: Member, lang: str, session: AsyncSession
 ) -> AgendaReply | None:
@@ -379,13 +412,22 @@ async def handle_agenda_command(
     plain = re.sub(r"\s+", " ", body_plain).strip(" .!?")
 
     m = _LIST_RE.match(plain)
-    if m:
+    if m and not _is_creation(m.group("per"), now):
         return AgendaReply(await _list(member, lang, session, now, m.group("per")))
 
     m_move = _MOVE_RE.match(plain)
     if m_move:
         items = await _upcoming(session, member.id, now)
         hits = _match(m_move.group("name"), items)
+        if not hits:
+            w = parse_when(m_move.group("rest"), now)
+            other = _OTHER_MODULE_WORDS & set(strip_accents(m_move.group("name")).split())
+            if (w.day is not None or w.hhmm is not None) and not other:  # B-056: no "Muda o X"
+                name = m_move.group("name").strip()
+                flat = re.sub(r"\s+", " ", body).strip(" .!?")
+                if len(flat) == len(plain):  # the name as typed, accents kept
+                    name = flat[m_move.start("name") : m_move.end("name")].strip()
+                return AgendaReply(_t("agenda_move_none", lang, name=name))
         if hits:
             if len(hits) > 1:
                 return AgendaReply(
@@ -517,6 +559,9 @@ async def _list(
             end = start + timedelta(days=1)
         elif re.search(r"semana|week|woche|semaine", per_plain):
             end = now + timedelta(days=7)
+        elif re.search(r"\b(?:mes|month|maand|mois|monat)\b", per_plain):  # B-024 "agenda do mês"
+            first_next = (now.date().replace(day=1) + timedelta(days=32)).replace(day=1)
+            end = datetime.combine(first_next, time.min, tzinfo=local_tz())
         else:
             return _t("agenda_list_help", lang)
     rows = list(
@@ -557,12 +602,12 @@ async def handle_button(
     try:
         appt_id = uuid.UUID(raw_id)
     except ValueError:
-        return _t("button_gone", lang)
+        return _t("button_used", lang)
     appt = await session.scalar(
         select(Appointment).where(Appointment.id == appt_id, Appointment.member_id == member.id)
     )
     if appt is None or appt.status == "cancelled":
-        return _t("button_gone", lang)
+        return _t("button_used", lang)
     if action == "appt_undo":
         appt.status = "cancelled"
         session.add(appt)
@@ -681,6 +726,13 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "fr": "Pour quand ? Par exemple « déplace dentiste à vendredi 15h ».",
         "de": "Auf wann? Zum Beispiel „verschiebe Zahnarzt auf Freitag 15 Uhr“.",
     },
+    "agenda_move_none": {
+        "pt": "Não achei *{name}* na sua agenda. Diga \"minha agenda\" para ver o que está marcado.",
+        "nl": "Ik vind *{name}* niet in je agenda. Zeg \"mijn agenda\" om te zien wat er staat.",
+        "en": "I couldn't find *{name}* in your calendar. Say \"my agenda\" to see what's planned.",
+        "fr": "Je ne trouve pas *{name}* dans ton agenda. Dis \"mon agenda\" pour voir ce qui est prévu.",
+        "de": "Ich finde *{name}* nicht in deinem Kalender. Sag \"mein Kalender\", um zu sehen, was geplant ist.",
+    },
     "agenda_ambiguous": {
         "pt": "Mais de um compromisso combina: {names}. Diga o nome completo.",
         "nl": "Meerdere afspraken passen: {names}. Geef de volledige naam.",
@@ -703,11 +755,11 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Nichts in deinem Kalender für diesen Zeitraum. Trage etwas ein, zum Beispiel „Zahnarzt Donnerstag um 14 Uhr“.",
     },
     "agenda_list_help": {
-        "pt": "Posso mostrar “minha agenda”, “agenda de hoje”, “agenda de amanhã”, “agenda da semana” ou de um dia da semana.",
-        "nl": "Ik kan “mijn agenda”, “agenda van vandaag”, “agenda van morgen” of “agenda van de week” laten zien.",
-        "en": "I can show “my agenda”, “agenda for today”, “agenda for tomorrow” or “agenda for the week”.",
-        "fr": "Je peux montrer « mon agenda », « agenda d'aujourd'hui », « agenda de demain » ou « agenda de la semaine ».",
-        "de": "Ich kann „meinen Kalender“, „Kalender für heute“, „für morgen“ oder „für die Woche“ zeigen.",
+        "pt": "Posso mostrar “minha agenda”, “agenda de hoje”, “agenda de amanhã”, “agenda da semana”, “agenda do mês” ou de um dia da semana.",
+        "nl": "Ik kan “mijn agenda”, “agenda van vandaag”, “agenda van morgen”, “agenda van de week” of “agenda van de maand” laten zien.",
+        "en": "I can show “my agenda”, “agenda for today”, “agenda for tomorrow”, “agenda for the week” or “agenda for the month”.",
+        "fr": "Je peux montrer « mon agenda », « agenda d'aujourd'hui », « agenda de demain », « agenda de la semaine » ou « agenda du mois ».",
+        "de": "Ich kann „meinen Kalender“, „Kalender für heute“, „für morgen“, „für die Woche“ oder „für den Monat“ zeigen.",
     },
     "agenda_list_header": {
         "pt": "Sua agenda ({n}):",

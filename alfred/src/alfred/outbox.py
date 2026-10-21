@@ -139,6 +139,7 @@ _ASK = re.compile(
     r")(?P<rest>.*)$"
 )
 _TODAY = re.compile(r"\b(?:hoje|today|vandaag|aujourd'?hui|heute)\b")
+_YESTERDAY = re.compile(r"\b(?:ontem|yesterday|gisteren|hier|gestern)\b")
 _REMINDERS = re.compile(r"\b(?:lembretes|reminders|herinneringen|rappels|erinnerungen)\b")
 
 
@@ -178,6 +179,11 @@ async def handle_outbox_command(
     stmt = select(Message).where(Message.author_id == member.id, Message.direction == "outbound")
     if today_only:
         stmt = stmt.where(Message.created_at >= day_start(today_local()))
+    elif _YESTERDAY.search(" ".join(body_plain.split())):  # B-022: "o que você enviou ontem"
+        stmt = stmt.where(
+            Message.created_at >= day_start(today_local() - timedelta(days=1)),
+            Message.created_at < day_start(today_local()),
+        )
     if reminders_only:
         stmt = stmt.where(Message.kind.in_(("reminder", "summary", "alert", "template")))
     rows = (
@@ -188,7 +194,7 @@ async def handle_outbox_command(
     if not rows:
         return _t("outbox_empty", lang)
     now = now_local()
-    lines = [_t("outbox_title", lang, n=len(rows))]
+    lines = [_t("outbox_title_one" if len(rows) == 1 else "outbox_title", lang, n=len(rows))]
     for m in rows:
         when = to_local(m.created_at)
         stamp = (
@@ -211,6 +217,13 @@ def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str]:
 
 
 STRINGS: dict[str, dict[str, str]] = {
+    "outbox_title_one": _all(
+        "A última mensagem que mandei:",
+        "Het laatste bericht dat ik stuurde:",
+        "The last message I sent:",
+        "Le dernier message que j'ai envoyé :",
+        "Die letzte Nachricht, die ich geschickt habe:",
+    ),
     "outbox_title": _all(
         "Últimas {n} mensagens que mandei:",
         "Laatste {n} berichten die ik stuurde:",

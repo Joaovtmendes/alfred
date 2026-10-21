@@ -6,7 +6,7 @@ pending_signup     + stop → rejected
 (the account becomes ``accepted`` only through the sign-up page: see test_signup_db.py)
 accepted           + stop → rejected, no LLM call
 rejected           + text → ignored
-rejected           + START→ sign-up link again → pending_signup (must re-consent)
+rejected           + START→ signed up before: accepted again (M-25); never signed up: sign-up link
 """
 
 from __future__ import annotations

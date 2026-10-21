@@ -214,7 +214,7 @@ async def test_unpay_button_reopens_and_removes_the_income(lab: Lab) -> None:
     (inv,) = await _inv(lab)
     assert inv.paid_on is None and inv.income_id is None
     assert await _income(lab) == []
-    assert await lab.tap(unpay) == _t("button_gone", "pt")  # a second tap does nothing
+    assert await lab.tap(unpay) == _t("button_used", "pt")  # a second tap does nothing
 
 
 @db
@@ -227,7 +227,7 @@ async def test_undo_button_removes_only_an_open_invoice(lab: Lab) -> None:
     await lab.say("fatura nº 2 para Acme 100")
     undo2 = lab.buttons[-1][0][0]
     await lab.say("fatura 2 paga")
-    assert await lab.tap(undo2) == _t("button_gone", "pt")  # paid: use the unpay button instead
+    assert await lab.tap(undo2) == _t("button_used", "pt")  # paid: use the unpay button instead
     assert len(await _inv(lab)) == 1
 
 

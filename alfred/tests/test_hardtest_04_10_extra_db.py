@@ -100,11 +100,11 @@ async def test_every_expense_confirmation_carries_a_month_total(lab: Lab):
         "days_ago": 0,
     }
     lab.expense.return_value = item
-    first = await lab.say("jumbo 12")  # first of its category: month total of everything
-    assert "12,00" in first and "No mês" in first
+    first = await lab.say("jumbo 12")  # first of its category: the day's total (M-12, 20/10)
+    assert "12,00" in first and "Hoje você já gastou" in first
     lab.expense.return_value = {**item, "amount": 8.0, "merchant": "Albert Heijn"}
     second = await lab.say("albert heijn 8")  # second of the category: category total
     assert "20,00" in second
     lab.expense.return_value = {**item, "amount": 5.0, "merchant": "Cinema", "category": "overig"}
-    third = await lab.say("cinema 5")  # unknown category: month total, not nothing
-    assert "25,00" in third and "No mês" in third
+    third = await lab.say("cinema 5")  # unknown category: the day's total, not nothing
+    assert "25,00" in third and "Hoje você já gastou" in third

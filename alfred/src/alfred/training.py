@@ -68,7 +68,8 @@ _TODAY = {
     "whats my workout today", "what is my workout today", "training vandaag",
     "mijn training van vandaag", "training van vandaag", "entrainement du jour",
     "mon entrainement daujourdhui", "entrainement daujourdhui", "training heute",
-    "mein training heute", "heutiges training",
+    "mein training heute", "heutiges training", "plano de treino de hoje", "plano de hoje",
+    "meu plano de hoje", "treino do dia", "plano do dia", "training plan today",
 }  # fmt: skip
 
 _KG = r"(\d{1,3}(?:[.,]\d{1,2})?)\s*kg"
@@ -90,6 +91,15 @@ _EVOLUTION = [
     re.compile(r"^evolution\s+(?:du\s+|de\s+la\s+|de\s+l\s*|des\s+|de\s+)?(.+)$"),
     re.compile(r"^(?:fortschritt|entwicklung)\s+(?:bei\s+|beim\s+|von\s+|im\s+)?(.+)$"),
 ]
+# B-033 / B-036: "peso corporal 75 kg" is body weight, "evolução dos gastos" is money
+_NOT_EXERCISE = re.compile(
+    r"^(?:corporal|corpo|do corpo|meu|minha|body|lichaam|corps|korper|koerper|"
+    r"dos gastos|das despesas|gastos|despesas|saldo|receitas|do saldo|das receitas|"
+    r"spending|expenses|uitgaven|depenses|ausgaben)\b"
+)
+# B-035: "carga supino 62" (no kg) — say how to write it instead of the expense fallback
+_LOAD_NO_UNIT = re.compile(r"^(?:carga|load|gewicht|charge)\s+(.+?)\s+(\d{1,3}(?:[.,]\d{1,2})?)$")
+_WHEN_WORDS = {"amanha", "hoje", "tomorrow", "today", "morgen", "vandaag", "demain", "heute"}
 _DAYS_RX = "|".join(sorted(WEEKDAYS, key=len, reverse=True))
 _EDIT = re.compile(
     r"^(?:troca|trocar|muda|mudar|altera|alterar|ajusta|ajustar|change|set|update|adjust|wijzig|"
@@ -97,6 +107,13 @@ _EDIT = re.compile(
     r"(?:o |a |os |as |the |de |het |le |la |l|les |den |die |das |dem )?"
     rf"(?P<name>.+?)\s+(?:de|da|do|on|op|le|am|em|no|na|du|von|vom|an|at|for|voor|pour|fur|auf)\s+"
     rf"(?P<day>{_DAYS_RX})\s+(?:para|pra|to|naar|en|zu|auf|a)\s+(?P<spec>.+)$"
+)
+# "troca o supino para 62 kg" without the day: ask the day (it fell into the weight guard)
+_EDIT_NO_DAY = re.compile(
+    r"^(?:troca|trocar|muda|mudar|altera|alterar|ajusta|ajustar|change|set|update|adjust|wijzig|"
+    r"verander|modifie|modifier|aendere|andere)\s+"
+    r"(?:o |a |os |as |the |de |het |le |la |les |den |die |das |dem )?"
+    r"(?P<name>[a-z][a-z ]{1,40}?)\s+(?:para|pra|to|naar|en|zu|auf|a)\s+(?P<spec>.+)$"
 )
 _EDIT_SPEC = re.compile(
     r"^(?:(?P<sets>\d{1,2})\s*[x×]\s*(?P<reps>\d{1,3}(?:\s*-\s*\d{1,3})?))?"
@@ -387,6 +404,9 @@ async def handle_training_command(
     if m := _EDIT.match(flat):
         spec = _EDIT_SPEC.match(m.group("spec").strip())
         if spec is None or not any(spec.groupdict().values()):
+            spec_words = set(m.group("spec").split())
+            if spec_words & set(WEEKDAYS) or spec_words & _WHEN_WORDS:
+                return None  # A-41: "muda a reunião de segunda para sexta" is the agenda's
             return Reply(_t("plan_edit_bad", lang))
         return await _edit_plan(
             _display_name(body, flat, m, "name"),
@@ -399,6 +419,8 @@ async def handle_training_command(
 
     for pattern, ex_g, kg_g in _LOAD:
         if m := pattern.match(flat):
+            if _NOT_EXERCISE.match(m.group(ex_g)):
+                return None  # body weight: the health handler says it is not tracked yet
             kg = _kg(m.group(kg_g))
             if kg is None:
                 return Reply(_t("load_bad", lang))
@@ -406,7 +428,15 @@ async def handle_training_command(
             return Reply(await _log_load(name, kg, member, lang, session))
     for pattern in _EVOLUTION:
         if m := pattern.match(flat):
+            if _NOT_EXERCISE.match(m.group(1)):
+                return None  # "evolução dos gastos" is a money question
             return Reply(await _evolution(_display_name(body, flat, m, 1), member, lang, session))
+    if m := _LOAD_NO_UNIT.match(flat):
+        return Reply(_t("load_needs_kg", lang, name=_display_name(body, flat, m, 1), n=m.group(2)))
+    if m := _EDIT_NO_DAY.match(flat):
+        spec = _EDIT_SPEC.match(m.group("spec").strip())
+        if spec is not None and any(spec.groupdict().values()):
+            return Reply(_t("plan_edit_which_day", lang, name=_display_name(body, flat, m, "name")))
     return None
 
 
@@ -489,7 +519,7 @@ async def handle_training_button(
         if row.expires_at < now_local():
             await session.delete(row)
             return Reply(_t("plan_expired", lang))
-        return Reply(_t("plan_adjust_help", lang), _buttons(draft_id, lang)[::2])
+        return Reply(_t("plan_adjust_help", lang))  # M-19: buttons come with the next preview
     # atomic take: a second tap finds nothing
     taken = (
         await session.execute(
@@ -718,8 +748,10 @@ async def _edit_plan(
         .order_by(PendingAction.created_at.desc())
     )
     if draft is not None and draft.expires_at < now_local():
-        await session.delete(draft)
-        return Reply(_t("plan_expired", lang))
+        await session.delete(draft)  # A-62: a forgotten draft no longer catches the edit
+        draft = None
+        if await _active_plan(session, member.id) is None:
+            return Reply(_t("plan_expired", lang))
 
     if draft is not None:
         days = copy.deepcopy(draft.payload["days"])  # a new object, so the JSONB change is flushed
@@ -928,6 +960,20 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "There's no workout in your plan for today ({day}). Rest up.",
         "Pas d'entraînement prévu aujourd'hui ({day}). Repose-toi.",
         "Für heute ({day}) steht kein Training in deinem Plan. Ruh dich aus.",
+    ),
+    "load_needs_kg": _all(
+        "Para anotar a carga, inclua o kg: “carga {name} {n} kg”.",
+        "Zet er kg bij om het gewicht te noteren: “gewicht {name} {n} kg”.",
+        "Add kg to log the load: “load {name} {n} kg”.",
+        "Ajoute kg pour noter la charge : « charge {name} {n} kg ».",
+        "Gib kg an, um das Gewicht zu notieren: „gewicht {name} {n} kg“.",
+    ),
+    "plan_edit_which_day": _all(
+        "De qual dia do plano? Por exemplo: “troca o {name} de segunda para 62 kg”.",
+        "Welke dag van het schema? Bijvoorbeeld: “wijzig {name} op maandag naar 62 kg”.",
+        "Which day of the plan? For example: “change {name} on monday to 62 kg”.",
+        "Quel jour du programme ? Par exemple : « modifie {name} le lundi à 62 kg ».",
+        "Welcher Tag im Plan? Zum Beispiel: „ändere {name} am montag auf 62 kg“.",
     ),
     "load_bad": _all(
         "Não entendi a carga. Exemplo: “carga supino 62 kg”.",

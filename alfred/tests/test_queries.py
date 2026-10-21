@@ -128,7 +128,7 @@ async def test_build_summary_empty_returns_message():
     member = _make_member()
     session = _mock_session(records=[])
     result = await _build_summary(member, session)
-    assert "registros" in result or "nada este mês" in result
+    assert result.startswith("Não encontrei nenhum lançamento em ") and "(" not in result
 
 
 @pytest.mark.asyncio
@@ -146,7 +146,7 @@ async def test_build_summary_last_month():
     member = _make_member()
     session = _mock_session(records=[])
     result = await _build_summary(member, session, period="last_month")
-    assert "registros" in result or "nada este mês" in result
+    assert result.startswith("Não encontrei nenhum lançamento em ") and "(" not in result
 
 
 @pytest.mark.asyncio

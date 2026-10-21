@@ -139,6 +139,23 @@ def parse_contract(text: str, today: date) -> dict | None:
     return {"kind": kind, "provider": provider, "amount": amount, "ends_on": ends}
 
 
+def _why_bad(text: str, today: date) -> str:
+    """B-048 / F14-34: say what is missing instead of one generic "não entendi"."""
+    m = _CREATE.match(unicodedata.normalize("NFC", " ".join(text.split()).strip(" !?")))
+    until = _UNTIL.match(m.group("rest")) if m else None
+    if until is None:
+        return "home_need_end"
+    dm = _DATE.match(until.group("date").strip(" .!?"))
+    if dm and dm.group(3):
+        try:
+            yy = int(dm.group(3))
+            if date(yy + 2000 if yy < 100 else yy, int(dm.group(2)), int(dm.group(1))) < today:
+                return "home_past"
+        except ValueError:
+            pass
+    return "home_bad"
+
+
 def contract_from_reading(reading: dict, today: date) -> dict | None:
     """Fields from what the model read on a contract; everything is checked here."""
     provider = _text(reading.get("provider"), 60)
@@ -254,7 +271,7 @@ async def handle_home_command(
     if _CREATE.match(unicodedata.normalize("NFC", " ".join(raw.split()).strip(" !?"))):
         fields = parse_contract(raw, today)
         if fields is None:
-            return Reply(_t("home_bad", lang))
+            return Reply(_t(_why_bad(raw, today), lang))
         return await _create_draft(fields, member, lang, session, today)
     if m := _RENEW.match(plain):
         ends = _parse_end(m.group("date"), today)
@@ -303,20 +320,34 @@ async def handle_home_button(
     try:
         rec_id = uuid.UUID(raw_id)
     except ValueError:
-        return Reply(_t("button_gone", lang))
+        return Reply(_t("button_used", lang))
     rec = await session.scalar(
         select(HomeContract)
         .where(HomeContract.id == rec_id, HomeContract.member_id == member.id)
         .with_for_update()
     )
     if rec is None or rec.status != "draft":
-        return Reply(_t("button_gone", lang))
+        return Reply(_t("button_used", lang))
     if action == "home_no":
         await session.delete(rec)
         return Reply(_t("home_cancelled", lang))
     if rec.created_at < datetime.now(UTC) - DRAFT_TTL:
         await session.delete(rec)
         return Reply(_t("home_expired", lang))
+    old_rows = (
+        (
+            await session.execute(
+                select(HomeContract).where(
+                    HomeContract.member_id == member.id,
+                    HomeContract.kind == rec.kind,
+                    HomeContract.status == "active",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    replaced = ", ".join(r.provider for r in old_rows)
     await session.execute(
         delete(HomeContract).where(
             HomeContract.member_id == member.id,
@@ -327,7 +358,10 @@ async def handle_home_button(
     rec.status = "active"
     session.add(rec)
     audit(session, "home_contract_saved", member.id)
-    return Reply(_t("home_saved", lang, line=_line(rec, lang, today)))
+    text = _t("home_saved", lang, line=_line(rec, lang, today))
+    if replaced:  # M-22: the old one of the same type is gone; say so
+        text += "\n" + _t("home_replaced", lang, old=replaced)
+    return Reply(text)
 
 
 # ── cron side ────────────────────────────────────────────────────────────────
@@ -454,6 +488,27 @@ STRINGS: dict[str, dict[str, str]] = {
         "You already have {n} contracts saved, the maximum. Delete one first.",
         "Tu as déjà {n} contrats enregistrés, le maximum. Supprime-en un d'abord.",
         "Du hast bereits {n} Verträge gespeichert, das Maximum. Lösche zuerst einen.",
+    ),
+    "home_replaced": _all5(
+        "Ele substitui o contrato anterior do mesmo tipo ({old}).",
+        "Het vervangt het vorige contract van dit type ({old}).",
+        "It replaces your previous contract of this type ({old}).",
+        "Il remplace ton contrat précédent du même type ({old}).",
+        "Er ersetzt deinen bisherigen Vertrag dieser Art ({old}).",
+    ),
+    "home_past": _all5(
+        "Essa data de fim já passou. Mande a data em que o contrato termina, por exemplo *até 31/12/2027*.",
+        "Die einddatum is al voorbij. Stuur de datum waarop het contract afloopt, bijvoorbeeld *tot 31/12/2027*.",
+        "That end date has already passed. Send the date the contract ends, for example *until 31/12/2027*.",
+        "Cette date de fin est déjà passée. Envoie la date de fin du contrat, par ex. *jusqu'au 31/12/2027*.",
+        "Dieses Enddatum ist schon vorbei. Schick das Datum, an dem der Vertrag endet, z. B. *bis 31/12/2027*.",
+    ),
+    "home_need_end": _all5(
+        "Até quando vale o contrato? Mande de novo com a data de fim, por exemplo *contrato energia Vattenfall 120 por mês até 31/12/2027*.",
+        "Tot wanneer loopt het contract? Stuur het opnieuw met de einddatum, bijvoorbeeld *contract energie Vattenfall 120 per maand tot 31/12/2027*.",
+        "Until when does the contract run? Send it again with the end date, for example *contract energy Vattenfall 120 a month until 31/12/2027*.",
+        "Jusqu'à quand court le contrat ? Renvoie-le avec la date de fin, par ex. *contrat énergie Vattenfall 120 par mois jusqu'au 31/12/2027*.",
+        "Bis wann läuft der Vertrag? Schick es noch einmal mit dem Enddatum, z. B. *vertrag strom Vattenfall 120 im Monat bis 31/12/2027*.",
     ),
     "home_bad": _all5(
         "Não entendi. Preciso do tipo (energia, gás ou internet), do fornecedor e da data de fim, por exemplo *contrato energia Vattenfall 120 por mês até 31/12/2027*.",

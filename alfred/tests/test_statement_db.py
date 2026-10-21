@@ -58,7 +58,9 @@ async def test_preview_counts_and_nothing_is_written_before_the_tap(lab: Lab) ->
     assert ids == ["imp_ok", "imp_no"]
     assert len(lab.buttons[-1][0][1]) <= 20 and len(lab.buttons[-1][1][1]) <= 20
     assert await _expenses(lab) == []
-    assert "overig" in reply  # the unknown shop is flagged
+    assert (
+        "*Outros*" in reply and "overig" not in reply
+    )  # flagged, in words the member reads (A-55)
 
 
 @db
@@ -170,7 +172,9 @@ async def test_a_different_amount_or_name_is_not_a_possible_duplicate(lab: Lab) 
             )
         )
     reply = await lab.doc("extrato.csv", ING)
-    assert "Novas: 3" in reply and "Possíveis duplicados" not in reply
+    # a different amount is never a duplicate; the same amount on the same day under another
+    # name ("Kapper" typed, "Albert Heijn" on the bank line) is now a *possible* one (A-38)
+    assert "Novas: 2" in reply and "Possíveis duplicados de lançamentos seus: 1" in reply
 
 
 # ── cancel, expire, ownership ─────────────────────────────────────────────────

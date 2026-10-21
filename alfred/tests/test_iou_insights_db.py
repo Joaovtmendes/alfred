@@ -110,7 +110,7 @@ async def test_month_vs_month_with_rises_and_new_categories(lab: Lab) -> None:
     )
     reply = await lab.say("mês contra mês por categoria")
     assert "Restaurante: €100,00 · €40,00 (+150%)" in reply
-    assert "Kleding" in reply or "Vestuário" in reply
+    assert "Kleding" in reply or "Roupas" in reply
     assert "(novo)" in reply  # clothing had nothing last month
     rises = reply.splitlines()[-1]
     assert rises.startswith("Maiores altas:") and rises.count("(+") == 2
@@ -151,9 +151,9 @@ async def _ious(lab: Lab) -> list[Iou]:
 @db
 async def test_create_both_directions_and_list(lab: Lab) -> None:
     assert "Pedro te deve €25,00" in await lab.say("Pedro me deve 25")
-    assert "Total do Pedro: €35,00" in await lab.say("pedro me deve 10 do almoço")
-    assert "você deve €40,00 ao Lucas" in await lab.say("devo 40 pro Lucas")
-    assert "você deve €5,00 ao Ana" in await lab.say("devo ao Ana 5")
+    assert "Total de Pedro: €35,00" in await lab.say("pedro me deve 10 do almoço")
+    assert "você deve €40,00 para Lucas" in await lab.say("devo 40 pro Lucas")
+    assert "você deve €5,00 para Ana" in await lab.say("devo ao Ana 5")
     owed = await lab.say("quem me deve")
     assert "Te devem €35,00" in owed and "• Pedro: €25,00" in owed and "· almoço" in owed
     owe = await lab.say("o que eu devo")
@@ -240,7 +240,7 @@ async def test_i_paid_and_the_fixed_bills_handler_still_gets_its_message(lab: La
 @db
 async def test_invalid_amounts_and_ordinary_messages(lab: Lab) -> None:
     assert "Não entendi o valor" in await lab.say("Pedro me deve 0")
-    assert "Não entendi o valor" in await lab.say("Pedro me deve 2000000")
+    assert "Não entendi o valor" in await lab.say("Pedro me deve 200000000")  # above MAX_AMOUNT
     assert await lab.say("gastei 25 com o Pedro") == "[llm]"
     assert await lab.say("quem pagou a conta?") == "[llm]"
     assert await _ious(lab) == []

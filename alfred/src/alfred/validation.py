@@ -34,7 +34,8 @@ HEALTH_TYPES = frozenset({"medication", "mood", "sleep", "water"})
 QUERY_TYPES = frozenset({"balance", "category", "period", "comparison"})
 PERIODS = frozenset({"today", "current_month", "last_month", "current_week", "last_week"})
 
-MAX_AMOUNT = 1_000_000.0  # one message cannot move a million euros
+# M-06: no practical cap (a big value asks "está certo?"); still fits NUMERIC(12,2)
+MAX_AMOUNT = 99_999_999.0
 MAX_DAYS_AGO = 366
 MAX_TEXT = 255  # matches the String(255) columns
 MAX_NOTES = 500

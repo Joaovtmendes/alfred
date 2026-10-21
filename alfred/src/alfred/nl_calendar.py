@@ -52,6 +52,9 @@ _LIST = {
     "dutch calendar", "important dates", "termijnen", "belangrijke data", "belangrijke datums",
     "nederlandse deadlines", "echeances", "echeances pays-bas", "dates importantes",
     "fristen", "niederlande fristen", "wichtige termine", "wichtige fristen",
+    "quais sao os prazos", "quais os prazos", "que prazos tenho", "meus prazos", "os prazos",
+    "which deadlines", "what are the deadlines", "welke deadlines", "quelles echeances",
+    "welche fristen",
 }  # fmt: skip
 _REM = re.compile(
     r"(?:avisos?|lembretes?|reminders?|herinneringen?|rappels?|erinnerungen?)\s+(?:de |of |van |des |der |von |do |dos )?(?:prazos|deadlines|termijnen|echeances|fristen)"
@@ -145,12 +148,28 @@ def topic_text(topic: str, lang: str, today: date) -> str:
     return _t("cal_btw", lang, d=_d(d), n=_days(d, today))
 
 
-def overview(lang: str, today: date) -> str:
+def overview(lang: str, today: date, *, hint: bool = True) -> str:
     parts = [_t("cal_title", lang)]
     parts += [f"• {topic_text(t, lang, today)}" for t in ("health", "tax", "btw")]
-    parts.append(f"• {_t('cal_tikkie', lang)}")
-    parts.append("\n" + _t("cal_hint", lang))
+    if hint:  # M-23: Tikkie left the list (it has no deadline); the closing line is plainer
+        parts.append("\n" + _t("cal_hint", lang))
     return "\n".join(parts)
+
+
+def _hint_buttons(lang: str) -> list[tuple[str, str]]:
+    return [("cal_on:0", _t("btn_cal_on", lang)), ("cal_no:0", _t("btn_cal_no", lang))]
+
+
+async def handle_calendar_button(
+    action: str, member: Member, lang: str, session: AsyncSession
+) -> str:
+    """[Ligar avisos] / [Agora não] under the deadline overview."""
+    if action == "cal_no":
+        return _t("cal_not_now", lang)
+    if await _optin(session, member) is None:
+        session.add(CalendarOptIn(member_id=member.id, sent_keys=""))
+        audit(session, "calendar_optin", member.id)
+    return _t("cal_on", lang)
 
 
 def _event_text(ev: Event, lang: str, today: date) -> str:
@@ -193,11 +212,20 @@ async def handle_calendar_command(
                 audit(session, "calendar_optin", member.id)
             return Reply(_t("cal_on", lang))
         return Reply(_t("cal_status_on" if row is not None else "cal_status_off", lang))
+    row = None
+    if plain in _LIST or _topic_of(plain) is not None:
+        row = await _optin(session, member)
     if plain in _LIST:
-        return Reply(overview(lang, today))
+        if row is not None:  # already on: no question to ask
+            return Reply(overview(lang, today, hint=False))
+        return Reply(overview(lang, today), _hint_buttons(lang))
     topic = _topic_of(plain)
     if topic is not None:
-        return Reply(topic_text(topic, lang, today) + "\n\n" + _t("cal_hint", lang))
+        if row is not None:
+            return Reply(topic_text(topic, lang, today))
+        return Reply(
+            topic_text(topic, lang, today) + "\n\n" + _t("cal_hint", lang), _hint_buttons(lang)
+        )
     if _TIKKIE.search(plain) and re.search(_INTENT, plain):
         return Reply(_t("cal_tikkie", lang))
     return None
@@ -303,11 +331,20 @@ STRINGS: dict[str, dict[str, str]] = {
         "Tikkie: Es gibt keine offizielle Frist; die App erinnert den Absender erst nach 1 Woche ohne Antwort. Sag 'wer schuldet mir', dann bereite ich den Text zum Kopieren vor.",
     ),
     "cal_hint": _all5(
-        "Quer receber avisos? Diga 'ligar avisos de prazos'. São datas de fontes oficiais; confira na fonte antes de decidir. Não é aconselhamento.",
-        "Wil je herinneringen? Zeg 'zet herinneringen deadlines aan'. Dit zijn data uit officiële bronnen; controleer ze bij de bron. Geen advies.",
-        "Want reminders? Say 'turn on deadline reminders'. These are dates from official sources; check the source before deciding. Not advice.",
-        "Des rappels ? Dis 'activer rappels échéances'. Ce sont des dates de sources officielles ; vérifie à la source. Ce n'est pas un conseil.",
-        "Erinnerungen? Sag 'Erinnerungen Fristen einschalten'. Das sind Daten aus offiziellen Quellen; bitte an der Quelle prüfen. Keine Beratung.",
+        "Quer que eu te avise quando cada prazo estiver chegando? As datas vêm de fontes oficiais, mas vale conferir na fonte antes de decidir.",
+        "Zal ik je waarschuwen als een deadline nadert? De data komen uit officiële bronnen; controleer ze wel even bij de bron.",
+        "Shall I remind you when each deadline is coming up? The dates come from official sources, but check the source before you decide.",
+        "Tu veux que je te prévienne quand chaque échéance approche ? Les dates viennent de sources officielles, mais vérifie à la source avant de décider.",
+        "Soll ich dich erinnern, wenn eine Frist näher rückt? Die Daten stammen aus offiziellen Quellen; prüf sie trotzdem an der Quelle.",
+    ),
+    "btn_cal_on": _all5("Avisar", "Waarschuw me", "Remind me", "Préviens-moi", "Erinnern"),
+    "btn_cal_no": _all5("Agora não", "Nu niet", "Not now", "Pas maintenant", "Nicht jetzt"),
+    "cal_not_now": _all5(
+        "Tudo bem. Se mudar de ideia, diga 'ligar avisos de prazos'.",
+        "Prima. Bedenk je je, zeg dan 'zet herinneringen deadlines aan'.",
+        "No problem. If you change your mind, say 'turn on deadline reminders'.",
+        "Pas de souci. Si tu changes d'avis, dis 'activer rappels échéances'.",
+        "Kein Problem. Wenn du es dir anders überlegst, sag 'Erinnerungen Fristen einschalten'.",
     ),
     "cal_on": _all5(
         "Pronto: vou avisar sobre seguro-saúde (novembro e dezembro), declaração de imposto (fim de abril) e BTW trimestral (10 dias antes). Para desligar, diga 'desligar avisos de prazos'.",
