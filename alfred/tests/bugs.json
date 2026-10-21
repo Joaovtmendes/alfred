@@ -1649,6 +1649,28 @@
       "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-070",
+      "title": "'paguei gas' sem valor perguntava 'Quanto foi?' mas o '75' seguinte virava 'Não consegui anotar nada'",
+      "severity": "media",
+      "area": "despesas",
+      "step": "print do WhatsApp 21/10",
+      "status": "fixed",
+      "source": "Print enviado pelo usuário 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-071",
+      "title": "'isso é transporte' mudava a categoria de um comércio antigo (Padaria) em vez do item de que se falava",
+      "severity": "media",
+      "area": "despesas",
+      "step": "print do WhatsApp 21/10",
+      "status": "fixed",
+      "source": "Print enviado pelo usuário 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }
