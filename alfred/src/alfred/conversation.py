@@ -22,7 +22,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
-from alfred import balance_view, bills, questions
+from alfred import balance_view, bills, budgets, questions
 from alfred import goals as goals_view
 from alfred import google_calendar as _gcal
 from alfred.accounting import STRINGS as _ACCT_STRINGS
@@ -4678,8 +4678,10 @@ async def handle_flow_onboarding(
 
 
 async def _send_reply(to: str, reply) -> None:
-    """Send a ``Reply``: buttons (or a list when there are more than three) or plain text."""
-    if reply.buttons:
+    """Send a ``Reply`` (or a plain str): buttons (a list above three) or plain text."""
+    if isinstance(reply, str):
+        await send_text(to, reply)
+    elif reply.buttons:
         await send_buttons(to, reply.text, reply.buttons)
     else:
         await send_text(to, reply.text)
@@ -5537,8 +5539,12 @@ async def handle_inbound(
         # 4e-0f. V2-01 — budgets: "orçamento mercado 400" / "meus orçamentos" / "tira o orçamento de lazer"
         budget_reply = await handle_budget_command(body_plain, member, lang, session)
         if budget_reply is not None:
-            await send_text(to, budget_reply)
-            await _save_outbound(member, budget_reply, session)
+            await _send_reply(to, budget_reply)
+            await _save_outbound(
+                member,
+                budget_reply.text if hasattr(budget_reply, "text") else budget_reply,
+                session,
+            )
             return
 
         # 4e-0h. V2-04 — resumo mensal: "resumo mensal" / "sem resumo mensal" / "ativar resumo mensal"
@@ -7144,6 +7150,7 @@ async def handle_inbound(
                 **({"status": pending_status} if pending_status else {}),
             )
             session.add(expense)
+            limit_q = None
 
             name = (
                 expense_data["merchant"]
@@ -7171,9 +7178,14 @@ async def handle_inbound(
                 reply += await _month_category_context(
                     session, member, expense_date, expense_data.get("category"), lang
                 )
-                reply += await alert_after_expense(
+                alert_text = await alert_after_expense(
                     session, member, expense_data.get("category"), expense_date, lang
                 )
+                reply += alert_text
+                if alert_text:  # F06-31: at 100 % offer to raise the limit (second message)
+                    limit_q = await budgets.limit_question(
+                        session, member, expense_data.get("category"), lang
+                    )
             # BUG-07 fix: show cumulative trip total when expense tagged to trip
             if active_trip and txn_type == "expense":
                 from sqlalchemy import func as sa_func
@@ -7230,6 +7242,9 @@ async def handle_inbound(
                 expense_buttons.append((f"home:{expense.id}", _t("btn_home", lang)))
             await send_buttons(to, reply, expense_buttons)
             await _save_outbound(member, reply, session)
+            if limit_q is not None:
+                await _send_reply(to, limit_q)
+                await _save_outbound(member, limit_q.text, session)
             logger.info(
                 "conversation.expense_recorded",
                 member_id=str(member.id),

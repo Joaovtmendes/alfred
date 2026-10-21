@@ -18,8 +18,10 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alfred import questions
 from alfred.audit import audit
 from alfred.clock import month_start, to_local, today_local
+from alfred.couple import Reply
 from alfred.labels import _LABELS, category_label
 from alfred.models import SETTLED, Budget, Expense, Member
 from alfred.parsing import strip_accents, to_amount
@@ -244,9 +246,9 @@ async def alerts_for_categories(
 
 async def handle_budget_command(
     body_plain: str, member: Member, lang: str, session: AsyncSession
-) -> str | None:
+) -> str | Reply | None:
     """Reply for "orçamento mercado 400" / "meus orçamentos" / "tira o orçamento de lazer"."""
-    from alfred.conversation import _fmt_eur, _t
+    from alfred.conversation import _t
 
     if is_list_request(body_plain):
         return await _list(member, lang, session)
@@ -270,7 +272,15 @@ async def handle_budget_command(
     raw_cat, amount = parsed
     cat = resolve_category(raw_cat)
     if cat is None:
-        return _unknown(lang)
+        return await _ask_new_category(session, member, lang, raw_cat, amount)
+    return await _apply_budget(session, member, lang, cat, amount)
+
+
+async def _apply_budget(
+    session: AsyncSession, member: Member, lang: str, cat: str, amount: float
+) -> str:
+    from alfred.conversation import _fmt_eur, _t
+
     existing = await session.scalar(
         select(Budget).where(Budget.member_id == member.id, Budget.category == cat)
     )
@@ -447,3 +457,158 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": " In diesem Tempo landest du am Monatsende bei ~{proj}.",
     },
 }
+
+
+# ── F06-04: unknown category → offer to create it ────────────────────────────
+
+STRINGS.update(
+    {
+        "budget_new_cat_ask": {
+            "pt": "Não conheço a categoria *{cat}*. Quer criar {cat} com limite de {limit} por mês?",
+            "nl": "Ik ken de categorie *{cat}* niet. Wil je {cat} aanmaken met een limiet van {limit} per maand?",
+            "en": "I don't know the category *{cat}*. Create {cat} with a limit of {limit} a month?",
+            "fr": "Je ne connais pas la catégorie *{cat}*. Créer {cat} avec une limite de {limit} par mois ?",
+            "de": "Die Kategorie *{cat}* kenne ich nicht. {cat} mit einem Limit von {limit} pro Monat anlegen?",
+        },
+        "btn_create_cat": {
+            "pt": "Criar categoria",
+            "nl": "Aanmaken",
+            "en": "Create it",
+            "fr": "Créer",
+            "de": "Anlegen",
+        },
+        "btn_pick_cat": {
+            "pt": "Ver categorias",
+            "nl": "Categorieën",
+            "en": "See categories",
+            "fr": "Catégories",
+            "de": "Kategorien",
+        },
+        "budget_alert_ask": {
+            "pt": "Quer aumentar o limite de {cat}? Toque numa opção ou diga o novo valor.",
+            "nl": "Wil je de limiet voor {cat} verhogen? Kies een optie of typ het nieuwe bedrag.",
+            "en": "Raise the {cat} limit? Tap an option or type the new amount.",
+            "fr": "Augmenter la limite de {cat} ? Choisis une option ou écris le nouveau montant.",
+            "de": "Das Limit für {cat} erhöhen? Tippe eine Option oder schreibe den neuen Betrag.",
+        },
+        "btn_limit_ok": {"pt": "Ok", "nl": "Ok", "en": "Ok", "fr": "Ok", "de": "Ok"},
+        "budget_limit_raised": {
+            "pt": "Limite de *{cat}* agora é {limit} por mês.",
+            "nl": "De limiet voor *{cat}* is nu {limit} per maand.",
+            "en": "The *{cat}* limit is now {limit} a month.",
+            "fr": "La limite de *{cat}* est maintenant de {limit} par mois.",
+            "de": "Das Limit für *{cat}* beträgt jetzt {limit} pro Monat.",
+        },
+        "budget_kept": {
+            "pt": "Certo, deixei como está.",
+            "nl": "Prima, ik laat het zoals het is.",
+            "en": "Okay, left as it is.",
+            "fr": "D'accord, je laisse comme ça.",
+            "de": "Okay, ich lasse es so.",
+        },
+    }
+)
+
+
+def _slug(raw: str) -> str:
+    return re.sub(r"\s+", " ", _norm(raw)).strip(" .!?")[:40]
+
+
+async def _ask_new_category(
+    session: AsyncSession, member: Member, lang: str, raw_cat: str, amount: float
+) -> Reply | str:
+    from alfred.conversation import _fmt_eur, _t
+
+    slug = _slug(raw_cat)
+    if not slug or len(slug) < 2:
+        return _unknown(lang)
+    return await questions.ask(
+        session,
+        member,
+        "budget_new_cat",
+        {"slug": slug, "amount": amount, "yes_no": True},
+        _t("budget_new_cat_ask", lang, cat=slug.capitalize(), limit=_fmt_eur(amount)),
+        [("yes", _t("btn_create_cat", lang)), ("list", _t("btn_pick_cat", lang))],
+    )
+
+
+async def _on_new_category(session, member, lang, data, choice, today):
+    if choice == "yes":
+        return Reply(
+            await _apply_budget(session, member, lang, data["slug"], float(data["amount"])), []
+        )
+    return Reply(_unknown(lang), [])
+
+
+async def limit_question(
+    session: AsyncSession, member: Member, category: str | None, lang: str
+) -> Reply | None:
+    """F06-31: right after a 100 % alert, offer to raise the limit (+10 % / +20 % / a value)."""
+    from alfred.conversation import _t
+
+    if not category:
+        return None
+    budget = await session.scalar(
+        select(Budget).where(Budget.member_id == member.id, Budget.category == category)
+    )
+    if budget is None or budget.last_alert_level != 100:
+        return None
+    return await questions.ask(
+        session,
+        member,
+        "budget_limit",
+        {"category": category},
+        _t("budget_alert_ask", lang, cat=category_label(category, lang)),
+        [("up10", "+10%"), ("up20", "+20%"), ("ok", _t("btn_limit_ok", lang))],
+    )
+
+
+def _parse_limit(text: str, data: dict) -> str | None:
+    plain = re.sub(r"\s+", " ", _norm(text)).strip(" .!?")
+    if plain in ("ok", "nao", "no", "nee", "non", "nein"):
+        return "ok"
+    # a bare number could be the next expense: it needs a "para/to" word or a euro sign
+    m = re.fullmatch(
+        r"(?:(?:para|to|naar|de|zu|limite)\s+[€]?|[€])\s*(\d[\d.,]*)\s*(?:€|eur|euros?)?"
+        r"|(\d[\d.,]*)\s*(?:€|eur|euros?)",
+        plain,
+    )
+    if not m:
+        return None
+    amount = to_amount(m.group(1) or m.group(2))
+    return f"v:{amount}" if amount and amount <= MAX_AMOUNT else None
+
+
+async def _on_limit(session, member, lang, data, choice, today):
+    from alfred.conversation import _fmt_eur, _t
+
+    if choice == "ok":
+        return Reply(_t("budget_kept", lang), [])
+    budget = await session.scalar(
+        select(Budget).where(Budget.member_id == member.id, Budget.category == data["category"])
+    )
+    if budget is None:
+        return Reply(_t("budget_kept", lang), [])
+    if choice.startswith("v:"):
+        new = float(choice[2:])
+    else:
+        factor = Decimal("1.1") if choice == "up10" else Decimal("1.2")
+        new = float((_dec(budget.monthly_limit) * factor).quantize(Decimal("1"), ROUND_HALF_UP))
+    budget.monthly_limit = new
+    budget.last_alert_level = 0
+    budget.last_alert_month = None
+    session.add(budget)
+    audit(session, "budget_set", member.id)
+    return Reply(
+        _t(
+            "budget_limit_raised",
+            lang,
+            cat=category_label(data["category"], lang),
+            limit=_fmt_eur(new),
+        ),
+        [],
+    )
+
+
+questions.register("budget_new_cat", _on_new_category)
+questions.register("budget_limit", _on_limit, _parse_limit)

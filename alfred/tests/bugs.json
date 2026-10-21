@@ -1762,6 +1762,28 @@
       "source": "Hard test 20/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-079",
+      "title": "orçamento de categoria desconhecida só listava as válidas",
+      "severity": "baixa",
+      "area": "orcamento",
+      "step": "hard test F06-04",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-080",
+      "title": "alerta de 100% do orçamento não oferecia aumentar o limite",
+      "severity": "baixa",
+      "area": "orcamento",
+      "step": "hard test F06-31",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }
