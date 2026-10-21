@@ -100,7 +100,8 @@ async def test_maiores_gastos_typed_gives_the_top_list(lab: Lab) -> None:
 async def test_saldo_says_it_is_not_the_bank_balance(lab: Lab) -> None:
     lab.expense.return_value = _exp(20, "Jumbo", "supermarkt")
     await lab.say("Jumbo 20")
-    assert "não o saldo do banco" in await lab.say("saldo")
+    await lab.say("saldo")
+    assert "não o saldo do banco" in await lab.tap(lab.buttons[-1][0][0])  # Ver detalhes (B-076)
 
 
 @db

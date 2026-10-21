@@ -228,13 +228,14 @@ async def test_saldo_command_routing(word: str) -> None:
 
     with (
         patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send,
+        patch("alfred.conversation.send_buttons", new_callable=AsyncMock) as mock_buttons,
         patch("alfred.conversation.generate_reply", new_callable=AsyncMock) as mock_llm,
         patch("alfred.conversation.extract_expense", new_callable=AsyncMock, return_value=None),
         patch("alfred.conversation.classify_query", new_callable=AsyncMock, return_value=None),
     ):
         await handle_inbound(member, message, session)
 
-    mock_send.assert_awaited_once()
+    assert mock_send.await_count + mock_buttons.await_count == 1  # short saldo + Detalhes button
     mock_llm.assert_not_awaited()
 
 

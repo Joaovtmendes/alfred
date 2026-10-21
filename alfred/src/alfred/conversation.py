@@ -22,9 +22,9 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
+from alfred import balance_view, questions
 from alfred import goals as goals_view
 from alfred import google_calendar as _gcal
-from alfred import questions
 from alfred.accounting import STRINGS as _ACCT_STRINGS
 from alfred.accounting import default_scope, handle_accounting_command
 from alfred.agenda import STRINGS as _AGENDA_STRINGS
@@ -1951,7 +1951,8 @@ _STRINGS.update(_INVOICE_STRINGS)  # V2-12 part 2
 _STRINGS.update(_SERVICE_STRINGS)  # V2-36
 _STRINGS.update(_HOME_STRINGS)  # V2-27
 _STRINGS.update(_GOALS_STRINGS)
-_STRINGS.update(questions.STRINGS)  # financial goals + week marks
+_STRINGS.update(questions.STRINGS)
+_STRINGS.update(balance_view.STRINGS)  # financial goals + week marks
 _STRINGS.update(_CAL_STRINGS)  # V2-21
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
@@ -4339,9 +4340,14 @@ async def _build_recent(
     return "\n".join(lines)
 
 
-async def _build_saldo(member: Member, session: AsyncSession, window=None) -> str:
+async def _build_saldo(
+    member: Member, session: AsyncSession, window=None, *, short: bool = False
+) -> str:
     """Income/expense balance of the current month, or of the window the text named
-    ("saldo de setembro", "saldo em 2025")."""
+    ("saldo de setembro", "saldo em 2025").
+
+    ``short`` (F05-07): only the balance (and the pending line), for the current month; the
+    detail (income, expenses, note and the month-end estimate) is one button away."""
     lang = member.language or "en"
     now = now_local()
     if window is not None and window.kind not in ("current_month",):
@@ -4378,13 +4384,17 @@ async def _build_saldo(member: Member, session: AsyncSession, window=None) -> st
     sign = "+" if balance >= 0 else "-"
 
     month_label = label or month_name(now.date(), lang, year=True)
-    lines = [
-        f"{_t('saldo_title', lang, month=month_label)}\n",
-        _t("saldo_income", lang, amount=_fmt_eur(total_in)),
-        _t("saldo_expenses", lang, amount=_fmt_eur(total_out)),
-        _t("saldo_balance", lang, sign=sign, amount=_fmt_eur(abs(balance))),
-        _t("saldo_note", lang),  # A-70: it is the period's in minus out, not the bank balance
-    ]
+    lines = [f"{_t('saldo_title', lang, month=month_label)}\n"]
+    if not (short and window is None):
+        lines += [
+            _t("saldo_income", lang, amount=_fmt_eur(total_in)),
+            _t("saldo_expenses", lang, amount=_fmt_eur(total_out)),
+        ]
+    lines.append(_t("saldo_balance", lang, sign=sign, amount=_fmt_eur(abs(balance))))
+    if not (short and window is None):
+        lines.append(_t("saldo_note", lang))  # A-70: it is the period's in minus out, not the bank
+        if window is None and (guess := balance_view.projection(total_out, now.date())):
+            lines.append(_t("saldo_projection", lang, amount=_fmt_eur(guess)))
     from alfred.ledger_status import pending_summary
 
     pend = await pending_summary(session, member.id)
@@ -4694,6 +4704,12 @@ async def _handle_button_reply(
     )
     action, _, raw_id = button_id.partition(":")
     to = member.wa_phone
+
+    if action == "bal_detail":  # F05-07: the full balance, one tap after the short one
+        reply = await _build_saldo(member, session)
+        await send_text(to, reply)
+        await _save_outbound(member, reply, session)
+        return True
 
     if action == "fu":  # an answer to a follow-up question (questions.py)
         fu_reply = await questions.on_button(session, member, lang, button_id, today_local())
@@ -5331,8 +5347,12 @@ async def handle_inbound(
 
         # 4b. Saldo command
         if _is_plain_command(body, _SALDO_WORDS) and not _SALDO_ELSEWHERE_RE.search(body_plain):
-            saldo = await _build_saldo(member, session, parse_period(body_plain, today_local()))
-            await send_text(to, saldo)
+            period = parse_period(body_plain, today_local())
+            saldo = await _build_saldo(member, session, period, short=True)
+            if period is None or period.kind == "current_month":
+                await send_buttons(to, saldo, [("bal_detail:x", _t("btn_balance_detail", lang))])
+            else:
+                await send_text(to, saldo)
             await _save_outbound(member, saldo, session)
             return
 

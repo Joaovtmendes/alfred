@@ -1729,6 +1729,17 @@
       "source": "Hard test 20/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-076",
+      "title": "'saldo' mostrava receitas, despesas, nota e previsto; só o saldo era pedido",
+      "severity": "baixa",
+      "area": "saldo",
+      "step": "hard test F05-07, F04-43",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }
