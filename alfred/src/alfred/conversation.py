@@ -4768,6 +4768,14 @@ async def _handle_button_reply(
         await _save_outbound(member, reply, session)
         return True
 
+    if action == "an_exp":  # F05-39 "Explicar" under an analysis answer
+        from alfred.analysis import explain_button
+
+        explained = await explain_button(raw_id, member, lang, session)
+        await send_text(to, explained)
+        await _save_outbound(member, explained, session)
+        return True
+
     if action in ("dd_cat", "dd_top", "dd_bud"):  # V2-20 go deeper after a spending answer
         deeper_text = await handle_deeper_button(action, raw_id, member, lang, session)
         await send_text(to, deeper_text)
@@ -7343,8 +7351,11 @@ async def handle_inbound(
                 message.body or "", body_plain, member, lang, session
             )
             if analysis_first is not None:
-                await send_text(to, analysis_first)
-                await _save_outbound(member, analysis_first, session)
+                if analysis_first.buttons:  # F05-39
+                    await send_buttons(to, analysis_first.text, analysis_first.buttons)
+                else:
+                    await send_text(to, analysis_first.text)
+                await _save_outbound(member, analysis_first.text, session)
                 return
 
         # 4f. Try to classify as a financial query
@@ -7396,8 +7407,11 @@ async def handle_inbound(
             message.body or "", body_plain, member, lang, session
         )
         if analysis_reply is not None:
-            await send_text(to, analysis_reply)  # M-10: no 👍/👎 buttons any more
-            await _save_outbound(member, analysis_reply, session)
+            if analysis_reply.buttons:  # F05-39: "Explicar" (M-10: still no 👍/👎)
+                await send_buttons(to, analysis_reply.text, analysis_reply.buttons)
+            else:
+                await send_text(to, analysis_reply.text)
+            await _save_outbound(member, analysis_reply.text, session)
             return
 
             # 4g. General LLM reply with conversation history

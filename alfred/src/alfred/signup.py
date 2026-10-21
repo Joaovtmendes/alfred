@@ -520,7 +520,7 @@ def render_form(
         f'<div class="me">{escape(c[2])}</div><div>{escape(c[3])}</div><small>{escape(c[4])}</small></div>'
     )
     form = (
-        f'<form method="post" action="/cadastro/{escape(token)}" autocomplete="off">'
+        f'<form method="post" action="/cadastro/{escape(token)}" autocomplete="off" novalidate>'
         f"<h2>{escape(p['form_h'])}</h2>"
         f'<div class="f"><label class="l" for="n">{escape(p["name"])}</label>'
         f'<input id="n" type="text" name="name" maxlength="40" required value="{escape(name)}" autocomplete="given-name"{_bad("err_name")}>'
