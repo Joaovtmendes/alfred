@@ -1971,6 +1971,61 @@
       "source": "Hard test 20/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-098",
+      "title": "vários comprovantes seguidos substituíam o rascunho anterior; export xlsx não existia",
+      "severity": "media",
+      "area": "documentos",
+      "step": "hard test F13-10/F19-01",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-099",
+      "title": "comprovante repetido não era avisado como possível duplicado",
+      "severity": "baixa",
+      "area": "documentos",
+      "step": "hard test F13-11",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-100",
+      "title": "extrato em xlsx era recusado",
+      "severity": "media",
+      "area": "extrato",
+      "step": "hard test F15-01",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-101",
+      "title": "extrato em PDF era recusado (PDF vai ao modelo só como texto com IBAN mascarado)",
+      "severity": "media",
+      "area": "extrato",
+      "step": "hard test F15-01",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-102",
+      "title": "extrato todo duplicado não oferecia 'Importar mesmo assim'",
+      "severity": "baixa",
+      "area": "extrato",
+      "step": "hard test F15-07",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }

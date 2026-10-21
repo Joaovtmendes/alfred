@@ -37,6 +37,7 @@ from alfred.whatsapp import MediaTooLarge, download_media
 DRAFT_HOURS = 24
 MAX_PER_HOUR = 10
 _TEXT_EXT = (".csv", ".txt", ".tsv", ".tab")  # A-37: ABN AMRO exports .TAB
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 _TEXT_MIME = ("text/csv", "text/plain", "text/tab-separated-values", "application/csv")
 _BANKS = {"ing": "ING", "rabobank": "Rabobank", "abn": "ABN AMRO", "bunq": "bunq"}
 
@@ -99,7 +100,10 @@ async def handle_document(
     name = str(doc.get("filename") or "")[:120]
     mime = str(doc.get("mime_type") or "").lower()
     ext = "." + name.rsplit(".", 1)[-1].lower() if "." in name else ""
-    if not (ext in _TEXT_EXT or (not ext and mime in _TEXT_MIME)):
+    if ext == ".xlsm" or "macroenabled" in mime:
+        return Reply(_t("imp_xlsm", lang), [])
+    is_xlsx = ext == ".xlsx" or (not ext and mime == _XLSX_MIME)
+    if not (is_xlsx or ext in _TEXT_EXT or (not ext and mime in _TEXT_MIME)):
         return Reply(_t("imp_bad_type", lang), [])
 
     since = datetime.now(UTC) - timedelta(hours=1)
@@ -117,18 +121,30 @@ async def handle_document(
     audit(session, "statement_upload", member.id)
 
     try:
-        data = await download_media(str(doc.get("id") or ""), csvp.MAX_BYTES)
+        data = await download_media(
+            str(doc.get("id") or ""), csvp.MAX_XLSX_BYTES if is_xlsx else csvp.MAX_BYTES
+        )
     except MediaTooLarge:
         return Reply(_t("imp_too_big", lang), [])
     if data is None:
         return Reply(_t("imp_download_failed", lang), [])
 
-    parsed = csvp.parse_statement(data, clock.today_local())
-    del data  # the raw file is never kept
+    if is_xlsx:
+        text, problem = csvp.xlsx_to_csv(data)
+        del data
+        if text is None:
+            key = {"xlsm": "imp_xlsm", "too_big": "imp_too_big", "too_many": "imp_too_many"}
+            return Reply(_t(key.get(problem, "imp_format"), lang), [])
+        parsed = csvp.parse_statement(
+            text, clock.today_local(), max_rows=csvp.MAX_XLSX_ROWS, max_bytes=3_000_000
+        )
+    else:
+        parsed = csvp.parse_statement(data, clock.today_local())
+        del data  # the raw file is never kept
     if parsed.error:
         key = {"too_big": "imp_too_big", "too_many": "imp_too_many", "empty": "imp_empty"}
         return Reply(_t(key.get(parsed.error, "imp_format"), lang), [])
-    return await _make_draft(member, lang, session, parsed, name)
+    return await make_draft(member, lang, session, parsed, name)
 
 
 async def handle_statement_button(
@@ -150,14 +166,27 @@ async def handle_statement_button(
     if action == "imp_no":
         batch.status, batch.items = "cancelled", []
         return Reply(_t("imp_cancelled", lang), [])
-    return await _commit(member, lang, session, batch, include_possible=action == "imp_all")
+    return await _commit(
+        member,
+        lang,
+        session,
+        batch,
+        include_possible=action in ("imp_all", "imp_force"),
+        force=action == "imp_force",
+    )
 
 
 # ── draft ─────────────────────────────────────────────────────────────────────
 
 
-async def _make_draft(
-    member: Member, lang: str, session: AsyncSession, parsed: csvp.Parsed, filename: str
+async def make_draft(
+    member: Member,
+    lang: str,
+    session: AsyncSession,
+    parsed: csvp.Parsed,
+    filename: str,
+    *,
+    from_pdf: bool = False,
 ) -> Reply:
     from alfred.conversation import _load_merchant_overrides
 
@@ -273,8 +302,14 @@ async def _make_draft(
     await session.flush()
 
     if counts["new"] == 0 and counts["maybe"] == 0:
-        batch.status, batch.items = "cancelled", []
-        return Reply(_t("imp_nothing_new", lang), [])
+        # F15-07: everything is already here; the member can still choose to import it again
+        return Reply(
+            _t("imp_nothing_new", lang),
+            [
+                (f"imp_no:{batch.id}", _t("imp_btn_nothing_ok", lang)),
+                (f"imp_force:{batch.id}", _t("imp_btn_force", lang)),
+            ],
+        )
 
     fresh = [i for i in items if i["f"] != "dup"]
     outgoing = sum((-Decimal(i["a"]) for i in fresh if Decimal(i["a"]) < 0), Decimal(0))
@@ -309,6 +344,8 @@ async def _make_draft(
         text += _t(
             "imp_skipped_one" if parsed.skipped == 1 else "imp_skipped", lang, n=parsed.skipped
         )
+    if from_pdf:  # the model read a PDF: always a draft to check
+        text += _t("imp_pdf_check", lang)
     buttons: list[tuple[str, str]] = []
     if counts["new"]:
         buttons.append((f"imp_ok:{batch.id}", _t("imp_btn_ok", lang, n=counts["new"])))
@@ -324,9 +361,17 @@ async def _make_draft(
 
 
 async def _commit(
-    member: Member, lang: str, session: AsyncSession, batch: ImportBatch, *, include_possible: bool
+    member: Member,
+    lang: str,
+    session: AsyncSession,
+    batch: ImportBatch,
+    *,
+    include_possible: bool,
+    force: bool = False,
 ) -> Reply:
     wanted = {"new", "maybe"} if include_possible else {"new"}
+    if force:  # F15-07: "importar mesmo assim" also takes the lines that were already here
+        wanted.add("dup")
     items = [i for i in (batch.items or []) if i.get("f") in wanted]
     ids = [i["e"] for i in items]
     known = set(
@@ -341,7 +386,18 @@ async def _commit(
     made = 0
     for i in items:
         if i["e"] in known:
-            continue
+            if not force:
+                continue
+            n = 2  # a deliberate second copy needs its own unique external id
+            while f"{i['e']}~{n}" in known or (
+                await session.scalar(
+                    select(Expense.id).where(
+                        Expense.member_id == member.id, Expense.external_id == f"{i['e']}~{n}"
+                    )
+                )
+            ):
+                n += 1
+            i = {**i, "e": f"{i['e']}~{n}"}
         amount = Decimal(i["a"])
         income = amount > 0
         cat = i["k"]
@@ -406,18 +462,53 @@ def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str | tuple[s
 
 STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     "imp_help": _all(
-        "Para importar o extrato do banco, exporte o arquivo em *CSV* no app ou site do banco (ING, Rabobank, ABN AMRO, bunq…) e envie aqui como documento. Eu mostro um resumo e só importo depois do seu OK. Linhas já importadas ou que você já registrou à mão não duplicam. Para desfazer: *desfazer importação*.",
-        "Om je bankafschrift te importeren, exporteer je het bestand als *CSV* in de app of site van je bank (ING, Rabobank, ABN AMRO, bunq…) en stuur je het hier als document. Ik laat eerst een samenvatting zien en importeer pas na je OK. Regels die al zijn geïmporteerd of die je zelf hebt ingevoerd worden niet dubbel. Ongedaan maken: *import ongedaan maken*.",
-        "To import your bank statement, export it as *CSV* from your bank's app or website (ING, Rabobank, ABN AMRO, bunq…) and send it here as a document. I show a summary first and only import after your OK. Lines already imported, or that you entered by hand, are not duplicated. To undo: *undo import*.",
-        "Pour importer ton relevé bancaire, exporte-le en *CSV* depuis l'appli ou le site de ta banque (ING, Rabobank, ABN AMRO, bunq…) et envoie-le ici comme document. Je montre d'abord un résumé et je n'importe qu'après ton OK. Les lignes déjà importées ou saisies à la main ne sont pas dupliquées. Pour annuler : *annuler l'import*.",
-        "Um deinen Kontoauszug zu importieren, exportiere ihn als *CSV* in der App oder auf der Website deiner Bank (ING, Rabobank, ABN AMRO, bunq…) und sende ihn hier als Dokument. Ich zeige erst eine Zusammenfassung und importiere erst nach deinem OK. Bereits importierte oder von dir von Hand eingetragene Zeilen werden nicht doppelt angelegt. Zum Rückgängigmachen: *import rückgängig*.",
+        "Para importar o extrato do banco, exporte o arquivo em *CSV*, *Excel* ou *PDF* no app ou site do banco (ING, Rabobank, ABN AMRO, bunq…) e envie aqui como documento. Eu mostro um resumo e só importo depois do seu OK. Linhas já importadas ou que você já registrou à mão não duplicam. Para desfazer: *desfazer importação*.",
+        "Om je bankafschrift te importeren, exporteer je het bestand als *CSV*, *Excel* of *pdf* in de app of site van je bank (ING, Rabobank, ABN AMRO, bunq…) en stuur je het hier als document. Ik laat eerst een samenvatting zien en importeer pas na je OK. Regels die al zijn geïmporteerd of die je zelf hebt ingevoerd worden niet dubbel. Ongedaan maken: *import ongedaan maken*.",
+        "To import your bank statement, export it as *CSV*, *Excel* or *PDF* from your bank's app or website (ING, Rabobank, ABN AMRO, bunq…) and send it here as a document. I show a summary first and only import after your OK. Lines already imported, or that you entered by hand, are not duplicated. To undo: *undo import*.",
+        "Pour importer ton relevé bancaire, exporte-le en *CSV*, *Excel* ou *PDF* depuis l'appli ou le site de ta banque (ING, Rabobank, ABN AMRO, bunq…) et envoie-le ici comme document. Je montre d'abord un résumé et je n'importe qu'après ton OK. Les lignes déjà importées ou saisies à la main ne sont pas dupliquées. Pour annuler : *annuler l'import*.",
+        "Um deinen Kontoauszug zu importieren, exportiere ihn als *CSV*, *Excel* oder *PDF* in der App oder auf der Website deiner Bank (ING, Rabobank, ABN AMRO, bunq…) und sende ihn hier als Dokument. Ich zeige erst eine Zusammenfassung und importiere erst nach deinem OK. Bereits importierte oder von dir von Hand eingetragene Zeilen werden nicht doppelt angelegt. Zum Rückgängigmachen: *import rückgängig*.",
     ),
     "imp_bad_type": _all(
-        "Esse arquivo não é um CSV. Exporte o extrato como *CSV* (ou TXT) no app do banco e envie de novo.",
-        "Dit bestand is geen CSV. Exporteer het afschrift als *CSV* (of TXT) in de app van je bank en stuur het opnieuw.",
-        "That file is not a CSV. Export the statement as *CSV* (or TXT) from your bank's app and send it again.",
-        "Ce fichier n'est pas un CSV. Exporte le relevé en *CSV* (ou TXT) depuis l'appli de ta banque et renvoie-le.",
-        "Diese Datei ist keine CSV. Exportiere den Auszug als *CSV* (oder TXT) in der App deiner Bank und sende ihn erneut.",
+        "Esse arquivo eu não consigo ler como extrato. Envie em *CSV*, *Excel (.xlsx)* ou *PDF* (do app do banco) e tente de novo.",
+        "Dit bestand kan ik niet als afschrift lezen. Stuur het als *CSV*, *Excel (.xlsx)* of *pdf* (uit de app van je bank) en probeer het opnieuw.",
+        "I can't read that file as a statement. Send it as *CSV*, *Excel (.xlsx)* or *PDF* (from your bank's app) and try again.",
+        "Je ne peux pas lire ce fichier comme un relevé. Envoie-le en *CSV*, *Excel (.xlsx)* ou *PDF* (depuis l'appli de ta banque) et réessaie.",
+        "Diese Datei kann ich nicht als Kontoauszug lesen. Sende sie als *CSV*, *Excel (.xlsx)* oder *PDF* (aus der App deiner Bank) und versuche es erneut.",
+    ),
+    "imp_xlsm": _all(
+        "Arquivos Excel com macros (.xlsm) eu não abro, por segurança. Salve como *.xlsx* (sem macros) ou exporte em CSV e envie de novo.",
+        "Excel-bestanden met macro's (.xlsm) open ik niet, voor de veiligheid. Sla op als *.xlsx* (zonder macro's) of exporteer als CSV en stuur het opnieuw.",
+        "I don't open Excel files with macros (.xlsm), for safety. Save as *.xlsx* (no macros) or export as CSV and send it again.",
+        "Je n'ouvre pas les fichiers Excel avec macros (.xlsm), par sécurité. Enregistre en *.xlsx* (sans macros) ou exporte en CSV et renvoie-le.",
+        "Excel-Dateien mit Makros (.xlsm) öffne ich aus Sicherheitsgründen nicht. Speichere als *.xlsx* (ohne Makros) oder exportiere als CSV und sende sie erneut.",
+    ),
+    "imp_pdf_too_big": _all(
+        "Esse PDF passa de 5 MB. Exporte um período menor ou envie o extrato em CSV ou Excel.",
+        "Deze pdf is groter dan 5 MB. Exporteer een kortere periode of stuur het afschrift als CSV of Excel.",
+        "That PDF is over 5 MB. Export a shorter period or send the statement as CSV or Excel.",
+        "Ce PDF dépasse 5 Mo. Exporte une période plus courte ou envoie le relevé en CSV ou Excel.",
+        "Dieses PDF ist größer als 5 MB. Exportiere einen kürzeren Zeitraum oder sende den Auszug als CSV oder Excel.",
+    ),
+    "imp_pdf_pages": _all(
+        "Esse PDF tem mais de 10 páginas. Exporte um período menor ou envie o extrato em CSV ou Excel.",
+        "Deze pdf heeft meer dan 10 pagina's. Exporteer een kortere periode of stuur het afschrift als CSV of Excel.",
+        "That PDF has more than 10 pages. Export a shorter period or send the statement as CSV or Excel.",
+        "Ce PDF a plus de 10 pages. Exporte une période plus courte ou envoie le relevé en CSV ou Excel.",
+        "Dieses PDF hat mehr als 10 Seiten. Exportiere einen kürzeren Zeitraum oder sende den Auszug als CSV oder Excel.",
+    ),
+    "imp_pdf_unreadable": _all(
+        "Não consegui ler lançamentos nesse PDF. Tente exportar o extrato em CSV ou Excel pelo app do banco.",
+        "Ik kon geen transacties in deze pdf lezen. Probeer het afschrift als CSV of Excel uit de app van je bank te exporteren.",
+        "I couldn't read transactions in that PDF. Try exporting the statement as CSV or Excel from your bank's app.",
+        "Je n'ai pas pu lire de transactions dans ce PDF. Essaie d'exporter le relevé en CSV ou Excel depuis l'appli de ta banque.",
+        "Ich konnte in diesem PDF keine Buchungen lesen. Versuche, den Auszug als CSV oder Excel aus der App deiner Bank zu exportieren.",
+    ),
+    "imp_pdf_check": _all(
+        "\n\nLi este PDF como texto, sem guardar o arquivo, e escondi os números de conta. Confira os valores antes de importar: um PDF pode ser mal interpretado.",
+        "\n\nIk heb deze pdf als tekst gelezen, zonder het bestand te bewaren, en rekeningnummers verborgen. Controleer de bedragen voor je importeert: een pdf kan verkeerd gelezen zijn.",
+        "\n\nI read this PDF as text without keeping the file, and hid account numbers. Check the amounts before importing: a PDF can be misread.",
+        "\n\nJ'ai lu ce PDF comme du texte, sans garder le fichier, et masqué les numéros de compte. Vérifie les montants avant d'importer : un PDF peut être mal lu.",
+        "\n\nIch habe dieses PDF als Text gelesen, ohne die Datei zu speichern, und Kontonummern ausgeblendet. Prüfe die Beträge vor dem Import: Ein PDF kann falsch gelesen werden.",
     ),
     "imp_rate": _all(
         "Você já enviou muitos arquivos nesta hora. Tente de novo daqui a pouco.",
@@ -441,11 +532,11 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Die Datei ist zu groß (Limit 1 MB). Exportiere einen kürzeren Zeitraum, zum Beispiel ein Jahr auf einmal.",
     ),
     "imp_too_many": _all(
-        "O arquivo tem linhas demais (limite de 2000). Exporte um período menor.",
-        "Het bestand heeft te veel regels (limiet 2000). Exporteer een kortere periode.",
-        "The file has too many lines (limit 2000). Export a shorter period.",
-        "Le fichier a trop de lignes (limite de 2000). Exporte une période plus courte.",
-        "Die Datei hat zu viele Zeilen (Limit 2000). Exportiere einen kürzeren Zeitraum.",
+        "O arquivo tem linhas demais (limite de 2000 no CSV e de 5000 no Excel). Exporte um período menor.",
+        "Het bestand heeft te veel regels (limiet 2000 in CSV en 5000 in Excel). Exporteer een kortere periode.",
+        "The file has too many lines (limit 2000 for CSV and 5000 for Excel). Export a shorter period.",
+        "Le fichier a trop de lignes (limite de 2000 en CSV et 5000 en Excel). Exporte une période plus courte.",
+        "Die Datei hat zu viele Zeilen (Limit 2000 bei CSV und 5000 bei Excel). Exportiere einen kürzeren Zeitraum.",
     ),
     "imp_empty": _all(
         "Não achei lançamentos nesse arquivo.",
@@ -515,12 +606,20 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Alle ({n})",
     ),
     "imp_btn_no": _all("Cancelar", "Annuleren", "Cancel", "Annuler", "Abbrechen"),
+    "imp_btn_nothing_ok": _all("Ok", "Ok", "OK", "OK", "OK"),
+    "imp_btn_force": _all(
+        "Importar mesmo assim",
+        "Toch importeren",
+        "Import anyway",
+        "Importer quand même",
+        "Trotzdem importieren",
+    ),
     "imp_nothing_new": _all(
-        "Tudo isso já estava importado ou registrado por você; não há nada novo.",
-        "Dit stond al allemaal in je administratie; er is niets nieuws.",
-        "All of this was already imported or entered by you; there is nothing new.",
-        "Tout cela était déjà importé ou saisi par toi ; il n'y a rien de nouveau.",
-        "Das war alles schon importiert oder von dir eingetragen; es gibt nichts Neues.",
+        "Tudo isso já estava importado ou registrado por você; não há nada novo. Se mesmo assim quiser importar de novo, toque em *Importar mesmo assim*.",
+        "Dit stond al allemaal in je administratie; er is niets nieuws. Wil je het toch opnieuw importeren, tik dan op *Toch importeren*.",
+        "All of this was already imported or entered by you; there is nothing new. If you still want to import it again, tap *Import anyway*.",
+        "Tout cela était déjà importé ou saisi par toi ; il n'y a rien de nouveau. Si tu veux quand même l'importer à nouveau, touche *Importer quand même*.",
+        "Das war alles schon importiert oder von dir eingetragen; es gibt nichts Neues. Willst du es trotzdem erneut importieren, tippe auf *Trotzdem importieren*.",
     ),
     "imp_done": _all(
         "Pronto: {n} lançamentos importados. Para desfazer: *desfazer importação*.",

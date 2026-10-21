@@ -4903,7 +4903,7 @@ async def _handle_button_reply(
         await _save_outbound(member, couple_btn.text, session)
         return True
 
-    if action in ("imp_ok", "imp_all", "imp_no"):  # V2-05 statement import preview
+    if action in ("imp_ok", "imp_all", "imp_no", "imp_force"):  # V2-05 statement import preview
         imp_btn = await handle_statement_button(action, raw_id, member, lang, session)
         await send_text(to, imp_btn.text)
         await _save_outbound(member, imp_btn.text, session)

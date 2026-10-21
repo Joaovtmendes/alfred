@@ -136,7 +136,10 @@ def _books_year(raw: str | None) -> int:
     "/api/d/{token}/books-export", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
 )
 async def books_export_page(
-    token: str, year: str | None = None, session: AsyncSession = Depends(get_session)
+    token: str,
+    year: str | None = None,
+    format: str | None = None,  # noqa: A002 — the query parameter is called "format"
+    session: AsyncSession = Depends(get_session),
 ) -> HTMLResponse:
     """V2-12 — confirmation page of the accountant CSV (a GET never spends the single-use link)."""
     member = await peek_export_token(session, token)
@@ -146,13 +149,15 @@ async def books_export_page(
 
     lang = normalize_lang(member.language)
     t = ui(lang)
+    xlsx = format == "xlsx"
+    suffix = "_xlsx" if xlsx else ""
     return brand_page(
         lang,
         t["books_export_title"],
         f"<h1>{escape(t['books_export_title'])}</h1>"
-        f"<p class='lead'>{escape(t['books_export_text'])}</p>"
-        f'<form method="post" action="?year={_books_year(year)}"><button type="submit">'
-        f"{escape(t['books_export_button'])}</button></form>",
+        f"<p class='lead'>{escape(t['books_export_text' + suffix])}</p>"
+        f'<form method="post" action="?year={_books_year(year)}{"&amp;format=xlsx" if xlsx else ""}">'
+        f'<button type="submit">{escape(t["books_export_button" + suffix])}</button></form>',
     )
 
 
@@ -160,9 +165,12 @@ async def books_export_page(
     "/api/d/{token}/books-export", include_in_schema=False, dependencies=[Depends(limit_dashboard)]
 )
 async def books_export(
-    token: str, year: str | None = None, session: AsyncSession = Depends(get_session)
+    token: str,
+    year: str | None = None,
+    format: str | None = None,  # noqa: A002 — the query parameter is called "format"
+    session: AsyncSession = Depends(get_session),
 ) -> Response:
-    """The year's entries as CSV (business entries only in business mode), once."""
+    """The year's entries as CSV or xlsx (business entries only in business mode), once."""
     from alfred import accounting
 
     member = await consume_export_token(session, token)
@@ -170,6 +178,13 @@ async def books_export(
         raise HTTPException(status_code=404, detail="Link not found")
     y = _books_year(year)
     audit(session, "accounting_exported", member.id, year=y)
+    if format == "xlsx":  # F19-01: one sheet per month
+        data = await accounting.export_xlsx(session, member, y)
+        return Response(
+            data,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="alfred-accounting-{y}.xlsx"'},
+        )
     body = await accounting.export_csv(session, member, y)
     return Response(
         "\ufeff" + body,  # the byte-order mark makes Excel read the accents right

@@ -29,6 +29,7 @@ from alfred.validation import MAX_AMOUNT
 
 TTL = timedelta(minutes=15)
 MAX_ITEMS = 10
+MAX_LIVE_RECEIPTS = 5  # F13-10: one draft per receipt, at most five waiting at once
 
 __all__ = [
     "STRINGS",
@@ -68,6 +69,7 @@ def _store(item: dict) -> dict:
         "description": item.get("description"),
         "days_ago": int(item.get("days_ago") or 0),
         "pending_in_days": item.get("pending_in_days"),
+        **({"src": "receipt"} if item.get("src") == "receipt" else {}),
     }
 
 
@@ -131,6 +133,62 @@ def clean_items(items: list[dict]) -> list[dict]:
     return [_store(i) for i in items if _valid(i)][:MAX_ITEMS]
 
 
+def _is_receipt(batch: PendingBatch) -> bool:
+    return bool(batch.items) and batch.items[0].get("src") == "receipt"
+
+
+def _same(a: dict, b: dict) -> bool:
+    """Same amount and same merchant (case-insensitive): probably the same receipt twice."""
+    return (
+        abs(float(a["amount"]) - float(b["amount"])) < 0.005
+        and (a.get("merchant") or "").strip().lower() == (b.get("merchant") or "").strip().lower()
+    )
+
+
+async def _looks_duplicate(
+    session: AsyncSession, member: Member, items: list[dict], live: list[PendingBatch]
+) -> bool:
+    """F13-11: the new receipt equals a waiting draft or an entry recorded in the last 3 days."""
+    if len(items) != 1:
+        return False
+    item = items[0]
+    if any(len(b.items) == 1 and _same(item, b.items[0]) for b in live):
+        return True
+    since = now_local() - timedelta(days=3)
+    rows = (
+        await session.execute(
+            select(Expense.amount, Expense.merchant).where(
+                Expense.member_id == member.id,
+                Expense.transaction_type == "expense",
+                Expense.expense_date >= since,
+                Expense.amount == item["amount"],
+            )
+        )
+    ).all()
+    return any(
+        (m or "").strip().lower() == (item.get("merchant") or "").strip().lower() for _a, m in rows
+    )
+
+
+async def live_receipts(session: AsyncSession, member_id: uuid.UUID) -> list[PendingBatch]:
+    rows = await session.scalars(
+        select(PendingBatch)
+        .where(PendingBatch.member_id == member_id, PendingBatch.expires_at > now_local())
+        .order_by(PendingBatch.created_at)
+    )
+    return [b for b in rows.all() if _is_receipt(b)]
+
+
+async def _others_note(session: AsyncSession, member_id: uuid.UUID, lang: str) -> str:
+    """ "Ainda há 2 comprovantes esperando" after one of several drafts is settled."""
+    from alfred.conversation import _t
+
+    n = len(await live_receipts(session, member_id))
+    if n == 0:
+        return ""
+    return "\n\n" + _t("batch_others_one" if n == 1 else "batch_others", lang, n=n)
+
+
 async def create_draft(
     session: AsyncSession,
     member: Member,
@@ -143,18 +201,51 @@ async def create_draft(
     """Store a draft and return the message to show; None when fewer than ``min_items`` remain.
 
     A receipt read from a photo uses ``min_items=1`` and its own ``title``: one entry, but still
-    only written after the member confirms.
+    only written after the member confirms. Each receipt keeps its own draft (at most five
+    waiting); a text list still replaces the previous text list.
     """
-    clean = clean_items(items)
+    from alfred.conversation import _t
+
+    receipt = title is not None
+    clean = clean_items([{**i, "src": "receipt"} if receipt else i for i in items])
     if len(clean) < min_items:
         return None
-    await session.execute(delete(PendingBatch).where(PendingBatch.member_id == member.id))
+    await session.execute(
+        delete(PendingBatch).where(
+            PendingBatch.member_id == member.id, PendingBatch.expires_at <= now_local()
+        )
+    )
+    live = await live_receipts(session, member.id)
+    if receipt:
+        if len(live) >= MAX_LIVE_RECEIPTS:
+            return BatchReply(_t("batch_limit", lang, n=MAX_LIVE_RECEIPTS))
+        dup = await _looks_duplicate(session, member, clean, live)
+    else:  # a text list replaces the older text list, never a receipt waiting for its tap
+        old_text = [b.id for b in await _all_live(session, member.id) if not _is_receipt(b)]
+        if old_text:
+            await session.execute(delete(PendingBatch).where(PendingBatch.id.in_(old_text)))
+        dup = False
     batch = PendingBatch(
         id=uuid.uuid4(), member_id=member.id, items=clean, expires_at=now_local() + TTL
     )
     session.add(batch)
     await session.flush()
-    return BatchReply(_draft_text(clean, lang, title), _buttons(batch.id, lang))
+    head = title
+    if receipt and live:
+        head = _t("batch_receipt_n", lang, n=len(live) + 1, m=len(live) + 1) + " · " + (title or "")
+    text = _draft_text(clean, lang, head)
+    if dup:
+        text += "\n\n" + _t("batch_dup", lang)
+    return BatchReply(text, _buttons(batch.id, lang))
+
+
+async def _all_live(session: AsyncSession, member_id: uuid.UUID) -> list[PendingBatch]:
+    rows = await session.scalars(
+        select(PendingBatch).where(
+            PendingBatch.member_id == member_id, PendingBatch.expires_at > now_local()
+        )
+    )
+    return list(rows.all())
 
 
 async def _take(session: AsyncSession, member_id: uuid.UUID, batch_id: uuid.UUID | None):
@@ -347,8 +438,12 @@ async def handle_batch_button(
     if expired:
         return BatchReply(_t("batch_expired", lang))
     if action == "batch_cancel":
-        return BatchReply(_t("batch_cancelled", lang))
-    return await _recorded(session, member, items, lang)
+        return BatchReply(
+            _t("batch_cancelled", lang) + await _others_note(session, member.id, lang)
+        )
+    done = await _recorded(session, member, items, lang)
+    done.text += await _others_note(session, member.id, lang)
+    return done
 
 
 # ── text ──────────────────────────────────────────────────────────────────────
@@ -467,8 +562,12 @@ async def handle_batch_text(
         if expired:
             return BatchReply(_t("batch_expired", lang))
         if is_no:
-            return BatchReply(_t("batch_cancelled", lang))
-        return await _recorded(session, member, items, lang)
+            return BatchReply(
+                _t("batch_cancelled", lang) + await _others_note(session, member.id, lang)
+            )
+        done = await _recorded(session, member, items, lang)
+        done.text += await _others_note(session, member.id, lang)
+        return done
 
     if when and not (rm or ch):
         who = when.group("who").strip()
@@ -527,6 +626,41 @@ STRINGS: dict[str, dict[str, str]] = {
         "Confirm and I'll add them. Nothing has been added yet.",
         "Tu confirmes ? Rien n'est encore ajouté.",
         "Soll ich sie übernehmen? Bisher steht nichts in deiner Übersicht.",
+    ),
+    "batch_receipt_n": _all(
+        "Comprovante {n} de {m}",
+        "Bon {n} van {m}",
+        "Receipt {n} of {m}",
+        "Reçu {n} sur {m}",
+        "Beleg {n} von {m}",
+    ),
+    "batch_limit": _all(
+        "Já há {n} comprovantes esperando sua confirmação. Confirme ou cancele algum antes de enviar outro.",
+        "Er wachten al {n} bonnen op je bevestiging. Bevestig of annuleer er eerst een voordat je een nieuwe stuurt.",
+        "{n} receipts are already waiting for your confirmation. Confirm or cancel one before sending another.",
+        "{n} reçus attendent déjà ta confirmation. Confirme ou annule-en un avant d'en envoyer un autre.",
+        "{n} Belege warten schon auf deine Bestätigung. Bestätige oder verwirf einen, bevor du einen neuen sendest.",
+    ),
+    "batch_dup": _all(
+        "⚠ Parece igual a um comprovante que já está aqui (mesmo valor e mesmo local). Se for outro, confirme; se não, cancele este.",
+        "⚠ Dit lijkt op een bon die al is vastgelegd of klaarstaat (zelfde bedrag en winkel). Is het een andere, bevestig dan; anders annuleer je deze.",
+        "⚠ This looks like a receipt that is already here (same amount and place). If it is another one, confirm; if not, cancel this one.",
+        "⚠ Cela ressemble à un reçu déjà présent (même montant et même lieu). Si c'est un autre, confirme ; sinon annule celui-ci.",
+        "⚠ Das sieht wie ein Beleg aus, der schon da ist (gleicher Betrag und Ort). Ist es ein anderer, bestätige; sonst verwirf diesen.",
+    ),
+    "batch_others": _all(
+        "Ainda há {n} comprovantes esperando. Responda aos botões de cada um.",
+        "Er wachten nog {n} bonnen. Gebruik de knoppen bij elk bericht.",
+        "{n} more receipts still waiting. Use the buttons on each message.",
+        "Il reste {n} reçus en attente. Utilise les boutons de chaque message.",
+        "Noch {n} Belege warten. Nutze die Buttons der jeweiligen Nachricht.",
+    ),
+    "batch_others_one": _all(
+        "Ainda há 1 comprovante esperando. Responda aos botões dele.",
+        "Er wacht nog 1 bon. Gebruik de knoppen bij dat bericht.",
+        "1 more receipt is still waiting. Use the buttons on that message.",
+        "Il reste 1 reçu en attente. Utilise les boutons de ce message.",
+        "Noch 1 Beleg wartet. Nutze die Buttons dieser Nachricht.",
     ),
     "pending_tag_recv": _all(
         "a receber em {due}",
