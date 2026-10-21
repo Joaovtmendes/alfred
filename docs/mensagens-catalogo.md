@@ -79,6 +79,19 @@
 - **de** — CSV für {year} mit allen deinen Buchungen: {url}
   > Der Link gilt einmal und {minutes} Minuten.
 
+## `acct_export_all_xlsx`
+
+- **pt** — Excel de {year} com todos os seus lançamentos, uma aba por mês: {url}
+  > O link vale uma vez e por {minutes} minutos.
+- **nl** — Excel van {year} met al je boekingen, een tabblad per maand: {url}
+  > De link werkt één keer en {minutes} minuten.
+- **en** — Excel for {year} with all your entries, one sheet per month: {url}
+  > The link works once and for {minutes} minutes.
+- **fr** — Excel de {year} avec toutes tes écritures, un onglet par mois : {url}
+  > Le lien est valable une fois et {minutes} minutes.
+- **de** — Excel für {year} mit allen deinen Buchungen, ein Blatt pro Monat: {url}
+  > Der Link gilt einmal und {minutes} Minuten.
+
 ## `acct_export_bad_year`
 
 - **pt** — Não tenho esse ano. Exemplo: *exportar contabilidade 2026*.
@@ -98,6 +111,19 @@
 - **fr** — CSV de {year} avec les écritures pro seulement, pour ton comptable : {url}
   > Le lien est valable une fois et {minutes} minutes.
 - **de** — CSV für {year} nur mit den geschäftlichen Buchungen, für deinen Steuerberater: {url}
+  > Der Link gilt einmal und {minutes} Minuten.
+
+## `acct_export_business_xlsx`
+
+- **pt** — Excel de {year} só com os lançamentos da empresa, uma aba por mês, para o seu contador: {url}
+  > O link vale uma vez e por {minutes} minutos.
+- **nl** — Excel van {year} alleen met de zakelijke boekingen, een tabblad per maand, voor je boekhouder: {url}
+  > De link werkt één keer en {minutes} minuten.
+- **en** — Excel for {year} with the business entries only, one sheet per month, for your accountant: {url}
+  > The link works once and for {minutes} minutes.
+- **fr** — Excel de {year} avec les écritures pro seulement, un onglet par mois, pour ton comptable : {url}
+  > Le lien est valable une fois et {minutes} minutes.
+- **de** — Excel für {year} nur mit den geschäftlichen Buchungen, ein Blatt pro Monat, für deinen Steuerberater: {url}
   > Der Link gilt einmal und {minutes} Minuten.
 
 ## `acct_marked_business`
@@ -443,6 +469,14 @@
 - **fr** — ⏰ {title} — {when}.
 - **de** — ⏰ {title} — {when}.
 
+## `analysis_btn_explain`
+
+- **pt** — Explicar
+- **nl** — Uitleg
+- **en** — Explain
+- **fr** — Expliquer
+- **de** — Erklären
+
 ## `analysis_empty`
 
 - **pt** — Não achei lançamentos nesse recorte.
@@ -450,6 +484,94 @@
 - **en** — I found no transactions for that selection.
 - **fr** — Je n'ai trouvé aucune opération pour cette sélection.
 - **de** — Ich habe für diese Auswahl keine Buchungen gefunden.
+
+## `analysis_explain_average`
+
+- **pt** — Dividi o total do período pelo número de lançamentos.
+- **nl** — Ik heb het totaal van de periode gedeeld door het aantal boekingen.
+- **en** — I divided the period's total by the number of entries.
+- **fr** — J'ai divisé le total de la période par le nombre d'écritures.
+- **de** — Ich habe die Summe des Zeitraums durch die Anzahl der Buchungen geteilt.
+
+## `analysis_explain_count`
+
+- **pt** — Contei quantos lançamentos há no período.
+- **nl** — Ik heb geteld hoeveel boekingen er in de periode zijn.
+- **en** — I counted how many entries there are in the period.
+- **fr** — J'ai compté combien d'écritures il y a sur la période.
+- **de** — Ich habe gezählt, wie viele Buchungen es im Zeitraum gibt.
+
+## `analysis_explain_filter`
+
+- **pt** — Filtro: {what}.
+- **nl** — Filter: {what}.
+- **en** — Filter: {what}.
+- **fr** — Filtre : {what}.
+- **de** — Filter: {what}.
+
+## `analysis_explain_gone`
+
+- **pt** — Essa análise já não está guardada. Faça a pergunta de novo que eu explico.
+- **nl** — Die analyse is niet meer bewaard. Stel de vraag opnieuw, dan leg ik het uit.
+- **en** — That analysis is no longer stored. Ask again and I'll explain it.
+- **fr** — Cette analyse n'est plus conservée. Repose la question et je t'explique.
+- **de** — Diese Analyse ist nicht mehr gespeichert. Frag noch einmal, dann erkläre ich sie.
+
+## `analysis_explain_income`
+
+- **pt** — Somei as receitas do período (dinheiro que entrou).
+- **nl** — Ik heb de inkomsten van de periode opgeteld (geld dat binnenkwam).
+- **en** — I added up the income of the period (money that came in).
+- **fr** — J'ai additionné les revenus de la période (l'argent entré).
+- **de** — Ich habe die Einnahmen des Zeitraums addiert (Geld, das reinkam).
+
+## `analysis_explain_net`
+
+- **pt** — Calculei receitas menos despesas do período.
+- **nl** — Ik heb inkomsten min uitgaven van de periode berekend.
+- **en** — I calculated income minus spending for the period.
+- **fr** — J'ai calculé revenus moins dépenses de la période.
+- **de** — Ich habe Einnahmen minus Ausgaben des Zeitraums berechnet.
+
+## `analysis_explain_panel`
+
+- **pt** — Para ver os lançamentos e gráficos, diga *painel* e abra a aba Dinheiro.
+- **nl** — Om de boekingen en grafieken te zien, zeg je *dashboard* en open je het tabblad Geld.
+- **en** — To see the entries and charts, say *panel* and open the Money tab.
+- **fr** — Pour voir les écritures et les graphiques, dis *tableau de bord* et ouvre l'onglet Argent.
+- **de** — Um die Buchungen und Diagramme zu sehen, sag *Dashboard* und öffne den Tab Geld.
+
+## `analysis_explain_period`
+
+- **pt** — Período: {when}.
+- **nl** — Periode: {when}.
+- **en** — Period: {when}.
+- **fr** — Période : {when}.
+- **de** — Zeitraum: {when}.
+
+## `analysis_explain_prev`
+
+- **pt** — A comparação é com o período {when}, pela mesma regra.
+- **nl** — De vergelijking gebruikt de periode {when}, met dezelfde regel.
+- **en** — The comparison uses the period {when}, with the same rule.
+- **fr** — La comparaison utilise la période {when}, avec la même règle.
+- **de** — Der Vergleich nutzt den Zeitraum {when}, mit derselben Regel.
+
+## `analysis_explain_settled`
+
+- **pt** — Só entram lançamentos já pagos ou recebidos; o que ainda está a pagar ou a receber fica de fora.
+- **nl** — Alleen boekingen die al betaald of ontvangen zijn tellen mee; wat nog open staat telt niet mee.
+- **en** — Only entries already paid or received count; anything still to pay or to receive is left out.
+- **fr** — Seules comptent les écritures déjà payées ou reçues ; ce qui reste à payer ou à recevoir est exclu.
+- **de** — Es zählen nur bereits bezahlte oder erhaltene Buchungen; Offenes bleibt außen vor.
+
+## `analysis_explain_spent`
+
+- **pt** — Somei as despesas do período (dinheiro que saiu).
+- **nl** — Ik heb de uitgaven van de periode opgeteld (geld dat eruit ging).
+- **en** — I added up the spending of the period (money that went out).
+- **fr** — J'ai additionné les dépenses de la période (l'argent sorti).
+- **de** — Ich habe die Ausgaben des Zeitraums addiert (Geld, das rausging).
 
 ## `analysis_limit`
 
@@ -629,11 +751,21 @@
 
 ## `bare_yes`
 
-- **pt** — Tudo certo, mas não tenho nada esperando confirmação. Quer registrar alguma coisa? Por exemplo: “Mercado 20”.
-- **nl** — Prima! Maar er staat niets open om te bevestigen. Wil je iets vastleggen, zeg het gerust, bijvoorbeeld: “Jumbo 20”.
-- **en** — Sure! But I don't have anything waiting for confirmation. To log something, just tell me, e.g. “Groceries 20”.
-- **fr** — D'accord ! Mais rien n'attend de confirmation. Pour enregistrer quelque chose, dis-le-moi, par ex. « Courses 20 ».
-- **de** — Alles klar! Es wartet aber nichts auf Bestätigung. Zum Erfassen sag mir einfach z. B. „Einkauf 20“.
+- **pt** — Sim para quê? Não tenho nada esperando confirmação. Me diga o que quer registrar, por exemplo: “Mercado 20”.
+- **pt** — Fico feliz com o sim, mas não há nada pendente. Para registrar algo, é só escrever, por exemplo: “Café 3,50”.
+- **pt** — Não tenho nenhuma pergunta aberta. Quer anotar um gasto (“Mercado 20”), um treino (“corri 5 km”) ou ver o saldo?
+- **nl** — Ja, waarvoor? Er staat niets open om te bevestigen. Zeg wat je wilt vastleggen, bijvoorbeeld: “Jumbo 20”.
+- **nl** — Fijn, maar er is niets in behandeling. Wil je iets noteren, schrijf bijvoorbeeld: “Koffie 3,50”.
+- **nl** — Ik heb geen open vraag. Wil je een uitgave noteren (“Jumbo 20”), een training (“5 km gelopen”) of je saldo zien?
+- **en** — Yes to what? Nothing is waiting for confirmation. Tell me what to log, e.g. “Groceries 20”.
+- **en** — Glad to hear it, but nothing is pending. To log something, just write it, e.g. “Coffee 3.50”.
+- **en** — I have no open question. Want to log an expense (“Groceries 20”), a workout (“ran 5 km”) or see your balance?
+- **fr** — Oui à quoi ? Rien n'attend de confirmation. Dis-moi ce que tu veux noter, par ex. « Courses 20 ».
+- **fr** — Bien noté, mais rien n'est en attente. Pour enregistrer quelque chose, écris-le, par ex. « Café 3,50 ».
+- **fr** — Je n'ai aucune question ouverte. Tu veux noter une dépense (« Courses 20 »), un entraînement (« couru 5 km ») ou voir ton solde ?
+- **de** — Ja, wozu? Es wartet nichts auf Bestätigung. Sag mir, was ich erfassen soll, z. B. „Einkauf 20“.
+- **de** — Schön, aber es ist nichts offen. Zum Erfassen schreib es einfach, z. B. „Kaffee 3,50“.
+- **de** — Ich habe keine offene Frage. Möchtest du eine Ausgabe erfassen („Einkauf 20“), ein Training („5 km gelaufen“) oder dein Saldo sehen?
 
 ## `batch_ask`
 
@@ -691,6 +823,14 @@
 - **fr** — Annulé. Rien n'a été ajouté.
 - **de** — Abgebrochen. Es wurde nichts hinzugefügt.
 
+## `batch_dup`
+
+- **pt** — ⚠ Parece igual a um comprovante que já está aqui (mesmo valor e mesmo local). Se for outro, confirme; se não, cancele este.
+- **nl** — ⚠ Dit lijkt op een bon die al is vastgelegd of klaarstaat (zelfde bedrag en winkel). Is het een andere, bevestig dan; anders annuleer je deze.
+- **en** — ⚠ This looks like a receipt that is already here (same amount and place). If it is another one, confirm; if not, cancel this one.
+- **fr** — ⚠ Cela ressemble à un reçu déjà présent (même montant et même lieu). Si c'est un autre, confirme ; sinon annule celui-ci.
+- **de** — ⚠ Das sieht wie ein Beleg aus, der schon da ist (gleicher Betrag und Ort). Ist es ein anderer, bestätige; sonst verwirf diesen.
+
 ## `batch_edit_hint`
 
 - **pt** — Diga o que mudar: "tira o segundo" ou "o primeiro foi 4". Depois confirme.
@@ -723,6 +863,14 @@
 - **fr** — Rien n'attend de confirmation. Renvoie les opérations si besoin.
 - **de** — Es wartet nichts auf Bestätigung. Sende die Buchungen bei Bedarf erneut.
 
+## `batch_limit`
+
+- **pt** — Já há {n} comprovantes esperando sua confirmação. Confirme ou cancele algum antes de enviar outro.
+- **nl** — Er wachten al {n} bonnen op je bevestiging. Bevestig of annuleer er eerst een voordat je een nieuwe stuurt.
+- **en** — {n} receipts are already waiting for your confirmation. Confirm or cancel one before sending another.
+- **fr** — {n} reçus attendent déjà ta confirmation. Confirme ou annule-en un avant d'en envoyer un autre.
+- **de** — {n} Belege warten schon auf deine Bestätigung. Bestätige oder verwirf einen, bevor du einen neuen sendest.
+
 ## `batch_no_item`
 
 - **pt** — Não achei o item "{n}" na lista. Use o número da linha.
@@ -730,6 +878,30 @@
 - **en** — I can't find item "{n}" in the list. Use the line number.
 - **fr** — Je ne trouve pas l'élément « {n} » dans la liste. Utilise le numéro de ligne.
 - **de** — Ich finde Eintrag "{n}" nicht in der Liste. Nutze die Zeilennummer.
+
+## `batch_others`
+
+- **pt** — Ainda há {n} comprovantes esperando. Responda aos botões de cada um.
+- **nl** — Er wachten nog {n} bonnen. Gebruik de knoppen bij elk bericht.
+- **en** — {n} more receipts still waiting. Use the buttons on each message.
+- **fr** — Il reste {n} reçus en attente. Utilise les boutons de chaque message.
+- **de** — Noch {n} Belege warten. Nutze die Buttons der jeweiligen Nachricht.
+
+## `batch_others_one`
+
+- **pt** — Ainda há 1 comprovante esperando. Responda aos botões dele.
+- **nl** — Er wacht nog 1 bon. Gebruik de knoppen bij dat bericht.
+- **en** — 1 more receipt is still waiting. Use the buttons on that message.
+- **fr** — Il reste 1 reçu en attente. Utilise les boutons de ce message.
+- **de** — Noch 1 Beleg wartet. Nutze die Buttons dieser Nachricht.
+
+## `batch_receipt_n`
+
+- **pt** — Comprovante {n} de {m}
+- **nl** — Bon {n} van {m}
+- **en** — Receipt {n} of {m}
+- **fr** — Reçu {n} sur {m}
+- **de** — Beleg {n} von {m}
 
 ## `batch_title`
 
@@ -851,6 +1023,14 @@
 - **fr** — Pas encore d'écritures cette année.
 - **de** — In diesem Jahr gibt es noch keine Buchungen.
 
+## `btn_balance_detail`
+
+- **pt** — Ver detalhes
+- **nl** — Details
+- **en** — See details
+- **fr** — Voir le détail
+- **de** — Details ansehen
+
 ## `btn_bare_no`
 
 - **pt** — Não
@@ -891,6 +1071,30 @@
 - **fr** — Annuler
 - **de** — Abbrechen
 
+## `btn_create_cat`
+
+- **pt** — Criar categoria
+- **nl** — Aanmaken
+- **en** — Create it
+- **fr** — Créer
+- **de** — Anlegen
+
+## `btn_day_change`
+
+- **pt** — Mudar o dia
+- **nl** — Dag wijzigen
+- **en** — Change day
+- **fr** — Changer
+- **de** — Ändern
+
+## `btn_day_keep`
+
+- **pt** — Manter
+- **nl** — Laten staan
+- **en** — Keep it
+- **fr** — Garder
+- **de** — Lassen
+
 ## `btn_dd_bud`
 
 - **pt** — Ajustar orçamento
@@ -922,6 +1126,30 @@
 - **en** — Delete
 - **fr** — Supprimer
 - **de** — Löschen
+
+## `btn_due_other`
+
+- **pt** — Outra data
+- **nl** — Andere datum
+- **en** — Other date
+- **fr** — Autre date
+- **de** — Anderes Datum
+
+## `btn_due_today`
+
+- **pt** — Hoje
+- **nl** — Vandaag
+- **en** — Today
+- **fr** — Aujourd'hui
+- **de** — Heute
+
+## `btn_due_tomorrow`
+
+- **pt** — Amanhã
+- **nl** — Morgen
+- **en** — Tomorrow
+- **fr** — Demain
+- **de** — Morgen
 
 ## `btn_edit`
 
@@ -971,6 +1199,30 @@
 - **fr** — Incorrect
 - **de** — Falsch
 
+## `btn_goal_3x`
+
+- **pt** — 3x por semana
+- **nl** — 3x per week
+- **en** — 3x a week
+- **fr** — 3x par semaine
+- **de** — 3x pro Woche
+
+## `btn_goal_daily`
+
+- **pt** — Todo dia
+- **nl** — Elke dag
+- **en** — Every day
+- **fr** — Chaque jour
+- **de** — Jeden Tag
+
+## `btn_goal_other`
+
+- **pt** — Outra
+- **nl** — Anders
+- **en** — Other
+- **fr** — Autre
+- **de** — Andere
+
 ## `btn_hc_no`
 
 - **pt** — Não autorizo
@@ -1011,6 +1263,14 @@
 - **fr** — Confirmer
 - **de** — Bestätigen
 
+## `btn_home_skip`
+
+- **pt** — Agora não
+- **nl** — Nu niet
+- **en** — Not now
+- **fr** — Pas maintenant
+- **de** — Jetzt nicht
+
 ## `btn_inv_undo`
 
 - **pt** — Desfazer
@@ -1043,6 +1303,30 @@
 - **fr** — Oui, changer
 - **de** — Ja, wechseln
 
+## `btn_limit_ok`
+
+- **pt** — Ok
+- **nl** — Ok
+- **en** — Ok
+- **fr** — Ok
+- **de** — Ok
+
+## `btn_mood_cancel`
+
+- **pt** — Cancelar
+- **nl** — Annuleren
+- **en** — Cancel
+- **fr** — Annuler
+- **de** — Abbrechen
+
+## `btn_mood_ten`
+
+- **pt** — Registrar 10
+- **nl** — 10 noteren
+- **en** — Log 10
+- **fr** — Noter 10
+- **de** — 10 eintragen
+
 ## `btn_neg_income`
 
 - **pt** — Anotar receita
@@ -1052,6 +1336,14 @@
 - **de** — Als Einnahme
 
 ## `btn_neg_no`
+
+- **pt** — Não
+- **nl** — Nee
+- **en** — No
+- **fr** — Non
+- **de** — Nein
+
+## `btn_no`
 
 - **pt** — Não
 - **nl** — Nee
@@ -1075,6 +1367,14 @@
 - **fr** — Ouvrir mon tableau
 - **de** — Dashboard öffnen
 
+## `btn_pick_cat`
+
+- **pt** — Ver categorias
+- **nl** — Categorieën
+- **en** — See categories
+- **fr** — Catégories
+- **de** — Kategorien
+
 ## `btn_rec_keep`
 
 - **pt** — Manter
@@ -1090,6 +1390,22 @@
 - **en** — Change amount
 - **fr** — Changer
 - **de** — Betrag ändern
+
+## `btn_repeat_no`
+
+- **pt** — Só esta vez
+- **nl** — Alleen nu
+- **en** — Just this once
+- **fr** — Cette fois
+- **de** — Nur dieses Mal
+
+## `btn_repeat_yes`
+
+- **pt** — Sim, todo mês
+- **nl** — Ja, elke maand
+- **en** — Yes, monthly
+- **fr** — Oui, chaque mois
+- **de** — Ja, monatlich
 
 ## `btn_svc_exp`
 
@@ -1147,6 +1463,14 @@
 - **fr** — Tout supprimer
 - **de** — Alles löschen
 
+## `btn_yes`
+
+- **pt** — Sim
+- **nl** — Ja
+- **en** — Yes
+- **fr** — Oui
+- **de** — Ja
+
 ## `budget_alert_100`
 
 - **pt** — 
@@ -1173,6 +1497,14 @@
 - **de** — 
   > ⚠️ Du hast schon {pct} % deines Budgets für {cat} verbraucht ({spent} von {limit}).
 
+## `budget_alert_ask`
+
+- **pt** — Quer aumentar o limite de {cat}? Toque numa opção ou diga o novo valor.
+- **nl** — Wil je de limiet voor {cat} verhogen? Kies een optie of typ het nieuwe bedrag.
+- **en** — Raise the {cat} limit? Tap an option or type the new amount.
+- **fr** — Augmenter la limite de {cat} ? Choisis une option ou écris le nouveau montant.
+- **de** — Das Limit für {cat} erhöhen? Tippe eine Option oder schreibe den neuen Betrag.
+
 ## `budget_alert_proj`
 
 - **pt** —  No ritmo atual, fecha o mês em ~{proj}.
@@ -1180,6 +1512,22 @@
 - **en** —  At this pace you'll end the month at ~{proj}.
 - **fr** —  À ce rythme, tu finis le mois à ~{proj}.
 - **de** —  In diesem Tempo landest du am Monatsende bei ~{proj}.
+
+## `budget_kept`
+
+- **pt** — Certo, deixei como está.
+- **nl** — Prima, ik laat het zoals het is.
+- **en** — Okay, left as it is.
+- **fr** — D'accord, je laisse comme ça.
+- **de** — Okay, ich lasse es so.
+
+## `budget_limit_raised`
+
+- **pt** — Limite de *{cat}* agora é {limit} por mês.
+- **nl** — De limiet voor *{cat}* is nu {limit} per maand.
+- **en** — The *{cat}* limit is now {limit} a month.
+- **fr** — La limite de *{cat}* est maintenant de {limit} par mois.
+- **de** — Das Limit für *{cat}* beträgt jetzt {limit} pro Monat.
 
 ## `budget_list_empty`
 
@@ -1196,6 +1544,14 @@
 - **en** — Your budgets for {month}:
 - **fr** — Tes budgets pour {month} :
 - **de** — Deine Budgets für {month}:
+
+## `budget_new_cat_ask`
+
+- **pt** — Não conheço a categoria *{cat}*. Quer criar {cat} com limite de {limit} por mês?
+- **nl** — Ik ken de categorie *{cat}* niet. Wil je {cat} aanmaken met een limiet van {limit} per maand?
+- **en** — I don't know the category *{cat}*. Create {cat} with a limit of {limit} a month?
+- **fr** — Je ne connais pas la catégorie *{cat}*. Créer {cat} avec une limite de {limit} par mois ?
+- **de** — Die Kategorie *{cat}* kenne ich nicht. {cat} mit einem Limit von {limit} pro Monat anlegen?
 
 ## `budget_none_to_remove`
 
@@ -1945,6 +2301,46 @@
 - **fr** — C'est fait : l'ancien lien du tableau de bord ne marche plus. Voici le nouveau, rien que pour toi.
 - **de** — Erledigt: Der alte Dashboard-Link funktioniert nicht mehr. Hier ist der neue, nur für dich.
 
+## `day_change_ask`
+
+- **pt** — {name} já está no dia {old}. Mudar para o dia {new}?
+- **nl** — {name} staat op dag {old}. Verplaatsen naar dag {new}?
+- **en** — {name} is on day {old}. Move it to day {new}?
+- **fr** — {name} est au jour {old}. Passer au jour {new} ?
+- **de** — {name} steht auf Tag {old}. Auf Tag {new} ändern?
+
+## `day_change_kept`
+
+- **pt** — Certo, mantive o dia {old}.
+- **nl** — Prima, dag {old} blijft.
+- **en** — Okay, kept day {old}.
+- **fr** — D'accord, je garde le jour {old}.
+- **de** — Okay, Tag {old} bleibt.
+
+## `day_paid_ask`
+
+- **pt** — Mudei {name} para o dia {new}. A de {month} já foi paga?
+- **nl** — {name} staat nu op dag {new}. Is die van {month} al betaald?
+- **en** — {name} now falls on day {new}. Is the {month} one already paid?
+- **fr** — {name} tombe maintenant le {new}. Celle de {month} est-elle déjà payée ?
+- **de** — {name} fällt jetzt auf Tag {new}. Ist die von {month} schon bezahlt?
+
+## `day_paid_no`
+
+- **pt** — Certo. {name} vence em {due}; eu aviso 3 dias antes.
+- **nl** — Prima. {name} vervalt op {due}; ik waarschuw je 3 dagen eerder.
+- **en** — Okay. {name} is due on {due}; I'll remind you 3 days before.
+- **fr** — D'accord. {name} est dû le {due} ; je te préviens 3 jours avant.
+- **de** — Okay. {name} ist am {due} fällig; ich erinnere dich 3 Tage vorher.
+
+## `day_paid_yes`
+
+- **pt** — Certo. O próximo vencimento de {name} é {due}.
+- **nl** — Prima. De volgende vervaldatum van {name} is {due}.
+- **en** — Okay. The next due date for {name} is {due}.
+- **fr** — D'accord. La prochaine échéance de {name} est le {due}.
+- **de** — Okay. Die nächste Fälligkeit von {name} ist {due}.
+
 ## `day_total_context`
 
 - **pt** —  Hoje você já gastou {total}.
@@ -2180,6 +2576,14 @@
 - **fr** — ces 7 derniers jours
 - **de** — in den letzten 7 Tagen
 
+## `fu_gone`
+
+- **pt** — Essa pergunta já foi respondida ou expirou. Pode me dizer de novo o que quer fazer.
+- **nl** — Die vraag is al beantwoord of verlopen. Zeg gerust opnieuw wat je wilt doen.
+- **en** — That question was already answered or has expired. Just tell me again what you want.
+- **fr** — Cette question a déjà reçu une réponse ou a expiré. Dis-moi à nouveau ce que tu veux.
+- **de** — Diese Frage wurde schon beantwortet oder ist abgelaufen. Sag mir einfach noch einmal, was du möchtest.
+
 ## `gcal_already`
 
 - **pt** — O Google Agenda já está ligado. Os compromissos novos vão para lá. Para desligar: *desconectar google agenda*.
@@ -2328,9 +2732,9 @@
 
 ## `goal_deleted`
 
-- **pt** — Pronto, tirei a meta *{title}* da sua lista.
+- **pt** — Pronto, tirei a meta *{title}* da sua lista. Os registros já feitos continuam guardados.
 - **nl** — Klaar, het doel *{title}* staat niet meer in je lijst.
-- **en** — Done, I removed the goal *{title}* from your list.
+- **en** — Done, I removed the goal *{title}* from your list. Logs you already made are kept.
 - **fr** — C'est fait, j'ai retiré l'objectif *{title}* de ta liste.
 - **de** — Erledigt, das Ziel *{title}* ist nicht mehr in deiner Liste.
 
@@ -2515,13 +2919,37 @@
 - **fr** — Bonjour
 - **de** — Hallo
 
+## `habit_added_qty`
+
+- **pt** — Somei ao de hoje: {activity}, {qty}. Esta semana: {week}.
+- **nl** — Erbij voor vandaag: {activity}, {qty}. Deze week: {week}.
+- **en** — Added to today: {activity}, {qty}. This week: {week}.
+- **fr** — Ajouté à aujourd'hui : {activity}, {qty}. Cette semaine : {week}.
+- **de** — Zu heute addiert: {activity}, {qty}. Diese Woche: {week}.
+
 ## `habit_already_today`
 
-- **pt** — {activity} já está anotado hoje. Uma vez por dia conta.
+- **pt** — {activity} já está anotado hoje, não precisa repetir.
 - **nl** — {activity} staat vandaag al genoteerd. Eén keer per dag telt.
-- **en** — {activity} is already logged for today. Once a day counts.
+- **en** — {activity} is already logged for today, no need to repeat it.
 - **fr** — {activity} est déjà noté aujourd'hui. Une fois par jour compte.
 - **de** — {activity} ist für heute schon eingetragen. Einmal pro Tag zählt.
+
+## `habit_freq_daily`
+
+- **pt** — todo dia
+- **nl** — elke dag
+- **en** — every day
+- **fr** — chaque jour
+- **de** — jeden Tag
+
+## `habit_freq_n`
+
+- **pt** — {n}x por semana
+- **nl** — {n}x per week
+- **en** — {n}x a week
+- **fr** — {n}x par semaine
+- **de** — {n}x pro Woche
 
 ## `habit_frequency`
 
@@ -2539,6 +2967,30 @@
 - **fr** — Aucune entrée pour *{activity}* {period}.
 - **de** — Keine Einträge für *{activity}* {period}.
 
+## `habit_goal_created`
+
+- **pt** — Meta criada: *{title}*. Cada registro conta para ela.
+- **nl** — Doel gemaakt: *{title}*. Elke registratie telt mee.
+- **en** — Goal created: *{title}*. Every log counts toward it.
+- **fr** — Objectif créé : *{title}*. Chaque enregistrement compte.
+- **de** — Ziel angelegt: *{title}*. Jeder Eintrag zählt dafür.
+
+## `habit_goal_offer`
+
+- **pt** — Quer criar uma meta de *{activity}*? Com que frequência?
+- **nl** — Wil je een doel maken voor *{activity}*? Hoe vaak?
+- **en** — Want to set a goal for *{activity}*? How often?
+- **fr** — Tu veux créer un objectif pour *{activity}* ? À quelle fréquence ?
+- **de** — Möchtest du ein Ziel für *{activity}* anlegen? Wie oft?
+
+## `habit_goal_times_ask`
+
+- **pt** — Quantas vezes por semana? Responda com um número de 1 a 7.
+- **nl** — Hoe vaak per week? Antwoord met een getal van 1 tot 7.
+- **en** — How many times a week? Reply with a number from 1 to 7.
+- **fr** — Combien de fois par semaine ? Réponds avec un nombre de 1 à 7.
+- **de** — Wie oft pro Woche? Antworte mit einer Zahl von 1 bis 7.
+
 ## `habit_logged`
 
 - **pt** — Anotei: {activity}.
@@ -2551,6 +3003,14 @@
 - **fr** — {activity} : noté. Un jour de plus !
 - **de** — Notiert: {activity}.
 - **de** — {activity}: eingetragen. Wieder ein Tag mehr!
+
+## `habit_logged_qty`
+
+- **pt** — Anotei: {activity}, {qty}. Esta semana: {week}.
+- **nl** — Genoteerd: {activity}, {qty}. Deze week: {week}.
+- **en** — Noted: {activity}, {qty}. This week: {week}.
+- **fr** — Noté : {activity}, {qty}. Cette semaine : {week}.
+- **de** — Notiert: {activity}, {qty}. Diese Woche: {week}.
 
 ## `habit_logged_with_goal`
 
@@ -2718,11 +3178,11 @@
 
 ## `health_sleep_avg`
 
-- **pt** — Você dorme em média *{avg}h* (últimos 7 dias, {n} registros).
-- **nl** — Je slaapt gemiddeld *{avg} uur* (laatste 7 dagen, {n} registraties).
-- **en** — You sleep an average of *{avg}h* (last 7 days, {n} entries).
-- **fr** — Tu dors en moyenne *{avg}h* (7 derniers jours, {n} entrées).
-- **de** — Du schläfst im Schnitt *{avg}h* (letzte 7 Tage, {n} Einträge).
+- **pt** — Você dorme em média *{avg}h* (últimos 7 dias, {n}).
+- **nl** — Je slaapt gemiddeld *{avg} uur* (laatste 7 dagen, {n}).
+- **en** — You sleep an average of *{avg}h* (last 7 days, {n}).
+- **fr** — Tu dors en moyenne *{avg}h* (7 derniers jours, {n}).
+- **de** — Du schläfst im Schnitt *{avg}h* (letzte 7 Tage, {n}).
 
 ## `health_sleep_empty`
 
@@ -2734,11 +3194,11 @@
 
 ## `health_unsupported`
 
-- **pt** — Ainda não acompanho peso nem pressão, só medicação, humor, sono e água.
-- **nl** — Gewicht en bloeddruk volg ik nog niet, alleen medicatie, stemming, slaap en water.
-- **en** — I don't track weight or blood pressure yet, only medication, mood, sleep and water.
-- **fr** — Je ne suis pas encore le poids ni la tension, seulement médicaments, humeur, sommeil et eau.
-- **de** — Gewicht und Blutdruck verfolge ich noch nicht, nur Medikamente, Stimmung, Schlaf und Wasser.
+- **pt** — Ainda não acompanho pressão nem glicose. Peso eu guardo: diga, por exemplo, "peso 72,5 kg".
+- **nl** — Bloeddruk en glucose volg ik nog niet. Gewicht bewaar ik wel: zeg bijvoorbeeld "gewicht 72,5 kg".
+- **en** — I don't track blood pressure or glucose yet. I do keep weight: say, for example, "weight 72.5 kg".
+- **fr** — Je ne suis pas encore la tension ni la glycémie. Le poids, oui : dis par exemple « poids 72,5 kg ».
+- **de** — Blutdruck und Blutzucker verfolge ich noch nicht. Gewicht speichere ich: sag zum Beispiel "Gewicht 72,5 kg".
 
 ## `health_water_empty`
 
@@ -2939,6 +3399,30 @@
 - **fr** — Annulé, rien n'a été enregistré.
 - **de** — Abgebrochen, nichts gespeichert.
 
+## `home_day_ask`
+
+- **pt** — Em que dia do mês a cobrança acontece? Responda com o dia (1 a 31).
+- **nl** — Op welke dag van de maand wordt er afgeschreven? Antwoord met de dag (1 tot 31).
+- **en** — On which day of the month is it charged? Reply with the day (1 to 31).
+- **fr** — Quel jour du mois le prélèvement a-t-il lieu ? Réponds avec le jour (1 à 31).
+- **de** — An welchem Tag im Monat wird abgebucht? Antworte mit dem Tag (1 bis 31).
+
+## `home_day_done`
+
+- **pt** — Pronto: {name} agora é uma conta fixa no dia {day}. Eu aviso antes do vencimento e do fim do contrato. A de {month} já foi paga?
+- **nl** — Klaar: {name} is nu een vaste last op dag {day}. Ik waarschuw je voor de vervaldatum en het einde van het contract. Is die van {month} al betaald?
+- **en** — Done: {name} is now a fixed bill on day {day}. I'll warn you before the due date and before the contract ends. Is the {month} one already paid?
+- **fr** — C'est fait : {name} est maintenant une charge fixe le {day}. Je te préviens avant l'échéance et la fin du contrat. Celle de {month} est-elle déjà payée ?
+- **de** — Erledigt: {name} ist jetzt eine Fixkostenposition am {day}. Ich erinnere dich vor Fälligkeit und Vertragsende. Ist die von {month} schon bezahlt?
+
+## `home_day_skipped`
+
+- **pt** — Certo, não criei a conta fixa. Diga “conta fixa …” quando quiser.
+- **nl** — Prima, geen vaste last aangemaakt. Zeg “vaste last …” wanneer je wilt.
+- **en** — Okay, no fixed bill created. Say “fixed bill …” whenever you like.
+- **fr** — D'accord, aucune charge fixe créée. Dis « charge fixe … » quand tu veux.
+- **de** — Okay, keine Fixkosten angelegt. Sag „Fixkosten …“, wann du magst.
+
 ## `home_deleted`
 
 - **pt** — Apaguei: {what}.
@@ -2970,6 +3454,22 @@
 - **en** — That draft expired. Please send the contract again.
 - **fr** — Ce brouillon a expiré. Renvoie le contrat.
 - **de** — Dieser Entwurf ist abgelaufen. Sende den Vertrag bitte neu.
+
+## `home_fill_end`
+
+- **pt** — Quando termina o contrato de {kind}? Por exemplo: 31/12/2027.
+- **nl** — Wanneer eindigt het {kind}-contract? Bijvoorbeeld: 31/12/2027.
+- **en** — When does the {kind} contract end? For example: 31/12/2027.
+- **fr** — Quand le contrat {kind} se termine-t-il ? Par exemple : 31/12/2027.
+- **de** — Wann endet der {kind}-Vertrag? Zum Beispiel: 31.12.2027.
+
+## `home_fill_provider`
+
+- **pt** — Qual é o fornecedor do contrato de {kind}?
+- **nl** — Wie is de aanbieder van het {kind}-contract?
+- **en** — Who is the provider of the {kind} contract?
+- **fr** — Quel est le fournisseur du contrat {kind} ?
+- **de** — Wer ist der Anbieter des {kind}-Vertrags?
 
 ## `home_foot`
 
@@ -3157,11 +3657,11 @@
 
 ## `imp_bad_type`
 
-- **pt** — Esse arquivo não é um CSV. Exporte o extrato como *CSV* (ou TXT) no app do banco e envie de novo.
-- **nl** — Dit bestand is geen CSV. Exporteer het afschrift als *CSV* (of TXT) in de app van je bank en stuur het opnieuw.
-- **en** — That file is not a CSV. Export the statement as *CSV* (or TXT) from your bank's app and send it again.
-- **fr** — Ce fichier n'est pas un CSV. Exporte le relevé en *CSV* (ou TXT) depuis l'appli de ta banque et renvoie-le.
-- **de** — Diese Datei ist keine CSV. Exportiere den Auszug als *CSV* (oder TXT) in der App deiner Bank und sende ihn erneut.
+- **pt** — Esse arquivo eu não consigo ler como extrato. Envie em *CSV*, *Excel (.xlsx)* ou *PDF* (do app do banco) e tente de novo.
+- **nl** — Dit bestand kan ik niet als afschrift lezen. Stuur het als *CSV*, *Excel (.xlsx)* of *pdf* (uit de app van je bank) en probeer het opnieuw.
+- **en** — I can't read that file as a statement. Send it as *CSV*, *Excel (.xlsx)* or *PDF* (from your bank's app) and try again.
+- **fr** — Je ne peux pas lire ce fichier comme un relevé. Envoie-le en *CSV*, *Excel (.xlsx)* ou *PDF* (depuis l'appli de ta banque) et réessaie.
+- **de** — Diese Datei kann ich nicht als Kontoauszug lesen. Sende sie als *CSV*, *Excel (.xlsx)* oder *PDF* (aus der App deiner Bank) und versuche es erneut.
 
 ## `imp_btn_all`
 
@@ -3171,6 +3671,14 @@
 - **fr** — Tout importer ({n})
 - **de** — Alle ({n})
 
+## `imp_btn_force`
+
+- **pt** — Importar mesmo assim
+- **nl** — Toch importeren
+- **en** — Import anyway
+- **fr** — Importer quand même
+- **de** — Trotzdem importieren
+
 ## `imp_btn_no`
 
 - **pt** — Cancelar
@@ -3178,6 +3686,14 @@
 - **en** — Cancel
 - **fr** — Annuler
 - **de** — Abbrechen
+
+## `imp_btn_nothing_ok`
+
+- **pt** — Ok
+- **nl** — Ok
+- **en** — OK
+- **fr** — OK
+- **de** — OK
 
 ## `imp_btn_ok`
 
@@ -3261,11 +3777,11 @@
 
 ## `imp_help`
 
-- **pt** — Para importar o extrato do banco, exporte o arquivo em *CSV* no app ou site do banco (ING, Rabobank, ABN AMRO, bunq…) e envie aqui como documento. Eu mostro um resumo e só importo depois do seu OK. Linhas já importadas ou que você já registrou à mão não duplicam. Para desfazer: *desfazer importação*.
-- **nl** — Om je bankafschrift te importeren, exporteer je het bestand als *CSV* in de app of site van je bank (ING, Rabobank, ABN AMRO, bunq…) en stuur je het hier als document. Ik laat eerst een samenvatting zien en importeer pas na je OK. Regels die al zijn geïmporteerd of die je zelf hebt ingevoerd worden niet dubbel. Ongedaan maken: *import ongedaan maken*.
-- **en** — To import your bank statement, export it as *CSV* from your bank's app or website (ING, Rabobank, ABN AMRO, bunq…) and send it here as a document. I show a summary first and only import after your OK. Lines already imported, or that you entered by hand, are not duplicated. To undo: *undo import*.
-- **fr** — Pour importer ton relevé bancaire, exporte-le en *CSV* depuis l'appli ou le site de ta banque (ING, Rabobank, ABN AMRO, bunq…) et envoie-le ici comme document. Je montre d'abord un résumé et je n'importe qu'après ton OK. Les lignes déjà importées ou saisies à la main ne sont pas dupliquées. Pour annuler : *annuler l'import*.
-- **de** — Um deinen Kontoauszug zu importieren, exportiere ihn als *CSV* in der App oder auf der Website deiner Bank (ING, Rabobank, ABN AMRO, bunq…) und sende ihn hier als Dokument. Ich zeige erst eine Zusammenfassung und importiere erst nach deinem OK. Bereits importierte oder von dir von Hand eingetragene Zeilen werden nicht doppelt angelegt. Zum Rückgängigmachen: *import rückgängig*.
+- **pt** — Para importar o extrato do banco, exporte o arquivo em *CSV*, *Excel* ou *PDF* no app ou site do banco (ING, Rabobank, ABN AMRO, bunq…) e envie aqui como documento. Eu mostro um resumo e só importo depois do seu OK. Linhas já importadas ou que você já registrou à mão não duplicam. Para desfazer: *desfazer importação*.
+- **nl** — Om je bankafschrift te importeren, exporteer je het bestand als *CSV*, *Excel* of *pdf* in de app of site van je bank (ING, Rabobank, ABN AMRO, bunq…) en stuur je het hier als document. Ik laat eerst een samenvatting zien en importeer pas na je OK. Regels die al zijn geïmporteerd of die je zelf hebt ingevoerd worden niet dubbel. Ongedaan maken: *import ongedaan maken*.
+- **en** — To import your bank statement, export it as *CSV*, *Excel* or *PDF* from your bank's app or website (ING, Rabobank, ABN AMRO, bunq…) and send it here as a document. I show a summary first and only import after your OK. Lines already imported, or that you entered by hand, are not duplicated. To undo: *undo import*.
+- **fr** — Pour importer ton relevé bancaire, exporte-le en *CSV*, *Excel* ou *PDF* depuis l'appli ou le site de ta banque (ING, Rabobank, ABN AMRO, bunq…) et envoie-le ici comme document. Je montre d'abord un résumé et je n'importe qu'après ton OK. Les lignes déjà importées ou saisies à la main ne sont pas dupliquées. Pour annuler : *annuler l'import*.
+- **de** — Um deinen Kontoauszug zu importieren, exportiere ihn als *CSV*, *Excel* oder *PDF* in der App oder auf der Website deiner Bank (ING, Rabobank, ABN AMRO, bunq…) und sende ihn hier als Dokument. Ich zeige erst eine Zusammenfassung und importiere erst nach deinem OK. Bereits importierte oder von dir von Hand eingetragene Zeilen werden nicht doppelt angelegt. Zum Rückgängigmachen: *import rückgängig*.
 
 ## `imp_maybe_line`
 
@@ -3282,11 +3798,11 @@
 
 ## `imp_nothing_new`
 
-- **pt** — Tudo isso já estava importado ou registrado por você; não há nada novo.
-- **nl** — Dit stond al allemaal in je administratie; er is niets nieuws.
-- **en** — All of this was already imported or entered by you; there is nothing new.
-- **fr** — Tout cela était déjà importé ou saisi par toi ; il n'y a rien de nouveau.
-- **de** — Das war alles schon importiert oder von dir eingetragen; es gibt nichts Neues.
+- **pt** — Tudo isso já estava importado ou registrado por você; não há nada novo. Se mesmo assim quiser importar de novo, toque em *Importar mesmo assim*.
+- **nl** — Dit stond al allemaal in je administratie; er is niets nieuws. Wil je het toch opnieuw importeren, tik dan op *Toch importeren*.
+- **en** — All of this was already imported or entered by you; there is nothing new. If you still want to import it again, tap *Import anyway*.
+- **fr** — Tout cela était déjà importé ou saisi par toi ; il n'y a rien de nouveau. Si tu veux quand même l'importer à nouveau, touche *Importer quand même*.
+- **de** — Das war alles schon importiert oder von dir eingetragen; es gibt nichts Neues. Willst du es trotzdem erneut importieren, tippe auf *Trotzdem importieren*.
 
 ## `imp_other_line`
 
@@ -3313,6 +3829,48 @@
   > 1 dépense est dans *Autres*, sans catégorie ; tu pourras ajuster ensuite.
 - **de** — 
   > 1 Ausgabe steht unter *Sonstiges*, ohne Kategorie; du kannst das später anpassen.
+
+## `imp_pdf_check`
+
+- **pt** — 
+  > 
+  > Li este PDF como texto, sem guardar o arquivo, e escondi os números de conta. Confira os valores antes de importar: um PDF pode ser mal interpretado.
+- **nl** — 
+  > 
+  > Ik heb deze pdf als tekst gelezen, zonder het bestand te bewaren, en rekeningnummers verborgen. Controleer de bedragen voor je importeert: een pdf kan verkeerd gelezen zijn.
+- **en** — 
+  > 
+  > I read this PDF as text without keeping the file, and hid account numbers. Check the amounts before importing: a PDF can be misread.
+- **fr** — 
+  > 
+  > J'ai lu ce PDF comme du texte, sans garder le fichier, et masqué les numéros de compte. Vérifie les montants avant d'importer : un PDF peut être mal lu.
+- **de** — 
+  > 
+  > Ich habe dieses PDF als Text gelesen, ohne die Datei zu speichern, und Kontonummern ausgeblendet. Prüfe die Beträge vor dem Import: Ein PDF kann falsch gelesen werden.
+
+## `imp_pdf_pages`
+
+- **pt** — Esse PDF tem mais de 10 páginas. Exporte um período menor ou envie o extrato em CSV ou Excel.
+- **nl** — Deze pdf heeft meer dan 10 pagina's. Exporteer een kortere periode of stuur het afschrift als CSV of Excel.
+- **en** — That PDF has more than 10 pages. Export a shorter period or send the statement as CSV or Excel.
+- **fr** — Ce PDF a plus de 10 pages. Exporte une période plus courte ou envoie le relevé en CSV ou Excel.
+- **de** — Dieses PDF hat mehr als 10 Seiten. Exportiere einen kürzeren Zeitraum oder sende den Auszug als CSV oder Excel.
+
+## `imp_pdf_too_big`
+
+- **pt** — Esse PDF passa de 5 MB. Exporte um período menor ou envie o extrato em CSV ou Excel.
+- **nl** — Deze pdf is groter dan 5 MB. Exporteer een kortere periode of stuur het afschrift als CSV of Excel.
+- **en** — That PDF is over 5 MB. Export a shorter period or send the statement as CSV or Excel.
+- **fr** — Ce PDF dépasse 5 Mo. Exporte une période plus courte ou envoie le relevé en CSV ou Excel.
+- **de** — Dieses PDF ist größer als 5 MB. Exportiere einen kürzeren Zeitraum oder sende den Auszug als CSV oder Excel.
+
+## `imp_pdf_unreadable`
+
+- **pt** — Não consegui ler lançamentos nesse PDF. Tente exportar o extrato em CSV ou Excel pelo app do banco.
+- **nl** — Ik kon geen transacties in deze pdf lezen. Probeer het afschrift als CSV of Excel uit de app van je bank te exporteren.
+- **en** — I couldn't read transactions in that PDF. Try exporting the statement as CSV or Excel from your bank's app.
+- **fr** — Je n'ai pas pu lire de transactions dans ce PDF. Essaie d'exporter le relevé en CSV ou Excel depuis l'appli de ta banque.
+- **de** — Ich konnte in diesem PDF keine Buchungen lesen. Versuche, den Auszug als CSV oder Excel aus der App deiner Bank zu exportieren.
 
 ## `imp_preview`
 
@@ -3406,11 +3964,11 @@
 
 ## `imp_too_many`
 
-- **pt** — O arquivo tem linhas demais (limite de 2000). Exporte um período menor.
-- **nl** — Het bestand heeft te veel regels (limiet 2000). Exporteer een kortere periode.
-- **en** — The file has too many lines (limit 2000). Export a shorter period.
-- **fr** — Le fichier a trop de lignes (limite de 2000). Exporte une période plus courte.
-- **de** — Die Datei hat zu viele Zeilen (Limit 2000). Exportiere einen kürzeren Zeitraum.
+- **pt** — O arquivo tem linhas demais (limite de 2000 no CSV e de 5000 no Excel). Exporte um período menor.
+- **nl** — Het bestand heeft te veel regels (limiet 2000 in CSV en 5000 in Excel). Exporteer een kortere periode.
+- **en** — The file has too many lines (limit 2000 for CSV and 5000 for Excel). Export a shorter period.
+- **fr** — Le fichier a trop de lignes (limite de 2000 en CSV et 5000 en Excel). Exporte une période plus courte.
+- **de** — Die Datei hat zu viele Zeilen (Limit 2000 bei CSV und 5000 bei Excel). Exportiere einen kürzeren Zeitraum.
 
 ## `imp_undo_none`
 
@@ -3435,6 +3993,22 @@
 - **en** — Undone: 1 entry from the last import was removed.
 - **fr** — Annulé : 1 écriture du dernier import a été supprimée.
 - **de** — Rückgängig gemacht: 1 Buchung des letzten Imports wurde entfernt.
+
+## `imp_xlsm`
+
+- **pt** — Arquivos Excel com macros (.xlsm) eu não abro, por segurança. Salve como *.xlsx* (sem macros) ou exporte em CSV e envie de novo.
+- **nl** — Excel-bestanden met macro's (.xlsm) open ik niet, voor de veiligheid. Sla op als *.xlsx* (zonder macro's) of exporteer als CSV en stuur het opnieuw.
+- **en** — I don't open Excel files with macros (.xlsm), for safety. Save as *.xlsx* (no macros) or export as CSV and send it again.
+- **fr** — Je n'ouvre pas les fichiers Excel avec macros (.xlsm), par sécurité. Enregistre en *.xlsx* (sans macros) ou exporte en CSV et renvoie-le.
+- **de** — Excel-Dateien mit Makros (.xlsm) öffne ich aus Sicherheitsgründen nicht. Speichere als *.xlsx* (ohne Makros) oder exportiere als CSV und sende sie erneut.
+
+## `income_due_today`
+
+- **pt** — Hoje é dia de {name} ({amount}). Já caiu? Se sim, diga "recebi {name}". Até lá fica em "a receber".
+- **nl** — Vandaag is het dag van {name} ({amount}). Al binnen? Zeg dan "ontvangen {name}". Tot dan staat het bij "te ontvangen".
+- **en** — Today is {name} day ({amount}). Has it arrived? If so, say "received {name}". Until then it stays under "to receive".
+- **fr** — Aujourd'hui, c'est {name} ({amount}). C'est arrivé ? Si oui, dis « reçu {name} ». D'ici là, c'est « à recevoir ».
+- **de** — Heute ist {name} ({amount}) dran. Schon da? Dann sag "erhalten {name}". Bis dahin steht es unter "zu erhalten".
 
 ## `income_line`
 
@@ -3869,6 +4443,14 @@
   > 
   > (1–5)
 
+## `language_pick`
+
+- **pt** — Qual idioma você prefere? · Welke taal? · Which language? · Quelle langue ? · Welche Sprache?
+- **nl** — Qual idioma você prefere? · Welke taal? · Which language? · Quelle langue ? · Welche Sprache?
+- **en** — Qual idioma você prefere? · Welke taal? · Which language? · Quelle langue ? · Welche Sprache?
+- **fr** — Qual idioma você prefere? · Welke taal? · Which language? · Quelle langue ? · Welche Sprache?
+- **de** — Qual idioma você prefere? · Welke taal? · Which language? · Quelle langue ? · Welche Sprache?
+
 ## `last_expenses_title`
 
 - **pt** — Suas últimas {n} despesas
@@ -4260,6 +4842,54 @@
 - **fr** —  Cela fait {total} dépensés ce mois-ci.
 - **de** —  Das sind {total} Ausgaben in diesem Monat.
 
+## `mood_band_good`
+
+- **pt** — Anotado: {value} de 10 hoje. 😊 Bom dia!
+- **nl** — Genoteerd: {value} van 10 vandaag. 😊 Fijne dag!
+- **en** — Noted: {value} out of 10 today. 😊 Good day!
+- **fr** — Noté : {value} sur 10 aujourd'hui. 😊 Belle journée !
+- **de** — Notiert: heute {value} von 10. 😊 Schöner Tag!
+
+## `mood_band_low`
+
+- **pt** — Anotado: {value} de 10 hoje. 💙 Dias assim passam; se quiser falar, estou aqui.
+- **nl** — Genoteerd: {value} van 10 vandaag. 💙 Zulke dagen gaan voorbij; wil je praten, dan ben ik er.
+- **en** — Noted: {value} out of 10 today. 💙 Days like this pass; I'm here if you want to talk.
+- **fr** — Noté : {value} sur 10 aujourd'hui. 💙 Ces jours passent ; je suis là si tu veux parler.
+- **de** — Notiert: heute {value} von 10. 💙 Solche Tage gehen vorbei; ich bin da, wenn du reden möchtest.
+
+## `mood_band_mid`
+
+- **pt** — Anotado: {value} de 10 hoje. 🙂
+- **nl** — Genoteerd: {value} van 10 vandaag. 🙂
+- **en** — Noted: {value} out of 10 today. 🙂
+- **fr** — Noté : {value} sur 10 aujourd'hui. 🙂
+- **de** — Notiert: heute {value} von 10. 🙂
+
+## `mood_band_top`
+
+- **pt** — Anotado: {value} de 10 hoje. 🌟 Que dia!
+- **nl** — Genoteerd: {value} van 10 vandaag. 🌟 Wat een dag!
+- **en** — Noted: {value} out of 10 today. 🌟 What a day!
+- **fr** — Noté : {value} sur 10 aujourd'hui. 🌟 Quelle journée !
+- **de** — Notiert: heute {value} von 10. 🌟 Was für ein Tag!
+
+## `mood_over_ask`
+
+- **pt** — A escala vai de 0 a 10 e você escreveu {value}. Registro 10?
+- **nl** — De schaal loopt van 0 tot 10 en je schreef {value}. Zal ik 10 noteren?
+- **en** — The scale goes from 0 to 10 and you wrote {value}. Log it as 10?
+- **fr** — L'échelle va de 0 à 10 et tu as écrit {value}. J'enregistre 10 ?
+- **de** — Die Skala reicht von 0 bis 10 und du hast {value} geschrieben. Soll ich 10 eintragen?
+
+## `mood_over_cancelled`
+
+- **pt** — Certo, não registrei. Diga o humor de 0 a 10 quando quiser.
+- **nl** — Prima, niets genoteerd. Zeg je stemming van 0 tot 10 wanneer je wilt.
+- **en** — Okay, nothing logged. Tell me your mood from 0 to 10 whenever you like.
+- **fr** — D'accord, rien noté. Dis-moi ton humeur de 0 à 10 quand tu veux.
+- **de** — Okay, nichts eingetragen. Sag mir deine Stimmung von 0 bis 10, wann du magst.
+
 ## `msum_activity`
 
 - **pt** — Treinos: {workouts} · Hábitos registrados: {habits}.
@@ -4624,6 +5254,94 @@
 - **fr** — Le dernier message que j'ai envoyé :
 - **de** — Die letzte Nachricht, die ich geschickt habe:
 
+## `pay_due_ask`
+
+- **pt** — Anotei {name}, {amount}. Quando vence?
+- **nl** — Genoteerd: {name}, {amount}. Wanneer vervalt het?
+- **en** — Noted: {name}, {amount}. When is it due?
+- **fr** — Noté : {name}, {amount}. Quelle est l'échéance ?
+- **de** — Notiert: {name}, {amount}. Wann ist es fällig?
+
+## `pay_due_date_ask`
+
+- **pt** — Qual é a data? Por exemplo: dia 28 ou 15/11.
+- **nl** — Welke datum? Bijvoorbeeld: de 28e of 15/11.
+- **en** — Which date? For example: the 28th or 15/11.
+- **fr** — Quelle date ? Par exemple : le 28 ou 15/11.
+- **de** — Welches Datum? Zum Beispiel: der 28. oder 15.11.
+
+## `pay_many_ask`
+
+- **pt** — Baixar {n} parcelas de {name} ({n} × {each} = {total})? Faltariam {left}.
+- **nl** — {n} termijnen van {name} afboeken ({n} × {each} = {total})? Dan blijven er {left} over.
+- **en** — Settle {n} instalments of {name} ({n} × {each} = {total})? {left} would remain.
+- **fr** — Solder {n} échéances de {name} ({n} × {each} = {total}) ? Il en resterait {left}.
+- **de** — {n} Raten von {name} abbuchen ({n} × {each} = {total})? Es blieben {left}.
+
+## `pay_many_cancelled`
+
+- **pt** — Certo, não baixei nada.
+- **nl** — Prima, ik heb niets afgeboekt.
+- **en** — Okay, I didn't settle anything.
+- **fr** — D'accord, je n'ai rien soldé.
+- **de** — Okay, ich habe nichts abgebucht.
+
+## `pay_many_done`
+
+- **pt** — Baixei {n} parcelas de {name} ({total}). Faltam {left}; a próxima vence em {due} e eu aviso 3 dias antes.
+- **nl** — {n} termijnen van {name} afgeboekt ({total}). Nog {left}; de volgende vervalt op {due}, ik waarschuw je 3 dagen eerder.
+- **en** — Settled {n} instalments of {name} ({total}). {left} left; the next is due on {due} and I'll remind you 3 days before.
+- **fr** — {n} échéances de {name} soldées ({total}). Il en reste {left} ; la prochaine est le {due}, je te préviens 3 jours avant.
+- **de** — {n} Raten von {name} abgebucht ({total}). Noch {left}; die nächste ist am {due} fällig, ich erinnere dich 3 Tage vorher.
+
+## `pay_many_last`
+
+- **pt** — Baixei {n} parcelas de {name} ({total}). Foi a última: parcelamento quitado!
+- **nl** — {n} termijnen van {name} afgeboekt ({total}). Dat was de laatste: afbetaald!
+- **en** — Settled {n} instalments of {name} ({total}). That was the last one: paid off!
+- **fr** — {n} échéances de {name} soldées ({total}). C'était la dernière : soldé !
+- **de** — {n} Raten von {name} abgebucht ({total}). Das war die letzte: abbezahlt!
+
+## `pay_many_none`
+
+- **pt** — Não achei um parcelamento chamado {name}. Para criar um, diga por exemplo "celular em 10x de 89,90".
+- **nl** — Ik vind geen afbetaling met de naam {name}. Maak er een aan met bijvoorbeeld "telefoon in 10x 89,90".
+- **en** — I can't find an instalment plan called {name}. Create one, for example "phone in 10x of 89.90".
+- **fr** — Je ne trouve pas de paiement échelonné nommé {name}. Crée-en un, par exemple « téléphone en 10x de 89,90 ».
+- **de** — Ich finde keinen Ratenplan namens {name}. Lege einen an, zum Beispiel "Handy in 10 Raten à 89,90".
+
+## `pay_many_too_many`
+
+- **pt** — {name} só tem {left} parcelas em aberto. Quer baixar todas?
+- **nl** — {name} heeft nog maar {left} termijnen open. Alles afboeken?
+- **en** — {name} only has {left} instalments left. Settle all of them?
+- **fr** — {name} n'a plus que {left} échéances. Tout solder ?
+- **de** — {name} hat nur noch {left} offene Raten. Alle abbuchen?
+
+## `pay_repeat_ask`
+
+- **pt** — Essa conta repete todo mês?
+- **nl** — Komt deze rekening elke maand terug?
+- **en** — Does this bill repeat every month?
+- **fr** — Cette facture revient-elle chaque mois ?
+- **de** — Wiederholt sich diese Rechnung jeden Monat?
+
+## `pay_repeat_no`
+
+- **pt** — Certo, só esta vez.
+- **nl** — Prima, alleen deze keer.
+- **en** — Okay, just this once.
+- **fr** — D'accord, juste cette fois.
+- **de** — Okay, nur dieses Mal.
+
+## `pay_repeat_yes`
+
+- **pt** — Pronto: {name} agora é uma conta fixa todo mês, dia {day}. O próximo lembrete é em {next}.
+- **nl** — Klaar: {name} is nu elke maand een vaste last, dag {day}. De volgende herinnering is op {next}.
+- **en** — Done: {name} is now a monthly fixed bill on day {day}. The next reminder is on {next}.
+- **fr** — C'est fait : {name} est maintenant une charge fixe mensuelle, le {day}. Prochain rappel le {next}.
+- **de** — Erledigt: {name} ist jetzt monatlich fix, Tag {day}. Die nächste Erinnerung ist am {next}.
+
 ## `pending_forecast`
 
 - **pt** — Previsto: {pay} a pagar e {recv} a receber.
@@ -4824,6 +5542,14 @@
 - **fr** — C'est fait : {name} du {day} est maintenant {new} (avant : {old}).
 - **de** — Erledigt: {name} am {day} ist jetzt {new} (vorher: {old}).
 
+## `plan_edit_guess`
+
+- **pt** — Você quis dizer: trocar {name} de {day} para {spec}?
+- **nl** — Bedoel je: {name} op {day} wijzigen naar {spec}?
+- **en** — Did you mean: change {name} on {day} to {spec}?
+- **fr** — Tu voulais dire : changer {name} du {day} en {spec} ?
+- **de** — Meinst du: {name} am {day} auf {spec} ändern?
+
 ## `plan_edit_noday`
 
 - **pt** — Não há treino de {day} no seu plano.
@@ -4887,6 +5613,38 @@
 - **en** — This is the plan I understood:
 - **fr** — Voici le plan que j'ai compris :
 - **de** — Das ist der Plan, den ich verstanden habe:
+
+## `plan_save_ex_ask`
+
+- **pt** — Isso parece um exercício: {name} {sets}x{reps}. Quer salvar no plano de treino{day}?
+- **nl** — Dit lijkt een oefening: {name} {sets}x{reps}. Opslaan in je trainingsplan{day}?
+- **en** — That looks like an exercise: {name} {sets}x{reps}. Save it in your training plan{day}?
+- **fr** — Cela ressemble à un exercice : {name} {sets}x{reps}. L'enregistrer dans ton plan{day} ?
+- **de** — Das sieht nach einer Übung aus: {name} {sets}x{reps}. Im Trainingsplan speichern{day}?
+
+## `plan_save_ex_done`
+
+- **pt** — Pronto: {name} {sets}x{reps} entrou no plano de {day}.
+- **nl** — Klaar: {name} {sets}x{reps} staat nu in het plan van {day}.
+- **en** — Done: {name} {sets}x{reps} is now in the {day} plan.
+- **fr** — C'est fait : {name} {sets}x{reps} est dans le plan de {day}.
+- **de** — Erledigt: {name} {sets}x{reps} steht jetzt im Plan für {day}.
+
+## `plan_save_ex_no`
+
+- **pt** — Certo, não salvei. Nada foi registrado como despesa.
+- **nl** — Prima, niet opgeslagen. Er is niets als uitgave genoteerd.
+- **en** — Okay, not saved. Nothing was logged as an expense.
+- **fr** — D'accord, rien enregistré. Aucune dépense créée.
+- **de** — Okay, nicht gespeichert. Es wurde keine Ausgabe erfasst.
+
+## `plan_save_ex_noday`
+
+- **pt** — Não achei esse dia no seu plano. Para criar o plano, mande, por exemplo, “plano: segunda - peito: supino 4x10”.
+- **nl** — Ik vind die dag niet in je plan. Maak het plan met bijvoorbeeld “plan: maandag - borst: bankdrukken 4x10”.
+- **en** — I can't find that day in your plan. Create the plan with, for example, “plan: monday - chest: bench press 4x10”.
+- **fr** — Je ne trouve pas ce jour dans ton plan. Crée-le avec par exemple « plan : lundi - pecs : développé 4x10 ».
+- **de** — Ich finde diesen Tag nicht in deinem Plan. Lege ihn an, z. B. „Plan: Montag - Brust: Bankdrücken 4x10“.
 
 ## `plan_saved`
 
@@ -5028,6 +5786,14 @@
 - **en** — yearly
 - **fr** — annuel
 - **de** — jährlich
+
+## `recurring_income_created`
+
+- **pt** — Anotado: {name}, {amount} todo mês, dia {day}. Próximo: {due}. No dia eu pergunto se já caiu.
+- **nl** — Genoteerd: {name}, {amount} elke maand, dag {day}. Volgende: {due}. Op die dag vraag ik of het binnen is.
+- **en** — Noted: {name}, {amount} every month, day {day}. Next: {due}. On the day I'll ask whether it arrived.
+- **fr** — C'est noté : {name}, {amount} chaque mois, le {day}. Prochain : {due}. Ce jour-là, je demande si c'est arrivé.
+- **de** — Notiert: {name}, {amount} jeden Monat, Tag {day}. Nächste: {due}. Am Tag frage ich, ob es angekommen ist.
 
 ## `recurring_kept`
 
@@ -5214,6 +5980,14 @@
 - **en** — _Income minus expenses for the period, not your bank balance._
 - **fr** — _Revenus moins dépenses de la période, pas le solde bancaire._
 - **de** — _Einnahmen minus Ausgaben im Zeitraum, nicht dein Kontostand._
+
+## `saldo_projection`
+
+- **pt** — _Estimativa: no ritmo atual, as despesas do mês fecham em cerca de {amount}._
+- **nl** — _Schatting: in dit tempo komen de uitgaven van de maand op ongeveer {amount}._
+- **en** — _Estimate: at the current pace, this month's expenses end around {amount}._
+- **fr** — _Estimation : à ce rythme, les dépenses du mois s'élèvent à environ {amount}._
+- **de** — _Schätzung: im aktuellen Tempo enden die Ausgaben des Monats bei etwa {amount}._
 
 ## `saldo_title`
 
@@ -5441,6 +6215,14 @@
 - **fr** — Rien n'est encore enregistré. Pour corriger, renvoie-le avec les bonnes informations.
 - **de** — Noch nichts gespeichert. Zum Korrigieren sende es einfach neu mit den richtigen Angaben.
 
+## `svc_generic`
+
+- **pt** — Serviço
+- **nl** — Dienst
+- **en** — Service
+- **fr** — Service
+- **de** — Dienst
+
 ## `svc_l_amount`
 
 - **pt** — Valor: {a}
@@ -5544,6 +6326,30 @@
 - **en** — warranty until {d} ({n} days)
 - **fr** — garantie jusqu'au {d} ({n} jours)
 - **de** — Garantie bis {d} ({n} Tage)
+
+## `svc_miss_amount`
+
+- **pt** — valor
+- **nl** — bedrag
+- **en** — amount
+- **fr** — montant
+- **de** — Betrag
+
+## `svc_miss_warranty`
+
+- **pt** — garantia
+- **nl** — garantie
+- **en** — warranty
+- **fr** — garantie
+- **de** — Garantie
+
+## `svc_missing`
+
+- **pt** — Faltam: {what}. Se quiser, mande por exemplo *valor 180* ou *garantia 12 meses*.
+- **nl** — Ontbreekt: {what}. Stuur bijvoorbeeld *bedrag 180* of *garantie 12 maanden*.
+- **en** — Missing: {what}. If you like, send for example *amount 180* or *warranty 12 months*.
+- **fr** — Il manque : {what}. Envoie par exemple *montant 180* ou *garantie 12 mois*.
+- **de** — Es fehlt: {what}. Sende zum Beispiel *Betrag 180* oder *Garantie 12 Monate*.
 
 ## `svc_no_provider`
 
@@ -6189,6 +6995,62 @@
 - **fr** — Tes vues enregistrées :
 - **de** — Deine gespeicherten Ansichten:
 
+## `weight_bad_value`
+
+- **pt** — Esse peso não parece certo. Diga por exemplo "peso 72,5 kg".
+- **nl** — Dat gewicht lijkt niet te kloppen. Zeg bijvoorbeeld "gewicht 72,5 kg".
+- **en** — That weight doesn't look right. Say, for example, "weight 72.5 kg".
+- **fr** — Ce poids ne semble pas correct. Dis par exemple « poids 72,5 kg ».
+- **de** — Dieses Gewicht scheint nicht zu stimmen. Sag zum Beispiel "Gewicht 72,5 kg".
+
+## `weight_change_less`
+
+- **pt** —  São {delta} kg a menos desde {date}.
+- **nl** —  Dat is {delta} kg minder dan op {date}.
+- **en** —  That is {delta} kg less than on {date}.
+- **fr** —  C'est {delta} kg de moins que le {date}.
+- **de** —  Das sind {delta} kg weniger als am {date}.
+
+## `weight_change_more`
+
+- **pt** —  São {delta} kg a mais desde {date}.
+- **nl** —  Dat is {delta} kg meer dan op {date}.
+- **en** —  That is {delta} kg more than on {date}.
+- **fr** —  C'est {delta} kg de plus que le {date}.
+- **de** —  Das sind {delta} kg mehr als am {date}.
+
+## `weight_change_same`
+
+- **pt** —  Igual a {date}.
+- **nl** —  Gelijk aan {date}.
+- **en** —  Same as on {date}.
+- **fr** —  Identique au {date}.
+- **de** —  Gleich wie am {date}.
+
+## `weight_deleted`
+
+- **pt** — Pronto, apaguei seus registros de peso.
+- **nl** — Klaar, ik heb je gewichtsregistraties gewist.
+- **en** — Done, I deleted your weight entries.
+- **fr** — C'est fait, j'ai supprimé tes enregistrements de poids.
+- **de** — Erledigt, ich habe deine Gewichtseinträge gelöscht.
+
+## `weight_none`
+
+- **pt** — Você não tem registros de peso.
+- **nl** — Je hebt geen gewichtsregistraties.
+- **en** — You have no weight entries.
+- **fr** — Tu n'as aucun enregistrement de poids.
+- **de** — Du hast keine Gewichtseinträge.
+
+## `weight_saved`
+
+- **pt** — Anotado: {kg} kg.{change}
+- **nl** — Genoteerd: {kg} kg.{change}
+- **en** — Noted: {kg} kg.{change}
+- **fr** — Noté : {kg} kg.{change}
+- **de** — Notiert: {kg} kg.{change}
+
 ## `wipe_ask`
 
 - **pt** — Isso apaga *tudo* o que guardei sobre você (despesas, notas, metas, mensagens) e não dá para desfazer. Quer mesmo?
@@ -6228,6 +7090,54 @@
 - **en** — You did *{activity}* {n}x in the last 7 days.
 - **fr** — Tu as fait *{activity}* {n}x ces 7 derniers jours.
 - **de** — Du hast *{activity}* {n}x in den letzten 7 Tagen gemacht.
+
+## `workout_cmp_dist_less`
+
+- **pt** — {delta} km a menos que em {date}.
+- **nl** — {delta} km minder dan op {date}.
+- **en** — {delta} km less than on {date}.
+- **fr** — {delta} km de moins que le {date}.
+- **de** — {delta} km weniger als am {date}.
+
+## `workout_cmp_dist_more`
+
+- **pt** — {delta} km a mais que em {date}.
+- **nl** — {delta} km verder dan op {date}.
+- **en** — {delta} km farther than on {date}.
+- **fr** — {delta} km de plus que le {date}.
+- **de** — {delta} km weiter als am {date}.
+
+## `workout_cmp_dur_less`
+
+- **pt** — {delta} min a menos que em {date}.
+- **nl** — {delta} min korter dan op {date}.
+- **en** — {delta} min shorter than on {date}.
+- **fr** — {delta} min de moins que le {date}.
+- **de** — {delta} min kürzer als am {date}.
+
+## `workout_cmp_dur_more`
+
+- **pt** — {delta} min a mais que em {date}.
+- **nl** — {delta} min langer dan op {date}.
+- **en** — {delta} min longer than on {date}.
+- **fr** — {delta} min de plus que le {date}.
+- **de** — {delta} min länger als am {date}.
+
+## `workout_cmp_pace_faster`
+
+- **pt** — {delta} min mais rápido que em {date}.
+- **nl** — {delta} min sneller dan op {date}.
+- **en** — {delta} min faster than on {date}.
+- **fr** — {delta} min plus rapide que le {date}.
+- **de** — {delta} min schneller als am {date}.
+
+## `workout_cmp_pace_slower`
+
+- **pt** — {delta} min mais lento que em {date}.
+- **nl** — {delta} min langzamer dan op {date}.
+- **en** — {delta} min slower than on {date}.
+- **fr** — {delta} min plus lent que le {date}.
+- **de** — {delta} min langsamer als am {date}.
 
 ## `workout_delete_not_found`
 
@@ -6312,3 +7222,19 @@
 - **en** — • {date}: {activity} {duration}
 - **fr** — • {date} : {activity} {duration}
 - **de** — • {date}: {activity} {duration}
+
+## `workouts_day_empty`
+
+- **pt** — Nenhum treino registrado em {day}.
+- **nl** — Geen training geregistreerd op {day}.
+- **en** — No workout logged on {day}.
+- **fr** — Aucun entraînement enregistré le {day}.
+- **de** — Kein Training am {day} eingetragen.
+
+## `workouts_day_header`
+
+- **pt** — Treinos de {day} ({n}):
+- **nl** — Trainingen van {day} ({n}):
+- **en** — Workouts on {day} ({n}):
+- **fr** — Entraînements du {day} ({n}) :
+- **de** — Trainings am {day} ({n}):
