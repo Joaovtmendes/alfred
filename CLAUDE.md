@@ -1,10 +1,12 @@
-# Alfred — guia para o Claude
+# Jofie (código: Alfred) — guia para o Claude
 
 Assistente pessoal via WhatsApp para o mercado holandês: finanças, lembretes, treino,
 saúde, metas/hábitos, notas/tarefas, viagens e dashboard web. Um único serviço FastAPI
 no Railway, com PostgreSQL e a API da Anthropic (Claude Haiku 4.5).
 
+Marca: o produto chama-se **Jofie** (empresa JVM Solutions); o repositório, o pacote Python e o Projeto no claude.ai continuam "alfred".
 Roadmap e estado dos módulos: `claude/alfred-status.md` no Projeto "Alfred" (claude.ai).
+Regra de bugs: todo bug tem ID e teste de regressão (`docs/BUGS.md`, `python scripts/bugs.py check`).
 
 ## Estrutura
 
@@ -38,7 +40,7 @@ alfred/                    ← raiz do serviço (Railway "Root Directory")
   scripts/seed_demo_member.py   membro de demonstração do painel v2 (idempotente, só o 31000000000)
   scripts/contrast_check.py     contraste WCAG AA dos tokens de cor do painel (-v lista os pares)
   scripts/panel_shots.py        capturas claro/escuro x desktop/celular + CSP/overflow no Chromium
-  alembic/versions/        migrações (cadeia linear, head = c4d5e6f7a8b9)
+  alembic/versions/        migrações (cadeia linear, head = d8e9f0a1b2c3)
   m5-templates/ m6-flow/   JSON para submeter no WhatsApp Manager
   tests/                   pytest (unit + integração com Postgres real)
 docs/                      ARCHITECTURE.md, OPERATIONS.md

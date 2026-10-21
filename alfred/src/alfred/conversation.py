@@ -999,11 +999,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Zeitzone: {zone}. Bei dir ist es jetzt {time}.",
     },
     "tz_unknown": {
-        "pt": "Não reconheci esse fuso. Diga a cidade ou o nome completo, por exemplo: “fuso horário Lisboa” ou “fuso horário America/Sao_Paulo”.",
-        "nl": "Die tijdzone ken ik niet. Noem de stad of de volledige naam, bijvoorbeeld: “tijdzone Lissabon” of “tijdzone America/Sao_Paulo”.",
-        "en": "I don't know that timezone. Say the city or the full name, for example: “timezone Lisbon” or “timezone America/Sao_Paulo”.",
-        "fr": "Je ne connais pas ce fuseau. Dis la ville ou le nom complet, par ex. : « fuseau horaire Lisbonne » ou « fuseau horaire America/Sao_Paulo ».",
-        "de": "Diese Zeitzone kenne ich nicht. Nenne die Stadt oder den vollen Namen, z. B.: „Zeitzone Lissabon“ oder „Zeitzone America/Sao_Paulo“.",
+        "pt": "Não reconheci esse fuso. Diga a cidade ou o nome completo, por exemplo: “fuso horário Lisboa” ou “fuso horário Europe/Amsterdam”.",
+        "nl": "Die tijdzone ken ik niet. Noem de stad of de volledige naam, bijvoorbeeld: “tijdzone Lissabon” of “tijdzone Europe/Amsterdam”.",
+        "en": "I don't know that timezone. Say the city or the full name, for example: “timezone Lisbon” or “timezone Europe/Amsterdam”.",
+        "fr": "Je ne connais pas ce fuseau. Dis la ville ou le nom complet, par ex. : « fuseau horaire Lisbonne » ou « fuseau horaire Europe/Amsterdam ».",
+        "de": "Diese Zeitzone kenne ich nicht. Nenne die Stadt oder den vollen Namen, z. B.: „Zeitzone Lissabon“ oder „Zeitzone Europe/Amsterdam“.",
     },
     "purchase_ask_price": {
         "pt": "Quanto custou {item}? Mande com o valor, por exemplo: “{item} 4,50”.",

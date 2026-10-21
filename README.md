@@ -1,15 +1,15 @@
-# Alfred
+# Jofie (código: Alfred)
 
 Assistente pessoal pelo WhatsApp para quem vive nos Países Baixos. O utilizador escreve
 em linguagem natural ("Jumbo 23,50", "corri 5 km", "lembrete: medicação às 09:00") e o
-Alfred regista, responde e envia lembretes. Fala PT, NL, EN, FR e DE.
+Jofie regista, responde e envia lembretes. Fala PT, NL, EN, FR e DE.
 
 | Área | Módulos |
 |---|---|
 | Finanças | despesas e receitas, resumo, saldo, comparação, correcções, categorias que aprendem (M2–M4, M12) |
 | Proactivo | lembretes e resumo semanal por template da Meta (M5) |
 | Vida | treino (M7), saúde (M8), metas e hábitos com streak (M9), notas e tarefas (M10), viagens (M14) |
-| Web | dashboard pessoal por link privado (M11) |
+| Web | cadastro obrigatório, dashboard pessoal por link privado (M11), Google Agenda opcional |
 | Base | webhook WhatsApp, consentimento e disclosure EU AI Act (M1, M3) |
 
 **Stack:** Python 3.12 · FastAPI · SQLAlchemy 2 async · PostgreSQL · Alembic ·

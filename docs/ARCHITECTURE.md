@@ -45,19 +45,23 @@ Ficheiro: `alfred/src/alfred/conversation.py`. Os passos têm um comentário `# 
 código (procura por esse prefixo; os números de linha mudam, a ordem não). `body` é o texto
 em minúsculas; `body_plain` é o mesmo sem acentos e com o mesmo comprimento.
 
-**Antes de tudo:** resposta de WhatsApp Flow (onboarding M6) → consentimento: `pending` →
-disclosure (ou, se a primeira mensagem não mostra a língua, `pending_language`: menu 1–5 em
-português, nederlands, english, français, deutsch; a resposta grava `member.language`, que manda no
-chat e no painel); `pending_response` → sim/não; `rejected` → ignora, excepto `START`.
+**Antes de tudo:** o fuso do membro entra em vigor (`clock.use_member_timezone`, `member.timezone`,
+padrão Amsterdã) → resposta de WhatsApp Flow (onboarding M6) → **cadastro**: número novo recebe
+(em inglês) o convite com o botão para `/cadastro/{token}` (`signup.py`: nome, e-mail e idioma
+obrigatórios, caixa da política, saúde e avisos de prazo opcionais; token de uso único, 30 min);
+enquanto o cadastro não existe (`pending_signup`) qualquer texto só reenvia o link; `rejected` →
+ignora, excepto `START`. O "sim" curto de consentimento no chat deixou de existir.
 
 **Já com consentimento (`accepted`), por esta ordem:**
 
 | Passo | O quê | Módulo / função |
 |---|---|---|
-| 4-0 | toque num botão (`undo:` `edit:` `ok:` `appt_*` `batch_*` `wipe:` `keep:`) | `_handle_button_reply` |
+| 4-0 | toque num botão (`undo:` `edit:` `ok:` `appt_*` `batch_*` `wipe:` `keep:` `bare_yes/bare_no` `plan_*` `dd_*` `fb_*` `inv_*` `svc_*` `home_*`) | `_handle_button_reply` |
 | 4-0aa | resposta a um rascunho de 2+ lançamentos ("sim", "cancela", "tira o segundo", "o primeiro foi 4") | `batch.py` `handle_batch_text` (só consulta a BD se o texto parece uma resposta) |
 | 4-0a | "sim" solto sem rascunho → "não há nada a confirmar" | `_BARE_YES_RE` |
+| 4-0i | palavra solta de módulo ("faturas", "a pagar", "pessoal"): **pergunta antes de gravar** (A-74, `BARE_KIND`) | `_BARE_RECORD_WORDS` |
 | 4-0b | RGPD: apagar / exportar dados | `privacy.py` |
+| 4a2 | fuso horário por comando ("meu fuso é Brasília", A-66), antes do saldo | `_timezone_from_text` |
 | 4a–4d | stop, saldo, ajuda, resumo | comandos exactos |
 | 4e-0, 0b, 0c | lembretes M5: criar, listar, cancelar; cadência ("toda segunda", "dias úteis", "todo dia 5") | `scheduled_job`, `recurrence.py` |
 | 4e-0f | orçamentos V2-01 | `budgets.py` |
@@ -77,6 +81,7 @@ chat e no painel); `pending_response` → sim/não; `rejected` → ignora, excep
 | 4e-9 … 4e-9e | saúde: medicação, humor, sono, água | M8 |
 | 4e-10 … 4e-11d | treinos | M7 |
 | 4e-0c(2), 4e-0d | comandos reais que o LLM improvisava; correcção de valor ("errei, foram 42") | |
+| 4e-0e-pre | "paguei gás" sem valor: pergunta "Quanto foi?" (`ASK_AMOUNT_KIND`) e a resposta só com número grava (B-070); "isso é X" só corrige lançamento das últimas 6 h (B-071) | `_PAID_NO_AMOUNT_RE`, `_AMOUNT_ONLY_RE` |
 | 4e-0e | 2+ lançamentos numa mensagem → **rascunho** com Confirmar/Ajustar/Cancelar (V2-17); com 1 sobrando, grava directo | `batch.py` `create_draft` |
 | — | 1 despesa/receita → grava directo com [Desfazer] | `llm.extract_expense` |
 | 4f | consulta financeira ("gastei em restaurantes este mês") | `classify_query` |
@@ -112,16 +117,17 @@ received / to_receive; relatórios só contam paid e received), `merchant_catego
 viagem+categoria) e `pending_action` (rascunho genérico, TTL de 15 min; o toque "confirmar" faz
 `DELETE … RETURNING`, então um segundo toque não faz nada). Exportar e apagar dados (`privacy.py`) percorre `Base.metadata`: uma
 tabela nova entra sozinha.
-Migrações em `alfred/alembic/versions/` numa cadeia linear; o head actual é `d5e6f7a8b9c0`
-(V2-35; antes dele `f2a3b4c5d6e7`, V2-18). Cada item V2 tem uma migração própria (`e5f6a7b8c9d0` orçamentos … `f2a3b4c5d6e7`
-extrato de mensagens).
+Também: `google_connection` (Google Agenda opcional, `google_calendar.py`; token cifrado, desligar
+ou apagar dados revoga a concessão), `member.email`, `member.signup_token*`, `member.health_consent_at`,
+`member.timezone` (A-66). Migrações em `alfred/alembic/versions/` numa cadeia linear; o head actual é
+`d8e9f0a1b2c3` (fuso por membro; antes `c7d8e9f0a1b2` Google Agenda, `b6c7d8e9f0a1` e-mail do
+cadastro). Cada item V2 tem uma migração própria.
 
 ## Painel v2
 
 O painel v2 é o único (desde 04/10/2026; o v1 com Chart.js e o seu endpoint `/api/d/{token}` foram
 removidos). A coluna `member.dashboard_v2` ficou no banco, ignorada. A casca tem HTML/CSS/JS próprios (`src/alfred/panel/`), sem Chart.js (barras em CSS e SVG
-desenhados por `panel.js`) e sem nenhum host externo; as fontes (Hanken Grotesk, Bricolage
-Grotesque, licença OFL) são servidas pelo próprio serviço. Só leitura.
+desenhados por `panel.js`) e sem nenhum host externo; as fontes (Figtree para o texto, Fredoka só no nome "jofie", licença OFL) são servidas pelo próprio serviço. Só leitura.
 
 ```
 GET  /d/{token}                 → o painel v2 (língua = member.language)
@@ -176,6 +182,7 @@ states, trip}, "cards": [...]}`. Todo cartão tem `id` estável, `empty`, `phras
 | Aba | Cartões (em ordem) |
 |---|---|
 | `summary` | `balance` (com `compare` e `projection`), `categories`, `goals`, `week`, `upcoming` |
+| `agenda` | `week`, `load` (Respiro e pico: compromissos por dia nos próximos 7 dias), `tasks`, `deadlines` (Prazos da semana: tarefas com prazo nos próximos 7 dias, por dia), `month_map`, `reminders`, `notes` |
 | `money` | `transactions` (50 por página, `?page=N`; visão por dia com filtro de dia no topo, no navegador), `month_vs_month`, `top_expenses`, `categories`, `budgets`, `fixed_variable`, `owed`, `daily`, `recurring` |
 | `health` | `goals`, `workouts`, `training`, `water` |
 
@@ -213,6 +220,15 @@ Definições que o front-end pode citar:
 Frases: no máximo uma por cartão, só com dado mínimo (cada regra documenta o seu limiar). A
 sugestão é um comando que o roteador do chat entende sem LLM (um teste roda todas, nas 5 línguas),
 exceto "como fica meu mês?" e o exemplo de registrar um gasto, que passam pelo LLM.
+
+### Visual do painel (21/10/2026)
+
+Paleta "ameixa contida": tokens em `panel.css` em três blocos (escuro padrão, `[data-theme="light"]`
+e a cópia em `prefers-color-scheme`); fundo escuro `#231730` / `#2F1D3B`. Semântica fixa: **verde =
+entrada, vermelho = saída**, e as cores de realizado / contas marcadas / gasto esperado da primeira
+versão na barra de projeção. `scripts/contrast_check.py` valida todos os pares em AA. Dinheiro no
+painel segue o formato do chat sem espaço: `€1.842,30`, `-€5,00` (`fmt_eur` e `money()` em
+`panel.js`; A-58).
 
 ### Front-end de Resumo e Dinheiro (`panel.js`, `panel.css`)
 
@@ -268,7 +284,7 @@ própria, carregada só ao abrir a aba, e cada abertura vai para o `AuditLog`. O
 
 **Agenda, Hábitos e Viagens** (`panel_tabs.py`, contrato de cada cartão no docstring do módulo).
 Sem filtros: cada cartão tem janela fixa e nomeada. Agenda: próximos 7 dias (`Appointment`
-ativos), tarefas (atrasadas/prazos), mapa de 4 semanas, lembretes (`ScheduledJob` ativos), notas.
+ativos), respiro e pico (`load_card`, regra `rule_agenda_breath`), tarefas (atrasadas/prazos), prazos da semana (`deadlines_card`), mapa de 4 semanas, lembretes (`ScheduledJob` ativos), notas.
 Hábitos: água, treinos, plano de treino com cargas e evolução (`training_card`), hábitos e metas;
 sono, humor e medicação saíram da aba por decisão de 02/10. Frases só descrevem (média, contagem),
 nunca julgam, e a aba mostra "não é conselho médico". Viagens: viagem ativa, senão a próxima,
