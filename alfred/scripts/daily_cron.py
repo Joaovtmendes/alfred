@@ -100,6 +100,40 @@ def is_weekly_summary_due(now_local: datetime, interval_minutes: int = INTERVAL_
     return start <= now_local < start + timedelta(minutes=interval_minutes)
 
 
+_REMINDER_BODY = {
+    "pt": "⏰ Lembrete: {text}",
+    "nl": "⏰ Herinnering: {text}",
+    "en": "⏰ Reminder: {text}",
+    "fr": "⏰ Rappel : {text}",
+    "de": "⏰ Erinnerung: {text}",
+}
+
+
+def reminder_body(text: str, lang: str) -> str:
+    """The plain-text reminder sent inside the 24 h window."""
+    return _REMINDER_BODY.get(lang, _REMINDER_BODY["en"]).format(text=text)
+
+
+async def _last_inbound(member_ids: set) -> dict:
+    """member_id → time of their last message to us (UTC), for the 24 h window."""
+    if not member_ids:
+        return {}
+    from sqlalchemy import func, select
+
+    from alfred.db import AsyncSessionLocal
+    from alfred.models import Message
+
+    async with AsyncSessionLocal() as session:
+        rows = (
+            await session.execute(
+                select(Message.author_id, func.max(Message.created_at))
+                .where(Message.author_id.in_(member_ids), Message.direction == "inbound")
+                .group_by(Message.author_id)
+            )
+        ).all()
+    return {mid: ts.astimezone(UTC) for mid, ts in rows if ts is not None}
+
+
 def _one_line(text: str) -> str:
     """Template parameters cannot hold line breaks, tabs or runs of spaces (Meta rejects them)."""
     return " ".join(str(text).split())
@@ -451,7 +485,7 @@ async def run_cron() -> int:
     from alfred.db import AsyncSessionLocal
     from alfred.models import Member, ScheduledJob
     from alfred.settings import settings
-    from alfred.whatsapp import send_template
+    from alfred.whatsapp import send_template, send_text
 
     tz = ZoneInfo(settings.timezone)
     now_local = datetime.now(UTC).astimezone(tz)
@@ -490,6 +524,10 @@ async def run_cron() -> int:
             ).all()
 
     own_weekly = {r.member_id for r in rows if r.job_type == "weekly_summary"}
+    # B-026: inside the 24 h window a reminder goes as plain text. It used to go only as a
+    # Meta template, so with the template not approved yet no reminder ever arrived.
+    last_in = await _last_inbound({r.member_id for r in rows})
+    cutoff = datetime.now(UTC) - timedelta(hours=24)
 
     for r in rows:
         if not is_job_due(
@@ -505,22 +543,33 @@ async def run_cron() -> int:
             logger.warning("cron.unknown_job_type", job_id=str(r.id), job_type=r.job_type)
             continue
         text = (r.payload or {}).get("text")
-        components = (
-            [{"type": "body", "parameters": [{"type": "text", "text": text}]}] if text else None
-        )
+        seen = last_in.get(r.member_id)
         try:
-            resp = await send_template(
-                to=r.wa_phone,
-                template_name=template_name,
-                lang_code=LANG_CODE_MAP.get(r.language or "en", "en"),
-                components=components,
-            )
+            if text and seen is not None and seen >= cutoff:
+                body = reminder_body(text, r.language or "en")
+                resp = await send_text(r.wa_phone, body)
+                sent += 1
+                await _log_out(r.wa_phone, resp, body, "reminder")
+            else:
+                components = (
+                    [{"type": "body", "parameters": [{"type": "text", "text": _one_line(text)}]}]
+                    if text
+                    else None
+                )
+                resp = await send_template(
+                    to=r.wa_phone,
+                    template_name=template_name,
+                    lang_code=LANG_CODE_MAP.get(r.language or "en", "en"),
+                    components=components,
+                )
+                sent += 1
+                await _log_out(
+                    r.wa_phone, resp, text or f"[{template_name}]", "template", template_name
+                )
         except Exception as exc:
             logger.error("cron.send_failed", job_id=str(r.id), error=str(exc))
             errors += 1
             continue
-        sent += 1
-        await _log_out(r.wa_phone, resp, text or f"[{template_name}]", "template", template_name)
         async with AsyncSessionLocal() as session:
             await session.execute(
                 update(ScheduledJob)

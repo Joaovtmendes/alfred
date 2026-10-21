@@ -94,9 +94,11 @@ async def test_help_and_balance_words_with_an_amount_are_expenses(lab: Lab) -> N
     lab.expense.return_value = _exp(50, "Mudança", "overig")
     out = await lab.say("ajuda com a mudança 50")
     assert out != _t("help", "pt") and await _count(lab, Expense) == 1
-    lab.expense.return_value = _exp(300, "Conta", "overig")
+    # B-006 (hard test 20/10): "saldo da conta 300" is a bank balance; it is neither the balance
+    # card nor a guessed expense — the reply says the app does not keep it and how to log money
     out = await lab.say("saldo da conta 300")
-    assert not out.startswith("*Saldo") and await _count(lab, Expense) == 2
+    assert not out.startswith("*Saldo") and out == _t("bank_balance_not_tracked", "pt")
+    assert await _count(lab, Expense) == 1
 
 
 @db

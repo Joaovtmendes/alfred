@@ -95,7 +95,7 @@ async def build_summary(
         )
         if not ever:
             return None
-        return _t("msum_empty", lang, month=month)
+        return _t("msum_empty", lang, month=month.lower() if lang in ("pt", "fr", "nl") else month)
 
     parts: list[str] = [
         _t(
@@ -399,7 +399,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Alles als Diagramme: sag „mein Dashboard“.",
     },
     "msum_empty": {
-        "pt": "Resumo de {month}: não vi lançamentos desse mês. Que tal retomar? É só me mandar “mercado 25”.",
+        "pt": "Em {month} não houve nenhum lançamento, então não tenho resumo desse mês. Quando quiser recomeçar, é só me mandar um gasto, como “mercado 25”.",
         "nl": "Overzicht van {month}: ik zag geen transacties. Zin om weer te beginnen? Stuur me gewoon “boodschappen 25”.",
         "en": "Your {month} summary: I didn't see any entries. Want to pick it up again? Just send “groceries 25”.",
         "fr": "Bilan de {month} : je n'ai vu aucune opération. On reprend ? Envoie-moi simplement « courses 25 ».",

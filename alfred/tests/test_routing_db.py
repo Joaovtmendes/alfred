@@ -166,7 +166,7 @@ async def test_treinos_deste_mes_reaches_the_monthly_handler(lab: Lab) -> None:
         km=0,
         min=0,
     )
-    assert reply.splitlines()[0] == header
+    assert reply.startswith(header.rstrip("\n"))
 
 
 async def test_treinos_de_mes_passado_uses_the_previous_month(lab: Lab) -> None:
@@ -182,7 +182,7 @@ async def test_treinos_de_mes_passado_uses_the_previous_month(lab: Lab) -> None:
         km=0,
         min=0,
     )
-    assert reply.splitlines()[0] == header
+    assert reply.startswith(header.rstrip("\n"))
 
 
 async def test_treinos_de_um_mes_por_nome(lab: Lab) -> None:

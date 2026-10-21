@@ -12,7 +12,13 @@ from __future__ import annotations
 import re
 import unicodedata
 
-__all__ = ["STRINGS", "parse_language_choice", "parse_language_command"]
+__all__ = [
+    "STRINGS",
+    "is_bare_language_name",
+    "is_language_menu_request",
+    "parse_language_choice",
+    "parse_language_command",
+]
 
 _LANG_WORDS = {
     "pt": {"portugues", "portuguese", "portugees", "portugais", "portugiesisch", "pt"},
@@ -76,6 +82,8 @@ _LEAD = {
 }
 _FILLER = {
     "para",
+    "pra",
+    "pro",
     "o",
     "a",
     "de",
@@ -169,6 +177,27 @@ def parse_language_command(body: str) -> str | None:
     return target
 
 
+def is_bare_language_name(body: str) -> bool:
+    """ "português" alone: M-03 asks before switching (it may be an answer to something else)."""
+    tokens = _plain(body).split()
+    return len(tokens) == 1 and tokens[0] in _WORD_TO_LANG and tokens[0] not in _CODES
+
+
+_MENU_REQUESTS = {
+    "mudar idioma", "muda idioma", "mude idioma", "mudar o idioma", "muda o idioma",
+    "trocar idioma",
+    "troca idioma", "trocar o idioma", "mudar lingua", "trocar lingua", "idioma", "outro idioma",
+    "change language", "switch language", "language", "other language", "taal wijzigen",
+    "andere taal", "taal veranderen", "taal", "changer de langue", "changer langue", "langue",
+    "sprache andern", "sprache aendern", "sprache wechseln", "sprache",
+}  # fmt: skip
+
+
+def is_language_menu_request(body: str) -> bool:
+    """ "mudar idioma" with no language named: M-04 shows the menu (1–5) instead of the model."""
+    return " ".join(_plain(body).split()) in _MENU_REQUESTS
+
+
 _MENU_NUMBERS = {"1": "pt", "2": "nl", "3": "en", "4": "fr", "5": "de"}
 
 
@@ -197,6 +226,22 @@ _ASK = (
 
 STRINGS: dict[str, dict[str, str]] = {
     "language_ask": _all(_ASK, _ASK, _ASK, _ASK, _ASK),
+    "lang_confirm": _all(
+        "Quer que eu passe a falar português com você?",
+        "Zal ik voortaan Nederlands met je praten?",
+        "Do you want me to speak English with you from now on?",
+        "Tu veux que je te parle en français désormais ?",
+        "Soll ich ab jetzt Deutsch mit dir sprechen?",
+    ),
+    "btn_lang_yes": _all("Sim, mudar", "Ja, wissel", "Yes, switch", "Oui, changer", "Ja, wechseln"),
+    "btn_lang_keep": _all("Manter", "Zo laten", "Keep", "Garder", "Behalten"),
+    "lang_kept": _all(
+        "Certo, continuo em português.",
+        "Prima, ik blijf Nederlands praten.",
+        "Fine, I'll keep speaking English.",
+        "D'accord, je continue en français.",
+        "Gut, ich bleibe bei Deutsch.",
+    ),
     "lang_changed": _all(
         "Pronto, agora falo português com você.",
         "Klaar, ik praat nu Nederlands met je.",

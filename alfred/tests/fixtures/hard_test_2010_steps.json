@@ -1,0 +1,2530 @@
+[
+ {
+  "id": "F02-01",
+  "send": "ajuda"
+ },
+ {
+  "id": "F02-02",
+  "send": "o que você faz?"
+ },
+ {
+  "id": "F02-03",
+  "send": "me ajuda"
+ },
+ {
+  "id": "F02-04",
+  "send": "menu"
+ },
+ {
+  "id": "F02-05",
+  "send": "ajuda com a mudança 50"
+ },
+ {
+  "id": "F02-06",
+  "send": "como funciona o orçamento?"
+ },
+ {
+  "id": "F02-07",
+  "send": "oi"
+ },
+ {
+  "id": "F02-08",
+  "send": "bom dia"
+ },
+ {
+  "id": "F02-09",
+  "send": "obrigado"
+ },
+ {
+  "id": "F02-10",
+  "send": "ok"
+ },
+ {
+  "id": "F02-11",
+  "send": "sim"
+ },
+ {
+  "id": "F02-12",
+  "send": "qual a capital da França?"
+ },
+ {
+  "id": "F02-13",
+  "send": "me conta uma piada"
+ },
+ {
+  "id": "F02-14",
+  "send": "peso 75 kg"
+ },
+ {
+  "id": "F02-15",
+  "send": "minha pressão 12/8"
+ },
+ {
+  "id": "F02-16",
+  "send": "comprei 2 kg de arroz"
+ },
+ {
+  "id": "F02-17",
+  "send": "o que você tem anotado sobre mim?"
+ },
+ {
+  "id": "F02-18",
+  "send": "meus dados ficam guardados onde?"
+ },
+ {
+  "id": "F02-19",
+  "send": "asdfghjkl"
+ },
+ {
+  "id": "F02-20",
+  "send": "kkkkkkkk"
+ },
+ {
+  "id": "F02-21",
+  "send": "asdf"
+ },
+ {
+  "id": "F02-22",
+  "send": "Oi Alfred, hoje foi um dia bem corrido, acordei cedo, levei o carro na oficina, depois fui ao mercado, encontrei uma amiga, almoçamos juntas, voltei para casa a pé porque o tempo estava bom, e agora estou tentando organizar as contas do mês, queria entender melhor como você pode me ajudar a controlar os gastos sem eu ter que ficar anotando tudo em planilha"
+ },
+ {
+  "id": "F02-23",
+  "send": "😀"
+ },
+ {
+  "id": "F02-28",
+  "tap": "reagir com 👍 a uma mensagem do Jofie"
+ },
+ {
+  "id": "F02-29",
+  "send": "idioma holandês"
+ },
+ {
+  "id": "F02-30",
+  "send": "help"
+ },
+ {
+  "id": "F02-31",
+  "send": "idioma inglês"
+ },
+ {
+  "id": "F02-32",
+  "send": "muda pra português"
+ },
+ {
+  "id": "F02-33",
+  "send": "mudar idioma"
+ },
+ {
+  "id": "F02-34",
+  "send": "idioma português"
+ },
+ {
+  "id": "F02-35",
+  "send": "francês"
+ },
+ {
+  "id": "F02-36",
+  "send": "português"
+ },
+ {
+  "id": "F02-37",
+  "send": "curso de alemão"
+ },
+ {
+  "id": "F02-38",
+  "send": "painel"
+ },
+ {
+  "id": "F03-01",
+  "send": "gastei 23,45 no Albert Heijn"
+ },
+ {
+  "id": "F03-02",
+  "send": "almoço 12,50"
+ },
+ {
+  "id": "F03-03",
+  "send": "uber 18"
+ },
+ {
+  "id": "F03-04",
+  "send": "recebi €3200 de salário"
+ },
+ {
+  "id": "F03-05",
+  "send": "paguei €1250 de aluguel"
+ },
+ {
+  "id": "F03-06",
+  "tap": "Está certo"
+ },
+ {
+  "id": "F03-07",
+  "send": "cinema 24"
+ },
+ {
+  "id": "F03-08",
+  "tap": "Editar"
+ },
+ {
+  "id": "F03-09",
+  "send": "na verdade foi 25"
+ },
+ {
+  "id": "F03-10",
+  "send": "errei, foram 26"
+ },
+ {
+  "id": "F03-11",
+  "send": "errei foram 1.200"
+ },
+ {
+  "id": "F03-12",
+  "send": "na verdade foi 0"
+ },
+ {
+  "id": "F03-13",
+  "send": "corrige para 25"
+ },
+ {
+  "id": "F03-14",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F03-15",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F03-16",
+  "send": "desfazer"
+ },
+ {
+  "id": "F03-17",
+  "send": "café 4"
+ },
+ {
+  "id": "F03-18",
+  "send": "recebi €50 de reembolso"
+ },
+ {
+  "id": "F03-19",
+  "tap": "Editar"
+ },
+ {
+  "id": "F03-20",
+  "send": "na verdade foi 60"
+ },
+ {
+  "id": "F03-21",
+  "send": "apaga"
+ },
+ {
+  "id": "F03-21b",
+  "tap": "Apagar"
+ },
+ {
+  "id": "F03-22",
+  "send": "apaga a última despesa"
+ },
+ {
+  "id": "F03-22b",
+  "tap": "Apagar"
+ },
+ {
+  "id": "F03-23",
+  "send": "apaga isso"
+ },
+ {
+  "id": "F03-24",
+  "send": "Albert Heijn é supermercado"
+ },
+ {
+  "id": "F03-25",
+  "send": "gastei 15 na Lojinha Azul"
+ },
+ {
+  "id": "F03-26",
+  "send": "Lojinha Azul é lazer"
+ },
+ {
+  "id": "F03-27",
+  "send": "isso é transporte"
+ },
+ {
+  "id": "F03-28",
+  "send": "isso é saude"
+ },
+ {
+  "id": "F03-29",
+  "send": "Lojinha Azul é roupas"
+ },
+ {
+  "id": "F03-30",
+  "send": "isso é alimentação"
+ },
+ {
+  "id": "F03-31",
+  "send": "isso é renda"
+ },
+ {
+  "id": "F03-32",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F03-33",
+  "send": "comprei pão ali 5"
+ },
+ {
+  "id": "F03-34",
+  "send": "uber zona leste 15"
+ },
+ {
+  "id": "F03-35",
+  "send": "almoço no Tivoli 30"
+ },
+ {
+  "id": "F03-36",
+  "send": "saldo da conta 300"
+ },
+ {
+  "id": "F03-37",
+  "send": "tomei café 3,50"
+ },
+ {
+  "id": "F03-38",
+  "send": "gym 35"
+ },
+ {
+  "id": "F03-39",
+  "send": "gastei 20 dólares no mercado"
+ },
+ {
+  "id": "F03-40",
+  "send": "gastei 50 reais no mercado"
+ },
+ {
+  "id": "F03-41",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F03-42",
+  "send": "café 0"
+ },
+ {
+  "id": "F03-43",
+  "send": "reembolso -15"
+ },
+ {
+  "id": "F03-44",
+  "send": "gastei 2000000 no iate"
+ },
+ {
+  "id": "F03-45",
+  "send": "padaria 3.50"
+ },
+ {
+  "id": "F03-46",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F03-47",
+  "send": "gastei 1.200 no notebook"
+ },
+ {
+  "id": "F03-48",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F03-49",
+  "send": "gastei 999,99 no monitor"
+ },
+ {
+  "id": "F03-50",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F03-51",
+  "send": "gastei 30 na farmácia ontem"
+ },
+ {
+  "id": "F03-52",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F03-53",
+  "send": "resumo"
+ },
+ {
+  "id": "F04-01",
+  "send": "mercado 45, farmácia 12,30 e cinema 22"
+ },
+ {
+  "id": "F04-02",
+  "tap": "Ajustar"
+ },
+ {
+  "id": "F04-03",
+  "send": "tira o terceiro"
+ },
+ {
+  "id": "F04-04",
+  "send": "o primeiro foi 40"
+ },
+ {
+  "id": "F04-05",
+  "send": "o primeiro foi 0"
+ },
+ {
+  "id": "F04-06",
+  "send": "o quinto foi 3"
+ },
+ {
+  "id": "F04-07",
+  "send": "tira o 5"
+ },
+ {
+  "id": "F04-08",
+  "send": "troca o primeiro para 4"
+ },
+ {
+  "id": "F04-09",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F04-10",
+  "tap": "Desfazer tudo"
+ },
+ {
+  "id": "F04-11",
+  "tap": "Desfazer tudo"
+ },
+ {
+  "id": "F04-12",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F04-13",
+  "send": "mercado 45, farmácia 12,30 e cinema 22"
+ },
+ {
+  "id": "F04-14",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F04-15",
+  "send": "mercado 45, farmácia 12,30 e cinema 22"
+ },
+ {
+  "id": "F04-16",
+  "send": "almoço no shopping"
+ },
+ {
+  "id": "F04-17",
+  "send": "mercado 45, farmácia 12,30 e cinema 22"
+ },
+ {
+  "id": "F04-18",
+  "send": "já paguei"
+ },
+ {
+  "id": "F04-19",
+  "tap": "Desfazer tudo"
+ },
+ {
+  "id": "F04-20",
+  "send": "padaria 6"
+ },
+ {
+  "id": "F04-21",
+  "send": "mercado 45, farmácia 12,30 e cinema 22"
+ },
+ {
+  "id": "F04-22",
+  "send": "apaga"
+ },
+ {
+  "id": "F04-23",
+  "send": "pode confirmar"
+ },
+ {
+  "id": "F04-24",
+  "tap": "Desfazer tudo"
+ },
+ {
+  "id": "F04-25",
+  "send": "mercado 45, farmácia 12,30 e cinema 22"
+ },
+ {
+  "id": "F04-26",
+  "send": "esquece"
+ },
+ {
+  "id": "F04-27",
+  "send": "pão 1\nleite 2\ncafé 3\nqueijo 4\nsuco 5\narroz 6\nfeijão 7\nmassa 8\nmolho 9\nsabão 10\nfruta 11\ncarne 12"
+ },
+ {
+  "id": "F04-28",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F04-29",
+  "send": "mercado 20 e 10 dólares de táxi"
+ },
+ {
+  "id": "F04-30",
+  "send": "2 cafés 7,00"
+ },
+ {
+  "id": "F04-31",
+  "send": "mercado 45, farmácia 12,30 e cinema 22"
+ },
+ {
+  "id": "F04-33",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F04-34",
+  "send": "a pagar luz 120 dia 20"
+ },
+ {
+  "id": "F04-35",
+  "send": "a receber 300 do freela dia 15"
+ },
+ {
+  "id": "F04-36",
+  "send": "luz 80 a pagar dia 5"
+ },
+ {
+  "id": "F04-37",
+  "send": "a pagar internet"
+ },
+ {
+  "id": "F04-38",
+  "send": "a pagar 50"
+ },
+ {
+  "id": "F04-39",
+  "send": "a pagar internet 45 dia 25"
+ },
+ {
+  "id": "F04-40",
+  "send": "na verdade foi 50"
+ },
+ {
+  "id": "F04-41",
+  "send": "contas a pagar"
+ },
+ {
+  "id": "F04-42",
+  "send": "o que tenho a receber?"
+ },
+ {
+  "id": "F04-43",
+  "send": "saldo"
+ },
+ {
+  "id": "F04-44",
+  "send": "já paguei a conta de luz"
+ },
+ {
+  "id": "F04-45",
+  "send": "paguei a luz"
+ },
+ {
+  "id": "F04-46",
+  "send": "recebi 280 do freela"
+ },
+ {
+  "id": "F04-47",
+  "send": "paguei a internet ontem"
+ },
+ {
+  "id": "F04-48",
+  "send": "a pagar gás 60 dia 28"
+ },
+ {
+  "id": "F04-49",
+  "send": "a pagar gás 75 dia 29"
+ },
+ {
+  "id": "F04-50",
+  "send": "paguei gás"
+ },
+ {
+  "id": "F04-51",
+  "send": "apaga"
+ },
+ {
+  "id": "F04-52",
+  "send": "apaga"
+ },
+ {
+  "id": "F04-53",
+  "send": "a pagar"
+ },
+ {
+  "id": "F05-01",
+  "send": "resumo"
+ },
+ {
+  "id": "F05-02",
+  "tap": "Maiores gastos"
+ },
+ {
+  "id": "F05-03",
+  "tap": "Ajustar orçamento"
+ },
+ {
+  "id": "F05-04",
+  "send": "gastos"
+ },
+ {
+  "id": "F05-05",
+  "send": "meus gastos"
+ },
+ {
+  "id": "F05-06",
+  "send": "saldo"
+ },
+ {
+  "id": "F05-07",
+  "send": "qual é o meu saldo?"
+ },
+ {
+  "id": "F05-08",
+  "send": "saldo de setembro"
+ },
+ {
+  "id": "F05-09",
+  "send": "quanto gastei hoje?"
+ },
+ {
+  "id": "F05-10",
+  "send": "gastos de ontem"
+ },
+ {
+  "id": "F05-11",
+  "send": "quanto gastei esta semana?"
+ },
+ {
+  "id": "F05-12",
+  "send": "gastos desta semana"
+ },
+ {
+  "id": "F05-13",
+  "send": "gastos da semana passada"
+ },
+ {
+  "id": "F05-14",
+  "send": "gastos do mês passado"
+ },
+ {
+  "id": "F05-15",
+  "send": "gastos de setembro"
+ },
+ {
+  "id": "F05-16",
+  "send": "quanto gastei este ano?"
+ },
+ {
+  "id": "F05-17",
+  "send": "gastos deste ano"
+ },
+ {
+  "id": "F05-18",
+  "send": "gastos em 2025"
+ },
+ {
+  "id": "F05-19",
+  "send": "gastos dos últimos 7 dias"
+ },
+ {
+  "id": "F05-20",
+  "send": "quanto gastei hoje e ontem"
+ },
+ {
+  "id": "F05-21",
+  "send": "gastos de dezembro"
+ },
+ {
+  "id": "F05-22",
+  "send": "quanto gastei com o Marco"
+ },
+ {
+  "id": "F05-23",
+  "send": "quanto gastei em supermercado?"
+ },
+ {
+  "id": "F05-24",
+  "tap": "Por categoria"
+ },
+ {
+  "id": "F05-25",
+  "tap": "Maiores gastos"
+ },
+ {
+  "id": "F05-26",
+  "tap": "Ajustar orçamento"
+ },
+ {
+  "id": "F05-27",
+  "send": "quanto gastei em transporte esta semana?"
+ },
+ {
+  "id": "F05-28",
+  "send": "quanto gastei em lazer este mês?"
+ },
+ {
+  "id": "F05-29",
+  "send": "quanto recebi este mês?"
+ },
+ {
+  "id": "F05-30",
+  "send": "compara este mês com o mês passado"
+ },
+ {
+  "id": "F05-31",
+  "send": "últimas 5 despesas"
+ },
+ {
+  "id": "F05-32",
+  "send": "últimas 50 despesas"
+ },
+ {
+  "id": "F05-33",
+  "send": "minhas últimas despesas"
+ },
+ {
+  "id": "F05-34",
+  "send": "últimas receitas"
+ },
+ {
+  "id": "F05-35",
+  "send": "top categorias"
+ },
+ {
+  "id": "F05-36",
+  "send": "top categorias ano passado"
+ },
+ {
+  "id": "F05-37",
+  "send": "maiores gastos"
+ },
+ {
+  "id": "F05-38",
+  "send": "total de gastos por mês nos últimos 3 meses"
+ },
+ {
+  "id": "F05-39",
+  "send": "explique em detalhes como organizar meu orçamento mensal"
+ },
+ {
+  "id": "F05-40",
+  "tap": "👍 Útil"
+ },
+ {
+  "id": "F05-41",
+  "tap": "👍 Útil"
+ },
+ {
+  "id": "F05-42",
+  "tap": "👎 Não ajudou"
+ },
+ {
+  "id": "F05-43",
+  "tap": "Errado"
+ },
+ {
+  "id": "F05-44",
+  "tap": "Não entendi"
+ },
+ {
+  "id": "F05-45",
+  "tap": "Faltou algo"
+ },
+ {
+  "id": "F05-46",
+  "tap": "👍 Útil"
+ },
+ {
+  "id": "F05-47",
+  "tap": "👎 Não ajudou"
+ },
+ {
+  "id": "F05-48",
+  "send": "média de gastos por mês nos últimos 3 meses"
+ },
+ {
+  "id": "F06-01",
+  "send": "orçamento mercado 85"
+ },
+ {
+  "id": "F06-02",
+  "send": "orçamento restaurante 20"
+ },
+ {
+  "id": "F06-03",
+  "send": "orçamento lazer 40"
+ },
+ {
+  "id": "F06-04",
+  "send": "orçamento pets 100"
+ },
+ {
+  "id": "F06-05",
+  "send": "orçamento de 400 para mercado"
+ },
+ {
+  "id": "F06-06",
+  "send": "meus orçamentos"
+ },
+ {
+  "id": "F06-07",
+  "send": "mercado 10"
+ },
+ {
+  "id": "F06-08",
+  "send": "mercado 8"
+ },
+ {
+  "id": "F06-09",
+  "send": "restaurante 7,50"
+ },
+ {
+  "id": "F06-10",
+  "send": "cinema 9,99"
+ },
+ {
+  "id": "F06-11",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F06-12",
+  "send": "muda o orçamento de mercado para 120"
+ },
+ {
+  "id": "F06-13",
+  "send": "orçamentos"
+ },
+ {
+  "id": "F06-14",
+  "send": "tira o orçamento de lazer"
+ },
+ {
+  "id": "F06-15",
+  "send": "aluguel 1250 todo dia 1"
+ },
+ {
+  "id": "F06-16",
+  "send": "netflix 13,99 mensal"
+ },
+ {
+  "id": "F06-17",
+  "send": "celular em 10x de 89,90"
+ },
+ {
+  "id": "F06-18",
+  "send": "internet 45 todo mês dia DIA"
+ },
+ {
+  "id": "F06-19",
+  "send": "contas fixas"
+ },
+ {
+  "id": "F06-20",
+  "send": "seguro 480 anual"
+ },
+ {
+  "id": "F06-21",
+  "send": "paguei a netflix"
+ },
+ {
+  "id": "F06-22",
+  "send": "paguei o celular"
+ },
+ {
+  "id": "F06-23",
+  "send": "apaga"
+ },
+ {
+  "id": "F06-24",
+  "send": "contas fixas"
+ },
+ {
+  "id": "F06-25",
+  "send": "paguei 1250 de aluguel"
+ },
+ {
+  "id": "F06-26",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F06-27",
+  "send": "cancela a netflix"
+ },
+ {
+  "id": "F06-28",
+  "send": "a pagar internet 45"
+ },
+ {
+  "id": "F06-29",
+  "send": "paguei a internet"
+ },
+ {
+  "id": "F06-30",
+  "send": "apaga"
+ },
+ {
+  "id": "F06-31",
+  "send": "gastei 50 no mercado todo mês"
+ },
+ {
+  "id": "F06-32",
+  "send": "cancela gastei"
+ },
+ {
+  "id": "F06-33",
+  "send": "salário 3000 todo dia 25"
+ },
+ {
+  "id": "F06-34",
+  "send": "cancela o salário"
+ },
+ {
+  "id": "F06-35",
+  "send": "luz 80 todo mês dia 10"
+ },
+ {
+  "id": "F06-36",
+  "send": "luz 80 todo mês dia 10"
+ },
+ {
+  "id": "F06-37",
+  "send": "paguei a luz"
+ },
+ {
+  "id": "F06-38",
+  "send": "cancela a luz"
+ },
+ {
+  "id": "F07-01",
+  "send": "resumo mensal"
+ },
+ {
+  "id": "F07-02",
+  "send": "resumo do mês"
+ },
+ {
+  "id": "F07-03",
+  "send": "cancelar resumo mensal"
+ },
+ {
+  "id": "F07-04",
+  "send": "ativar resumo mensal"
+ },
+ {
+  "id": "F07-06",
+  "send": "dias no azul"
+ },
+ {
+  "id": "F07-07",
+  "send": "quantos dias fiquei no positivo este mês?"
+ },
+ {
+  "id": "F07-08",
+  "send": "mês contra mês"
+ },
+ {
+  "id": "F07-09",
+  "send": "compara com o mês passado"
+ },
+ {
+  "id": "F07-10",
+  "send": "meu dashboard"
+ },
+ {
+  "id": "F07-12",
+  "send": "Pedro me deve 25,50 do jantar"
+ },
+ {
+  "id": "F07-13",
+  "send": "Pedro me deve 10"
+ },
+ {
+  "id": "F07-14",
+  "send": "devo 40 pro Lucas"
+ },
+ {
+  "id": "F07-15",
+  "send": "quem me deve"
+ },
+ {
+  "id": "F07-16",
+  "send": "o que eu devo"
+ },
+ {
+  "id": "F07-17",
+  "send": "quanto devo"
+ },
+ {
+  "id": "F07-18",
+  "send": "Pedro me deve 0"
+ },
+ {
+  "id": "F07-19",
+  "send": "Pedro pagou"
+ },
+ {
+  "id": "F07-20",
+  "send": "Pedro pagou 10"
+ },
+ {
+  "id": "F07-21",
+  "send": "Pedro pagou 5,50"
+ },
+ {
+  "id": "F07-22",
+  "send": "quem me deve"
+ },
+ {
+  "id": "F07-23",
+  "send": "cobra o Pedro"
+ },
+ {
+  "id": "F07-24",
+  "send": "Pedro pagou 30"
+ },
+ {
+  "id": "F07-25",
+  "send": "Pedro pagou"
+ },
+ {
+  "id": "F07-26",
+  "send": "paguei 15 pro Lucas"
+ },
+ {
+  "id": "F07-27",
+  "send": "paguei o Lucas"
+ },
+ {
+  "id": "F07-28",
+  "send": "a Ana me deve 40"
+ },
+ {
+  "id": "F07-29",
+  "send": "Ana pagou"
+ },
+ {
+  "id": "F07-30",
+  "send": "a Ana pagou"
+ },
+ {
+  "id": "F07-31",
+  "send": "devo 40 para o Lucas do uber"
+ },
+ {
+  "id": "F07-32",
+  "send": "paguei o Lucas"
+ },
+ {
+  "id": "F07-33",
+  "send": "devo 30 a Maria"
+ },
+ {
+  "id": "F07-34",
+  "send": "paguei a Maria"
+ },
+ {
+  "id": "F07-35",
+  "send": "quem me deve"
+ },
+ {
+  "id": "F07-36",
+  "send": "saldo"
+ },
+ {
+  "id": "F08-01",
+  "send": "quanto gastei por mês este ano"
+ },
+ {
+  "id": "F08-02",
+  "send": "salva essa visão como gastos do ano"
+ },
+ {
+  "id": "F08-03",
+  "send": "salva essa visão como outra"
+ },
+ {
+  "id": "F08-04",
+  "send": "gastos por categoria este ano"
+ },
+ {
+  "id": "F08-05",
+  "send": "salva essa visão como categorias"
+ },
+ {
+  "id": "F08-06",
+  "send": "quais meus maiores gastos este ano"
+ },
+ {
+  "id": "F08-07",
+  "send": "salva essa visão como Categorias"
+ },
+ {
+  "id": "F08-08",
+  "send": "salva essa visão como maiores gastos"
+ },
+ {
+  "id": "F08-09",
+  "send": "minhas visões"
+ },
+ {
+  "id": "F08-10",
+  "send": "roda gastos do ano"
+ },
+ {
+  "id": "F08-11",
+  "send": "roda a visão inexistente"
+ },
+ {
+  "id": "F08-12",
+  "send": "apaga a visão categorias"
+ },
+ {
+  "id": "F08-13",
+  "send": "quanto gastei com restaurante nos últimos 3 meses comparado ao trimestre anterior?"
+ },
+ {
+  "id": "F08-14",
+  "send": "quanto gastei no Albert Heijn nos últimos 6 meses"
+ },
+ {
+  "id": "F08-15",
+  "send": "receitas este ano comparado com ano passado"
+ },
+ {
+  "id": "F08-16",
+  "send": "média de gastos por mês"
+ },
+ {
+  "id": "F08-17",
+  "send": "em que dia da semana eu mais gastei este ano"
+ },
+ {
+  "id": "F08-18",
+  "send": "saldo este ano por mês"
+ },
+ {
+  "id": "F08-19",
+  "send": "gastos por categoria vs mês passado"
+ },
+ {
+  "id": "F08-20",
+  "tap": "👎 Não ajudou"
+ },
+ {
+  "id": "F08-21",
+  "send": "quanto gastei com transporte nos últimos 30 dias"
+ },
+ {
+  "id": "F08-22",
+  "send": "roda gastos do ano"
+ },
+ {
+  "id": "F08-24",
+  "send": "minha nota de saúde"
+ },
+ {
+  "id": "F08-25",
+  "send": "minha nota"
+ },
+ {
+  "id": "F08-26",
+  "send": "o que você me enviou hoje"
+ },
+ {
+  "id": "F08-27",
+  "send": "lembretes que você me enviou hoje"
+ },
+ {
+  "id": "F08-28",
+  "send": "o que você enviou ontem"
+ },
+ {
+  "id": "F09-01",
+  "send": "dentista quinta às 14h"
+ },
+ {
+  "id": "F09-02",
+  "tap": "Está certo"
+ },
+ {
+  "id": "F09-03",
+  "send": "reunião com o banco amanhã às 10:30, avisa 30 min antes"
+ },
+ {
+  "id": "F09-04",
+  "send": "jantar com a Ana no Loetje sexta 20h"
+ },
+ {
+  "id": "F09-05",
+  "send": "marcar cabeleireiro dia 20 às 16h"
+ },
+ {
+  "id": "F09-06",
+  "send": "consulta médica 15/11 às 9h avisa 2 horas antes"
+ },
+ {
+  "id": "F09-07",
+  "send": "aniversário da mãe dia 25 às 19h"
+ },
+ {
+  "id": "F09-08",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F09-09",
+  "tap": "Está certo"
+ },
+ {
+  "id": "F09-10",
+  "send": "dentista quinta às 14h"
+ },
+ {
+  "id": "F09-11",
+  "send": "banco amanhã às 10:45"
+ },
+ {
+  "id": "F09-12",
+  "send": "dentista hoje às 0h05"
+ },
+ {
+  "id": "F09-13",
+  "send": "dentista amanhã"
+ },
+ {
+  "id": "F09-14",
+  "send": "agenda dentista amanhã às 14h"
+ },
+ {
+  "id": "F09-15",
+  "send": "minha agenda"
+ },
+ {
+  "id": "F09-16",
+  "send": "agenda de hoje"
+ },
+ {
+  "id": "F09-17",
+  "send": "agenda da semana"
+ },
+ {
+  "id": "F09-18",
+  "send": "agenda do mês"
+ },
+ {
+  "id": "F09-19",
+  "send": "muda o dentista para sexta às 15h"
+ },
+ {
+  "id": "F09-20",
+  "send": "remarca dentista para 16h"
+ },
+ {
+  "id": "F09-21",
+  "send": "muda o dentista para depois"
+ },
+ {
+  "id": "F09-22",
+  "send": "muda a reunião de segunda para sexta"
+ },
+ {
+  "id": "F09-23",
+  "send": "muda o oculista para sexta às 15h"
+ },
+ {
+  "id": "F09-24",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F09-25",
+  "send": "revisão do carro dia 28 às 9h avisa 1 dia antes"
+ },
+ {
+  "id": "F09-26",
+  "send": "cancela o dentista"
+ },
+ {
+  "id": "F09-27",
+  "send": "cancela o pediatra"
+ },
+ {
+  "id": "F09-28",
+  "send": "dentista hoje às HH:MM"
+ },
+ {
+  "id": "F09-30",
+  "send": "lembrete: tomar o remédio às 08:00"
+ },
+ {
+  "id": "F09-31",
+  "send": "me lembra de tomar vitamina toda segunda às 8h"
+ },
+ {
+  "id": "F09-32",
+  "send": "lembrete: revisar e-mails dias úteis às 09:00"
+ },
+ {
+  "id": "F09-33",
+  "send": "lembrete: regar as plantas fim de semana às 10:00"
+ },
+ {
+  "id": "F09-34",
+  "send": "lembrete: pagar aluguel todo dia 5 às 09:00"
+ },
+ {
+  "id": "F09-35",
+  "send": "lembrete: treino de perna segunda, quarta e sexta às 18:30"
+ },
+ {
+  "id": "F09-36",
+  "send": "lembrete: oculista amanhã às 14:00"
+ },
+ {
+  "id": "F09-37",
+  "send": "me lembra amanhã às 9h de ligar pro contador"
+ },
+ {
+  "id": "F09-38",
+  "send": "lembrete: tomar remédio às 25:00"
+ },
+ {
+  "id": "F09-39",
+  "send": "lembrete: reunião às 9h"
+ },
+ {
+  "id": "F09-40",
+  "send": "meus lembretes"
+ },
+ {
+  "id": "F09-41",
+  "send": "cancela lembrete oculista"
+ },
+ {
+  "id": "F09-42",
+  "send": "cancelar lembrete regar"
+ },
+ {
+  "id": "F09-43",
+  "send": "cancela lembrete xyz"
+ },
+ {
+  "id": "F09-44",
+  "send": "cancela lembrete tomar"
+ },
+ {
+  "id": "F09-45",
+  "send": "lembrete: beber água às HH:MM"
+ },
+ {
+  "id": "F09-47",
+  "send": "cancela lembrete beber água"
+ },
+ {
+  "id": "F09-48",
+  "send": "nota: senha do wifi é Casa123"
+ },
+ {
+  "id": "F09-49",
+  "send": "anotação: ligar pro contador sobre o IR"
+ },
+ {
+  "id": "F09-50",
+  "send": "nota: dentista amanhã às 14h"
+ },
+ {
+  "id": "F09-51",
+  "send": "nota: lembrete trocar o filtro às 08:00"
+ },
+ {
+  "id": "F09-52",
+  "send": "minhas notas"
+ },
+ {
+  "id": "F09-53",
+  "send": "nota comprar lâmpada"
+ },
+ {
+  "id": "F09-54",
+  "send": "procura nas notas wifi"
+ },
+ {
+  "id": "F09-55",
+  "send": "apaga a nota do wifi"
+ },
+ {
+  "id": "F09-56",
+  "send": "tarefa: enviar relatório até sexta"
+ },
+ {
+  "id": "F09-57",
+  "send": "tarefa: comprar pão"
+ },
+ {
+  "id": "F09-58",
+  "send": "tarefa: pagar o dentista amanhã às 14h"
+ },
+ {
+  "id": "F09-59",
+  "send": "minhas tarefas"
+ },
+ {
+  "id": "F09-60",
+  "send": "feito: 2"
+ },
+ {
+  "id": "F09-61",
+  "send": "feito: 99"
+ },
+ {
+  "id": "F09-62",
+  "send": "apaga tarefa relatório"
+ },
+ {
+  "id": "F09-63",
+  "send": "tarefa difícil essa"
+ },
+ {
+  "id": "F09-64",
+  "send": "minhas tarefas"
+ },
+ {
+  "id": "F10-01",
+  "send": "meta: meditar todos os dias"
+ },
+ {
+  "id": "F10-02",
+  "send": "objetivo: correr 10 km"
+ },
+ {
+  "id": "F10-03",
+  "send": "meta: juntar 5000 euros até dezembro"
+ },
+ {
+  "id": "F10-04",
+  "send": "meta: correr amanhã às 7h"
+ },
+ {
+  "id": "F10-05",
+  "send": "minhas metas"
+ },
+ {
+  "id": "F10-06",
+  "send": "meditei hoje"
+ },
+ {
+  "id": "F10-07",
+  "send": "meditei"
+ },
+ {
+  "id": "F10-08",
+  "send": "quantos dias seguidos meditei"
+ },
+ {
+  "id": "F10-09",
+  "send": "quantas vezes meditei esta semana"
+ },
+ {
+  "id": "F10-10",
+  "send": "li 30 páginas"
+ },
+ {
+  "id": "F10-11",
+  "send": "streak de yoga"
+ },
+ {
+  "id": "F10-12",
+  "send": "toquei violão"
+ },
+ {
+  "id": "F10-13",
+  "send": "meditei hoje?"
+ },
+ {
+  "id": "F10-14",
+  "send": "comprei ravioli 12"
+ },
+ {
+  "id": "F10-15",
+  "send": "gastei 12 no tivoli"
+ },
+ {
+  "id": "F10-16",
+  "send": "meta de meditar concluída"
+ },
+ {
+  "id": "F10-17",
+  "send": "meta de tricô concluída"
+ },
+ {
+  "id": "F10-18",
+  "send": "apaga a meta correr 10 km"
+ },
+ {
+  "id": "F10-19",
+  "send": "tomei omeprazol"
+ },
+ {
+  "id": "F10-20",
+  "tap": "Autorizo"
+ },
+ {
+  "id": "F10-20b",
+  "send": "tomei omeprazol"
+ },
+ {
+  "id": "F10-21",
+  "send": "humor 7/10"
+ },
+ {
+  "id": "F10-22",
+  "send": "humor 15/10"
+ },
+ {
+  "id": "F10-23",
+  "send": "dormi 7h"
+ },
+ {
+  "id": "F10-24",
+  "send": "bebi 2L de água"
+ },
+ {
+  "id": "F10-25",
+  "send": "mais 500ml de água"
+ },
+ {
+  "id": "F10-26",
+  "send": "água de hoje"
+ },
+ {
+  "id": "F10-27",
+  "send": "como foi o meu humor?"
+ },
+ {
+  "id": "F10-28",
+  "send": "sono médio"
+ },
+ {
+  "id": "F10-29",
+  "send": "tomei a medicação todos os dias?"
+ },
+ {
+  "id": "F10-30",
+  "send": "quantas horas dormi esta semana"
+ },
+ {
+  "id": "F10-31",
+  "send": "bebi água suficiente"
+ },
+ {
+  "id": "F10-32",
+  "send": "peso 75 kg"
+ },
+ {
+  "id": "F10-33",
+  "send": "pressão 12 por 8"
+ },
+ {
+  "id": "F10-34",
+  "send": "tomei o remédio da pressão"
+ },
+ {
+  "id": "F10-35",
+  "send": "dormi 8h e peso 80kg"
+ },
+ {
+  "id": "F10-36",
+  "send": "comprei 2 kg de arroz"
+ },
+ {
+  "id": "F10-37",
+  "send": "peso corporal 75 kg"
+ },
+ {
+  "id": "F10-38",
+  "send": "fiz 50 minutos de musculação"
+ },
+ {
+  "id": "F10-39",
+  "send": "corri 5 km em 30 min"
+ },
+ {
+  "id": "F10-40",
+  "send": "caminhei 40 minutos ontem"
+ },
+ {
+  "id": "F10-41",
+  "send": "fiz musculação"
+ },
+ {
+  "id": "F10-42",
+  "send": "fui à academia 1 hora"
+ },
+ {
+  "id": "F10-43",
+  "send": "treinos"
+ },
+ {
+  "id": "F10-44",
+  "send": "meus treinos"
+ },
+ {
+  "id": "F10-45",
+  "send": "quantas vezes corri esta semana"
+ },
+ {
+  "id": "F10-46",
+  "send": "treinos deste mês"
+ },
+ {
+  "id": "F10-47",
+  "send": "apaga o último treino"
+ },
+ {
+  "id": "F10-48",
+  "send": "apaga o treino de segunda"
+ },
+ {
+  "id": "F11-01",
+  "send": "plano de treino"
+ },
+ {
+  "id": "F11-02",
+  "send": "troca o supino de segunda para 62 kg"
+ },
+ {
+  "id": "F11-03",
+  "send": "plano de treino:\nTreino A: supino 4x10\nQuarta - Pernas: Agachamento 4x8 80kg"
+ },
+ {
+  "id": "F11-04",
+  "send": "plano de treino:\nSegunda - Peito: Supino 4x10 600kg"
+ },
+ {
+  "id": "F11-05",
+  "send": "plano de treino:\nSegunda - Peito: Supino 4x10 60kg, Crucifixo 3x12 14kg\nQuarta - Pernas: Agachamento 4x8 80kg, Leg press 3x12\nSexta - Costas: Remada 4x10 50kg, Puxada 3x12"
+ },
+ {
+  "id": "F11-06",
+  "tap": "Ajustar"
+ },
+ {
+  "id": "F11-07",
+  "send": "troca o supino de segunda para 62 kg"
+ },
+ {
+  "id": "F11-08",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F11-09",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F11-10",
+  "send": "plano de treino"
+ },
+ {
+  "id": "F11-11",
+  "send": "treino de hoje"
+ },
+ {
+  "id": "F11-12",
+  "send": "treino hoje"
+ },
+ {
+  "id": "F11-13",
+  "send": "plano de treino de hoje"
+ },
+ {
+  "id": "F11-14",
+  "send": "carga supino 60 kg"
+ },
+ {
+  "id": "F11-15",
+  "send": "carga supino 62 kg"
+ },
+ {
+  "id": "F11-16",
+  "send": "usei 80 kg no agachamento"
+ },
+ {
+  "id": "F11-17",
+  "send": "carga supino 62"
+ },
+ {
+  "id": "F11-18",
+  "send": "carga supino 600 kg"
+ },
+ {
+  "id": "F11-19",
+  "send": "evolução supino"
+ },
+ {
+  "id": "F11-20",
+  "send": "evolução remada"
+ },
+ {
+  "id": "F11-21",
+  "send": "evolução dos gastos"
+ },
+ {
+  "id": "F11-22",
+  "send": "troca o supino de segunda para 65 kg"
+ },
+ {
+  "id": "F11-23",
+  "send": "muda o agachamento de quarta para 5x5"
+ },
+ {
+  "id": "F11-24",
+  "send": "troca o crucifixo de segunda para 3x15 com 16 kg"
+ },
+ {
+  "id": "F11-25",
+  "send": "troca o supino de segunda para 62"
+ },
+ {
+  "id": "F11-26",
+  "send": "troca o supino de terça para 62 kg"
+ },
+ {
+  "id": "F11-27",
+  "send": "troca o remo de segunda para 40 kg"
+ },
+ {
+  "id": "F11-28",
+  "send": "troca o supino para 62 kg"
+ },
+ {
+  "id": "F11-29",
+  "send": "plano de treino:\nSegunda - Peito: Supino reto 4x10 60kg, Supino inclinado 3x12 40kg\nQuinta - Pernas: Agachamento 5x5 85kg"
+ },
+ {
+  "id": "F11-30",
+  "tap": "Cancelar"
+ },
+ {
+  "id": "F11-31",
+  "send": "plano de treino:\nSegunda - Peito: Supino reto 4x10 60kg, Supino inclinado 3x12 40kg\nQuinta - Pernas: Agachamento 5x5 85kg"
+ },
+ {
+  "id": "F11-32",
+  "send": "troca o agachamento de quinta para 90 kg"
+ },
+ {
+  "id": "F11-33",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F11-34",
+  "send": "troca o supino de segunda para 65 kg"
+ },
+ {
+  "id": "F11-35",
+  "send": "troca o supino reto de segunda para 65 kg"
+ },
+ {
+  "id": "F12-01",
+  "send": "resumo da viagem"
+ },
+ {
+  "id": "F12-02",
+  "send": "roteiro"
+ },
+ {
+  "id": "F12-03",
+  "send": "criar viagem Bali"
+ },
+ {
+  "id": "F12-04",
+  "send": "criar viagem Roma 800"
+ },
+ {
+  "id": "F12-05",
+  "send": "criar viagem Lisboa dia 25 às 10h"
+ },
+ {
+  "id": "F12-06",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F12-07",
+  "send": "criar viagem Lisboa €500"
+ },
+ {
+  "id": "F12-08",
+  "send": "criar viagem Porto"
+ },
+ {
+  "id": "F12-09",
+  "send": "jantar 45"
+ },
+ {
+  "id": "F12-10",
+  "send": "uber 18"
+ },
+ {
+  "id": "F12-11",
+  "send": "roteiro 30/12 10:00 Museu do Fado"
+ },
+ {
+  "id": "F12-12",
+  "send": "roteiro 31/12 Jantar no Bairro Alto"
+ },
+ {
+  "id": "F12-13",
+  "send": "roteiro amanhã 10:00 museu"
+ },
+ {
+  "id": "F12-14",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F12-15",
+  "send": "roteiro 32/12 10:00 praia"
+ },
+ {
+  "id": "F12-16",
+  "send": "roteiro"
+ },
+ {
+  "id": "F12-17",
+  "send": "bagagem: passaporte, carregador, adaptador"
+ },
+ {
+  "id": "F12-18",
+  "send": "mala: Passaporte"
+ },
+ {
+  "id": "F12-19",
+  "send": "peguei o passaporte"
+ },
+ {
+  "id": "F12-20",
+  "send": "bagagem"
+ },
+ {
+  "id": "F12-21",
+  "send": "peguei um uber 12"
+ },
+ {
+  "id": "F12-22",
+  "send": "orçamento da viagem hospedagem 300"
+ },
+ {
+  "id": "F12-23",
+  "send": "orçamento da viagem restaurante 200"
+ },
+ {
+  "id": "F12-24",
+  "send": "orçamento da viagem"
+ },
+ {
+  "id": "F12-25",
+  "send": "orçamento viagem hospedagem 300"
+ },
+ {
+  "id": "F12-26",
+  "send": "orçamento da viagem passeios 100"
+ },
+ {
+  "id": "F12-27",
+  "send": "orçamento da viagem lazer 0"
+ },
+ {
+  "id": "F12-28",
+  "send": "guarda serviço: lavanderia do hotel, 20 €"
+ },
+ {
+  "id": "F12-29",
+  "tap": "Confirmar + gasto"
+ },
+ {
+  "id": "F12-30",
+  "send": "resumo da viagem"
+ },
+ {
+  "id": "F12-31",
+  "send": "cheguei em casa"
+ },
+ {
+  "id": "F12-32",
+  "send": "voltei a gastar 20 no jumbo"
+ },
+ {
+  "id": "F12-33",
+  "send": "voltei"
+ },
+ {
+  "id": "F12-34",
+  "send": "resumo da viagem"
+ },
+ {
+  "id": "F12-35",
+  "send": "bagagem"
+ },
+ {
+  "id": "F12-36",
+  "send": "café 3"
+ },
+ {
+  "id": "F12-37",
+  "send": "viagens"
+ },
+ {
+  "id": "F12-38",
+  "send": "voltei"
+ },
+ {
+  "id": "F12-39",
+  "send": "criar viagem Paris de 20 a 25 de dezembro"
+ },
+ {
+  "id": "F12-40",
+  "send": "voltei"
+ },
+ {
+  "id": "F13-02",
+  "tap": "Ajustar"
+ },
+ {
+  "id": "F13-03",
+  "send": "o primeiro foi 22,10"
+ },
+ {
+  "id": "F13-04",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F13-05",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F13-06",
+  "tap": "Desfazer tudo"
+ },
+ {
+  "id": "F13-09",
+  "send": "ok"
+ },
+ {
+  "id": "F13-12",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F13-14",
+  "send": "troca o agachamento de quarta para 85 kg"
+ },
+ {
+  "id": "F13-15",
+  "tap": "Cancelar"
+ },
+ {
+  "id": "F13-17",
+  "tap": "Confirmar + gasto"
+ },
+ {
+  "id": "F13-18",
+  "tap": "Não"
+ },
+ {
+  "id": "F13-20",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F14-01",
+  "send": "guarda serviço: encanador, 180 €, garantia 12 meses"
+ },
+ {
+  "id": "F14-02",
+  "tap": "Confirmar + gasto"
+ },
+ {
+  "id": "F14-03",
+  "tap": "Sim, online/fora"
+ },
+ {
+  "id": "F14-04",
+  "tap": "Não"
+ },
+ {
+  "id": "F14-05",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F14-06",
+  "send": "anota serviço: pintor João, pintura da sala, 350, 24 meses de garantia"
+ },
+ {
+  "id": "F14-07",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F14-08",
+  "tap": "Não"
+ },
+ {
+  "id": "F14-09",
+  "send": "registra garantia: geladeira Bosch, 899 €, garantia 2 anos, 10/09/2026"
+ },
+ {
+  "id": "F14-10",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F14-11",
+  "send": "guarda serviço: eletricista, garantia de 6 meses"
+ },
+ {
+  "id": "F14-12",
+  "tap": "Cancelar"
+ },
+ {
+  "id": "F14-13",
+  "send": "guardar serviço eletricista 90 euros"
+ },
+ {
+  "id": "F14-14",
+  "send": "guarda serviço:"
+ },
+ {
+  "id": "F14-15",
+  "send": "guarda serviço: telhado, 180 €, garantia 11 anos"
+ },
+ {
+  "id": "F14-16",
+  "send": "guarda serviço: jardineiro, 80 €, 31/12/2027"
+ },
+ {
+  "id": "F14-17",
+  "send": "guarda serviço: 180 €"
+ },
+ {
+  "id": "F14-18",
+  "send": "garantias"
+ },
+ {
+  "id": "F14-19",
+  "send": "garantia encanador"
+ },
+ {
+  "id": "F14-20",
+  "send": "qual a garantia do encanador?"
+ },
+ {
+  "id": "F14-21",
+  "send": "apaga garantia pintor"
+ },
+ {
+  "id": "F14-22",
+  "send": "apaga garantia dentista"
+ },
+ {
+  "id": "F14-23",
+  "send": "guarda serviço: teste aviso, garantia 1 mes, DD/MM"
+ },
+ {
+  "id": "F14-24",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F14-25",
+  "send": "contrato energia Vattenfall 120 por mês até 31/12/2027"
+ },
+ {
+  "id": "F14-26",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F14-27",
+  "send": "contrato internet Ziggo 45 até 01/06/2027"
+ },
+ {
+  "id": "F14-28",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F14-29",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F14-30",
+  "send": "contratos"
+ },
+ {
+  "id": "F14-31",
+  "send": "contrato luz Eneco 95 até 30/06/2028"
+ },
+ {
+  "id": "F14-32",
+  "tap": "Cancelar"
+ },
+ {
+  "id": "F14-33",
+  "send": "renovei contrato energia até 31/12/2028"
+ },
+ {
+  "id": "F14-34",
+  "send": "contrato energia Vattenfall 120 por mês"
+ },
+ {
+  "id": "F14-35",
+  "send": "contrato energia Vattenfall até 01/01/2020"
+ },
+ {
+  "id": "F14-36",
+  "send": "contrato energia 120 até 31/12/2027"
+ },
+ {
+  "id": "F14-37",
+  "send": "contrato água Vitens 20 até 31/12/2027"
+ },
+ {
+  "id": "F14-38",
+  "send": "quando termina meu contrato de energia?"
+ },
+ {
+  "id": "F14-39",
+  "send": "apaga contrato internet"
+ },
+ {
+  "id": "F14-40",
+  "send": "apaga contrato gás"
+ },
+ {
+  "id": "F14-41",
+  "send": "contrato gás Teste 30 até DD/MM/AAAA"
+ },
+ {
+  "id": "F14-42",
+  "tap": "Confirmar"
+ },
+ {
+  "id": "F14-43",
+  "send": "prazos"
+ },
+ {
+  "id": "F14-44",
+  "send": "até quando posso trocar o seguro-saúde?"
+ },
+ {
+  "id": "F14-45",
+  "send": "quando é a declaração de imposto?"
+ },
+ {
+  "id": "F14-46",
+  "send": "prazo btw"
+ },
+ {
+  "id": "F14-47",
+  "send": "quando vence o tikkie?"
+ },
+ {
+  "id": "F14-48",
+  "send": "quais são os prazos"
+ },
+ {
+  "id": "F14-49",
+  "send": "paguei 130 de seguro saúde, data 05/10"
+ },
+ {
+  "id": "F14-50",
+  "send": "avisos de prazos"
+ },
+ {
+  "id": "F14-51",
+  "send": "ligar avisos de prazos"
+ },
+ {
+  "id": "F14-52",
+  "send": "avisos de prazos"
+ },
+ {
+  "id": "F14-53",
+  "send": "meus lembretes de prazos"
+ },
+ {
+  "id": "F14-54",
+  "send": "desligar avisos de prazos"
+ },
+ {
+  "id": "F14-55",
+  "send": "ligar avisos de prazos"
+ },
+ {
+  "id": "F15-01",
+  "send": "importar extrato"
+ },
+ {
+  "id": "F15-04",
+  "tap": "Importar 8"
+ },
+ {
+  "id": "F15-05",
+  "send": "orçamentos"
+ },
+ {
+  "id": "F15-06",
+  "tap": "Importar 8"
+ },
+ {
+  "id": "F15-08",
+  "tap": "Importar tudo (1)"
+ },
+ {
+  "id": "F15-09",
+  "send": "importar tudo"
+ },
+ {
+  "id": "F15-11",
+  "send": "desfazer importação"
+ },
+ {
+  "id": "F15-12",
+  "send": "desfazer importação"
+ },
+ {
+  "id": "F15-13",
+  "send": "desfazer importação"
+ },
+ {
+  "id": "F15-17",
+  "tap": "Cancelar"
+ },
+ {
+  "id": "F15-19",
+  "tap": "Importar 8"
+ },
+ {
+  "id": "F15-20",
+  "send": "orçamentos"
+ },
+ {
+  "id": "F15-21",
+  "send": "resumo mensal"
+ },
+ {
+  "id": "F16-01",
+  "send": "foi da empresa"
+ },
+ {
+  "id": "F16-02",
+  "send": "modo empresa"
+ },
+ {
+  "id": "F16-03",
+  "send": "foi da empresa"
+ },
+ {
+  "id": "F16-04",
+  "send": "foi particular"
+ },
+ {
+  "id": "F16-05",
+  "send": "notebook 1210"
+ },
+ {
+  "id": "F16-06",
+  "send": "foi da empresa"
+ },
+ {
+  "id": "F16-07",
+  "send": "btw 21"
+ },
+ {
+  "id": "F16-08",
+  "send": "almoço com cliente 54,50"
+ },
+ {
+  "id": "F16-09",
+  "send": "foi da empresa"
+ },
+ {
+  "id": "F16-10",
+  "send": "btw 9"
+ },
+ {
+  "id": "F16-11",
+  "send": "btw 6"
+ },
+ {
+  "id": "F16-12",
+  "send": "dedutível"
+ },
+ {
+  "id": "F16-13",
+  "send": "não dedutível"
+ },
+ {
+  "id": "F16-14",
+  "send": "reserva de imposto 30%"
+ },
+ {
+  "id": "F16-15",
+  "send": "reserva de imposto 70"
+ },
+ {
+  "id": "F16-16",
+  "send": "reserva de emergência 5000"
+ },
+ {
+  "id": "F16-17",
+  "send": "sempre da empresa: software, transporte"
+ },
+ {
+  "id": "F16-18",
+  "send": "sempre da empresa: software"
+ },
+ {
+  "id": "F16-19",
+  "send": "uber 14"
+ },
+ {
+  "id": "F16-20",
+  "send": "fatura nº 2026-014 para Acme 2420 btw 21 vence em 30 dias"
+ },
+ {
+  "id": "F16-21",
+  "send": "fatura para Beta BV 500"
+ },
+ {
+  "id": "F16-22",
+  "send": "fatura para Gamma 300 btw 6"
+ },
+ {
+  "id": "F16-23",
+  "send": "faturas"
+ },
+ {
+  "id": "F16-24",
+  "send": "fatura 2026-014 paga"
+ },
+ {
+  "id": "F16-25",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F16-26",
+  "send": "fatura Acme paga"
+ },
+ {
+  "id": "F16-27",
+  "send": "fatura de luz 80"
+ },
+ {
+  "id": "F16-28",
+  "tap": "Desfazer"
+ },
+ {
+  "id": "F16-29",
+  "send": "fatura para Delta 300 vence 1/1"
+ },
+ {
+  "id": "F16-30",
+  "send": "contabilidade"
+ },
+ {
+  "id": "F16-31",
+  "send": "balanço do ano"
+ },
+ {
+  "id": "F16-32",
+  "send": "exportar contabilidade"
+ },
+ {
+  "id": "F16-35",
+  "send": "modo pessoal"
+ },
+ {
+  "id": "F16-36",
+  "send": "fatura Delta paga"
+ },
+ {
+  "id": "F16-37",
+  "send": "apaga a fatura Delta"
+ },
+ {
+  "id": "F16-38",
+  "send": "saldo"
+ },
+ {
+  "id": "F16-39",
+  "send": "apaga a fatura Beta BV"
+ },
+ {
+  "id": "F16-40",
+  "send": "fatura para Epsilon 150 vence em 1 dia"
+ },
+ {
+  "id": "F18-01",
+  "send": "saldo"
+ },
+ {
+  "id": "F18-02",
+  "send": "meus orçamentos"
+ },
+ {
+  "id": "F18-03",
+  "send": "painel"
+ },
+ {
+  "id": "F18-04",
+  "send": "meu painel"
+ },
+ {
+  "id": "F18-05",
+  "send": "meu dashboard"
+ },
+ {
+  "id": "F18-07",
+  "tap": "Botão Abrir meu painel na última mensagem"
+ },
+ {
+  "id": "F18-08",
+  "tap": "Arrastar a barra de abas para a esquerda até o fim"
+ },
+ {
+  "id": "F18-12",
+  "tap": "Seta ‹ ao lado do nome do mês (Outubro de 2026)"
+ },
+ {
+  "id": "F18-13",
+  "tap": "Pílula Categoria na fila de filtros"
+ },
+ {
+  "id": "F18-14",
+  "tap": "Pílula de tipo: escolher Só receitas; depois tocar em Limpar filtros"
+ },
+ {
+  "id": "F18-15",
+  "tap": "Aba Dinheiro"
+ },
+ {
+  "id": "F18-17",
+  "tap": "Campo Buscar por nome nesta lista: digitar merc"
+ },
+ {
+  "id": "F18-23",
+  "tap": "Aba Agenda"
+ },
+ {
+  "id": "F18-26",
+  "tap": "Aba Hábitos"
+ },
+ {
+  "id": "F18-29",
+  "tap": "Aba Viagens"
+ },
+ {
+  "id": "F18-31",
+  "tap": "Aba Contabilidade"
+ },
+ {
+  "id": "F18-34",
+  "tap": "Aba Casa"
+ },
+ {
+  "id": "F18-38",
+  "tap": "Botão redondo de tema no topo (sol no escuro, lua no claro)"
+ },
+ {
+  "id": "F18-39",
+  "tap": "Em cada uma das 7 abas, arrastar a página para a esquerda"
+ },
+ {
+  "id": "F18-40",
+  "send": "padaria 3,10"
+ },
+ {
+  "id": "F18-41",
+  "tap": "Recarregar a página do painel (menu do navegador ou puxar para baixo)"
+ },
+ {
+  "id": "F18-42",
+  "send": "idioma inglês"
+ },
+ {
+  "id": "F18-43",
+  "send": "idioma português"
+ },
+ {
+  "id": "F18-44",
+  "send": "meu dashboard"
+ },
+ {
+  "id": "F19-01",
+  "send": "quero exportar meus dados"
+ },
+ {
+  "id": "F19-02",
+  "send": "baixar meus dados"
+ },
+ {
+  "id": "F19-03",
+  "send": "exportar meus dados"
+ },
+ {
+  "id": "F19-04",
+  "send": "exportar os meus dados"
+ },
+ {
+  "id": "F19-09",
+  "send": "sair"
+ },
+ {
+  "id": "F19-10",
+  "send": "Stop."
+ },
+ {
+  "id": "F19-11",
+  "send": "parar de enviar"
+ },
+ {
+  "id": "F19-12",
+  "send": "parar"
+ },
+ {
+  "id": "F19-13",
+  "send": "oi"
+ },
+ {
+  "id": "F19-14",
+  "send": "ajuda"
+ },
+ {
+  "id": "F19-15",
+  "send": "gastei 5 no café"
+ },
+ {
+  "id": "F19-16",
+  "send": "apagar meus dados"
+ },
+ {
+  "id": "F19-17",
+  "tap": "Editar"
+ },
+ {
+  "id": "F19-18",
+  "send": "voltei"
+ },
+ {
+  "id": "F19-19",
+  "send": "start"
+ },
+ {
+  "id": "F19-21",
+  "send": "resumo"
+ }
+]

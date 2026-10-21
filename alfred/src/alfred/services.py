@@ -69,6 +69,10 @@ _DATE = re.compile(
     r"^(?:dia\s+|op\s+|le\s+|am\s+|on\s+)?(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2,4}))?$"
 )
 _AMOUNT = re.compile(r"^(?:€\s*)?(\d[\d.,]*)\s*(?:€|eur|euros?)?$")
+_TRAILING_AMOUNT = re.compile(
+    r"^(?P<txt>.*?[^\W\d_].*?)\s+(?:€\s*(?P<amt>\d[\d.,]*)|(?P<amt2>\d[\d.,]*)\s*(?:€|eur\b|euros?\b))$",
+    re.I,
+)
 _SPLIT = re.compile(r"\s*;\s*|,(?=\s|\D)")
 _MARKUP = re.compile(r"[*_~`]")
 
@@ -93,8 +97,8 @@ def add_months(day: date, months: int) -> date:
 
 
 def _clean(value: str, limit: int) -> str | None:
-    out = " ".join(_MARKUP.sub("", value).split())[:limit].strip(" -,.")
-    return out or None
+    out = " ".join(_MARKUP.sub("", value).split())[:limit].strip(" -,.:;")
+    return out if out and any(ch.isalnum() for ch in out) else None  # B-046: ":" is not a name
 
 
 def _months(n: str, unit: str) -> int | None:
@@ -114,6 +118,15 @@ def _day(d: int, m: int, y: str | None, today: date) -> date | None:
     except ValueError:
         return None
     return day if day <= today and (today - day).days <= 3650 else None
+
+
+def _too_long_warranty(rest: str) -> bool:
+    for part in _SPLIT.split(unicodedata.normalize("NFC", rest)):
+        key = strip_accents(part.strip(" .!?")).lower()
+        w = next((m for p in _WARRANTY if (m := p.match(key))), None)
+        if w and _months(w.group("n"), w.group("unit")) is None and int(w.group("n")) > 0:
+            return True
+    return False
 
 
 def parse_register(rest: str, today: date) -> dict | None:
@@ -141,6 +154,16 @@ def parse_register(rest: str, today: date) -> dict | None:
             if amount is None or amount > MAX_AMOUNT:
                 return None
             out["amount"] = round(amount, 2)
+        elif "/" in part or re.search(r"\b(?:dd|mm|aaaa|yyyy)\b", key):
+            return None  # B-047: "DD/MM" (the example left as typed) is not a description
+        elif (m := _TRAILING_AMOUNT.match(part)) and out["amount"] is None:
+            amount = to_amount(
+                m.group("amt") or m.group("amt2")
+            )  # "eletricista 90 euros": the price, not the name
+            if amount is None or amount > MAX_AMOUNT:
+                return None
+            out["amount"] = round(amount, 2)
+            texts.append(m.group("txt"))
         else:
             texts.append(part)
     provider = _clean(texts[0], 60) if texts else None
@@ -188,7 +211,8 @@ def record_from_reading(reading: dict, today: date) -> dict | None:
 
 
 def _what(rec: ServiceRecord) -> str:
-    return f"{rec.provider} ({rec.description})" if rec.description else rec.provider
+    desc = (rec.description or "").strip().rstrip(".")  # B-042: no "(…).." when it ends in "."
+    return f"{rec.provider} ({desc})" if desc else rec.provider
 
 
 def _key(text: str) -> str:
@@ -200,7 +224,8 @@ def _lines(rec: ServiceRecord, lang: str, today: date, *, left: bool = False) ->
     if rec.amount is not None:
         out.append("• " + _t("svc_l_amount", lang, a=_fmt(rec.amount)))
     if rec.warranty_until:
-        line = _t("svc_l_warranty", lang, d=f"{rec.warranty_until:%d/%m/%Y}", n=rec.warranty_months)
+        key = "svc_l_warranty_one" if rec.warranty_months == 1 else "svc_l_warranty"
+        line = _t(key, lang, d=f"{rec.warranty_until:%d/%m/%Y}", n=rec.warranty_months)
         if left:
             days = (rec.warranty_until - today).days
             line += " " + (_t("svc_l_left", lang, n=days) if days >= 0 else _t("svc_l_over", lang))
@@ -295,6 +320,8 @@ async def handle_service_command(
     if m := _CREATE.match(raw_norm):
         fields = parse_register(m.group("rest"), today)
         if fields is None:
+            if _too_long_warranty(m.group("rest")):  # "garantia 11 anos": say the limit
+                return Reply(_t("svc_warranty_max", lang, n=MAX_WARRANTY_MONTHS // 12))
             return Reply(_t("svc_bad", lang))
         return await _create_draft(fields, member, lang, session, today)
     if m := _DELETE.match(plain):
@@ -313,7 +340,14 @@ async def handle_service_command(
             return None  # an ordinary sentence about warranties: not ours
         if len(found) > 1:
             return Reply(_t("svc_ambiguous", lang, names=", ".join(_what(r) for r in found[:5])))
-        text = "\n".join([*_lines(found[0], lang, today, left=True), "", _t("svc_note", lang)])
+        text = "\n".join(  # M-21: a title, and the reminder that this is not the proof
+            [
+                _t("svc_detail_title", lang, what=found[0].provider),
+                *_lines(found[0], lang, today, left=True),
+                "",
+                _t("svc_note", lang),
+            ]
+        )
         return Reply(text)
     return None
 
@@ -344,24 +378,24 @@ async def handle_service_button(
     try:
         rec_id = uuid.UUID(raw_id)
     except ValueError:
-        return Reply(_t("button_gone", lang))
+        return Reply(_t("button_used", lang))
     rec = await session.scalar(
         select(ServiceRecord)
         .where(ServiceRecord.id == rec_id, ServiceRecord.member_id == member.id)
         .with_for_update()
     )
     if rec is None:
-        return Reply(_t("button_gone", lang))
+        return Reply(_t("button_used", lang))
     if action in ("svc_wd_yes", "svc_wd_no"):
         if rec.status != "active":
-            return Reply(_t("button_gone", lang))
+            return Reply(_t("button_used", lang))
         if action == "svc_wd_no":
             return Reply(_t("svc_wd_skip", lang))
         rec.withdrawal_until = rec.service_date + timedelta(days=WITHDRAWAL_DAYS)
         session.add(rec)
         return Reply(_t("svc_wd_set", lang, d=f"{rec.withdrawal_until:%d/%m/%Y}"))
     if rec.status != "draft":
-        return Reply(_t("button_gone", lang))
+        return Reply(_t("button_used", lang))
     if action == "svc_no":
         await session.delete(rec)
         return Reply(_t("svc_cancelled", lang))
@@ -386,7 +420,13 @@ async def handle_service_button(
             )
         )
     audit(session, "service_saved", member.id)
-    text = _t("svc_saved", lang, what=_what(rec))
+    # B-042: say whether the money went into the spending too (J asked what each button does)
+    if action == "svc_exp" and rec.amount is not None:
+        text = _t("svc_saved_exp", lang, what=_what(rec), a=_fmt(rec.amount))
+    elif rec.amount is not None:
+        text = _t("svc_saved_noexp", lang, what=_what(rec))
+    else:
+        text = _t("svc_saved", lang, what=_what(rec))
     if (today - rec.service_date).days <= WITHDRAWAL_DAYS:
         return Reply(
             text + "\n\n" + _t("svc_wd_ask", lang),
@@ -507,6 +547,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "Garantie promise jusqu'au {d} ({n} mois)",
         "Zugesagte Garantie bis {d} ({n} Monate)",
     ),
+    "svc_l_warranty_one": _all5(
+        "Garantia prometida até {d} (1 mês)",
+        "Beloofde garantie tot {d} (1 maand)",
+        "Promised warranty until {d} (1 month)",
+        "Garantie promise jusqu'au {d} (1 mois)",
+        "Zugesagte Garantie bis {d} (1 Monat)",
+    ),
     "svc_l_nowarranty": _all5(
         "Sem garantia informada",
         "Geen garantie opgegeven",
@@ -587,6 +634,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "Je n'ai pas compris. Exemple : *garde service : plombier, 180 €, garantie 12 mois* (la date est aujourd'hui ; ajoute *10/09* pour une autre).",
         "Das habe ich nicht verstanden. Beispiel: *speichere service: Klempner, 180 €, garantie 12 monate* (Datum ist heute; für ein anderes *10/09* ergänzen).",
     ),
+    "svc_warranty_max": _all5(
+        "Eu guardo garantias de até {n} anos. Mande de novo com um prazo menor.",
+        "Ik bewaar garanties tot {n} jaar. Stuur het opnieuw met een kortere termijn.",
+        "I keep warranties of up to {n} years. Send it again with a shorter term.",
+        "Je garde les garanties jusqu'à {n} ans. Renvoie-le avec une durée plus courte.",
+        "Ich speichere Garantien bis {n} Jahre. Schick es noch mal mit einer kürzeren Dauer.",
+    ),
     "svc_no_provider": _all5(
         "Não consegui ver quem prestou o serviço nesse arquivo. Mande uma foto mais nítida ou escreva, por exemplo *guarda serviço: encanador, 180 €, garantia 12 meses*.",
         "Ik kon niet zien wie de dienst leverde. Stuur een scherpere foto of typ bijvoorbeeld *bewaar dienst: loodgieter, 180 €, garantie 12 maanden*.",
@@ -644,11 +698,32 @@ STRINGS: dict[str, dict[str, str]] = {
         "Gelöscht: {what}.",
     ),
     "svc_note": _all5(
-        "Se algo der errado, avise a empresa logo que perceber o problema e guarde a nota original. Informação geral, não é aconselhamento jurídico.",
-        "Gaat er iets mis, meld het dan zo snel mogelijk bij het bedrijf en bewaar de originele factuur. Algemene informatie, geen juridisch advies.",
-        "If something goes wrong, tell the company as soon as you notice the problem and keep the original invoice. General information, not legal advice.",
-        "Si quelque chose ne va pas, préviens l'entreprise dès que tu le remarques et garde la facture originale. Information générale, pas un conseil juridique.",
-        "Wenn etwas schiefgeht, melde es dem Unternehmen, sobald du das Problem bemerkst, und bewahre die Originalrechnung auf. Allgemeine Information, keine Rechtsberatung.",
+        "Este resumo não vale como comprovante da garantia: guarde a nota ou a fatura original. Se algo der errado, avise a empresa logo que perceber o problema. Informação geral, não é aconselhamento jurídico.",
+        "Dit overzicht is geen bewijs van de garantie: bewaar de originele bon of factuur. Gaat er iets mis, meld het dan zo snel mogelijk bij het bedrijf. Algemene informatie, geen juridisch advies.",
+        "This summary is not proof of the warranty: keep the original receipt or invoice. If something goes wrong, tell the company as soon as you notice. General information, not legal advice.",
+        "Ce résumé ne prouve pas la garantie : garde le reçu ou la facture originale. Si quelque chose ne va pas, préviens l'entreprise dès que tu le remarques. Information générale, pas un conseil juridique.",
+        "Diese Übersicht ist kein Garantienachweis: Bewahre die Originalquittung oder -rechnung auf. Wenn etwas schiefgeht, melde es dem Unternehmen, sobald du es bemerkst. Allgemeine Information, keine Rechtsberatung.",
+    ),
+    "svc_detail_title": _all5(
+        "*Garantia: {what}*",
+        "*Garantie: {what}*",
+        "*Warranty: {what}*",
+        "*Garantie : {what}*",
+        "*Garantie: {what}*",
+    ),
+    "svc_saved_exp": _all5(
+        "Guardei {what} e anotei o gasto de {a} nas suas despesas.",
+        "{what} bewaard en de uitgave van {a} bij je uitgaven gezet.",
+        "Saved {what} and logged the {a} in your spending.",
+        "J'ai gardé {what} et noté la dépense de {a}.",
+        "{what} gespeichert und die Ausgabe von {a} eingetragen.",
+    ),
+    "svc_saved_noexp": _all5(
+        "Guardei {what} só para a garantia; o valor não entrou nas despesas.",
+        "{what} bewaard voor de garantie; het bedrag staat niet bij je uitgaven.",
+        "Saved {what} for the warranty only; the amount was not added to your spending.",
+        "J'ai gardé {what} pour la garantie ; le montant n'est pas compté dans les dépenses.",
+        "{what} für die Garantie gespeichert; der Betrag zählt nicht zu den Ausgaben.",
     ),
     "svc_rem_warranty": _all5(
         "Aviso: a garantia prometida de {what} termina em {d} (faltam {n} dias). Se houver algum problema, é a hora de falar com a empresa. Guarde a nota original.",

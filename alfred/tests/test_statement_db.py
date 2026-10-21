@@ -58,7 +58,9 @@ async def test_preview_counts_and_nothing_is_written_before_the_tap(lab: Lab) ->
     assert ids == ["imp_ok", "imp_no"]
     assert len(lab.buttons[-1][0][1]) <= 20 and len(lab.buttons[-1][1][1]) <= 20
     assert await _expenses(lab) == []
-    assert "overig" in reply  # the unknown shop is flagged
+    assert (
+        "*Outros*" in reply and "overig" not in reply
+    )  # flagged, in words the member reads (A-55)
 
 
 @db

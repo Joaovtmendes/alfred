@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,9 +67,7 @@ _PACKED = [
     re.compile(r"^jai mis\s+(?:le\s+|la\s+|les\s+|l)?(.+?)\s+dans la valise$"),
     re.compile(r"^(?:eingepackt|ich habe eingepackt)\s*:?\s+(?:den\s+|die\s+|das\s+)?(.+)$"),
 ]
-_BUDGET_WORDS = (
-    r"(?:orcamento da viagem|trip budget|reisbudget|budget voyage|budget du voyage|reisebudget)"
-)
+_BUDGET_WORDS = r"(?:orcamento (?:da |de )?viagem|trip budget|reisbudget|budget voyage|budget du voyage|reisebudget)"
 _BUDGET_SET = re.compile(rf"^{_BUDGET_WORDS}\s+(.+?)\s+(?:€\s*)?(\d[\d.,]*)\s*(?:€|eur|euros?)?$")
 _BUDGET_LIST = re.compile(rf"^{_BUDGET_WORDS}$")
 
@@ -141,6 +139,27 @@ def _time(h: str | None, mi: str | None) -> str | None | bool:
     return f"{hour:02d}:{minute:02d}"
 
 
+_REL_DAY = re.compile(
+    r"^(?:roteiro|itinerary|reisschema|itineraire|reiseplan)\s+(?:dia\s+|on\s+|op\s+|le\s+|am\s+)?"
+    r"(?P<w>hoje|amanha|today|tomorrow|vandaag|morgen|demain|heute)\b"
+)
+_REL_OFFSET = {"hoje": 0, "today": 0, "vandaag": 0, "heute": 0,
+               "amanha": 1, "tomorrow": 1, "morgen": 1, "demain": 1}  # fmt: skip
+
+
+def _relative_day(flat: str, body: str) -> tuple[str, str]:
+    """B-056: "roteiro amanhã 10:00 museu" → the same line with the date written as dd/mm."""
+    m = _REL_DAY.match(flat)
+    if not m:
+        return flat, body
+    day = today_local() + timedelta(days=_REL_OFFSET[m.group("w")])
+    ddmm = day.strftime("%d/%m")
+    start, end = m.span("w")
+    raw = " ".join(body.split())
+    new_body = raw[:start] + ddmm + raw[end:] if len(raw) == len(flat) else flat
+    return flat[:start] + ddmm + flat[end:], new_body
+
+
 async def handle_tripplan_command(
     body: str, body_plain: str, member: Member, lang: str, session: AsyncSession
 ) -> str | None:
@@ -154,9 +173,10 @@ async def handle_tripplan_command(
     if _BUDGET_LIST.match(flat):
         return await _list_budget(member, lang, session)
 
+    flat_it, body_it = _relative_day(flat, body)
     for pattern in _ITIN_ADD:
-        if m := pattern.match(flat):
-            return await _add_itinerary(body, flat, m, member, lang, session)
+        if m := pattern.match(flat_it):
+            return await _add_itinerary(body_it, flat_it, m, member, lang, session)
     for pattern in _PACK_ADD:
         if m := pattern.match(flat):
             names = [
@@ -272,7 +292,8 @@ async def _add_pack(names: list[str], member: Member, lang: str, session: AsyncS
     if not added:
         return _t("tp_pack_nothing_new", lang)
     audit(session, "trip_pack_added", member.id, n=len(added))
-    return _t("tp_pack_added", lang, n=len(added), dest=trip.destination)
+    key = "tp_pack_added_one" if len(added) == 1 else "tp_pack_added"  # B-053: "3 itens"
+    return _t(key, lang, n=len(added), dest=trip.destination)
 
 
 async def _list_pack(member: Member, lang: str, session: AsyncSession) -> str:
@@ -445,11 +466,18 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Der Reiseplan für {dest} ist leer. Beispiel: „reiseplan 12/10 10:00 Fado-Museum“.",
     ),
     "tp_pack_added": _all(
-        "Adicionei {n} à bagagem de {dest}.",
-        "{n} toegevoegd aan de paklijst voor {dest}.",
-        "Added {n} to the packing list for {dest}.",
-        "Liste de bagages pour {dest} mise à jour : {n} de plus.",
-        "{n} zur Packliste für {dest} hinzugefügt.",
+        "Adicionei {n} coisas à bagagem de {dest}.",
+        "{n} items toegevoegd aan de paklijst voor {dest}.",
+        "Added {n} items to the packing list for {dest}.",
+        "Liste de bagages pour {dest} mise à jour : {n} objets de plus.",
+        "{n} Sachen zur Packliste für {dest} hinzugefügt.",
+    ),
+    "tp_pack_added_one": _all(
+        "Adicionei 1 coisa à bagagem de {dest}.",
+        "1 item toegevoegd aan de paklijst voor {dest}.",
+        "Added 1 item to the packing list for {dest}.",
+        "Liste de bagages pour {dest} mise à jour : 1 objet de plus.",
+        "1 Sache zur Packliste für {dest} hinzugefügt.",
     ),
     "tp_pack_nothing_new": _all(
         "Isso já estava na bagagem.",

@@ -170,8 +170,8 @@ async def test_budget_button_shows_the_budget_or_how_to_create_one(lab: Lab) -> 
 @pytest.mark.asyncio
 async def test_forged_deeper_button_is_harmless(lab: Lab) -> None:
     await _seed(lab)
-    assert await lab.tap("dd_top:garbage") == _t("button_gone", "pt")
-    assert await lab.tap("dd_cat:2026-10-01.open.xx") == _t("button_gone", "pt")
+    assert await lab.tap("dd_top:garbage") == _t("button_used", "pt")
+    assert await lab.tap("dd_cat:2026-10-01.open.xx") == _t("button_used", "pt")
 
 
 @db
@@ -193,15 +193,16 @@ async def _ask_chat(lab: Lab, text: str = "x" * 300) -> list[tuple[str, str]]:
 
 @db
 @pytest.mark.asyncio
-async def test_long_model_answer_gets_feedback_buttons_but_short_one_does_not(lab: Lab) -> None:
-    assert [i.split(":")[0] for i, _ in await _ask_chat(lab)] == ["fb_up", "fb_down"]
+async def test_model_answers_no_longer_carry_feedback_buttons(lab: Lab) -> None:
+    # M-10 (hard test 20/10): J asked for the 👍/👎 buttons to go; old buttons still work
+    assert await _ask_chat(lab) == []
     assert await _ask_chat(lab, "ok, entendi") == []
 
 
 @db
 @pytest.mark.asyncio
 async def test_thumbs_up_stores_one_row_with_no_text(lab: Lab) -> None:
-    ids = [i for i, _ in await _ask_chat(lab)]
+    ids = ["fb_up:chat", "fb_down:chat"]  # buttons already sent before M-10
     reply = await lab.tap(ids[0])
     assert reply == _t("fb_thanks", "pt")
     row = await lab.scalar(select(ReplyFeedback).where(ReplyFeedback.member_id == lab.member_id))
@@ -211,7 +212,7 @@ async def test_thumbs_up_stores_one_row_with_no_text(lab: Lab) -> None:
 @db
 @pytest.mark.asyncio
 async def test_thumbs_down_asks_for_a_reason_from_a_closed_list(lab: Lab) -> None:
-    ids = [i for i, _ in await _ask_chat(lab)]
+    ids = ["fb_up:chat", "fb_down:chat"]
     reply = await lab.tap(ids[1])
     assert reply == _t("fb_ask_reason", "pt")
     reasons = lab.buttons[-1]
@@ -224,19 +225,19 @@ async def test_thumbs_down_asks_for_a_reason_from_a_closed_list(lab: Lab) -> Non
 @db
 @pytest.mark.asyncio
 async def test_a_forged_reason_changes_nothing(lab: Lab, lab2: Lab) -> None:
-    ids = [i for i, _ in await _ask_chat(lab)]
+    ids = ["fb_up:chat", "fb_down:chat"]
     await lab.tap(ids[1])
     row = await lab.scalar(select(ReplyFeedback).where(ReplyFeedback.member_id == lab.member_id))
-    assert await lab2.tap(f"fb_r:{row.id}:wrong") == _t("button_gone", "pt")  # not their row
-    assert await lab.tap(f"fb_r:{row.id}:<script>") == _t("button_gone", "pt")  # not on the list
-    assert await lab.tap("fb_r:not-a-uuid:wrong") == _t("button_gone", "pt")
+    assert await lab2.tap(f"fb_r:{row.id}:wrong") == _t("button_used", "pt")  # not their row
+    assert await lab.tap(f"fb_r:{row.id}:<script>") == _t("button_used", "pt")  # not on the list
+    assert await lab.tap("fb_r:not-a-uuid:wrong") == _t("button_used", "pt")
     await lab.tap("fb_up:chat")  # an up row never takes a reason
     up = await lab.scalar(
         select(ReplyFeedback).where(
             ReplyFeedback.member_id == lab.member_id, ReplyFeedback.rating == "up"
         )
     )
-    assert await lab.tap(f"fb_r:{up.id}:wrong") == _t("button_gone", "pt")
+    assert await lab.tap(f"fb_r:{up.id}:wrong") == _t("button_used", "pt")
 
 
 @db

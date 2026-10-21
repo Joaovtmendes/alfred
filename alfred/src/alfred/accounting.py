@@ -31,6 +31,7 @@ from alfred.couple import Reply, parse_categories
 from alfred.labels import category_label
 from alfred.models import SETTLED, Expense, Member
 from alfred.panel_calc import FIXED_CATEGORIES, recurring_names
+from alfred.parsing import strip_accents as strip_accents
 from alfred.statement_csv import parse_amount
 
 PERSONAL, BUSINESS = "personal", "business"
@@ -677,7 +678,14 @@ async def handle_accounting_command(
         member.business_categories = None
         return Reply(_t("acct_always_cleared", lang), [])
     if m := _ALWAYS.match(plain):
-        return _set_always(parse_categories(m.group(1)), member, lang)
+        reply = _set_always(parse_categories(m.group(1)), member, lang)
+        unknown = _unknown_categories(m.group(1))
+        if unknown and member.acct_mode == BUSINESS and member.business_categories:
+            # A-35: say which names were left out instead of ignoring them in silence
+            reply = Reply(
+                reply.text + _t("acct_always_unknown", lang, names=", ".join(unknown)), []
+            )
+        return reply
     if plain in _SUMMARY:
         return await _summary(member, lang, session, today)
     if m := _EXPORT.match(plain):
@@ -759,6 +767,16 @@ def _set_savings(raw: str, member: Member, lang: str, session: AsyncSession) -> 
     member.savings_amount = float(amount)
     audit(session, "savings_set", member.id)
     return Reply(_t("acct_savings_set", lang, amount=_fmt(amount)), [])
+
+
+def _unknown_categories(text: str) -> list[str]:
+    from alfred.couple import _category_lookup
+
+    lookup = _category_lookup()
+    parts = re.split(
+        r"[,;/&+]|\s+e\s+|\s+and\s+|\s+en\s+|\s+et\s+|\s+und\s+", strip_accents(text.lower())
+    )
+    return [p.strip(" .!?") for p in parts if p.strip(" .!?") and p.strip(" .!?") not in lookup]
 
 
 def _set_always(cats: list[str], member: Member, lang: str) -> Reply:
@@ -847,9 +865,9 @@ def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str | tuple[s
 
 STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     "acct_mode_business": _all(
-        "Modo empresa ligado. Marque um lançamento com *foi da empresa* e, se quiser, informe o BTW com *btw 21* (ou 9 ou 0). Para a empresa ter uma categoria padrão: *sempre da empresa: software, transporte*. Veja tudo na aba Contabilidade do painel (*meu dashboard*). Para voltar: *modo pessoal*.",
-        "Zakelijke modus aan. Markeer een boeking met *was zakelijk* en geef eventueel de btw door met *btw 21* (of 9 of 0). Voor een standaard zakelijke categorie: *altijd zakelijk: software, vervoer*. Alles staat in het tabblad Boekhouding van je dashboard (*mijn dashboard*). Terug: *persoonlijke modus*.",
-        "Business mode on. Mark an entry with *it was business* and, if you like, add the VAT with *btw 21* (or 9 or 0). For a default business category: *always business: software, transport*. Everything is in the Accounting tab of your panel (*my dashboard*). To go back: *personal mode*.",
+        "Modo empresa ligado. Marque um lançamento com *foi da empresa* e, se quiser, informe o BTW com *btw 21* (ou 9 ou 0). Para a empresa ter uma categoria padrão: *sempre da empresa: subscrições, transporte*. Veja tudo na aba Contabilidade do painel (*meu dashboard*). Para voltar: *modo pessoal*.",
+        "Zakelijke modus aan. Markeer een boeking met *was zakelijk* en geef eventueel de btw door met *btw 21* (of 9 of 0). Voor een standaard zakelijke categorie: *altijd zakelijk: abonnement, vervoer*. Alles staat in het tabblad Boekhouding van je dashboard (*mijn dashboard*). Terug: *persoonlijke modus*.",
+        "Business mode on. Mark an entry with *it was business* and, if you like, add the VAT with *btw 21* (or 9 or 0). For a default business category: *always business: subscriptions, transport*. Everything is in the Accounting tab of your panel (*my dashboard*). To go back: *personal mode*.",
         "Mode entreprise activé. Marque une écriture avec *c'était pro* et, si tu veux, indique la TVA avec *btw 21* (ou 9 ou 0). Pour une catégorie pro par défaut : *toujours pro : logiciel, transport*. Tout est dans l'onglet Comptabilité du tableau de bord (*mon dashboard*). Pour revenir : *mode personnel*.",
         "Firmenmodus an. Markiere eine Buchung mit *war geschäftlich* und gib bei Bedarf die MwSt mit *btw 21* (oder 9 oder 0) an. Für eine geschäftliche Standardkategorie: *immer geschäftlich: Software, Transport*. Alles steht im Tab Buchhaltung deines Dashboards (*mein Dashboard*). Zurück: *privatmodus*.",
     ),
@@ -959,16 +977,23 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Ich habe den Betrag nicht verstanden. Beispiel: *notgroschen 5000*.",
     ),
     "acct_always_set": _all(
-        "Combinado: {cats} entram como da empresa sempre que você lançar. Para desfazer: *nada sempre da empresa*.",
-        "Afgesproken: {cats} worden zakelijk geboekt als je iets invoert. Ongedaan maken: *niets altijd zakelijk*.",
-        "Done: {cats} are booked as business whenever you add something. To undo: *nothing always business*.",
-        "C'est noté : {cats} sont enregistrées en pro à chaque saisie. Pour annuler : *rien de toujours pro*.",
-        "Abgemacht: {cats} werden bei jeder Eingabe als geschäftlich gebucht. Zum Rückgängigmachen: *nichts immer geschäftlich*.",
+        "Combinado: o que você lançar em {cats} entra como da empresa. Para desfazer: *nada sempre da empresa*.",
+        "Afgesproken: wat je invoert in {cats} wordt zakelijk geboekt. Ongedaan maken: *niets altijd zakelijk*.",
+        "Done: anything you add in {cats} is booked as business. To undo: *nothing always business*.",
+        "C'est noté : ce que tu saisis en {cats} est enregistré en pro. Pour annuler : *rien de toujours pro*.",
+        "Abgemacht: Was du in {cats} einträgst, wird geschäftlich gebucht. Zum Rückgängigmachen: *nichts immer geschäftlich*.",
+    ),
+    "acct_always_unknown": _all(
+        " Não reconheci: {names}.",
+        " Niet herkend: {names}.",
+        " Not recognised: {names}.",
+        " Non reconnu : {names}.",
+        " Nicht erkannt: {names}.",
     ),
     "acct_always_none": _all(
-        "Não reconheci essas categorias. Exemplo: *sempre da empresa: software, transporte*.",
-        "Ik herken die categorieën niet. Voorbeeld: *altijd zakelijk: software, vervoer*.",
-        "I did not recognise those categories. Example: *always business: software, transport*.",
+        "Não reconheci essas categorias. Exemplo: *sempre da empresa: subscrições, transporte*.",
+        "Ik herken die categorieën niet. Voorbeeld: *altijd zakelijk: abonnement, vervoer*.",
+        "I did not recognise those categories. Example: *always business: subscriptions, transport*.",
         "Je n'ai pas reconnu ces catégories. Exemple : *toujours pro : logiciel, transport*.",
         "Ich habe diese Kategorien nicht erkannt. Beispiel: *immer geschäftlich: Software, Transport*.",
     ),

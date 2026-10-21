@@ -50,17 +50,21 @@ _NOT_NAMES = {
 }
 
 
+# A-31: "a Ana me deve 40" — the article is not part of the name
+_ART = r"(?:(?:o|a|the)\s+)?"
+
+
 def _c(pattern: str) -> re.Pattern[str]:
     return re.compile(r"^" + pattern + r"$")
 
 
 # (regex, group order) — groups: person, amount, note. Order is declared per pattern.
 _CREATE_OWED = [
-    _c(rf"{_NAME}\s+me\s+deve\s+{_AMT}{_NOTE}"),
-    _c(rf"{_NAME}\s+owes\s+me\s+{_AMT}{_NOTE}"),
-    _c(rf"{_NAME}\s+is\s+mij\s+{_AMT}\s+schuldig{_NOTE}"),
-    _c(rf"{_NAME}\s+me\s+doit\s+{_AMT}{_NOTE}"),
-    _c(rf"{_NAME}\s+schuldet\s+mir\s+{_AMT}{_NOTE}"),
+    _c(rf"{_ART}{_NAME}\s+me\s+deve\s+{_AMT}{_NOTE}"),
+    _c(rf"{_ART}{_NAME}\s+owes\s+me\s+{_AMT}{_NOTE}"),
+    _c(rf"{_ART}{_NAME}\s+is\s+mij\s+{_AMT}\s+schuldig{_NOTE}"),
+    _c(rf"{_ART}{_NAME}\s+me\s+doit\s+{_AMT}{_NOTE}"),
+    _c(rf"{_ART}{_NAME}\s+schuldet\s+mir\s+{_AMT}{_NOTE}"),
 ]
 # person first, then amount (shape A) or amount first, then person (shape B)
 _CREATE_OWE_A = [
@@ -74,11 +78,11 @@ _CREATE_OWE_B = [
     _c(rf"je\s+dois\s+{_AMT}\s+(?:a|au|a la)\s+{_NAME}{_NOTE}"),
 ]
 _SETTLE_OWED = [  # they paid me: person, optional amount
-    _c(rf"{_NAME}\s+(?:me\s+)?pagou(?:\s+{_AMT})?"),
-    _c(rf"{_NAME}\s+paid\s+me(?:\s+{_AMT})?"),
-    _c(rf"{_NAME}\s+heeft\s+(?:mij\s+)?(?:{_AMT}\s+)?betaald"),
-    _c(rf"{_NAME}\s+m'a\s+paye(?:\s+{_AMT})?"),
-    _c(rf"{_NAME}\s+hat\s+(?:mir\s+)?(?:{_AMT}\s+)?bezahlt"),
+    _c(rf"{_ART}{_NAME}\s+(?:me\s+)?pagou(?:\s+{_AMT})?"),
+    _c(rf"{_ART}{_NAME}\s+paid\s+me(?:\s+{_AMT})?"),
+    _c(rf"{_ART}{_NAME}\s+heeft\s+(?:mij\s+)?(?:{_AMT}\s+)?betaald"),
+    _c(rf"{_ART}{_NAME}\s+m'a\s+paye(?:\s+{_AMT})?"),
+    _c(rf"{_ART}{_NAME}\s+hat\s+(?:mir\s+)?(?:{_AMT}\s+)?bezahlt"),
 ]
 _SETTLE_OWE_A = [  # I paid: optional amount first, then person
     _c(rf"paguei(?:\s+{_AMT})?\s+(?:pro|pra|para o|para a|para|ao|a|o)?\s*{_NAME}"),
@@ -316,12 +320,15 @@ async def _settle(
         left_to_pay -= apply
     await session.flush()
     audit(session, "iou_settled", member.id, direction=direction)
-    still = sum((remaining(i) for i in items if i.settled_at is None), Decimal(0))
+    # B-021: what is still open is the person's whole balance, not only the item just paid
+    # ("Pedro pagou 10" with debts of 10 and 25,50 used to say "Nada mais em aberto").
+    still = total_left - pay
+    suffix = "" if direction == OWED else "_owe"  # "paguei o Lucas" is ME paying Lucas
     if still > 0:
         return _t(
-            "iou_settled_partial", lang, person=person, paid=_fmt(pay), left=_fmt(total_left - pay)
+            "iou_settled_partial" + suffix, lang, person=person, paid=_fmt(pay), left=_fmt(still)
         )
-    return _t("iou_settled_full", lang, person=person, paid=_fmt(pay))
+    return _t("iou_settled_full" + suffix, lang, person=person, paid=_fmt(pay))
 
 
 async def _remind(name: str, member: Member, lang: str, session: AsyncSession) -> str | None:
@@ -362,14 +369,14 @@ def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str | tuple[s
 
 STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     "iou_added_owed": _all(
-        "Anotei: {person} te deve {amount}. Total do {person}: {total}.",
+        "Anotei: {person} te deve {amount}. Total de {person}: {total}.",
         "Genoteerd: {person} is jou {amount} schuldig. Totaal {person}: {total}.",
         "Noted: {person} owes you {amount}. {person}'s total: {total}.",
         "C'est noté : {person} te doit {amount}. Total de {person} : {total}.",
         "Notiert: {person} schuldet dir {amount}. Gesamt {person}: {total}.",
     ),
     "iou_added_owe": _all(
-        "Anotei: você deve {amount} ao {person}. Total com o {person}: {total}.",
+        "Anotei: você deve {amount} para {person}. Total com {person}: {total}.",
         "Genoteerd: je bent {person} {amount} schuldig. Totaal met {person}: {total}.",
         "Noted: you owe {person} {amount}. Total with {person}: {total}.",
         "C'est noté : tu dois {amount} à {person}. Total avec {person} : {total}.",
@@ -420,6 +427,20 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "{paid} de {person} noté. Encore ouvert : {left}.",
         "{paid} von {person} notiert. Noch offen: {left}.",
     ),
+    "iou_settled_full_owe": _all(
+        "Quitado: você pagou {paid} para {person}. Nada mais em aberto.",
+        "Vereffend: je hebt {person} {paid} betaald. Niets meer open.",
+        "Settled: you paid {person} {paid}. Nothing left open.",
+        "Soldé : tu as payé {paid} à {person}. Plus rien d'ouvert.",
+        "Beglichen: Du hast {person} {paid} bezahlt. Nichts mehr offen.",
+    ),
+    "iou_settled_partial_owe": _all(
+        "Anotei que você pagou {paid} para {person}. Ainda falta: {left}.",
+        "Genoteerd: je hebt {person} {paid} betaald. Nog open: {left}.",
+        "Noted: you paid {person} {paid}. Still open: {left}.",
+        "Noté : tu as payé {paid} à {person}. Reste : {left}.",
+        "Notiert: Du hast {person} {paid} bezahlt. Noch offen: {left}.",
+    ),
     "iou_ambiguous_amount": _all(
         '{person} tem mais de um valor em aberto ({amounts}). Diga quanto: por exemplo, "{person} pagou 25".',
         '{person} heeft meer dan één openstaand bedrag ({amounts}). Zeg hoeveel, bijvoorbeeld "{person} heeft 25 betaald".',
@@ -456,7 +477,7 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Du hast schon {n} offene Beträge, das ist das Maximum. Begleiche zuerst einige.",
     ),
     "iou_reminder": _all(
-        "Texto pronto para copiar e mandar ao {person}:\n\n{text}",
+        "Texto pronto para copiar e mandar para {person}:\n\n{text}",
         "Tekst om te kopiëren en naar {person} te sturen:\n\n{text}",
         "Ready-to-copy text for {person}:\n\n{text}",
         "Texte à copier et envoyer à {person} :\n\n{text}",

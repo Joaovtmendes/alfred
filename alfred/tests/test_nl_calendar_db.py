@@ -86,7 +86,8 @@ def test_events_by_date() -> None:
 async def test_overview(lab: Lab, text) -> None:
     out = await lab.say(text)
     assert "31/12/2026" in out and "01/05/2027" in out and "31/10/2026" in out
-    assert "Tikkie" in out and "ligar avisos de prazos" in out
+    assert "Tikkie" not in out  # M-23: Tikkie has no deadline, it left the list
+    assert [b[0] for b in lab.buttons[-1]] == ["cal_on:0", "cal_no:0"]
 
 
 @db

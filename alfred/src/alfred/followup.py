@@ -167,7 +167,7 @@ async def handle_deeper_button(
     """Reply for ``dd_cat`` / ``dd_top`` / ``dd_bud``; a malformed id gets a neutral answer."""
     scope = _dec(raw_id)
     if scope is None:
-        return _t("button_gone", lang)
+        return _t("button_used", lang)
     start, end_excl, category = scope
     if action == "dd_top":
         return await _top(member, start, end_excl, category, lang, session)
@@ -199,14 +199,14 @@ async def handle_feedback_button(
         try:
             fid = uuid.UUID(row_id)
         except ValueError:
-            return Reply(_t("button_gone", lang))
+            return Reply(_t("button_used", lang))
         row = await session.scalar(
             select(ReplyFeedback).where(
                 ReplyFeedback.id == fid, ReplyFeedback.member_id == member.id
             )
         )
         if row is None or row.rating != "down" or reason not in REASONS:
-            return Reply(_t("button_gone", lang))
+            return Reply(_t("button_used", lang))
         row.reason = reason
         session.add(row)
         return Reply(_t("fb_thanks", lang))

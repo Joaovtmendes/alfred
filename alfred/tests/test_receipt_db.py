@@ -67,7 +67,7 @@ def test_the_total_is_read_in_the_usual_shapes(raw, amount) -> None:
 
 
 @pytest.mark.parametrize(
-    "total", [None, "", "abc", 0, -0, True, float("nan"), float("inf"), 5_000_000, [1], {"a": 1}]
+    "total", [None, "", "abc", 0, -0, True, float("nan"), float("inf"), 500_000_000, [1], {"a": 1}]
 )
 def test_an_unusable_total_is_refused(total) -> None:
     assert item_from_reading(R(total=total)) == (None, "total")
@@ -97,7 +97,9 @@ def test_text_fields_are_cleaned_and_the_category_must_be_known() -> None:
     assert item is not None
     assert "\n" not in item["merchant"] and "*" not in item["merchant"]
     assert len(item["merchant"]) <= 60
-    assert item["category"] == "overig"
+    assert item["category"] == "supermarkt"  # B-039: income is refused, the shop name decides
+    item, _ = item_from_reading(R(merchant="Bakkerij Bos", category="inkomen"))
+    assert item is not None and item["category"] == "overig"
     item, _ = item_from_reading(R(category="mystery", merchant=123))
     assert item is not None and item["category"] == "overig" and item["merchant"] is None
 

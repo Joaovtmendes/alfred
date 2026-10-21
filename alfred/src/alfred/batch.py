@@ -250,7 +250,9 @@ async def undo_recorded(raw_ids: str, member: Member, lang: str, session: AsyncS
         await session.delete(row)
     await session.flush()
     audit(session, "batch_undone", member.id, n=len(rows))
-    return _t("batch_undone", lang, n=len(rows)) if rows else _t("batch_gone", lang)
+    if not rows:
+        return _t("batch_gone", lang)
+    return _t("batch_undone_one" if len(rows) == 1 else "batch_undone", lang, n=len(rows))
 
 
 # ── buttons ───────────────────────────────────────────────────────────────────
@@ -273,7 +275,8 @@ async def handle_batch_button(
         )
         if batch is None:
             return BatchReply(_t("batch_gone", lang))
-        return BatchReply(_t("batch_edit_hint", lang), _buttons(batch.id, lang))
+        # M-19 (J, 20/10): no buttons here; the next message brings the new preview with them
+        return BatchReply(_t("batch_edit_hint", lang))
     taken = await _take(session, member.id, batch_id)
     if taken is None:
         return BatchReply(_t("batch_gone", lang))
@@ -443,6 +446,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "Undone: {n} entries removed.",
         "Annulé : {n} opérations supprimées.",
         "Rückgängig: {n} Buchungen gelöscht.",
+    ),
+    "batch_undone_one": _all(
+        "Desfeito: 1 lançamento apagado.",
+        "Ongedaan gemaakt: 1 transactie verwijderd.",
+        "Undone: 1 entry removed.",
+        "Annulé : 1 opération supprimée.",
+        "Rückgängig: 1 Buchung gelöscht.",
     ),
     "batch_btn_cancel": _all("Desfazer", "Ongedaan maken", "Undo", "Annuler", "Rückgängig"),
     "batch_edit_hint": _all(

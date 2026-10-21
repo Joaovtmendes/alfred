@@ -412,14 +412,14 @@ async def handle_couple_button(
     try:
         ident = uuid.UUID(raw_id)
     except ValueError:
-        return Reply(_t("button_gone", lang), [])
+        return Reply(_t("button_used", lang), [])
 
     if action == "home":  # the "Da casa" button of an expense confirmation
         exp = await session.scalar(
             select(Expense).where(Expense.id == ident, Expense.member_id == member.id)
         )
         if exp is None:
-            return Reply(_t("button_gone", lang), [])
+            return Reply(_t("button_used", lang), [])
         return await _mark_expense(member, lang, session, exp, True)
 
     link = await session.get(PartnerLink, ident)

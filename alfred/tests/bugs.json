@@ -246,11 +246,12 @@
     {
       "id": "A-20",
       "title": "Primeira mensagem não é executada; 'Bom dia' abre menu; 'comercial' cai em francês",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Primeiro contato",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-21",
@@ -265,47 +266,52 @@
     {
       "id": "A-22",
       "title": "'muda pra inglês' não funciona e o nome do idioma sozinho troca a língua",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Idioma",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-23",
       "title": "Nomes de categoria que o Alfred mostra não são aceitos na correção",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Categorias",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-24",
       "title": "'isso é renda' põe despesa na categoria de receita; mapas de categoria errados",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Categorias",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-25",
       "title": "'gastos desta semana/deste ano/em 2025' devolvem o mês corrente",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Consultas por período",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-26",
       "title": "'quanto recebi este mês?' pode responder Rendimento com total zero",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Consultas: receitas",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-27",
@@ -349,11 +355,12 @@
     {
       "id": "A-31",
       "title": "Artigo vira nome ('A Ana'), nota vira parte do nome, texto de quem paga errado",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Dívidas",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-32",
@@ -367,29 +374,32 @@
     {
       "id": "A-33",
       "title": "'paguei X' tem três donos e a conta fixa não avança",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Pagar",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-34",
       "title": "'fatura de luz 80' vira fatura de cliente; data passada; apagar fatura paga deixa receita",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Faturas",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-35",
       "title": "'sempre da empresa: software, transporte' ignora software; marca linha do extrato",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Contabilidade",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-36",
@@ -421,29 +431,32 @@
     {
       "id": "A-39",
       "title": "Tarefa, meta ou viagem com dia e hora vira compromisso",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Agenda",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-40",
       "title": "'agenda dentista amanhã' lista; 'muda o dentista' cria compromisso; 'avisa 1 dia antes'",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Agenda",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-41",
       "title": "'muda a reunião de segunda para sexta' é capturado pelo plano de treino",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Agenda × treino",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-42",
@@ -459,11 +472,12 @@
     {
       "id": "A-43",
       "title": "'lembrete: dentista amanhã às 14:00' vira lembrete diário",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Lembretes",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-44",
@@ -497,20 +511,22 @@
     {
       "id": "A-47",
       "title": "Pergunta sem '?' registra em vez de consultar",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Saúde",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-48",
       "title": "'criar viagem Roma 800' não cria; viagem futura fica ativa; 'voltei' encerra",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Viagens",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-49",
@@ -524,11 +540,12 @@
     {
       "id": "A-50",
       "title": "Foto como Documento recebe mensagem de CSV; extrato em PDF não é reconhecido",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Fotos e PDFs",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-51",
@@ -542,11 +559,12 @@
     {
       "id": "A-52",
       "title": "Pergunta de análise só chega ao módulo certo depois de dois modelos",
-      "status": "open",
+      "status": "fixed",
       "severity": "media",
       "area": "Análises livres",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-53",
@@ -579,11 +597,12 @@
     {
       "id": "A-56",
       "title": "'1 lançamento importados', 'últimas 1 despesas'",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Texto plural",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-57",
@@ -629,11 +648,12 @@
     {
       "id": "A-61",
       "title": "'comprei 2 kg de arroz' e 'peso corporal 75 kg' são mal lidos",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Peso e carga",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-62",
@@ -647,20 +667,22 @@
     {
       "id": "A-63",
       "title": "'tarefa difícil essa' cria tarefa; prazo em dois formatos; 'nota:' vira lembrete",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Tarefas e notas",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-64",
       "title": "Cancelar lembrete ambíguo não pergunta; 'transporte' vira treino",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Lembretes",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-65",
@@ -738,11 +760,12 @@
     {
       "id": "A-73",
       "title": "'o que você enviou ontem' ignora 'ontem'",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "O que você me enviou",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-74",
@@ -756,11 +779,12 @@
     {
       "id": "A-75",
       "title": "Ajuda incompleta; 'sair' e 'stop.' não funcionam",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Ajuda",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-76",
@@ -792,20 +816,22 @@
     {
       "id": "A-79",
       "title": "Recusa de dólar fala 'não guardei os USD' e termina com '?'",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Texto de moeda",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-80",
       "title": "Saudação passa por até 4 chamadas ao modelo",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Lentidão",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-20"
     },
     {
       "id": "A-81",
@@ -939,6 +965,666 @@
       "fixed": "2026-10-15",
       "step": "tests/test_panel_demo.py",
       "note": "A despesa 'Hotel Alfama' era datada em hoje−12 dias e entrava em outubro a partir de 13/10, somando €180 ao total do mockup. Agora tem data fixa (28/09/2026)."
+    },
+    {
+      "id": "B-002",
+      "title": "/terms mostrava só um link para os Termos",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "legal",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F01-10"
+    },
+    {
+      "id": "B-003",
+      "title": "Cadastro: erro não aparecia embaixo do campo errado",
+      "status": "fixed",
+      "severity": "media",
+      "area": "cadastro",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F01-11/12/13"
+    },
+    {
+      "id": "B-004",
+      "title": "Resposta livre do modelo dizia que apagou/cancelou/desligou/guardou sem fazer nada; 'Desfazer' digitado",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "conversa",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F03-15, F03-41, F04-18, F04-44, F09-39, F14-37"
+    },
+    {
+      "id": "B-005",
+      "title": "Correção mostrava a categoria ('Lazer') em vez do lançamento ('cinema')",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "dinheiro",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F03-10"
+    },
+    {
+      "id": "B-006",
+      "title": "'saldo da conta 300': modelo dizia que guardou o saldo",
+      "status": "fixed",
+      "severity": "media",
+      "area": "dinheiro",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F03-36"
+    },
+    {
+      "id": "B-007",
+      "title": "Lote com dólar: item em euro recusado como USD e uma linha por item",
+      "status": "fixed",
+      "severity": "media",
+      "area": "dinheiro",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F04-29"
+    },
+    {
+      "id": "B-009",
+      "title": "Saldo/gastos de outro mês ou de um ano devolviam o mês atual",
+      "status": "fixed",
+      "severity": "media",
+      "area": "consultas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F05-08, F05-18"
+    },
+    {
+      "id": "B-010",
+      "title": "'últimos 7 dias' sem registros; 'hoje e ontem' só ontem",
+      "status": "fixed",
+      "severity": "media",
+      "area": "consultas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F05-19, F05-20"
+    },
+    {
+      "id": "B-011",
+      "title": "'quanto recebi este mês?' = €0, ignorando o salário",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "consultas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F05-29"
+    },
+    {
+      "id": "B-012",
+      "title": "'minhas últimas despesas' / 'últimas receitas' davam o resumo",
+      "status": "fixed",
+      "severity": "media",
+      "area": "consultas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F05-33, F05-34"
+    },
+    {
+      "id": "B-013",
+      "title": "Perguntas de análise caíam na comparação de meses; limite diário e 'salva essa visão' nunca valiam",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "análise",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F05-48, F08-01, F08-07/08, F08-10, F08-13, F08-15, F08-16, F08-21/22"
+    },
+    {
+      "id": "B-016",
+      "title": "'últimos 6 meses' terminava no mês passado",
+      "status": "fixed",
+      "severity": "media",
+      "area": "análise",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F08-14"
+    },
+    {
+      "id": "B-017",
+      "title": "'orçamento de 400 para mercado' não mudava o orçamento (modelo dizia 'Atualizado')",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "orçamentos",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F06-05, F06-07"
+    },
+    {
+      "id": "B-018",
+      "title": "Conta fixa: 'dia DIA' virava hoje; repetida mandava apagar e recadastrar",
+      "status": "fixed",
+      "severity": "media",
+      "area": "contas fixas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F06-18"
+    },
+    {
+      "id": "B-019",
+      "title": "Conta fixa anual mostrava o vencimento sem o ano",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "contas fixas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F06-20, F06-24"
+    },
+    {
+      "id": "B-020",
+      "title": "'paguei a luz' pagava a pendência sem perguntar quando havia conta fixa com o mesmo nome",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "contas fixas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F06-37"
+    },
+    {
+      "id": "B-021",
+      "title": "Dívidas: pagamento igual a uma dívida dizia 'nada mais em aberto'; 'paguei o Lucas' virava 'Lucas pagou'",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "dívidas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F07-20, F07-27"
+    },
+    {
+      "id": "B-022",
+      "title": "'o que você enviou ontem' ignorava 'ontem'",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "mensagens",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F08-28"
+    },
+    {
+      "id": "B-023",
+      "title": "'agenda dentista amanhã às 14h' listava; 'avisa 1 dia antes' ficava no título",
+      "status": "fixed",
+      "severity": "media",
+      "area": "agenda",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F09-14, chat 20/10"
+    },
+    {
+      "id": "B-024",
+      "title": "'agenda do mês' não existia",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "agenda",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F09-18"
+    },
+    {
+      "id": "B-025",
+      "title": "'lembrete: reunião às 9h' não criava nada (modelo inventava 'amanhã')",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "lembretes",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F09-39"
+    },
+    {
+      "id": "B-026",
+      "title": "Lembretes só saíam como modelo da Meta: dentro da janela de 24 h nada chegava",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "lembretes",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F09-39, F09-46"
+    },
+    {
+      "id": "B-027",
+      "title": "Cancelar lembrete ambíguo cancelava um sem perguntar",
+      "status": "fixed",
+      "severity": "media",
+      "area": "lembretes",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F09-44"
+    },
+    {
+      "id": "B-028",
+      "title": "'apaga a nota do wifi': modelo dizia que apagou, nota continuava",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "notas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F09-55"
+    },
+    {
+      "id": "B-029",
+      "title": "Tarefa apagada continuava na lista",
+      "status": "fixed",
+      "severity": "media",
+      "area": "tarefas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F09-64"
+    },
+    {
+      "id": "B-030",
+      "title": "'apaga a meta': modelo dizia que apagou, meta continuava",
+      "status": "fixed",
+      "severity": "media",
+      "area": "metas",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F10-18"
+    },
+    {
+      "id": "B-031",
+      "title": "'meditei hoje?' respondido com texto inventado",
+      "status": "fixed",
+      "severity": "media",
+      "area": "hábitos",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F10-13"
+    },
+    {
+      "id": "B-032",
+      "title": "'água de hoje' / 'sono médio' registravam em vez de consultar",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "saúde",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F10-26, F10-28"
+    },
+    {
+      "id": "B-033",
+      "title": "'peso corporal 75 kg' virava carga; 'troca o supino para 62 kg' caía no aviso de peso",
+      "status": "fixed",
+      "severity": "media",
+      "area": "treino",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F10-37, F11-28"
+    },
+    {
+      "id": "B-034",
+      "title": "Treino sem duração: 'musculação, .'",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "treino",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F10-41, F11-12"
+    },
+    {
+      "id": "B-035",
+      "title": "Exemplo de despesa para treino/carga; 'notebook 1210' não anotado",
+      "status": "fixed",
+      "severity": "media",
+      "area": "conversa",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F10-42, F11-17, F16-05"
+    },
+    {
+      "id": "B-036",
+      "title": "'evolução dos gastos' virava carga de exercício",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "treino",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F11-21"
+    },
+    {
+      "id": "B-038",
+      "title": "Viagem: linha colada no alerta e sem 'restante' com orçamento por categoria",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "viagem",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F12-09, F12-10"
+    },
+    {
+      "id": "B-039",
+      "title": "Recibo de supermercado ia para Outros e não contava no orçamento",
+      "status": "fixed",
+      "severity": "media",
+      "area": "recibos",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F13-04"
+    },
+    {
+      "id": "B-041",
+      "title": "'1 lançamento apagados / importados'",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "texto",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F13-12, F15-11"
+    },
+    {
+      "id": "B-042",
+      "title": "Serviço: 'Guardado: … (…)..' e não dizia se anotou o gasto",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "serviços",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F13-17, F14-08"
+    },
+    {
+      "id": "B-043",
+      "title": "Botão velho respondia 'Esse registro já tinha sido apagado'",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "botões",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F13-18"
+    },
+    {
+      "id": "B-045",
+      "title": "Foto enviada como Documento recebia a mensagem de CSV",
+      "status": "fixed",
+      "severity": "media",
+      "area": "arquivos",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F13-22"
+    },
+    {
+      "id": "B-046",
+      "title": "'guarda serviço:' vazio virava prévia com ':'",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "serviços",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F14-14"
+    },
+    {
+      "id": "B-047",
+      "title": "'DD/MM' literal aceito no serviço",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "serviços",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F14-23"
+    },
+    {
+      "id": "B-048",
+      "title": "Contrato com data passada ou sem 'até': 'não entendi' genérico",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "contratos",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F14-34, F14-35"
+    },
+    {
+      "id": "B-049",
+      "title": "Aluguel do extrato duplicava o lançado à mão sem aviso",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "extrato",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F15-03"
+    },
+    {
+      "id": "B-050",
+      "title": "Importação que estourava orçamento não avisava",
+      "status": "fixed",
+      "severity": "media",
+      "area": "extrato",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F15-05, F15-20"
+    },
+    {
+      "id": "B-051",
+      "title": "'sair' / 'parar de enviar' / 'Stop.': modelo dizia que parou, nada mudava",
+      "status": "fixed",
+      "severity": "alta",
+      "area": "conversa",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F19-09/10/11"
+    },
+    {
+      "id": "B-053",
+      "title": "'Adicionei 3 à bagagem' sem dizer o quê",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "viagem",
+      "source": "Hard test manual 18–20/10",
+      "opened": "2026-10-20",
+      "fixed": "2026-10-20",
+      "step": "F12-17"
+    },
+    {
+      "id": "B-054",
+      "title": "'corrige para 25', 'tira o 5', 'gastos em 2025' viram despesa pelo valor solto",
+      "severity": "alta",
+      "area": "lançamentos",
+      "step": "F03-13, F04-04, F04-07, F04-08, F05-18",
+      "status": "fixed",
+      "source": "Teste interno (replay do hard test) 20–21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-055",
+      "title": "'com o Marco' lido como março",
+      "severity": "baixa",
+      "area": "consultas",
+      "step": "F05-22",
+      "status": "fixed",
+      "source": "Teste interno (replay do hard test) 20–21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-056",
+      "title": "'muda o X para…', 'criar viagem … às 10h', 'roteiro amanhã 10:00' viram compromisso",
+      "severity": "media",
+      "area": "agenda",
+      "step": "F09-23, F12-05, F12-13",
+      "status": "fixed",
+      "source": "Teste interno (replay do hard test) 20–21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-057",
+      "title": "'guardar serviço eletricista 90 euros': valor fica no nome",
+      "severity": "baixa",
+      "area": "serviços",
+      "step": "F14-13",
+      "status": "fixed",
+      "source": "Teste interno (replay do hard test) 20–21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-058",
+      "title": "'apaga a meta correr 10 km' pergunta qual quando outra meta contém o nome",
+      "status": "fixed",
+      "severity": "baixa",
+      "area": "metas",
+      "source": "Teste interno (replay do hard test) 20–21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21",
+      "step": "F10-18"
+    },
+    {
+      "id": "B-008",
+      "title": "'paguei a luz' com duas pendências: o valor respondido ('120') não quitava; o modelo disse que pagou",
+      "severity": "media",
+      "area": "ledger",
+      "step": "conversa 18/10 18:39",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-061",
+      "title": "'luz 120 já foi paga' gravava despesa nova em vez de quitar a pendência",
+      "severity": "media",
+      "area": "ledger",
+      "step": "conversa 18/10 19:34",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-062",
+      "title": "'apaga isso' caía no modelo (dizia que não havia o que desfazer)",
+      "severity": "baixa",
+      "area": "lançamentos",
+      "step": "conversa 18/10 17:52",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-063",
+      "title": "'tomei o remédio da pressão' recusado como medida de pressão",
+      "severity": "media",
+      "area": "saúde",
+      "step": "conversa 19/10 09:18",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-064",
+      "title": "'plano de treino de hoje' respondia erro de linha do plano",
+      "severity": "baixa",
+      "area": "treino",
+      "step": "conversa 19/10 09:27",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-065",
+      "title": "'apaga o treino de segunda' não existia; o modelo inventava os treinos do dia",
+      "severity": "media",
+      "area": "treino",
+      "step": "conversa 19/10 09:24",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-066",
+      "title": "'cheguei em casa' não encerrava a viagem (o modelo dizia bem-vindo de volta)",
+      "severity": "media",
+      "area": "viagem",
+      "step": "conversa 20/10 08:12",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-067",
+      "title": "'orçamento viagem hospedagem 300' (sem 'da') caía no orçamento mensal",
+      "severity": "baixa",
+      "area": "viagem",
+      "step": "conversa 20/10 08:11",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-068",
+      "title": "'paguei 130 de seguro saúde, data 05/10' gravava com a data de hoje",
+      "severity": "media",
+      "area": "lançamentos",
+      "step": "conversa 20/10 09:13",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-069",
+      "title": "garantia '(1 meses)' e 'garantia 11 anos' respondia só 'não entendi'",
+      "severity": "baixa",
+      "area": "serviços",
+      "step": "conversa 20/10 09:00 e 09:03",
+      "status": "fixed",
+      "source": "Conversa exportada do WhatsApp (2ª leitura do hard test) 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }

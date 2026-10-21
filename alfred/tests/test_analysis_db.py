@@ -120,10 +120,11 @@ def test_short_previous_month_is_capped() -> None:
     assert (prev.start, prev.end) == (date(2026, 2, 1), date(2026, 3, 1))  # Feb has 28 days
 
 
-def test_last_three_months_are_full_months_and_compare_to_the_three_before() -> None:
+@pytest.mark.bug("B-016")
+def test_last_three_months_include_this_month_and_compare_the_same_length_before() -> None:
     cur, prev = windows(Spec(period="last_3_months", compare_to="previous_period"), TODAY)
-    assert (cur.start, cur.end) == (date(2026, 7, 1), date(2026, 10, 1))
-    assert (prev.start, prev.end) == (date(2026, 4, 1), date(2026, 7, 1))
+    assert (cur.start, cur.end) == (date(2026, 8, 1), date(2026, 10, 16))
+    assert (prev.start, prev.end) == (date(2026, 5, 1), date(2026, 7, 16))
 
 
 def test_this_year_vs_same_period_last_year() -> None:
@@ -221,7 +222,7 @@ async def test_month_series_and_top_n(lab: Lab) -> None:
         _exp(lab, last, 4, merchant="A"),
     )
     series = await _run(lab, Spec(group_by="month", period="last_6_months"))
-    assert [k for k, _ in series.rows] == [f"{last:%Y-%m}"]
+    assert sorted(k for k, _ in series.rows) == sorted([f"{last:%Y-%m}", f"{m0:%Y-%m}"])
     top = await _run(lab, Spec(group_by="merchant", period="this_month", top_n=2))
     assert [k for k, _ in top.rows] == ["b", "c"] and top.total == Decimal("21.00")
 

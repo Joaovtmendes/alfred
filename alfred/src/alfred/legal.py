@@ -11,7 +11,7 @@ from __future__ import annotations
 from html import escape
 
 from fastapi import APIRouter, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 
 from alfred.settings import settings
 
@@ -473,20 +473,7 @@ async def privacy(lang: str = Query(default="en", max_length=5)) -> RedirectResp
 TERMS_URL = "https://jofie.nl/terms/"
 
 
-def render_terms() -> str:
-    """Stable in-app page pointing to the full Terms of Use on the public site."""
-    return (
-        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        f"<title>Jofie — Terms of Use</title><style>{_CSS}</style></head><body><main>"
-        "<h1>Jofie — Terms of Use</h1>"
-        '<p class="meta">English is the official version.</p>'
-        f'<p>Read the full Terms of Use at <a href="{TERMS_URL}">{TERMS_URL}</a>.</p>'
-        f'<p>Privacy: <a href="{PRIVACY_URLS["en"]}">{PRIVACY_URLS["en"]}</a></p>'
-        "</main></body></html>"
-    )
-
-
-@router.get("/terms", response_class=HTMLResponse, include_in_schema=False)
-async def terms() -> HTMLResponse:
-    return HTMLResponse(render_terms(), headers={"Cache-Control": "public, max-age=3600"})
+@router.get("/terms", include_in_schema=False)
+async def terms() -> RedirectResponse:
+    """B-002: open the Terms themselves (on the public site), not a page with a link to them."""
+    return RedirectResponse(TERMS_URL, status_code=307)

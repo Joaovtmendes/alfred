@@ -125,7 +125,14 @@ async def month_vs_month(member: Member, lang: str, session: AsyncSession) -> st
             prev=res.prev_window.label() if res.prev_window else "",
         )
     ]
-    for key, value in res.rows:
+    rows = list(res.rows)
+    shown = {k for k, _ in rows}
+    # M-14 (J, 20/10): every category, also the ones that had spending only last month
+    rows += sorted(
+        ((k, Decimal(0)) for k, v in prev.items() if k not in shown and v > 0),
+        key=lambda kv: -prev[kv[0]],
+    )
+    for key, value in rows:
         before = prev.get(key, Decimal(0))
         d = _delta(value, before)
         tail = f" ({_t('mom_new', lang)})" if before == 0 else (f" ({d})" if d else "")

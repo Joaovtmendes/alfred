@@ -78,7 +78,7 @@ TRIP_START_RE = re.compile(
 TRIP_END_RE = re.compile(
     r"^(?:"
     r"voltei(?:\s+(?:a\s+casa|de\s+viagem))?"
-    r"|cheguei\s+(?:a\s+casa|de\s+volta)"
+    r"|cheguei\s+(?:a\s+casa|em\s+casa|de\s+volta|de\s+viagem)|estou\s+de\s+volta|voltei\s+para\s+casa"
     r"|viagem\s+terminada|fim\s+da\s+viagem|terminar\s+(?:a\s+)?viagem"
     r"|trip\s+(?:end(?:ed)?|done|finished?|over)|end\s+(?:the\s+)?trip"
     r"|back\s+(?:home|in\s+\w+)|i(?:'m|\s+am)\s+back(?:\s+home)?"
@@ -120,7 +120,7 @@ TRIP_LIST_RE = re.compile(
 # Cut a destination at the first digit / currency / comma / "de <digit>" / "com …".
 _DEST_CUT_RE = re.compile(
     r"[\d€$£,;:()]"
-    r"|\s+(?:de|from|van|vom|du|do|da)\s+\d"
+    r"|\s+(?:de|from|van|vom|du|do|da|dia|day|op|le|am)\s+\d"
     r"|\s+(?:com|with|met|mit|avec)\s+",
     re.IGNORECASE,
 )
@@ -181,6 +181,10 @@ _TRIP_START_DATE_RE = re.compile(
 )
 
 
+_TRIP_DAY_ONLY_RE = re.compile(r"\b(?:dia|day|op|le|am)\s+(\d{1,2})\b(?!\s*[/.:h-])")
+_TRIP_TIME_RE = re.compile(r"\b(?:as|a|at|om|um)?\s*\d{1,2}\s*(?:h\d{0,2}|:\d{2})\b")
+
+
 def parse_trip_start_date(text: str, today):
     """Start date from "de 1 a 7 de outubro" / "1-7 oct 2027", or None.
 
@@ -190,7 +194,16 @@ def parse_trip_start_date(text: str, today):
 
     m = _TRIP_START_DATE_RE.search(strip_accents(text.lower()))
     if not m:
-        return None
+        d_only = _TRIP_DAY_ONLY_RE.search(strip_accents(text.lower()))
+        if not d_only:
+            return None
+        try:  # "criar viagem Lisboa dia 25": the next 25th
+            d = date(today.year, today.month, int(d_only.group(1)))
+            if d < today:
+                d = date(today.year + (today.month == 12), today.month % 12 + 1, d.day)
+            return d
+        except ValueError:
+            return None
     month = MONTH_WORDS.get(m.group(2))
     if not month:
         return None
@@ -213,6 +226,7 @@ def _only_trip_details(rest: str) -> bool:
     r = strip_accents(rest.lower())
     r = _TRIP_MONEY_RE.sub(" ", r)
     r = _TRIP_DATE_RE.sub(" ", r)
+    r = _TRIP_TIME_RE.sub(" ", _TRIP_DAY_ONLY_RE.sub(" ", r))  # "dia 25 às 10h"
     words = re.sub(r"[\s,;:()\-–/.]+", " ", r).split()
     return all(w in _TRIP_FILLER for w in words)
 
@@ -228,12 +242,28 @@ def match_trip_start(text: str) -> str | None:
         return None
     cut = _DEST_CUT_RE.search(raw)
     rest = raw[cut.start() :] if cut else ""
+    if m.group("pt2"):  # A-48: after "criar viagem Roma" a bare number (800) is the budget
+        rest = _TRIP_BARE_BUDGET_RE.sub(" ", rest)
     # Digits after the destination must be a budget or dates. "viagem em uber 15,00" or
     # "viagem a lisboa 30€ gasolina" are expenses, not trips. Digit-free tails
     # ("… com a Maria") are harmless.
     if HAS_DIGIT_RE.search(rest) and not _only_trip_details(rest):
         return None
     return dest
+
+
+_TRIP_BARE_BUDGET_RE = re.compile(
+    r"(?:\s|^)(?:orcamento\s+|orçamento\s+)?\d{2,7}(?:[.,]\d{1,2})?\s*$"
+)
+
+
+def trip_bare_budget(text: str) -> float | None:
+    """The bare trailing number of "criar viagem Roma 800" (only for that explicit form)."""
+    m = TRIP_START_RE.match(text.strip())
+    if not m or not m.group("pt2"):
+        return None
+    b = _TRIP_BARE_BUDGET_RE.search(m.group("pt2"))
+    return to_amount(b.group(0).split()[-1]) if b else None
 
 
 # ── Category corrections (M12) ────────────────────────────────────────────────
@@ -344,9 +374,12 @@ def parse_budget(text: str) -> float | None:
 class DateWindow:
     """[start, end) in local dates; ``end=None`` means "up to now"."""
 
-    kind: str  # today|yesterday|current_week|last_week|current_month|last_month|month|year
+    # today | yesterday | today_yesterday | days | current_week | last_week | current_month |
+    # last_month | month | year
+    kind: str
     start: date
     end: date | None = None
+    days: int = 0  # kind "days": the N of "últimos N dias"
 
 
 def _w(*phrases: str) -> re.Pattern[str]:
@@ -365,7 +398,14 @@ _LAST_WEEK_RE = _w(
     "letzten woche",
 )
 _THIS_WEEK_RE = _w(
-    "esta semana", "this week", "deze week", "cette semaine", "diese woche", "diesen woche"
+    "esta semana",
+    "desta semana",
+    "nesta semana",
+    "this week",
+    "deze week",
+    "cette semaine",
+    "diese woche",
+    "diesen woche",
 )
 _LAST_MONTH_RE = _w(
     "mes passado",
@@ -376,7 +416,14 @@ _LAST_MONTH_RE = _w(
     "letzter monat",
 )
 _THIS_MONTH_RE = _w(
-    "este mes", "neste mes", "this month", "deze maand", "ce mois", "diesen monat", "dieser monat"
+    "este mes",
+    "neste mes",
+    "deste mes",
+    "this month",
+    "deze maand",
+    "ce mois",
+    "diesen monat",
+    "dieser monat",
 )
 _LAST_YEAR_RE = _w(
     "ano passado", "last year", "vorig jaar", "annee derniere", "letztes jahr", "letzten jahr"
@@ -384,6 +431,7 @@ _LAST_YEAR_RE = _w(
 _THIS_YEAR_RE = _w(
     "este ano",
     "neste ano",
+    "deste ano",
     "ano todo",
     "this year",
     "year to date",
@@ -393,6 +441,20 @@ _THIS_YEAR_RE = _w(
     "diesem jahr",
 )
 _YEAR_NUM_RE = re.compile(r"\b(20\d{2})\b")
+# "últimos 7 dias" / "last 30 days" / "afgelopen 14 dagen" / "derniers 7 jours" / "letzten 7 tage"
+_LAST_DAYS_RE = re.compile(
+    r"\b(?:ultim[oa]s|last|past|afgelopen|laatste|derniers|letzten)\s+(\d{1,3})\s+"
+    r"(?:dias|days|dagen|jours|tage[n]?)\b"
+)
+# "hoje e ontem" / "ontem e hoje" / "today and yesterday"
+_TODAY_AND_YESTERDAY_RE = re.compile(
+    r"\b(?:hoje e ontem|ontem e hoje|today and yesterday|yesterday and today|vandaag en gisteren|"
+    r"gisteren en vandaag|hier et aujourd hui|aujourd hui et hier|heute und gestern|"
+    r"gestern und heute)\b"
+)
+
+
+_PERSON_LEADS = frozenset({"o", "com", "pro", "pelo", "ao", "with", "met", "avec", "mit"})
 
 
 def parse_period(text_plain: str, today: date) -> DateWindow | None:
@@ -403,6 +465,12 @@ def parse_period(text_plain: str, today: date) -> DateWindow | None:
     """
     t = text_plain
     week0 = today - timedelta(days=today.weekday())
+    if _TODAY_AND_YESTERDAY_RE.search(t):
+        return DateWindow("today_yesterday", today - timedelta(days=1), today + timedelta(days=1))
+    m_days = _LAST_DAYS_RE.search(t)
+    if m_days and 1 <= int(m_days.group(1)) <= 366:
+        n = int(m_days.group(1))
+        return DateWindow("days", today - timedelta(days=n - 1), today + timedelta(days=1), days=n)
     if _YESTERDAY_RE.search(t):
         y = today - timedelta(days=1)
         return DateWindow("yesterday", y, today)
@@ -419,9 +487,12 @@ def parse_period(text_plain: str, today: date) -> DateWindow | None:
         return DateWindow("last_month", first, today.replace(day=1))
     if _THIS_MONTH_RE.search(t):
         return DateWindow("current_month", today.replace(day=1), None)
+    prev = ""
     for word in re.findall(r"[a-z]+", t):
         month = MONTH_WORDS.get(word)
-        if month and len(word) > 3:  # "mar"/"set" are also ordinary words
+        after_person = prev in _PERSON_LEADS  # "com o Marco" is a person, not March
+        prev = word
+        if month and len(word) > 3 and not after_person:  # "mar"/"set" are also ordinary words
             ym = _YEAR_NUM_RE.search(t)
             year = (
                 int(ym.group(1)) if ym else (today.year if month <= today.month else today.year - 1)
@@ -432,6 +503,10 @@ def parse_period(text_plain: str, today: date) -> DateWindow | None:
             return DateWindow("month", start, None if is_now else nxt)
     if _TODAY_RE.search(t):
         return DateWindow("today", today, today + timedelta(days=1))
+    ym = _YEAR_NUM_RE.search(t)  # "gastos em 2025": a bare year is that whole year
+    if ym and 2000 <= int(ym.group(1)) <= today.year:
+        y = int(ym.group(1))
+        return DateWindow("year", date(y, 1, 1), None if y == today.year else date(y + 1, 1, 1))
     return None
 
 
@@ -440,24 +515,41 @@ _EXPENSE_WORDS = (
     r"depenses?|achats?|ausgaben?|kaeufe)"
 )
 _LAST_WORDS = r"(?:ultim[ao]s?|last|latest|recent[es]*|laatste|derniere?s?|letzte[n]?)"
+_INCOME_WORDS = r"(?:receitas?|entradas?|rendimentos?|income|incomes|inkomsten|revenus|einnahmen)"
+_MY = r"(?:as|os|my|mijn|mes|meine|minhas|meus|mostra\s+as|mostra\s+os)"
 LAST_N_RE = re.compile(
-    rf"^(?:(?:mostra|mostrar|show|toon|montre|zeig)\s+)?(?:(?:as|os|my|mijn|mes|meine)\s+)?"
+    rf"^(?:(?:mostra|mostrar|show|toon|montre|zeig)\s+)?(?:{_MY}\s+)?"
     rf"{_LAST_WORDS}\s*(\d{{1,2}})?\s*{_EXPENSE_WORDS}\s*\??$"
+)
+LAST_N_INCOME_RE = re.compile(
+    rf"^(?:(?:mostra|mostrar|show|toon|montre|zeig)\s+)?(?:{_MY}\s+)?"
+    rf"{_LAST_WORDS}\s*(\d{{1,2}})?\s*{_INCOME_WORDS}\s*\??$"
+)
+# "quanto recebi este mês?" / "minhas receitas de setembro": the income list, not the spending
+INCOME_QUERY_RE = re.compile(
+    r"^(?:quanto\s+(?:eu\s+)?(?:recebi|ganhei|entrou)|(?:minhas|as)\s+receitas|receitas\b|"
+    r"how\s+much\s+(?:did\s+i\s+)?(?:receive|earn)|my\s+income|hoeveel\s+(?:heb\s+ik\s+)?"
+    r"(?:ontvangen|verdiend)|mijn\s+inkomsten|combien\s+j\s*ai\s+(?:recu|gagne)|mes\s+revenus|"
+    r"wie\s*viel\s+habe\s+ich\s+(?:bekommen|verdient)|meine\s+einnahmen)"
 )
 TOP_CATEGORIES_RE = re.compile(
     r"^(?:top|maiores?|biggest|largest|grootste|principales?|groessten?)\s+"
     r"(?:categorias?|categories|categorieen|kategorien)\b"
 )
 DELETE_LAST_EXPENSE_RE = re.compile(
-    rf"^(?:apaga|apagar|elimina|eliminar|remove|delete|verwijder|supprime|supprimer|loesch|loeschen)"
+    rf"^(?:apaga|apagar|elimina|eliminar|remove|delete|verwijder|supprime|supprimer|loesch|loeschen|"
+    rf"desfazer|desfaz|desfaca|undo|ongedaan maken|ruckgangig|rueckgaengig)"
     rf"(?:\s+(?:a\s+|o\s+|the\s+|de\s+|die\s+|la\s+|le\s+|den\s+|das\s+)?{_LAST_WORDS}"
-    rf"(?:\s+{_EXPENSE_WORDS})?)?\s*[.!]?$"
-)
+    rf"(?:\s+{_EXPENSE_WORDS})?|\s+(?:isso|isto|esse|essa|this|that|it|dit|dat|ca|cela|das))?\s*[.!]?$"
+)  # "apaga isso" is the same as "apaga"
 
 
-def parse_last_n(text_plain: str) -> int | None:
-    """ "ultimas 5 despesas" → 5 (default 5, capped at 20); None when it is not that command."""
-    m = LAST_N_RE.match(text_plain.strip())
+def parse_last_n(text_plain: str, *, income: bool = False) -> int | None:
+    """ "ultimas 5 despesas" → 5 (default 5, capped at 20); None when it is not that command.
+
+    ``income=True`` reads "últimas receitas" instead.
+    """
+    m = (LAST_N_INCOME_RE if income else LAST_N_RE).match(text_plain.strip())
     if not m:
         return None
     return max(1, min(int(m.group(1)), 20)) if m.group(1) else 5

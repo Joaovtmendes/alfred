@@ -53,6 +53,9 @@ _UNDO_RE = re.compile(
 )
 
 
+SAME_MONTH_MIN = Decimal("50")  # below this, equal amounts in a month are too common to flag
+
+
 def _t(key: str, lang: str, **kw: object) -> str:
     from alfred.conversation import _t as t
 
@@ -170,7 +173,9 @@ async def _make_draft(
         ).all()
     )
     lo = clock.day_start(min(r.day for r in rows)) - timedelta(days=3)
-    hi = clock.day_start(max(r.day for r in rows)) + timedelta(days=4)
+    last = max(r.day for r in rows)
+    month_end = (last.replace(day=1) + timedelta(days=32)).replace(day=1)
+    hi = clock.day_start(max(last + timedelta(days=4), month_end))
     manual = list(
         (
             await session.scalars(
@@ -207,6 +212,22 @@ async def _make_draft(
                 taken.add(e.id)
                 flag = "maybe"
                 break
+            if flag == "new" and abs(r.amount) >= SAME_MONTH_MIN:
+                # B-049: "Woningstichting Huur 1.250" and the rent typed as "aluguel 1250" on
+                # another day share no word; the same amount and category in the same month is
+                # still very likely the same payment
+                for e in manual:
+                    local_day = clock.to_local(e.expense_date).date()
+                    if (
+                        e.id not in taken
+                        and e.transaction_type == kind
+                        and Decimal(str(e.amount)) == abs(r.amount)
+                        and (e.category or "overig") == cat
+                        and (local_day.year, local_day.month) == (r.day.year, r.day.month)
+                    ):
+                        taken.add(e.id)
+                        flag = "maybe"
+                        break
         items.append(
             {
                 "d": r.day.isoformat(),
@@ -265,7 +286,11 @@ async def _make_draft(
         out=_fmt(outgoing),
         inc=_fmt(incoming),
         cats=top or "-",
-        other_line=_t("imp_other_line", lang, other=other) if other else "",
+        other_line=(
+            _t("imp_other_line_one" if other == 1 else "imp_other_line", lang, other=other)
+            if other
+            else ""
+        ),
     )
     buttons: list[tuple[str, str]] = []
     if counts["new"]:
@@ -326,7 +351,14 @@ async def _commit(
         made += 1
     batch.status, batch.items, batch.rows_new = "done", [], made
     audit(session, "statement_imported", member.id, rows=made, bank=batch.bank)
-    return Reply(_t("imp_done", lang, n=made), [])
+    text = _t("imp_done_one" if made == 1 else "imp_done", lang, n=made)
+    if made:  # F15-05 / F15-20: a budget the import pushes over 80% / 100% is announced now
+        from alfred.budgets import alerts_for_categories
+
+        await session.flush()
+        cats = [i["k"] for i in items if Decimal(i["a"]) < 0]
+        text += await alerts_for_categories(session, member, cats, lang)
+    return Reply(text, [])
 
 
 async def _undo(member: Member, lang: str, session: AsyncSession) -> Reply:
@@ -348,7 +380,7 @@ async def _undo(member: Member, lang: str, session: AsyncSession) -> Reply:
     batch.status = "undone"
     removed = result.rowcount or 0
     audit(session, "statement_undone", member.id, rows=removed)
-    return Reply(_t("imp_undone", lang, n=removed), [])
+    return Reply(_t("imp_undone_one" if removed == 1 else "imp_undone", lang, n=removed), [])
 
 
 def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str | tuple[str, ...]]:
@@ -428,11 +460,18 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "\n• Mögliche Dubletten deiner eigenen Einträge: {maybe}",
     ),
     "imp_other_line": _all(
-        "\n{other} saídas ficaram sem categoria (*overig*); você pode ajustar depois.",
-        "\n{other} uitgaven hebben nog geen categorie (*overig*); je kunt dat later aanpassen.",
-        "\n{other} expenses have no category yet (*overig*); you can adjust that later.",
-        "\n{other} dépenses n'ont pas encore de catégorie (*overig*) ; tu pourras ajuster ensuite.",
-        "\n{other} Ausgaben haben noch keine Kategorie (*overig*); du kannst das später anpassen.",
+        "\n{other} saídas ficaram em *Outros*, sem categoria; você pode ajustar depois.",
+        "\n{other} uitgaven staan nog bij *Overig*, zonder categorie; je kunt dat later aanpassen.",
+        "\n{other} expenses are under *Other*, with no category yet; you can adjust that later.",
+        "\n{other} dépenses sont dans *Autres*, sans catégorie ; tu pourras ajuster ensuite.",
+        "\n{other} Ausgaben stehen unter *Sonstiges*, ohne Kategorie; du kannst das später anpassen.",
+    ),
+    "imp_other_line_one": _all(
+        "\n1 saída ficou em *Outros*, sem categoria; você pode ajustar depois.",
+        "\n1 uitgave staat nog bij *Overig*, zonder categorie; je kunt dat later aanpassen.",
+        "\n1 expense is under *Other*, with no category yet; you can adjust that later.",
+        "\n1 dépense est dans *Autres*, sans catégorie ; tu pourras ajuster ensuite.",
+        "\n1 Ausgabe steht unter *Sonstiges*, ohne Kategorie; du kannst das später anpassen.",
     ),
     "imp_btn_ok": _all(
         "Importar {n}", "Importeer {n}", "Import {n}", "Importer {n}", "{n} importieren"
@@ -458,6 +497,20 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Done: {n} entries imported. To undo: *undo import*.",
         "C'est fait : {n} écritures importées. Pour annuler : *annuler l'import*.",
         "Fertig: {n} Buchungen importiert. Zum Rückgängigmachen: *import rückgängig*.",
+    ),
+    "imp_done_one": _all(
+        "Pronto: 1 lançamento importado. Para desfazer: *desfazer importação*.",
+        "Klaar: 1 transactie geïmporteerd. Ongedaan maken: *import ongedaan maken*.",
+        "Done: 1 entry imported. To undo: *undo import*.",
+        "C'est fait : 1 écriture importée. Pour annuler : *annuler l'import*.",
+        "Fertig: 1 Buchung importiert. Zum Rückgängigmachen: *import rückgängig*.",
+    ),
+    "imp_undone_one": _all(
+        "Desfeito: 1 lançamento da última importação foi removido.",
+        "Ongedaan gemaakt: 1 transactie van de laatste import is verwijderd.",
+        "Undone: 1 entry from the last import was removed.",
+        "Annulé : 1 écriture du dernier import a été supprimée.",
+        "Rückgängig gemacht: 1 Buchung des letzten Imports wurde entfernt.",
     ),
     "imp_cancelled": _all(
         "Cancelado, não importei nada.",

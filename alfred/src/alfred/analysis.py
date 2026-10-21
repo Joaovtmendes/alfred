@@ -80,10 +80,12 @@ def _natural(period: str, today: date) -> tuple[date, date, str, int]:
         return m0, add_months(m0, 1), "m", 1
     if period == "last_month":
         return add_months(m0, -1), m0, "m", 1
+    # "últimos 3 meses" counts the month in progress (B-016: October was left out of
+    # "últimos 6 meses" on 18/10 and the card said there was nothing at Albert Heijn).
     if period == "last_3_months":
-        return add_months(m0, -3), m0, "m", 3
+        return add_months(m0, -2), add_months(m0, 1), "m", 3
     if period == "last_6_months":
-        return add_months(m0, -6), m0, "m", 6
+        return add_months(m0, -5), add_months(m0, 1), "m", 6
     if period == "this_year":
         return date(today.year, 1, 1), date(today.year + 1, 1, 1), "m", 12
     if period == "last_year":

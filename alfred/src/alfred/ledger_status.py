@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred.agenda import parse_when
 from alfred.audit import audit
 from alfred.clock import local_tz, now_local, today_local
-from alfred.models import PENDING, SETTLED, Expense, Member
+from alfred.models import PENDING, SETTLED, Expense, Member, PendingAction
 from alfred.parsing import strip_accents, to_amount
 from alfred.validation import MAX_AMOUNT
 
@@ -63,9 +63,23 @@ _CONNECTORS = {
     "do", "da", "de", "dos", "das", "from", "van", "von", "vom", "du", "des", "der", "die", "voor",
     "pour", "fur", "para", "pra", "pro", "the", "o", "a", "as", "os", "le", "la", "les", "het", "een", "um", "uma", "on", "em", "op", "am", "au", "aux", "ao", "aos",
 }  # fmt: skip
-_PAID_VERBS = {"paguei", "paid", "betaald", "betaalde", "paye", "bezahlt", "bezahlte"}
+_PAID_VERBS = {
+    "paguei",
+    "paid",
+    "betaald",
+    "betaalde",
+    "paye",
+    "bezahlt",
+    "bezahlte",
+    "paga",
+    "pago",
+    "quitada",
+    "quitado",
+}  # "luz 120 já foi paga"
 _RECV_VERBS = {"recebi", "received", "ontvangen", "recu", "erhalten", "bekommen", "recebido"}
 _FILLER = {
+    "foi",
+    "esta",
     "i",
     "ik",
     "heb",
@@ -311,7 +325,51 @@ async def handle_ledger_command(
     settle = parse_settle(body_plain)
     if settle is not None:
         return await _settle(settle, member, lang, session)
+    if _BARE_AMOUNT.match(plain):  # B-008: "120" right after "Qual deles?" picks that one
+        pick = await _take_pick(session, member.id)
+        if pick is not None:
+            amount = to_amount(_BARE_AMOUNT.match(plain).group(1))
+            return await _settle((pick[0], pick[1], amount), member, lang, session)
     return None
+
+
+PICK_KIND = "ledger_pick"
+PICK_TTL = timedelta(minutes=15)
+_BARE_AMOUNT = re.compile(r"^(?:€\s*)?(\d[\d.,]*)\s*(?:€|eur|euros?)?$")
+
+
+async def _remember_pick(session: AsyncSession, member_id, kind: str, tokens: set[str]) -> None:
+    from sqlalchemy import delete
+
+    await session.execute(
+        delete(PendingAction).where(
+            PendingAction.member_id == member_id, PendingAction.kind == PICK_KIND
+        )
+    )
+    session.add(
+        PendingAction(
+            member_id=member_id,
+            kind=PICK_KIND,
+            payload={"kind": kind, "tokens": sorted(tokens)},
+            expires_at=datetime.now(local_tz()) + PICK_TTL,
+        )
+    )
+    await session.flush()
+
+
+async def _take_pick(session: AsyncSession, member_id) -> tuple[str, set[str]] | None:
+    row = await session.scalar(
+        select(PendingAction).where(
+            PendingAction.member_id == member_id,
+            PendingAction.kind == PICK_KIND,
+            PendingAction.expires_at > datetime.now(local_tz()),
+        )
+    )
+    if row is None:
+        return None
+    await session.delete(row)
+    await session.flush()
+    return str(row.payload.get("kind")), set(row.payload.get("tokens") or [])
 
 
 async def _create(new: NewPending, member: Member, lang: str, session: AsyncSession) -> str:
@@ -384,12 +442,40 @@ async def _settle(
     ]
     if not cands:
         return None  # not ours: the debts / fixed bills / income handlers decide
+    if kind == "pay":
+        # B-020: a pending "Luz" and a fixed bill "Luz" both fit "paguei a luz"; paying the
+        # pending one silently (it was the €120, the bill was €80) is a guess, so ask.
+        from alfred.recurring import _active_items, _pay, match_items
+
+        bills = match_items(
+            " ".join(sorted(tokens)), await _active_items(session, member.id), loose=True
+        )
+        if bills:
+            if amount is not None:
+                same_bill = [b for b in bills if _dec(b.amount) == _dec(amount)]
+                same_pend = [e for e in cands if _dec(e.amount) == _dec(amount)]
+                if len(same_bill) == 1 and not same_pend:
+                    return await _pay(same_bill[0], member, lang, session)
+            else:
+                options = ", ".join(
+                    [
+                        f"{_label(e)} {_fmt(_dec(e.amount))} ({_t('ledger_kind_pending', lang)})"
+                        for e in cands[:3]
+                    ]
+                    + [
+                        f"{b.name} {_fmt(_dec(b.amount))} ({_t('ledger_kind_bill', lang)})"
+                        for b in bills[:3]
+                    ]
+                )
+                await _remember_pick(session, member.id, kind, tokens)
+                return _t("ledger_ambiguous", lang, options=options)
     if len(cands) > 1 and amount is not None:
         exact = [e for e in cands if _dec(e.amount) == _dec(amount)]
         if exact:
             cands = exact[:1]
     if len(cands) > 1:
         options = ", ".join(f"{_label(e)} {_fmt(_dec(e.amount))}" for e in cands[:5])
+        await _remember_pick(session, member.id, kind, tokens)
         return _t("ledger_ambiguous", lang, options=options)
     entry = cands[0]
     if amount is not None and 0 < amount <= MAX_AMOUNT:
@@ -425,6 +511,8 @@ def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str | tuple[s
 
 
 STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
+    "ledger_kind_pending": _all("a pagar", "te betalen", "to pay", "à payer", "zu zahlen"),
+    "ledger_kind_bill": _all("conta fixa", "vaste last", "fixed bill", "charge fixe", "Fixkosten"),
     "ledger_added_pay": _all(
         'Anotei a pagar: {name} {amount}, vence {due}. Não entra no saldo até você pagar ("paguei {name}").',
         'Genoteerd om te betalen: {name} {amount}, vervalt {due}. Telt pas mee in je saldo als je betaald hebt ("betaald {name}").',

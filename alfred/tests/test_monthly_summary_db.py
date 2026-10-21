@@ -90,7 +90,7 @@ async def test_income_only_month_has_no_division_by_zero_and_no_comparison(lab: 
 async def test_empty_month_is_a_short_nudge_without_zero_numbers(lab: Lab) -> None:
     await lab.add(_txn(lab, 10, "supermarkt", PREV))  # has history, but nothing last month
     text = await _summary(lab)
-    assert "não vi lançamentos" in text and "€0" not in text and "Receitas" not in text
+    assert "não houve nenhum lançamento" in text and "€0" not in text and "Receitas" not in text
 
 
 @db

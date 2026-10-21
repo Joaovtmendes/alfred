@@ -380,7 +380,8 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .req{color:var(--err);font-weight:600}
 .opt{color:var(--muted)}
 button,.btn{display:block;width:100%;text-align:center;font:inherit;font-weight:600;padding:.9rem 1rem;border:0;border-radius:999px;background:linear-gradient(90deg,#ffb49b,#ff7fa2);color:#3b2547;text-decoration:none;cursor:pointer}
-.err{color:var(--err);margin:0;font-weight:600}
+.err{color:var(--err);margin:.35rem 0 0;font-weight:600;font-size:.95rem}
+input.bad{border-color:var(--err);box-shadow:0 0 0 3px #b4233c22}.check.bad span{color:var(--err)}
 .note{color:var(--muted);font-size:.85rem;margin:0;text-align:center}
 .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}
 .card{background:var(--card);border:1px solid var(--line);border-radius:.9rem;padding:.9rem;display:flex;flex-direction:column;gap:.4rem}
@@ -450,6 +451,32 @@ def _brand() -> str:
     return '<div class="brand">' + WORDMARK_SVG + "</div>"
 
 
+def brand_page(
+    lang: str,
+    title: str,
+    body_html: str,
+    *,
+    status: int = 200,
+    nonce: str | None = None,
+    headers: dict[str, str] | None = None,
+) -> HTMLResponse:
+    """M-24: every page a member lands on (link expired, export, Google) wears the brand.
+
+    ``body_html`` must already be escaped. ``nonce`` is needed under the panel's CSP (/d/...).
+    """
+    style_attr = f' nonce="{escape(nonce)}"' if nonce else ""
+    html = (
+        f'<!doctype html><html lang="{escape(lang)}"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="color-scheme" content="light">'
+        '<meta name="robots" content="noindex,nofollow">'
+        f"{ICON_LINK}"
+        f"<title>{escape(title)} – Jofie</title><style{style_attr}>{_CSS}</style></head>"
+        f"<body><main>{_brand()}{body_html}</main></body></html>"
+    )
+    return HTMLResponse(html, status_code=status, headers=headers)
+
+
 def render_form(
     lang: str,
     token: str,
@@ -473,7 +500,14 @@ def render_form(
         .replace("{url}", PRIVACY_URLS.get(lang, PRIVACY_URLS["en"]))
         .replace("{terms}", "/terms")
     )
-    err = f'<p class="err" role="alert">{escape(p[error])}</p>' if error else ""
+
+    # B-003: the message sits under the field it is about, and that field is marked
+    def _err(key: str) -> str:
+        return f'<p class="err" role="alert">{escape(p[key])}</p>' if error == key else ""
+
+    def _bad(key: str) -> str:
+        return ' class="bad" aria-invalid="true" autofocus' if error == key else ""
+
     cards = "".join(
         f'<div class="card"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" '
         f'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{ic}</svg></div>'
@@ -489,21 +523,21 @@ def render_form(
         f'<form method="post" action="/cadastro/{escape(token)}" autocomplete="off">'
         f"<h2>{escape(p['form_h'])}</h2>"
         f'<div class="f"><label class="l" for="n">{escape(p["name"])}</label>'
-        f'<input id="n" type="text" name="name" maxlength="40" required value="{escape(name)}" autocomplete="given-name">'
-        f'<p class="hint">{escape(p["name_hint"])}</p></div>'
+        f'<input id="n" type="text" name="name" maxlength="40" required value="{escape(name)}" autocomplete="given-name"{_bad("err_name")}>'
+        f'{_err("err_name")}<p class="hint">{escape(p["name_hint"])}</p></div>'
         f'<div class="f"><label class="l" for="e">{escape(p["email"])}</label>'
-        f'<input id="e" type="email" name="email" maxlength="254" required value="{escape(email)}" autocomplete="email">'
-        f'<p class="hint">{escape(p["email_hint"])}</p></div>'
+        f'<input id="e" type="email" name="email" maxlength="254" required value="{escape(email)}" autocomplete="email"{_bad("err_email")}>'
+        f'{_err("err_email")}<p class="hint">{escape(p["email_hint"])}</p></div>'
         f'<div class="f"><label class="l" for="p">{escape(p["phone"])}</label>'
         f'<input id="p" type="text" value="{escape(_mask(phone))}" readonly tabindex="-1">'
         f'<p class="hint">{escape(p["phone_hint"])}</p></div>'
         f'<div class="f"><label class="l" for="l">{escape(p["language"])}</label>'
         f'<select id="l" name="lang" required>{opts}</select>'
         f'<p class="hint">{escape(p["lang_hint"])}</p></div><hr>'
-        f'<label class="check"><input type="checkbox" name="privacy" value="1" required><span>{privacy}</span></label>'
+        f'<label class="check{" bad" if error == "err_privacy" else ""}"><input type="checkbox" name="privacy" value="1" required><span>{privacy}</span></label>{_err("err_privacy")}'
         f'<label class="check"><input type="checkbox" name="health" value="1"{" checked" if health else ""}><span>{escape(p["health"])}</span></label>'
         f'<label class="check"><input type="checkbox" name="deadlines" value="1"{" checked" if deadlines else ""}><span>{escape(p["deadlines"])}</span></label>'
-        f'{err}<button type="submit">{escape(p["submit"])}</button>'
+        f'<button type="submit">{escape(p["submit"])}</button>'
         f'<p class="note">{escape(p["note"])}</p></form>'
     )
     body = f"{_brand()}<h1>{escape(p['h1'])}</h1>{form}<div class='cards'>{cards}</div>{chat}"

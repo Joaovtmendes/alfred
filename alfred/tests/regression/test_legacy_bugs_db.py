@@ -113,7 +113,6 @@ async def test_audio_gets_a_reply(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-22")
-@pytest.mark.xfail(strict=True, reason="A-22 aberto: remova junto com a correção")
 async def test_muda_pra_ingles_changes_the_language(lab: Lab) -> None:
     await lab.say("muda pra inglês")
     lang = await lab.scalar(select(Member.language).where(Member.id == lab.member_id))
@@ -122,7 +121,6 @@ async def test_muda_pra_ingles_changes_the_language(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-22")
-@pytest.mark.xfail(strict=True, reason="A-22 aberto: remova junto com a correção")
 async def test_a_language_name_alone_does_not_change_the_language(lab: Lab) -> None:
     await lab.say("francês")
     lang = await lab.scalar(select(Member.language).where(Member.id == lab.member_id))
@@ -135,7 +133,6 @@ async def test_a_language_name_alone_does_not_change_the_language(lab: Lab) -> N
 @db
 @pytest.mark.bug("A-23")
 @pytest.mark.parametrize("text", ["Zara é lazer", "isso é lazer", "isso é transporte"])
-@pytest.mark.xfail(strict=True, reason="A-23 aberto: remova junto com a correção")
 async def test_category_names_the_chat_shows_are_accepted(lab: Lab, text) -> None:
     lab.expense.return_value = _exp(89, "Zara")
     await lab.say("Zara 89")
@@ -146,7 +143,6 @@ async def test_category_names_the_chat_shows_are_accepted(lab: Lab, text) -> Non
 
 @db
 @pytest.mark.bug("A-24")
-@pytest.mark.xfail(strict=True, reason="A-24 aberto: remova junto com a correção")
 async def test_an_expense_never_takes_the_income_category(lab: Lab) -> None:
     lab.expense.return_value = _exp(30, "Jumbo", "supermarkt")
     await lab.say("Jumbo 30")
@@ -186,7 +182,6 @@ async def test_a_negative_amount_is_not_recorded_as_an_expense(lab: Lab) -> None
 
 @db
 @pytest.mark.bug("A-79")
-@pytest.mark.xfail(strict=True, reason="A-79 aberto: remova junto com a correção")
 async def test_the_dollar_refusal_does_not_end_with_a_question_mark(lab: Lab) -> None:
     lab.expense.return_value = _exp(50, "Walmart", "supermarkt", currency="USD")
     out = await lab.say("gastei 50 dollars")
@@ -198,7 +193,6 @@ async def test_the_dollar_refusal_does_not_end_with_a_question_mark(lab: Lab) ->
 
 @db
 @pytest.mark.bug("A-31")
-@pytest.mark.xfail(strict=True, reason="A-31 aberto: remova junto com a correção")
 async def test_the_article_is_not_part_of_the_name(lab: Lab) -> None:
     await lab.say("a Ana me deve 40")
     person = await lab.scalar(select(Iou.person).where(Iou.member_id == lab.member_id))
@@ -216,7 +210,6 @@ async def test_a_portuguese_statement_header_is_recognised(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-39")
-@pytest.mark.xfail(strict=True, reason="A-39 aberto: remova junto com a correção")
 async def test_a_task_with_a_time_is_a_task_not_an_appointment(lab: Lab) -> None:
     await lab.say("tarefa: pagar o dentista amanhã às 14h")
     assert await _count(lab, Task) == 1
@@ -225,7 +218,6 @@ async def test_a_task_with_a_time_is_a_task_not_an_appointment(lab: Lab) -> None
 
 @db
 @pytest.mark.bug("A-43")
-@pytest.mark.xfail(strict=True, reason="A-43 aberto: remova junto com a correção")
 async def test_a_reminder_with_tomorrow_is_not_a_daily_reminder(lab: Lab) -> None:
     await lab.say("lembrete: ligar pro dentista amanhã às 14:00")
     jobs = await lab.rows(select(ScheduledJob).where(ScheduledJob.member_id == lab.member_id))
@@ -234,7 +226,6 @@ async def test_a_reminder_with_tomorrow_is_not_a_daily_reminder(lab: Lab) -> Non
 
 @db
 @pytest.mark.bug("A-47")
-@pytest.mark.xfail(strict=True, reason="A-47 aberto: remova junto com a correção")
 async def test_a_health_question_without_a_question_mark_does_not_log(lab: Lab) -> None:
     await lab.say("quantas horas dormi esta semana")
     assert lab.health.await_count == 0
@@ -242,7 +233,6 @@ async def test_a_health_question_without_a_question_mark_does_not_log(lab: Lab) 
 
 @db
 @pytest.mark.bug("A-48")
-@pytest.mark.xfail(strict=True, reason="A-48 aberto: remova junto com a correção")
 async def test_criar_viagem_with_a_budget_and_no_symbol(lab: Lab) -> None:
     await lab.say("criar viagem Roma 800")
     trip = await lab.rows(
@@ -265,7 +255,6 @@ async def test_short_commands_never_reach_the_habit_model(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-56")
-@pytest.mark.xfail(strict=True, reason="A-56 aberto: remova junto com a correção")
 async def test_singular_has_no_plural_noun(lab: Lab) -> None:
     lab.expense.return_value = _exp(12, "Padaria", "supermarkt")
     await lab.say("padaria 12")
@@ -290,7 +279,6 @@ async def test_meus_gastos_is_a_command(lab: Lab) -> None:
 
 @db
 @pytest.mark.bug("A-75")
-@pytest.mark.xfail(strict=True, reason="A-75 aberto: remova junto com a correção")
 async def test_stop_with_a_full_stop_still_stops(lab: Lab) -> None:
     await lab.say("stop.")
     state = await lab.scalar(select(Member.consent_state).where(Member.id == lab.member_id))

@@ -22,6 +22,7 @@ from alfred.audit import audit
 from alfred.clock import now_local, today_local
 from alfred.models import Expense, Member, Message, RecurringItem
 from alfred.parsing import strip_accents, to_amount
+from alfred.training import Reply
 from alfred.validation import MAX_AMOUNT
 
 MAX_ACTIVE_ITEMS = 30
@@ -52,6 +53,9 @@ _WEEKLY = re.compile(
 _DAY = re.compile(
     r"\b(?:dia|day|the|every|op\s+de|le|am|den|toda\s+dia)\s+(\d{1,2})(?:st|nd|rd|th|e|ste|de|er)?\b"
 )
+# "dia" / "day" not followed by a number: the member meant a day but did not give one
+_DAY_WORD_NO_NUMBER = re.compile(r"\b(?:dia|day|dag|jour|tag)\b(?!\s*\d)(?!\s+(?:dia|day)\b\s*\d)")
+ASK_DAY = 0  # Parsed.due_day sentinel: ask which day before creating
 _INSTALLMENT_RE = re.compile(
     _LEAD
     + _NAME
@@ -126,6 +130,8 @@ def parse_recurring(body: str, body_plain: str) -> Parsed | None:
     due_day = int(day_m.group(1)) if day_m else None
     if due_day is not None and not 1 <= due_day <= 31:
         return None
+    if due_day is None and frequency == "monthly" and _DAY_WORD_NO_NUMBER.search(rest):
+        due_day = ASK_DAY  # B-018: "todo mês dia DIA" — ask the day, never guess today
     name = body[m.start("name") : m.end("name")].strip(" .-'&")
     if not name:
         return None
@@ -265,6 +271,9 @@ _CANCEL_RE = re.compile(
 
 
 def _fmt_date(d: date) -> str:
+    """ "18/11", or "18/10/2027" when it is not this year (B-019: an annual bill showed "18/10")."""
+    if d.year != today_local().year:
+        return f"{d.day:02d}/{d.month:02d}/{d.year}"
     return f"{d.day:02d}/{d.month:02d}"
 
 
@@ -284,7 +293,7 @@ async def _active_items(session: AsyncSession, member_id: uuid.UUID) -> list[Rec
 
 async def handle_recurring_command(
     body: str, body_plain: str, member: Member, lang: str, session: AsyncSession
-) -> str | None:
+) -> str | Reply | None:
     """Reply for create / list / "paguei X" / cancel, or None when it is not one of those."""
     from alfred.conversation import _t
 
@@ -322,7 +331,7 @@ async def handle_recurring_command(
     return None
 
 
-async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -> str:
+async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -> str | Reply:
     from alfred.conversation import _fmt_eur, _t
 
     count = await session.scalar(
@@ -332,9 +341,27 @@ async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -
     )
     if (count or 0) >= MAX_ACTIVE_ITEMS:
         return _t("recurring_limit", lang, n=MAX_ACTIVE_ITEMS)
+    if p.due_day == ASK_DAY:
+        return _t("recurring_ask_day", lang, name=p.name, amount=_fmt_eur(p.amount))
     same = [i for i in await _active_items(session, member.id) if i.name.lower() == p.name.lower()]
     if same:  # a second "Aluguel" would make "paguei o aluguel" ambiguous for good
-        return _t("recurring_exists", lang, name=same[0].name)
+        old = same[0]
+        if abs(float(old.amount) - p.amount) < 0.005:
+            return _t("recurring_exists_same", lang, name=old.name, amount=_fmt_eur(p.amount))
+        cents = int(round(p.amount * 100))
+        return Reply(  # B-018: offer the update instead of "delete it and add it again"
+            _t(
+                "recurring_exists_update",
+                lang,
+                name=old.name,
+                old=_fmt_eur(old.amount),
+                new=_fmt_eur(p.amount),
+            ),
+            [
+                (f"rec_upd:{old.id}:{cents}", _t("btn_rec_update", lang)),
+                (f"rec_keep:{old.id}", _t("btn_rec_keep", lang)),
+            ],
+        )
     today = today_local()
     due = first_due(p.frequency, p.due_day, today)
     session.add(
@@ -424,6 +451,46 @@ async def _pay(item: RecurringItem, member: Member, lang: str, session: AsyncSes
             due=_fmt_date(item.next_due_date),
         )
     return reply + await alert_after_expense(session, member, item.category, when, lang)
+
+
+async def handle_recurring_button(
+    action: str, raw_id: str, member: Member, lang: str, session: AsyncSession
+) -> str:
+    """[Atualizar] / [Manter] under "você já tem Luz nas contas fixas"."""
+    from alfred.conversation import _fmt_eur, _t
+
+    item_id, _, cents = raw_id.partition(":")
+    try:
+        uid = uuid.UUID(item_id)
+    except ValueError:
+        return _t("button_used", lang)
+    item = await session.scalar(
+        select(RecurringItem).where(
+            RecurringItem.id == uid,
+            RecurringItem.member_id == member.id,
+            RecurringItem.active.is_(True),
+        )
+    )
+    if item is None:
+        return _t("button_used", lang)
+    if action == "rec_keep":
+        return _t("recurring_kept", lang, name=item.name, amount=_fmt_eur(item.amount))
+    try:
+        amount = int(cents) / 100
+    except ValueError:
+        return _t("button_used", lang)
+    if not 0 < amount <= MAX_AMOUNT:
+        return _t("button_used", lang)
+    item.amount = amount
+    session.add(item)
+    audit(session, "recurring_updated", member.id)
+    return _t(
+        "recurring_updated",
+        lang,
+        name=item.name,
+        amount=_fmt_eur(amount),
+        due=_fmt_date(item.next_due_date),
+    )
 
 
 async def _list(member: Member, lang: str, session: AsyncSession) -> str:
@@ -589,6 +656,43 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": "Recurring item removed: {name}.",
         "fr": "Charge fixe supprimée : {name}.",
         "de": "Fixkosten entfernt: {name}.",
+    },
+    "recurring_ask_day": {
+        "pt": "Em que dia do mês vence *{name}* ({amount})? Mande assim: *{name} {amount} todo mês dia 10*.",
+        "nl": "Op welke dag van de maand vervalt *{name}* ({amount})? Stuur bijvoorbeeld: *{name} {amount} elke maand op de 10e*.",
+        "en": "Which day of the month is *{name}* ({amount}) due? Send it like this: *{name} {amount} every month day 10*.",
+        "fr": "Quel jour du mois tombe *{name}* ({amount}) ? Envoie par ex. : *{name} {amount} tous les mois le 10*.",
+        "de": "An welchem Tag im Monat ist *{name}* ({amount}) fällig? Schreib z. B.: *{name} {amount} jeden Monat am 10*.",
+    },
+    "recurring_exists_same": {
+        "pt": "Você já tem *{name}* de {amount} nas contas fixas; deixei como está.",
+        "nl": "*{name}* van {amount} staat al bij je vaste lasten; ik laat het zo.",
+        "en": "You already have *{name}* at {amount} in your fixed bills; I left it as it is.",
+        "fr": "Tu as déjà *{name}* à {amount} dans tes charges fixes ; je laisse comme ça.",
+        "de": "*{name}* mit {amount} steht schon bei deinen Fixkosten; ich lasse es so.",
+    },
+    "recurring_exists_update": {
+        "pt": "Você já tem *{name}* nas contas fixas, de {old}. Quer trocar para {new}?",
+        "nl": "*{name}* staat al bij je vaste lasten, voor {old}. Wil je het naar {new} zetten?",
+        "en": "You already have *{name}* in your fixed bills, at {old}. Change it to {new}?",
+        "fr": "Tu as déjà *{name}* dans tes charges fixes, à {old}. Passer à {new} ?",
+        "de": "*{name}* steht schon bei deinen Fixkosten, mit {old}. Auf {new} ändern?",
+    },
+    "btn_rec_update": {"pt": "Trocar o valor", "nl": "Bedrag wijzigen", "en": "Change amount", "fr": "Changer", "de": "Betrag ändern"},
+    "btn_rec_keep": {"pt": "Manter", "nl": "Zo laten", "en": "Keep", "fr": "Garder", "de": "Behalten"},
+    "recurring_updated": {
+        "pt": "Pronto: *{name}* agora é {amount}. Próximo vencimento: {due}.",
+        "nl": "Klaar: *{name}* is nu {amount}. Volgende vervaldatum: {due}.",
+        "en": "Done: *{name}* is now {amount}. Next due date: {due}.",
+        "fr": "C'est fait : *{name}* passe à {amount}. Prochaine échéance : {due}.",
+        "de": "Erledigt: *{name}* ist jetzt {amount}. Nächste Fälligkeit: {due}.",
+    },
+    "recurring_kept": {
+        "pt": "Certo, *{name}* continua {amount}.",
+        "nl": "Prima, *{name}* blijft {amount}.",
+        "en": "Fine, *{name}* stays at {amount}.",
+        "fr": "D'accord, *{name}* reste à {amount}.",
+        "de": "Gut, *{name}* bleibt bei {amount}.",
     },
     "recurring_exists": {
         "pt": "Você já tem *{name}* nas contas fixas. Para trocar o valor, apague com *cancela {name}* e cadastre de novo.",
