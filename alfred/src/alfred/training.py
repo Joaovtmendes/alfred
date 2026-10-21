@@ -385,6 +385,27 @@ def _date(day: date) -> str:
     return day.strftime("%d/%m")
 
 
+# F11-04: "supino 4x10" / "treino de segunda peito supino 4x10" is an exercise, never an instalment
+_TRAIN_WORDS = (
+    "treino|treinos|exercicio|exercicios|serie|series|supino|agachamento|rosca|remada|leg press|"
+    "peito|costas|ombro|biceps|triceps|perna|gluteo|abdominal|academia|workout|training|exercise|"
+    "bench|squat|deadlift|curl|gym|training|oefening|bankdrukken|kniebuiging|entrainement|"
+    "exercice|developpe|squats|training|ubung|uebung|bankdruecken|kniebeuge"
+)
+_SETS_LINE = re.compile(
+    rf"^(?:treino\s+(?:de\s+|da\s+|do\s+)?(?P<day>{_DAYS_RX})\s+)?"
+    r"(?P<name>[a-z][a-z ]{2,50}?)\s+(?P<sets>\d{1,2})\s*[x×]\s*(?:de\s+)?(?P<reps>\d{1,3})\s*[.!]*$"
+)
+_GUESS_SETS = re.compile(r"(\d{1,2})\s*(?:series|sets|keer|x)\s*(?:de|of|van)?\s*(\d{1,3})")
+
+
+def looks_like_exercise_sets(flat: str) -> re.Match[str] | None:
+    m = _SETS_LINE.match(flat)
+    if m and re.search(rf"\b(?:{_TRAIN_WORDS})\b", flat):
+        return m
+    return None
+
+
 async def handle_training_command(
     body: str, body_plain: str, member: Member, lang: str, session: AsyncSession
 ) -> Reply | None:
@@ -407,6 +428,10 @@ async def handle_training_command(
             spec_words = set(m.group("spec").split())
             if spec_words & set(WEEKDAYS) or spec_words & _WHEN_WORDS:
                 return None  # A-41: "muda a reunião de segunda para sexta" is the agenda's
+            if g := _GUESS_SETS.search(m.group("spec")):  # F11-25: "did you mean …?"
+                return await _ask_edit_guess(
+                    m, body, flat, f"{g.group(1)}x{g.group(2)}", member, lang, session
+                )
             return Reply(_t("plan_edit_bad", lang))
         return await _edit_plan(
             _display_name(body, flat, m, "name"),
@@ -416,6 +441,9 @@ async def handle_training_command(
             lang,
             session,
         )
+
+    if m := looks_like_exercise_sets(flat):
+        return await _ask_save_exercise(m, body, flat, member, lang, session)
 
     for pattern, ex_g, kg_g in _LOAD:
         if m := pattern.match(flat):
@@ -1032,3 +1060,129 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "Seit {since}: {delta}.",
     ),
 }
+
+
+# ── F11-04 / F11-25: questions instead of a wrong guess ──────────────────────
+
+STRINGS.update(
+    {
+        "plan_save_ex_ask": _all(
+            "Isso parece um exercício: {name} {sets}x{reps}. Quer salvar no plano de treino{day}?",
+            "Dit lijkt een oefening: {name} {sets}x{reps}. Opslaan in je trainingsplan{day}?",
+            "That looks like an exercise: {name} {sets}x{reps}. Save it in your training plan{day}?",
+            "Cela ressemble à un exercice : {name} {sets}x{reps}. L'enregistrer dans ton plan{day} ?",
+            "Das sieht nach einer Übung aus: {name} {sets}x{reps}. Im Trainingsplan speichern{day}?",
+        ),
+        "plan_save_ex_done": _all(
+            "Pronto: {name} {sets}x{reps} entrou no plano de {day}.",
+            "Klaar: {name} {sets}x{reps} staat nu in het plan van {day}.",
+            "Done: {name} {sets}x{reps} is now in the {day} plan.",
+            "C'est fait : {name} {sets}x{reps} est dans le plan de {day}.",
+            "Erledigt: {name} {sets}x{reps} steht jetzt im Plan für {day}.",
+        ),
+        "plan_save_ex_noday": _all(
+            "Não achei esse dia no seu plano. Para criar o plano, mande, por exemplo, “plano: segunda - peito: supino 4x10”.",
+            "Ik vind die dag niet in je plan. Maak het plan met bijvoorbeeld “plan: maandag - borst: bankdrukken 4x10”.",
+            "I can't find that day in your plan. Create the plan with, for example, “plan: monday - chest: bench press 4x10”.",
+            "Je ne trouve pas ce jour dans ton plan. Crée-le avec par exemple « plan : lundi - pecs : développé 4x10 ».",
+            "Ich finde diesen Tag nicht in deinem Plan. Lege ihn an, z. B. „Plan: Montag - Brust: Bankdrücken 4x10“.",
+        ),
+        "plan_save_ex_no": _all(
+            "Certo, não salvei. Nada foi registrado como despesa.",
+            "Prima, niet opgeslagen. Er is niets als uitgave genoteerd.",
+            "Okay, not saved. Nothing was logged as an expense.",
+            "D'accord, rien enregistré. Aucune dépense créée.",
+            "Okay, nicht gespeichert. Es wurde keine Ausgabe erfasst.",
+        ),
+        "plan_edit_guess": _all(
+            "Você quis dizer: trocar {name} de {day} para {spec}?",
+            "Bedoel je: {name} op {day} wijzigen naar {spec}?",
+            "Did you mean: change {name} on {day} to {spec}?",
+            "Tu voulais dire : changer {name} du {day} en {spec} ?",
+            "Meinst du: {name} am {day} auf {spec} ändern?",
+        ),
+    }
+)
+
+
+async def _ask_save_exercise(m, body, flat, member, lang, session) -> Reply:
+    from alfred import questions
+    from alfred.conversation import _t
+
+    day = m.group("day")
+    name = _display_name(body, flat, m, "name")
+    day_txt = f" ({weekday_name(WEEKDAYS[day], lang)})" if day else ""
+    return await questions.ask(
+        session,
+        member,
+        "plan_save_ex",
+        {"name": name, "sets": int(m.group("sets")), "reps": m.group("reps"),
+         "weekday": WEEKDAYS[day] if day else None, "yes_no": True},
+        _t("plan_save_ex_ask", lang, name=name, sets=m.group("sets"), reps=m.group("reps"), day=day_txt),
+        [("yes", _t("btn_yes", lang)), ("no", _t("btn_no", lang))],
+    )  # fmt: skip
+
+
+async def _on_save_exercise(session, member, lang, data, choice, today) -> Reply:
+    from alfred.conversation import _t
+
+    if choice != "yes":
+        return Reply(_t("plan_save_ex_no", lang))
+    plan = await _active_plan(session, member.id)
+    weekday = data.get("weekday")
+    if plan is None or weekday is None:
+        return Reply(_t("plan_save_ex_noday", lang))
+    days = await _plan_days(session, plan)
+    row = next(((d, its) for d, its in days if d.weekday == weekday), None)
+    if row is None:
+        return Reply(_t("plan_save_ex_noday", lang))
+    day, items = row
+    session.add(
+        WorkoutPlanItem(
+            id=uuid.uuid4(),
+            member_id=member.id,
+            day_id=day.id,
+            position=len(items),
+            exercise=data["name"][:80],
+            sets=data["sets"],
+            reps=str(data["reps"]),
+        )
+    )
+    return Reply(
+        _t("plan_save_ex_done", lang, name=data["name"], sets=data["sets"], reps=data["reps"],
+           day=weekday_name(weekday, lang))
+    )  # fmt: skip
+
+
+async def _ask_edit_guess(m, body, flat, spec, member, lang, session) -> Reply:
+    from alfred import questions
+    from alfred.conversation import _t
+
+    name = _display_name(body, flat, m, "name")
+    return await questions.ask(
+        session,
+        member,
+        "plan_edit_guess",
+        {"name": name, "weekday": WEEKDAYS[m.group("day")], "spec": spec, "yes_no": True},
+        _t("plan_edit_guess", lang, name=name, day=weekday_name(WEEKDAYS[m.group("day")], lang), spec=spec),
+        [("yes", _t("btn_yes", lang)), ("no", _t("btn_no", lang))],
+    )  # fmt: skip
+
+
+async def _on_edit_guess(session, member, lang, data, choice, today) -> Reply:
+    from alfred.conversation import _t
+
+    if choice != "yes":
+        return Reply(_t("plan_edit_bad", lang))
+    spec = _EDIT_SPEC.match(data["spec"])
+    return await _edit_plan(data["name"], data["weekday"], spec, member, lang, session)
+
+
+def _register() -> None:
+    from alfred import questions
+
+    questions.register("plan_save_ex", _on_save_exercise)
+    questions.register("plan_edit_guess", _on_edit_guess)
+
+
+_register()
