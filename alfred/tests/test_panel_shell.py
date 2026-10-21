@@ -57,14 +57,15 @@ def test_css_declares_both_themes_with_the_approved_tokens() -> None:
     css = (PANEL / "panel.css").read_text().lower()
     flat = css.replace(" ", "")
     for token in (
-        "--bg:#2a1a33",
-        "--surface:#34213e",
-        "--accent:#ff7fa2",
-        "--warm:#ffedb0",
-        "--good:#bfebd9",
+        "--bg:#231730",
+        "--surface:#2f1d3b",
+        "--accent:#8b7cf6",
+        "--warm:#f2c14e",
+        "--good:#3dd6a8",
+        "--neg:#f06a7f",
     ):
         assert token in flat, token
-    assert "#fff9f8" in css and "#c23a63" in css  # light theme (marca Jofie)
+    assert "#f7f4f8" in css and "#6d4fd6" in css  # light theme: plum ink, violet accent
     assert "@font-face" in css and "https://" not in css
     assert ":focus-visible" in css
 

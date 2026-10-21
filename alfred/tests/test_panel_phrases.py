@@ -137,6 +137,7 @@ def _all_phrases(lang: str) -> list[pp.Phrase]:
         pp.rule_fixed_variable(1238, 760, lang),
         pp.rule_busiest_day(date(2026, 10, 18), 230, 8, 14, 23, lang),
         pp.rule_agenda_week({0: 1, 2: 3, 4: 1}, lang),
+        pp.rule_agenda_breath([(0, 1), (1, 0), (2, 3), (3, 0), (4, 0), (5, 1), (6, 0)], lang),
         pp.rule_agenda_map({1: 3, 3: 2, 5: 1}, lang),
         pp.rule_tasks(2, "Pagar IPTU", 3, 0, None, 0, lang),
         pp.rule_tasks(0, None, 0, 3, "Enviar relatório", 2, lang),
@@ -383,3 +384,21 @@ def test_blue_days_phrase_is_singular_for_one_day_in_french() -> None:
 def test_a_phrase_built_from_a_lowercase_merchant_still_starts_with_a_capital() -> None:
     p = pp.rule_top_share("renda", 99999.0, 100000.0, 10, "pt")
     assert p and p.text[0] == "R"
+
+
+def test_agenda_breath_needs_a_clear_peak_and_a_quieter_day() -> None:
+    week = [(0, 1), (1, 0), (2, 3), (3, 0), (4, 0), (5, 1), (6, 0)]
+    p = pp.rule_agenda_breath(week, "pt")
+    assert p and p.text == "Mais livre: terça. Mais cheio: quarta, com 3."
+    assert (
+        pp.rule_agenda_breath([(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (6, 2)], "pt")
+        is None
+    )
+    assert (
+        pp.rule_agenda_breath([(0, 1), (1, 1), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0)], "pt")
+        is None
+    )
+    assert (
+        pp.rule_agenda_breath([(0, 2), (1, 2), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0)], "pt")
+        is None
+    )

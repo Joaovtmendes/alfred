@@ -638,7 +638,7 @@ async def test_theme_switch_toggles_and_remembers_the_choice() -> None:
         }
         theme = await page.evaluate("document.documentElement.dataset.theme")
         bg = await page.evaluate("getComputedStyle(document.body).backgroundColor")
-        assert bg == {"light": "rgb(255, 249, 248)", "dark": "rgb(42, 26, 51)"}[theme]
+        assert bg == {"light": "rgb(247, 244, 248)", "dark": "rgb(35, 23, 48)"}[theme]
         await page.reload()
         await page.wait_for_selector("[data-card=upcoming]")
         assert await page.evaluate("document.documentElement.dataset.theme") == theme  # remembered
@@ -782,7 +782,7 @@ def _tab_handlers():
 @pytest.mark.parametrize(
     ("tab", "cards"),
     [
-        ("agenda", ["week", "tasks", "month_map", "reminders", "notes"]),
+        ("agenda", ["week", "load", "tasks", "deadlines", "month_map", "reminders", "notes"]),
         ("health", ["goals", "workouts", "training", "water"]),
         ("trips", ["trip", "packing", "itinerary", "plan_budget", "trips_past"]),
     ],
@@ -817,6 +817,25 @@ async def test_agenda_names_today_and_tomorrow_and_flags_overdue_tasks() -> None
         assert await page.locator("[data-card=tasks] .amt.late").count() == 1
         assert await page.locator("[data-card=month_map] .cell").count() == 28
         assert await page.locator("[data-card=month_map] .cell.today").count() == 1
+    finally:
+        await _close(pwm, browser)
+
+
+async def test_agenda_draws_seven_load_columns_and_the_deadlines_by_day() -> None:
+    pwm, browser, page = await _open(_tab_handlers())
+    try:
+        await page.click('[data-tab="agenda"]')
+        await page.wait_for_selector("[data-card=load]")
+        assert await page.locator("[data-card=load] .lcol").count() == 7
+        assert await page.locator("[data-card=load] .lcol.free").count() == 3
+        assert "respiro e pico" in (await _text(page, "[data-card=load]")).lower()
+        assert "3 dias livres" in await _text(page, "[data-card=load]")
+        assert "prazos da semana" in (await _text(page, "[data-card=deadlines]")).lower()
+        assert await page.locator("[data-card=deadlines] .day-head").count() == 3
+        assert "Pagar IPTU" in await _text(page, "[data-card=deadlines]")
+        assert await page.evaluate(
+            "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
+        )
     finally:
         await _close(pwm, browser)
 
@@ -940,7 +959,7 @@ async def test_transactions_amounts_are_red_when_negative_and_green_when_positiv
                 name,
             )
 
-        red, green = await token("--warm-text"), await token("--good")
+        red, green = await token("--neg"), await token("--good")
         assert red != green
         expense = f"{tx} .entry:has(.amt.neg) .amt"
         income = f"{tx} .entry:has(.amt.pos) .amt"
