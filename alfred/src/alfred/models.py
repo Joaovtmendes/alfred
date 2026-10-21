@@ -433,6 +433,8 @@ class HabitLog(Base):
     activity: Mapped[str] = mapped_column(String(255), nullable=False)
     log_date: Mapped[date] = mapped_column(Date, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quantity: Mapped[float | None] = mapped_column(Numeric(10, 2, asdecimal=False), nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(30), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

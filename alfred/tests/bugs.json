@@ -1817,6 +1817,61 @@
       "source": "Hard test 20/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-084",
+      "title": "hábito sem meta só dizia 'Anotei'; não oferecia criar a meta",
+      "severity": "baixa",
+      "area": "habitos",
+      "step": "hard test F10-11/12/17",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-085",
+      "title": "humor acima de 10 era gravado como veio",
+      "severity": "baixa",
+      "area": "habitos",
+      "step": "hard test F10-22",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-086",
+      "title": "resposta de humor igual para qualquer nota, sem emoji",
+      "severity": "baixa",
+      "area": "habitos",
+      "step": "hard test F10-21",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-087",
+      "title": "'1 registros' no plural e frases de 'já registrado' e 'meta removida' estranhas",
+      "severity": "baixa",
+      "area": "habitos",
+      "step": "hard test F10-30, F10-13/16",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-088",
+      "title": "'li 30 páginas' guardava só 'li'; a quantidade se perdia",
+      "severity": "baixa",
+      "area": "habitos",
+      "step": "hard test F10-10",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }

@@ -22,7 +22,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
-from alfred import balance_view, bills, budgets, questions
+from alfred import balance_view, bills, budgets, habits_ext, questions
 from alfred import goals as goals_view
 from alfred import google_calendar as _gcal
 from alfred.accounting import STRINGS as _ACCT_STRINGS
@@ -1500,11 +1500,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Keine Stimmungseinträge diese Woche.",
     },
     "health_sleep_avg": {
-        "pt": "Você dorme em média *{avg}h* (últimos 7 dias, {n} registros).",
-        "nl": "Je slaapt gemiddeld *{avg} uur* (laatste 7 dagen, {n} registraties).",
-        "en": "You sleep an average of *{avg}h* (last 7 days, {n} entries).",
-        "fr": "Tu dors en moyenne *{avg}h* (7 derniers jours, {n} entrées).",
-        "de": "Du schläfst im Schnitt *{avg}h* (letzte 7 Tage, {n} Einträge).",
+        "pt": "Você dorme em média *{avg}h* (últimos 7 dias, {n}).",
+        "nl": "Je slaapt gemiddeld *{avg} uur* (laatste 7 dagen, {n}).",
+        "en": "You sleep an average of *{avg}h* (last 7 days, {n}).",
+        "fr": "Tu dors en moyenne *{avg}h* (7 derniers jours, {n}).",
+        "de": "Du schläfst im Schnitt *{avg}h* (letzte 7 Tage, {n}).",
     },
     "health_sleep_empty": {
         "pt": "Ainda não há registros de sono esta semana.",
@@ -1543,9 +1543,9 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     # ── M9 — extras ───────────────────────────────────────────────────────────
     "habit_already_today": {
-        "pt": "{activity} já está anotado hoje. Uma vez por dia conta.",
+        "pt": "{activity} já está anotado hoje, não precisa repetir.",
         "nl": "{activity} staat vandaag al genoteerd. Eén keer per dag telt.",
-        "en": "{activity} is already logged for today. Once a day counts.",
+        "en": "{activity} is already logged for today, no need to repeat it.",
         "fr": "{activity} est déjà noté aujourd'hui. Une fois par jour compte.",
         "de": "{activity} ist für heute schon eingetragen. Einmal pro Tag zählt.",
     },
@@ -1585,9 +1585,9 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Ich habe {day} noch kein *{activity}*. Schon erledigt? Schreib es ohne Fragezeichen.",
     },
     "goal_deleted": {
-        "pt": "Pronto, tirei a meta *{title}* da sua lista.",
+        "pt": "Pronto, tirei a meta *{title}* da sua lista. Os registros já feitos continuam guardados.",
         "nl": "Klaar, het doel *{title}* staat niet meer in je lijst.",
-        "en": "Done, I removed the goal *{title}* from your list.",
+        "en": "Done, I removed the goal *{title}* from your list. Logs you already made are kept.",
         "fr": "C'est fait, j'ai retiré l'objectif *{title}* de ta liste.",
         "de": "Erledigt, das Ziel *{title}* ist nicht mehr in deiner Liste.",
     },
@@ -1952,6 +1952,7 @@ _STRINGS.update(_SERVICE_STRINGS)  # V2-36
 _STRINGS.update(_HOME_STRINGS)  # V2-27
 _STRINGS.update(_GOALS_STRINGS)
 _STRINGS.update(questions.STRINGS)
+_STRINGS.update(habits_ext.STRINGS)
 _STRINGS.update(balance_view.STRINGS)
 _STRINGS.update(bills.STRINGS)  # financial goals + week marks
 _STRINGS.update(_CAL_STRINGS)  # V2-21
@@ -3376,6 +3377,12 @@ def _goal_for_activity(goals, activity: str):
     """The active goal a habit log belongs to: a shared word, or a shared stem of 5+ letters
     ("meditei" × "meditar todos os dias")."""
     words = [w for w in strip_accents((activity or "").lower()).split() if w]
+    for (
+        nouns
+    ) in _HABIT_NOUNS.values():  # "meditei" also reads as "meditação" (goals made by F10-11)
+        label = nouns.get((activity or "").strip().lower())
+        if label:
+            words += [w for w in strip_accents(label.lower()).split() if w]
     for g in goals:
         title = strip_accents(g.title.lower())
         title_words = re.findall(r"[a-z]+", title)
@@ -6247,6 +6254,14 @@ async def handle_inbound(
                 _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
             )
             linked_goal = _goal_for_activity(res_hg.scalars().all(), habit_activity)
+            qty = habits_ext.parse_quantity(body_plain)
+            if qty is not None:  # F10-10: "li 30 páginas" keeps the 30; the week adds up
+                reply = await habits_ext.log_with_quantity(
+                    session, member, lang, habit_activity, linked_goal, *qty, today_local()
+                )
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
             if await _habit_already_logged(session, member.id, habit_activity, today_local()):
                 reply = _t("habit_already_today", lang, activity=habit_activity)
                 await send_text(to, reply)
@@ -6264,10 +6279,16 @@ async def handle_inbound(
                 reply = _t(
                     "habit_logged_with_goal", lang, activity=habit_activity, goal=linked_goal.title
                 ) + await goals_view.marks_line(session, member, linked_goal, lang, today_local())
-            else:
-                reply = _t("habit_logged", lang, activity=habit_activity)
-            await send_text(to, reply)
-            await _save_outbound(member, reply, session)
+            else:  # F10-11/12: no goal yet → offer to create one (once per habit)
+                reply = await habits_ext.offer_goal(
+                    session,
+                    member,
+                    lang,
+                    habit_activity,
+                    _t("habit_logged", lang, activity=habit_activity),
+                )
+            await _send_reply(to, reply)
+            await _save_outbound(member, getattr(reply, "text", reply), session)
             return
 
         # 4e-8b. M9 — log de hábito via LLM (free-form)
@@ -6328,9 +6349,15 @@ async def handle_inbound(
                         session, member, linked_goal2, lang, today_local()
                     )
                 else:
-                    reply = _t("habit_logged", lang, activity=h_activity)
-                await send_text(to, reply)
-                await _save_outbound(member, reply, session)
+                    reply = await habits_ext.offer_goal(
+                        session,
+                        member,
+                        lang,
+                        h_activity,
+                        _t("habit_logged", lang, activity=h_activity),
+                    )
+                await _send_reply(to, reply)
+                await _save_outbound(member, getattr(reply, "text", reply), session)
                 logger.info(
                     "conversation.habit_recorded_llm", member_id=str(member.id), activity=h_activity
                 )
@@ -6364,6 +6391,15 @@ async def handle_inbound(
                     from datetime import timedelta as _td
 
                     log_date = today_local() - _td(days=health_data["days_ago"])
+                if health_data["log_type"] == "mood":  # F10-22: a score above 10 is checked
+                    mv = habits_ext.mood_value(health_data["value"])
+                    if mv is not None and mv > 10:
+                        over = await habits_ext.ask_mood_over(
+                            session, member, lang, health_data, log_date
+                        )
+                        await _send_reply(to, over)
+                        await _save_outbound(member, over.text, session)
+                        return
                 hlog = HealthLog(
                     id=uuid.uuid4(),
                     member_id=member.id,
@@ -6379,7 +6415,12 @@ async def handle_inbound(
                 if lt == "medication":
                     reply = _t("health_saved_medication", lang, value=val)
                 elif lt == "mood":
-                    reply = _t("health_saved_mood", lang, value=val)
+                    mv = habits_ext.mood_value(health_data["value"])
+                    reply = (
+                        habits_ext.mood_reply(mv, lang)
+                        if mv is not None
+                        else _t("health_saved_mood", lang, value=val)
+                    )
                 elif lt == "sleep":
                     reply = _t("health_saved_sleep", lang, value=val)
                 else:
@@ -6436,7 +6477,12 @@ async def handle_inbound(
                     avg = round(total_h / len(sleep_rows), 1)
                 except (ValueError, ZeroDivisionError):
                     avg = 0.0
-                reply = _t("health_sleep_avg", lang, avg=_num(avg, lang), n=len(sleep_rows))
+                reply = _t(
+                    "health_sleep_avg",
+                    lang,
+                    avg=_num(avg, lang),
+                    n=habits_ext.count_word(len(sleep_rows), lang),
+                )
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
