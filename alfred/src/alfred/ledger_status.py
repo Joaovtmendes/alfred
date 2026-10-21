@@ -566,6 +566,7 @@ async def bill_reminders(session: AsyncSession, now: datetime) -> list[BillRemin
             .join(Member, RecurringItem.member_id == Member.id)
             .where(
                 RecurringItem.active.is_(True),
+                RecurringItem.kind != "income",
                 RecurringItem.next_due_date == yesterday,
                 Member.consent_state == "accepted",
             )

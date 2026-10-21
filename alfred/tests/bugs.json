@@ -1784,6 +1784,28 @@
       "source": "Hard test 20/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-081",
+      "title": "mesma conta fixa com outro dia dizia 'já tem' sem oferecer mudar",
+      "severity": "baixa",
+      "area": "contas",
+      "step": "hard test F06-18",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-082",
+      "title": "'salário 3000 todo mês' não virava receita fixa",
+      "severity": "baixa",
+      "area": "contas",
+      "step": "hard test F06-33",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }

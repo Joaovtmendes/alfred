@@ -661,7 +661,9 @@ async def upcoming(
     if not f.states or "to_pay" in f.states:
         rows = await session.execute(
             select(RecurringItem).where(
-                RecurringItem.member_id == member_id, RecurringItem.active.is_(True)
+                RecurringItem.member_id == member_id,
+                RecurringItem.active.is_(True),
+                RecurringItem.kind != "income",
             )
         )
         for it in rows.scalars().all():
@@ -751,7 +753,11 @@ async def recurring_items(
 ) -> list[Recurring]:
     rows = await session.execute(
         select(RecurringItem)
-        .where(RecurringItem.member_id == member_id, RecurringItem.active.is_(True))
+        .where(
+            RecurringItem.member_id == member_id,
+            RecurringItem.active.is_(True),
+            RecurringItem.kind != "income",
+        )
         .order_by(RecurringItem.next_due_date, RecurringItem.name)
     )
     out: list[Recurring] = []

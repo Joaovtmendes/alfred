@@ -150,7 +150,9 @@ async def build_summary(
         (
             await session.execute(
                 select(RecurringItem).where(
-                    RecurringItem.member_id == member.id, RecurringItem.active.is_(True)
+                    RecurringItem.member_id == member.id,
+                    RecurringItem.active.is_(True),
+                    RecurringItem.kind != "income",
                 )
             )
         )
