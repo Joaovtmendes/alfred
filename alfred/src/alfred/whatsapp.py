@@ -137,6 +137,51 @@ async def send_template(
     return data
 
 
+MAX_BUTTONS = 3  # WhatsApp reply buttons; more options go out as a list message
+MAX_LIST_ROWS = 10
+LIST_BUTTON_LABEL = "Menu"  # the same word in pt, nl, en, fr and de
+
+
+async def _send_list(to: str, body: str, rows: list[tuple[str, str]]) -> dict:
+    """A list message (up to 10 rows, row title <= 24). The tap comes back as ``list_reply``."""
+    url = f"{_GRAPH_URL}/{settings.whatsapp_phone_number_id}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "list",
+            "body": {"text": body[:1024]},
+            "action": {
+                "button": LIST_BUTTON_LABEL,
+                "sections": [
+                    {
+                        "title": LIST_BUTTON_LABEL,
+                        "rows": [{"id": rid[:200], "title": title[:24]} for rid, title in rows],
+                    }
+                ],
+            },
+        },
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.whatsapp_token.get_secret_value()}",
+        "Content-Type": "application/json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+            if not resp.is_success:
+                logger.error("whatsapp.list_send_failed", status=resp.status_code, to=to)
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPError:
+        options = "\n".join(f"- {title}" for _, title in rows)
+        return await send_text(to, f"{body}\n{options}")
+    delivery.note_sent(_wamid(data))
+    return data
+
+
 async def send_buttons(to: str, body: str, buttons: list[tuple[str, str]]) -> dict:
     """Send a message with up to 3 quick-reply buttons.
 
@@ -153,6 +198,8 @@ async def send_buttons(to: str, body: str, buttons: list[tuple[str, str]]) -> di
         logger.info("whatsapp.send_suppressed", to=to)
         return {"suppressed": True}
     url = f"{_GRAPH_URL}/{settings.whatsapp_phone_number_id}/messages"
+    if len(buttons) > MAX_BUTTONS:
+        return await _send_list(to, body, buttons[:MAX_LIST_ROWS])
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",

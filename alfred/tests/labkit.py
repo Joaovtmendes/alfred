@@ -49,6 +49,14 @@ class Lab:
         }
         return await self._run(make_message(body=None, raw=raw))
 
+    async def pick(self, row_id: str, title: str = "row") -> str:
+        """Pick a row of a list message (``interactive.list_reply``); returns the reply text."""
+        raw = {
+            "type": "interactive",
+            "interactive": {"type": "list_reply", "list_reply": {"id": row_id, "title": title}},
+        }
+        return await self._run(make_message(body=None, raw=raw))
+
     async def doc(self, filename: str, data: bytes | str | None, mime: str = "text/csv") -> str:
         """Send a document (a statement file); ``data`` is what the media download returns."""
         raw = {

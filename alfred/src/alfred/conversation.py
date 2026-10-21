@@ -24,6 +24,7 @@ from sqlalchemy.orm.attributes import set_committed_value
 
 from alfred import goals as goals_view
 from alfred import google_calendar as _gcal
+from alfred import questions
 from alfred.accounting import STRINGS as _ACCT_STRINGS
 from alfred.accounting import default_scope, handle_accounting_command
 from alfred.agenda import STRINGS as _AGENDA_STRINGS
@@ -51,6 +52,7 @@ from alfred.clock import (
 )
 from alfred.couple import STRINGS as _COUPLE_STRINGS
 from alfred.couple import (
+    Reply,
     active_link,
     handle_couple_button,
     handle_couple_command,
@@ -77,13 +79,14 @@ from alfred.iou import STRINGS as _IOU_STRINGS
 from alfred.iou import handle_iou_command
 from alfred.labels import activity_label as activity_name
 from alfred.labels import category_label
-from alfred.lang_cmd import STRINGS as _LANG_STRINGS
 from alfred.lang_cmd import (
+    LANG_ROWS,
     is_bare_language_name,
     is_language_menu_request,
     parse_language_choice,
     parse_language_command,
 )
+from alfred.lang_cmd import STRINGS as _LANG_STRINGS
 from alfred.ledger_status import STRINGS as _LEDGER_STRINGS
 from alfred.ledger_status import handle_ledger_command
 from alfred.llm import (
@@ -714,11 +717,31 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         ),
     },
     "bare_yes": {
-        "pt": "Tudo certo, mas não tenho nada esperando confirmação. Quer registrar alguma coisa? Por exemplo: “Mercado 20”.",
-        "nl": "Prima! Maar er staat niets open om te bevestigen. Wil je iets vastleggen, zeg het gerust, bijvoorbeeld: “Jumbo 20”.",
-        "en": "Sure! But I don't have anything waiting for confirmation. To log something, just tell me, e.g. “Groceries 20”.",
-        "fr": "D'accord ! Mais rien n'attend de confirmation. Pour enregistrer quelque chose, dis-le-moi, par ex. « Courses 20 ».",
-        "de": "Alles klar! Es wartet aber nichts auf Bestätigung. Zum Erfassen sag mir einfach z. B. „Einkauf 20“.",
+        "pt": (
+            "Sim para quê? Não tenho nada esperando confirmação. Me diga o que quer registrar, por exemplo: “Mercado 20”.",
+            "Fico feliz com o sim, mas não há nada pendente. Para registrar algo, é só escrever, por exemplo: “Café 3,50”.",
+            "Não tenho nenhuma pergunta aberta. Quer anotar um gasto (“Mercado 20”), um treino (“corri 5 km”) ou ver o saldo?",
+        ),
+        "nl": (
+            "Ja, waarvoor? Er staat niets open om te bevestigen. Zeg wat je wilt vastleggen, bijvoorbeeld: “Jumbo 20”.",
+            "Fijn, maar er is niets in behandeling. Wil je iets noteren, schrijf bijvoorbeeld: “Koffie 3,50”.",
+            "Ik heb geen open vraag. Wil je een uitgave noteren (“Jumbo 20”), een training (“5 km gelopen”) of je saldo zien?",
+        ),
+        "en": (
+            "Yes to what? Nothing is waiting for confirmation. Tell me what to log, e.g. “Groceries 20”.",
+            "Glad to hear it, but nothing is pending. To log something, just write it, e.g. “Coffee 3.50”.",
+            "I have no open question. Want to log an expense (“Groceries 20”), a workout (“ran 5 km”) or see your balance?",
+        ),
+        "fr": (
+            "Oui à quoi ? Rien n'attend de confirmation. Dis-moi ce que tu veux noter, par ex. « Courses 20 ».",
+            "Bien noté, mais rien n'est en attente. Pour enregistrer quelque chose, écris-le, par ex. « Café 3,50 ».",
+            "Je n'ai aucune question ouverte. Tu veux noter une dépense (« Courses 20 »), un entraînement (« couru 5 km ») ou voir ton solde ?",
+        ),
+        "de": (
+            "Ja, wozu? Es wartet nichts auf Bestätigung. Sag mir, was ich erfassen soll, z. B. „Einkauf 20“.",
+            "Schön, aber es ist nichts offen. Zum Erfassen schreib es einfach, z. B. „Kaffee 3,50“.",
+            "Ich habe keine offene Frage. Möchtest du eine Ausgabe erfassen („Einkauf 20“), ein Training („5 km gelaufen“) oder dein Saldo sehen?",
+        ),
     },
     "expense_corrected": {
         "pt": "Corrigido: {name}, {old} → {amount}.",
@@ -1927,7 +1950,8 @@ _STRINGS.update(_FOLLOWUP_STRINGS)  # V2-20 / V2-23
 _STRINGS.update(_INVOICE_STRINGS)  # V2-12 part 2
 _STRINGS.update(_SERVICE_STRINGS)  # V2-36
 _STRINGS.update(_HOME_STRINGS)  # V2-27
-_STRINGS.update(_GOALS_STRINGS)  # financial goals + week marks
+_STRINGS.update(_GOALS_STRINGS)
+_STRINGS.update(questions.STRINGS)  # financial goals + week marks
 _STRINGS.update(_CAL_STRINGS)  # V2-21
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
@@ -4642,6 +4666,14 @@ async def handle_flow_onboarding(
     return True
 
 
+async def _send_reply(to: str, reply) -> None:
+    """Send a ``Reply``: buttons (or a list when there are more than three) or plain text."""
+    if reply.buttons:
+        await send_buttons(to, reply.text, reply.buttons)
+    else:
+        await send_text(to, reply.text)
+
+
 async def _handle_button_reply(
     member: Member,
     message: Message,
@@ -4654,11 +4686,22 @@ async def _handle_button_reply(
     The expense id only ever selects a row of THIS member, so a forged id does nothing.
     """
     interactive = (message.raw or {}).get("interactive") or {}
-    if interactive.get("type") != "button_reply":
+    if interactive.get("type") not in ("button_reply", "list_reply"):
         return False
-    button_id = str((interactive.get("button_reply") or {}).get("id") or "")
+    # A list row (more than 3 options) comes back like a button tap, with the row id.
+    button_id = str(
+        (interactive.get("button_reply") or interactive.get("list_reply") or {}).get("id") or ""
+    )
     action, _, raw_id = button_id.partition(":")
     to = member.wa_phone
+
+    if action == "fu":  # an answer to a follow-up question (questions.py)
+        fu_reply = await questions.on_button(session, member, lang, button_id, today_local())
+        if fu_reply is None:
+            fu_reply = Reply(_t("fu_gone", lang), [])
+        await _send_reply(to, fu_reply)
+        await _save_outbound(member, fu_reply.text, session)
+        return True
 
     if action == "keep":
         audit(session, "wipe_cancelled", member.id, ts=int(datetime.now(UTC).timestamp()))
@@ -5032,7 +5075,8 @@ async def handle_inbound(
     if member.consent_state == "rejected":
         # The data rights do not depend on having accepted: erase and export still work
         # after "stop" (the privacy policy tells people to use them in the chat).
-        tapped = ((message.raw or {}).get("interactive") or {}).get("button_reply") or {}
+        _inter = (message.raw or {}).get("interactive") or {}
+        tapped = _inter.get("button_reply") or _inter.get("list_reply") or {}
         if str(tapped.get("id") or "").split(":")[0] in ("wipe", "keep"):
             await _handle_button_reply(member, message, session, lang)
             return
@@ -5086,6 +5130,13 @@ async def handle_inbound(
             await _save_outbound(member, doc_out.text, session)
             return
 
+        # 4-0aaa. An open follow-up question ("Vence quando?"): typed answer or it is closed
+        fu_out = await questions.on_text(session, member, lang, body_plain, today_local())
+        if fu_out is not None:
+            await _send_reply(to, fu_out)
+            await _save_outbound(member, fu_out.text, session)
+            return
+
         # 4-0aa. V2-17 — answers to a draft of 2+ entries ("sim" / "cancela" / "tira o segundo")
         batch_out = await handle_batch_text(body, body_plain, member, lang, session)
         if batch_out is not None:
@@ -5121,8 +5172,8 @@ async def handle_inbound(
                     expires_at=datetime.now(UTC) + timedelta(minutes=EDIT_MINUTES),
                 )
             )
-            reply = _t("language_ask", lang)
-            await send_text(to, reply)
+            reply = _t("language_pick", lang)  # one tap on the list (a typed 1-5 still works)
+            await send_buttons(to, reply, LANG_ROWS)
             await _save_outbound(member, reply, session)
             return
         new_lang = parse_language_command(body)

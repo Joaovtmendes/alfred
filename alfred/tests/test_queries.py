@@ -58,6 +58,7 @@ def _make_message(body: str) -> SimpleNamespace:
 def _mock_session(records=None) -> MagicMock:
     session = MagicMock()
     session.add = MagicMock()
+    session.scalar = AsyncMock(return_value=None)
     execute_result = MagicMock()
     execute_result.scalars.return_value.all.return_value = records or []
     session.execute = AsyncMock(return_value=execute_result)
