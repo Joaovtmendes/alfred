@@ -1806,6 +1806,17 @@
       "source": "Hard test 20/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-083",
+      "title": "'paguei 3 parcelas do celular' ia para o modelo; só uma parcela por 'paguei'",
+      "severity": "baixa",
+      "area": "contas",
+      "step": "hard test F06-23",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }

@@ -269,6 +269,13 @@ _PAID_RE = re.compile(
     r"^(?:(?:ja\s+)?paguei|pago|paid|i\s+paid|betaald|j'ai\s+paye|ich\s+habe|bezahlt)\s+"
     r"(?:(?:a|o|as|os|the|de|het|le|la|l'|die|der|das|my|meu|minha)\s+)?(?P<name>[a-z][a-z '\-]{1,60}?)(?:\s+bezahlt)?\s*[.!]*$"
 )  # fmt: skip
+# F06-23: "paguei 3 parcelas do celular" — several instalments at once
+_PAID_MANY_RE = re.compile(
+    r"^(?:(?:ja\s+)?paguei|pago|paid|i\s+paid|betaald|ik\s+heb|bezahlt|j'ai\s+paye)\s+(?P<n>\d{1,2})\s+"
+    r"(?:parcelas?|installments?|instalments?|termijnen|raten|echeances?|mensualites?)\s+"
+    r"(?:(?:do|da|de|dos|das|of|van|des|der|the|my|meu|minha|het|de)\s+)?"
+    r"(?P<name>[a-z][a-z '\-]{1,60}?)(?:\s+betaald)?\s*[.!]*$"
+)  # fmt: skip
 _PAID_NL_RE = re.compile(
     r"^ik\s+heb\s+(?:de\s+|het\s+)?(?P<name>[a-z][a-z '\-]{1,60}?)\s+betaald\s*[.!]*$"
 )
@@ -313,6 +320,18 @@ async def handle_recurring_command(
     parsed = parse_recurring(body, body_plain)
     if parsed is not None:
         return await _create(parsed, member, lang, session)
+
+    m_many = _PAID_MANY_RE.match(plain)
+    if m_many:
+        from alfred import bills
+
+        items = [i for i in await _active_items(session, member.id) if i.installments_total]
+        hits = match_items(m_many.group("name"), items, loose=True)
+        if len(hits) == 1:
+            return await bills.ask_pay_many(session, member, lang, hits[0], int(m_many.group("n")))
+        if len(hits) > 1:
+            return _t("recurring_ambiguous", lang, names=", ".join(h.name for h in hits))
+        return _t("pay_many_none", lang, name=m_many.group("name").strip())
 
     m_paid = _PAID_RE.match(plain) or _PAID_NL_RE.match(plain)
     if m_paid and not any(c.isdigit() for c in plain):

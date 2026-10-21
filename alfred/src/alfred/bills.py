@@ -382,3 +382,121 @@ async def income_reminders(session: AsyncSession, now: datetime) -> list:
         )
     await session.flush()
     return out
+
+
+# ── F06-23: "paguei 3 parcelas do celular" ────────────────────────────────────
+
+STRINGS.update(
+    {
+        "pay_many_none": _all(
+            'Não achei um parcelamento chamado {name}. Para criar um, diga por exemplo "celular em 10x de 89,90".',
+            'Ik vind geen afbetaling met de naam {name}. Maak er een aan met bijvoorbeeld "telefoon in 10x 89,90".',
+            'I can\'t find an instalment plan called {name}. Create one, for example "phone in 10x of 89.90".',
+            "Je ne trouve pas de paiement échelonné nommé {name}. Crée-en un, par exemple « téléphone en 10x de 89,90 ».",
+            'Ich finde keinen Ratenplan namens {name}. Lege einen an, zum Beispiel "Handy in 10 Raten à 89,90".',
+        ),
+        "pay_many_too_many": _all(
+            "{name} só tem {left} parcelas em aberto. Quer baixar todas?",
+            "{name} heeft nog maar {left} termijnen open. Alles afboeken?",
+            "{name} only has {left} instalments left. Settle all of them?",
+            "{name} n'a plus que {left} échéances. Tout solder ?",
+            "{name} hat nur noch {left} offene Raten. Alle abbuchen?",
+        ),
+        "pay_many_ask": _all(
+            "Baixar {n} parcelas de {name} ({n} × {each} = {total})? Faltariam {left}.",
+            "{n} termijnen van {name} afboeken ({n} × {each} = {total})? Dan blijven er {left} over.",
+            "Settle {n} instalments of {name} ({n} × {each} = {total})? {left} would remain.",
+            "Solder {n} échéances de {name} ({n} × {each} = {total}) ? Il en resterait {left}.",
+            "{n} Raten von {name} abbuchen ({n} × {each} = {total})? Es blieben {left}.",
+        ),
+        "pay_many_done": _all(
+            "Baixei {n} parcelas de {name} ({total}). Faltam {left}; a próxima vence em {due} e eu aviso 3 dias antes.",
+            "{n} termijnen van {name} afgeboekt ({total}). Nog {left}; de volgende vervalt op {due}, ik waarschuw je 3 dagen eerder.",
+            "Settled {n} instalments of {name} ({total}). {left} left; the next is due on {due} and I'll remind you 3 days before.",
+            "{n} échéances de {name} soldées ({total}). Il en reste {left} ; la prochaine est le {due}, je te préviens 3 jours avant.",
+            "{n} Raten von {name} abgebucht ({total}). Noch {left}; die nächste ist am {due} fällig, ich erinnere dich 3 Tage vorher.",
+        ),
+        "pay_many_last": _all(
+            "Baixei {n} parcelas de {name} ({total}). Foi a última: parcelamento quitado!",
+            "{n} termijnen van {name} afgeboekt ({total}). Dat was de laatste: afbetaald!",
+            "Settled {n} instalments of {name} ({total}). That was the last one: paid off!",
+            "{n} échéances de {name} soldées ({total}). C'était la dernière : soldé !",
+            "{n} Raten von {name} abgebucht ({total}). Das war die letzte: abbezahlt!",
+        ),
+    }
+)
+
+
+async def ask_pay_many(session: AsyncSession, member: Member, lang: str, item, n: int) -> Reply:
+    from alfred.conversation import _fmt_eur
+
+    left = (item.installments_total or 0) - (item.installments_paid or 0)
+    if n < 1:
+        return Reply(_t("pay_many_none", lang, name=item.name), [])
+    if n > left:
+        return await questions.ask(
+            session,
+            member,
+            "pay_many",
+            {"id": str(item.id), "n": left, "yes_no": True},
+            _t("pay_many_too_many", lang, name=item.name, left=left),
+            [("yes", _t("btn_yes", lang)), ("no", _t("btn_no", lang))],
+        )
+    return await questions.ask(
+        session,
+        member,
+        "pay_many",
+        {"id": str(item.id), "n": n, "yes_no": True},
+        _t(
+            "pay_many_ask",
+            lang,
+            n=n,
+            name=item.name,
+            each=_fmt_eur(item.amount),
+            total=_fmt_eur(item.amount * n),
+            left=left - n,
+        ),
+        [("yes", _t("btn_yes", lang)), ("no", _t("btn_no", lang))],
+    )
+
+
+async def _on_pay_many(session, member, lang, data, choice, today) -> Reply:
+    from alfred import recurring as rec
+    from alfred.conversation import _fmt_eur
+    from alfred.models import RecurringItem
+
+    item = await session.get(RecurringItem, uuid.UUID(data["id"]))
+    if item is None or item.member_id != member.id or not item.active:
+        return Reply(_t("fu_gone", lang), [])
+    if choice != "yes":
+        return Reply(_t("pay_many_cancelled", lang), [])
+    n = int(data["n"])
+    for _ in range(n):
+        await rec._pay(item, member, lang, session)
+    left = (item.installments_total or 0) - (item.installments_paid or 0)
+    total = _fmt_eur(item.amount * n)
+    if not item.active or left <= 0:
+        return Reply(_t("pay_many_last", lang, n=n, name=item.name, total=total), [])
+    return Reply(
+        _t(
+            "pay_many_done",
+            lang,
+            n=n,
+            name=item.name,
+            total=total,
+            left=left,
+            due=f"{item.next_due_date:%d/%m}",
+        ),
+        [],
+    )
+
+
+STRINGS["pay_many_cancelled"] = _all(
+    "Certo, não baixei nada.",
+    "Prima, ik heb niets afgeboekt.",
+    "Okay, I didn't settle anything.",
+    "D'accord, je n'ai rien soldé.",
+    "Okay, ich habe nichts abgebucht.",
+)
+
+questions.register("pay_many", _on_pay_many)
