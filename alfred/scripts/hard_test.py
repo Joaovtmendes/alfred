@@ -692,6 +692,32 @@ def bloco_p(run_id, delay):
     send("P21 arquivo não suportado: só texto", "importar extrato csv", run_id, delay)
 
 
+def bloco_q(run_id, delay):
+    """21/10 — PR A do hard test: saldo, contas a pagar, parcelas, perguntas com "sim", hábitos,
+    contratos e serviços. As respostas com botão (fu:…) são conferidas à mão no WhatsApp."""
+    print("\n══ Bloco Q — Correções do hard test (PR A) ══")
+    send("Q01 saldo curto", "saldo", run_id, delay)
+    send("Q02 a pagar sem data (pergunta o vencimento)", "a pagar internet 45", run_id, delay)
+    send("Q03 resposta ao vencimento", "dia 10", run_id, delay)
+    send("Q04 parcelas", "parcelei uma TV em 10x de 120", run_id, delay)
+    send("Q05 paguei duas parcelas", "paguei 2 parcelas da TV", run_id, delay)
+    send("Q06 sim solto sem pergunta", "sim", run_id, delay)
+    send("Q07 hábito com meta", "tomei 2 copos de água", run_id, delay)
+    send("Q08 peso", "peso 78,4", run_id, delay)
+    send("Q09 treino 4x10 não é parcela", "supino 4x10", run_id, delay)
+    send("Q10 contrato sem fornecedor", "contrato energia 120 até 31/12/2027", run_id, delay)
+    send("Q11 serviço com preço solto", "guarda serviço encanador Pedro 180", run_id, delay)
+    send("Q12 completar o rascunho", "garantia 12 meses", run_id, delay)
+    send("Q13 serviço só com valor", "serviço: 180 €", run_id, delay)
+    send(
+        "Q14 análise com botão Explicar",
+        "quanto gastei por categoria nos últimos 3 meses",
+        run_id,
+        delay,
+    )
+    send("Q15 exportar contabilidade em Excel", "exportar contabilidade xlsx", run_id, delay)
+
+
 BLOCOS = {
     "A": bloco_a,
     "B": bloco_b,
@@ -708,6 +734,7 @@ BLOCOS = {
     "N": bloco_n,
     "O": bloco_o,
     "P": bloco_p,
+    "Q": bloco_q,
 }
 
 if __name__ == "__main__":

@@ -27,6 +27,8 @@ dependencies = [
     "tzdata>=2024.1",        # Europe/Amsterdam on slim images
     "sentry-sdk>=2.0",       # error tracking, only active with SENTRY_DSN
     "cryptography>=42",      # Fernet for health data at rest (DATA_ENCRYPTION_KEY)
+    "openpyxl>=3.1",         # xlsx statement import and accounting export (T11)
+    "pypdf>=4.0",            # PDF statement text, read locally before the model sees it (T11)
 ]
 
 [project.optional-dependencies]

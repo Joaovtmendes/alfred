@@ -34,9 +34,9 @@ class Lab:
         self.health = AsyncMock(return_value=None)
         self.workout = AsyncMock(return_value=None)
 
-    async def say(self, body: str) -> str:
-        """Send one message; returns the reply text."""
-        return await self._run(make_message(body))
+    async def say(self, body: str, replies: int = 1) -> str:
+        """Send one message; returns the reply text (the first, when ``replies`` > 1)."""
+        return await self._run(make_message(body), replies)
 
     async def tap(self, button_id: str, title: str = "btn") -> str:
         """Tap a reply button (``interactive.button_reply``); returns the reply text."""
@@ -46,6 +46,14 @@ class Lab:
                 "type": "button_reply",
                 "button_reply": {"id": button_id, "title": title},
             },
+        }
+        return await self._run(make_message(body=None, raw=raw))
+
+    async def pick(self, row_id: str, title: str = "row") -> str:
+        """Pick a row of a list message (``interactive.list_reply``); returns the reply text."""
+        raw = {
+            "type": "interactive",
+            "interactive": {"type": "list_reply", "list_reply": {"id": row_id, "title": title}},
         }
         return await self._run(make_message(body=None, raw=raw))
 
@@ -99,7 +107,7 @@ class Lab:
         ):
             return await self._run(make_message(body=None, raw=raw))
 
-    async def _run(self, message) -> str:
+    async def _run(self, message, replies: int = 1) -> str:
         before = len(self.sent)
 
         async def fake_send(to: str, text: str) -> dict:
@@ -134,8 +142,9 @@ class Lab:
                 member = await s.get(Member, self.member_id)
                 await handle_inbound(member, message, s)
                 await s.commit()
-        assert len(self.sent) == before + 1, f"expected exactly one reply, got {self.sent[before:]}"
-        return self.sent[-1]
+        got = self.sent[before:]
+        assert len(got) == replies, f"expected {replies} reply(ies), got {got}"
+        return got[0]
 
     async def scalar(self, stmt):
         async with AsyncSessionLocal() as s:

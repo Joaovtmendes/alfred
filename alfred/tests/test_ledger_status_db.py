@@ -117,7 +117,7 @@ async def test_receivable_becomes_received_income(lab: Lab) -> None:
 
 @db
 async def test_paid_amount_overrides_the_stored_one(lab: Lab) -> None:
-    await lab.say("a pagar luz 120")
+    await lab.say("a pagar luz 120 hoje")
     await lab.say("paguei a luz 110")
     (e,) = await _exps(lab)
     assert (e.status, float(e.amount)) == ("paid", 110.0)
@@ -147,7 +147,7 @@ async def test_unmatched_paguei_still_reaches_the_other_handlers(lab: Lab) -> No
 @db
 async def test_limit_of_pending_items(lab: Lab) -> None:
     await lab.add(*[_row(lab, f"c{i}", 1, "to_pay") for i in range(MAX_PENDING)])
-    reply = await lab.say("a pagar extra 10")
+    reply = await lab.say("a pagar extra 10 hoje")
     assert str(MAX_PENDING) in reply
     assert len(await _exps(lab)) == MAX_PENDING
 
@@ -167,7 +167,9 @@ async def _seed(lab: Lab) -> None:
 @db
 async def test_balance_ignores_pending_but_shows_forecast(lab: Lab) -> None:
     await _seed(lab)
-    reply = await lab.say("saldo")
+    short = await lab.say("saldo")
+    assert "960,00" in short and "500,00" in short and "Receitas" not in short  # B-076
+    reply = await lab.tap(lab.buttons[-1][0][0])  # Ver detalhes
     assert "1.000,00" in reply and "40,00" in reply
     assert "500,00" in reply and "700,00" in reply  # forecast line
     assert "960,00" in reply  # 1000 - 40

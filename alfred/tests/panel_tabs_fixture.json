@@ -507,21 +507,48 @@
       "target": "7 por semana",
       "deadline": null,
       "logs_7d": 5,
-      "logs_30d": 5
+      "logs_30d": 5,
+      "week": [
+       "done",
+       "done",
+       "missed",
+       "done",
+       "done",
+       "later",
+       "later"
+      ]
      },
      {
       "title": "Caminhar 8.000 passos",
       "target": "7 por semana",
       "deadline": null,
       "logs_7d": 4,
-      "logs_30d": 4
+      "logs_30d": 4,
+      "week": [
+       "done",
+       "missed",
+       "done",
+       "done",
+       "missed",
+       "later",
+       "later"
+      ]
      },
      {
       "title": "12 treinos no mês",
       "target": "12 no mês",
       "deadline": "2026-10-28",
       "logs_7d": 2,
-      "logs_30d": 2
+      "logs_30d": 2,
+      "week": [
+       "missed",
+       "missed",
+       "done",
+       "done",
+       "missed",
+       "later",
+       "later"
+      ]
      }
     ],
     "phrase": {
@@ -786,6 +813,34 @@
      "chat": "\"água hoje\"",
      "severity": "info"
     }
+   },
+   {
+    "id": "weight",
+    "empty": false,
+    "values": {
+     "latest": 72.5,
+     "change_30d": -0.8,
+     "entries": 4
+    },
+    "phrase": null,
+    "points": [
+     {
+      "date": "2026-09-20",
+      "kg": 73.3
+     },
+     {
+      "date": "2026-10-05",
+      "kg": 73.0
+     },
+     {
+      "date": "2026-10-14",
+      "kg": 72.8
+     },
+     {
+      "date": "2026-10-20",
+      "kg": 72.5
+     }
+    ]
    }
   ]
  },

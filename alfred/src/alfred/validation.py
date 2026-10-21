@@ -74,6 +74,14 @@ def _days_ago(value: Any) -> int:
     return max(0, min(int(n), MAX_DAYS_AGO))
 
 
+def _pending_in_days(value: Any) -> int | None:
+    """None = already happened; 0..365 = the money only moves in that many days (pending)."""
+    n = _num(value)
+    if n is None or n < 0:
+        return None
+    return min(int(n), 365)
+
+
 def sanitize_expense(data: dict) -> dict | None:
     amount = _num(data.get("amount"))
     if amount is None:
@@ -102,6 +110,7 @@ def sanitize_expense(data: dict) -> dict | None:
         "description": _text(data.get("description")) or "",
         "type": txn_type,
         "days_ago": _days_ago(data.get("days_ago")),
+        "pending_in_days": _pending_in_days(data.get("pending_in_days")),
     }
 
 

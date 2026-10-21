@@ -58,6 +58,7 @@ def _make_message(body: str) -> SimpleNamespace:
 def _mock_session(records=None) -> MagicMock:
     session = MagicMock()
     session.add = MagicMock()
+    session.scalar = AsyncMock(return_value=None)
     execute_result = MagicMock()
     execute_result.scalars.return_value.all.return_value = records or []
     session.execute = AsyncMock(return_value=execute_result)
@@ -227,13 +228,14 @@ async def test_saldo_command_routing(word: str) -> None:
 
     with (
         patch("alfred.conversation.send_text", new_callable=AsyncMock) as mock_send,
+        patch("alfred.conversation.send_buttons", new_callable=AsyncMock) as mock_buttons,
         patch("alfred.conversation.generate_reply", new_callable=AsyncMock) as mock_llm,
         patch("alfred.conversation.extract_expense", new_callable=AsyncMock, return_value=None),
         patch("alfred.conversation.classify_query", new_callable=AsyncMock, return_value=None),
     ):
         await handle_inbound(member, message, session)
 
-    mock_send.assert_awaited_once()
+    assert mock_send.await_count + mock_buttons.await_count == 1  # short saldo + Detalhes button
     mock_llm.assert_not_awaited()
 
 

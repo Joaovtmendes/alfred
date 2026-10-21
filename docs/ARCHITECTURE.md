@@ -56,7 +56,7 @@ ignora, excepto `START`. O "sim" curto de consentimento no chat deixou de existi
 
 | Passo | O quê | Módulo / função |
 |---|---|---|
-| 4-0 | toque num botão (`undo:` `edit:` `ok:` `appt_*` `batch_*` `wipe:` `keep:` `bare_yes/bare_no` `plan_*` `dd_*` `fb_*` `inv_*` `svc_*` `home_*`) | `_handle_button_reply` |
+| 4-0 | toque num botão (`undo:` `edit:` `ok:` `appt_*` `batch_*` `wipe:` `keep:` `bare_yes/bare_no` `plan_*` `dd_*` `fb_*` `inv_*` `svc_*` `home_*` `fu:` `an_exp` `imp_*`) | `_handle_button_reply` |
 | 4-0aa | resposta a um rascunho de 2+ lançamentos ("sim", "cancela", "tira o segundo", "o primeiro foi 4") | `batch.py` `handle_batch_text` (só consulta a BD se o texto parece uma resposta) |
 | 4-0a | "sim" solto sem rascunho → "não há nada a confirmar" | `_BARE_YES_RE` |
 | 4-0i | palavra solta de módulo ("faturas", "a pagar", "pessoal"): **pergunta antes de gravar** (A-74, `BARE_KIND`) | `_BARE_RECORD_WORDS` |
@@ -77,7 +77,8 @@ ignora, excepto `START`. O "sim" curto de consentimento no chat deixou de existi
 | 4e-0k | visões guardadas V2-14 | `analysis.py` `handle_view_command` |
 | 4e-1 | correcção de categoria ("Jumbo é supermarkt") | `parsing.py` |
 | 4e-2 … 4e-5d | notas, tarefas, dashboard | M10, M11 |
-| 4e-6 … 4e-8b | metas e hábitos (regex e LLM) | M9 |
+| 4e-0s4b | metas financeiras: criar com valor e prazo, "guardei 500 na reserva", "tenho 2000 na reserva", "metas financeiras" | `goals.py` |
+| 4e-6 … 4e-8b | metas e hábitos (regex e LLM); ao registrar, mostra os dias da semana (✅⬜▫️) | M9, `goals.py` |
 | 4e-9 … 4e-9e | saúde: medicação, humor, sono, água | M8 |
 | 4e-10 … 4e-11d | treinos | M7 |
 | 4e-0c(2), 4e-0d | comandos reais que o LLM improvisava; correcção de valor ("errei, foram 42") | |
@@ -110,7 +111,7 @@ linha `message` (V2-18) para o estado de entrega chegar depois pelo webhook (`st
 Tudo pertence a um `member` (e este a um `household`). Tabelas: `household`, `member`,
 `message` (inclui `kind`, `delivery_status`), `expense` (inclui `status`: paid / to_pay /
 received / to_receive; relatórios só contam paid e received), `merchant_category_overrides`,
-`scheduled_job`, `workout_session`, `health_log`, `goal`, `habit_log`, `note`, `task`, `trip`,
+`scheduled_job`, `workout_session`, `health_log`, `goal`, `goal_contribution` (aportes: `add` soma, `set` define o saldo; é o que mede a meta financeira), `habit_log`, `note`, `task`, `trip`,
 `llm_usage`, `audit_log` e, do V2, `budget`, `recurring_item`, `appointment`, `saved_view`,
 `iou`, `pending_batch` e, do V2-35, `workout_plan`, `workout_plan_day`,
 `workout_plan_item`, `workout_load`, `trip_item`, `trip_pack_item`, `trip_budget_line` (único por
@@ -120,7 +121,7 @@ tabela nova entra sozinha.
 Também: `google_connection` (Google Agenda opcional, `google_calendar.py`; token cifrado, desligar
 ou apagar dados revoga a concessão), `member.email`, `member.signup_token*`, `member.health_consent_at`,
 `member.timezone` (A-66). Migrações em `alfred/alembic/versions/` numa cadeia linear; o head actual é
-`d8e9f0a1b2c3` (fuso por membro; antes `c7d8e9f0a1b2` Google Agenda, `b6c7d8e9f0a1` e-mail do
+`f0a1b2c3d4e5` (quantidade e unidade em `habit_log`, 21/10; antes `e9f0a1b2c3d4` aportes de metas financeiras; antes `d8e9f0a1b2c3` fuso por membro; antes `c7d8e9f0a1b2` Google Agenda, `b6c7d8e9f0a1` e-mail do
 cadastro). Cada item V2 tem uma migração própria.
 
 ## Painel v2
@@ -183,8 +184,8 @@ states, trip}, "cards": [...]}`. Todo cartão tem `id` estável, `empty`, `phras
 |---|---|
 | `summary` | `balance` (com `compare` e `projection`), `categories`, `goals`, `week`, `upcoming` |
 | `agenda` | `week`, `load` (Respiro e pico: compromissos por dia nos próximos 7 dias), `tasks`, `deadlines` (Prazos da semana: tarefas com prazo nos próximos 7 dias, por dia), `month_map`, `reminders`, `notes` |
-| `money` | `transactions` (50 por página, `?page=N`; visão por dia com filtro de dia no topo, no navegador), `month_vs_month`, `top_expenses`, `categories`, `budgets`, `fixed_variable`, `owed`, `daily`, `recurring` |
-| `health` | `goals`, `workouts`, `training`, `water` |
+| `money` | `transactions` (50 por página, `?page=N`; visão por dia com filtro de dia no topo, no navegador), `month_vs_month`, `top_expenses`, `categories`, `budgets`, `money_goals` (metas financeiras: guardado, % e quanto por mês), `fixed_variable`, `owed`, `daily`, `recurring` |
+| `health` | `goals` (só metas de rotina, com os 7 dias da semana), `workouts`, `training`, `water` |
 
 A ordem é a da API em todas as telas (sem `order` em CSS; há teste de contrato). Nenhum cartão tem
 "ver como tabela".
@@ -305,10 +306,32 @@ máscara de dias (Seg=1 … Dom=64) mais dia do mês opcional, guardado em `payl
 (máscara 127); `scripts/daily_cron.py::is_job_due(day_of_month=…)` o respeita. `cadence_label` dá a
 frase da confirmação e da listagem nas 5 línguas.
 
+### Hard test PR A (21/10/2026)
+
+- **Perguntas de acompanho** (`questions.py`): uma pergunta aberta por membro (15 min), botões
+  `fu:<id>:<escolha>`, `register(tipo, handler, parser)`; `data["yes_no"]=True` liga o sim/não padrão.
+  Usada por contas a pagar (`bills.py`: vencimento, repetição, troca de dia, "paguei N", entradas
+  fixas), orçamento (categoria nova, aumentar limite), hábitos (`habits_ext.py`: meta, quantidade,
+  humor, peso, comparação de treino), treino (salvar exercício, "você quis dizer") e casa
+  (`home.py`: fornecedor/fim em falta, dia de cobrança → conta fixa com fim).
+- **Serviços** (`services.py`): preço sem €, "Faltam: …", edição `valor 180` / `garantia 12 meses`
+  enquanto o rascunho vive, `serviço: 180 €` com nome genérico.
+- **Comprovantes** (`batch.py`): um `pending_batch` por comprovante (até 5 vivos, cabeçalho
+  "Comprovante n de m", aviso de duplicado); botões agem no id, o texto age no mais recente; listas de
+  texto continuam a substituir só a lista anterior. Sem migração.
+- **Extratos**: CSV (`statement_csv.py`), xlsx (`xlsx_to_csv`: 3 MB, 5.000 linhas, zip ≤ 40 MB
+  descompactado, `.xlsm` recusado) e PDF (`statement_pdf.py`: pypdf local, ≤ 5 MB e 10 páginas, IBAN
+  → `[IBAN]` antes do modelo, `llm.read_statement_text`, linhas revalidadas, sempre rascunho).
+  Tudo repetido oferece "Ok / Importar mesmo assim" (`imp_force`, id `~n`).
+- **Exportação contábil** em xlsx (`accounting.export_xlsx`, uma aba por mês; `?format=xlsx`).
+- **Análises**: botão "Explicar" (`an_exp:<id>`, `analysis.explain_button`). **Cadastro**: formulário
+  com `novalidate`. **Painel**: cartão de peso.
+- Migração desta rodada: `f0a1b2c3d4e5` (rodar no Railway antes do deploy).
+
 ## Chamadas ao LLM
 
 `llm.py` tem um único `AsyncAnthropic` por processo (timeout 20 s, 2 retries).
-Uma mensagem de conversa livre pode gerar até 4 chamadas sequenciais (extractor do
+Há também a leitura de arquivos (`read_member_file`, foto/PDF) e a de texto de extrato PDF (`read_statement_text`, IBAN já mascarado). Uma mensagem de conversa livre pode gerar até 4 chamadas sequenciais (extractor do
 módulo → despesa → classificação de query → resposta); juntar isto numa chamada com
 tool use é o próximo ganho de custo e latência (roadmap S0).
 

@@ -35,6 +35,7 @@ from alfred.models import (  # noqa: E402
     Budget,
     Expense,
     Goal,
+    GoalContribution,
     HabitLog,
     HealthLog,
     Household,
@@ -110,6 +111,7 @@ async def run() -> str:
         await s.flush()
         for model in (
             HabitLog,
+            GoalContribution,
             Goal,
             HealthLog,
             WorkoutSession,
@@ -298,9 +300,18 @@ async def _seed_life(s, member) -> None:
         target_unit="no mês",
         deadline=date(today.year, today.month, 28),
     )
-    s.add_all([meditar, walk, gym])
+    reserve = Goal(
+        member_id=mid,
+        title="Reserva de emergência",
+        target_value="5000",
+        target_unit="EUR",
+        deadline=date(today.year, 12, 31),
+    )
+    s.add_all([meditar, walk, gym, reserve])
     await _seed_training(s, mid, today)
     await s.flush()  # the goals need their ids for the check-ins
+    for kind, amount in (("add", 1200), ("add", 800), ("add", 200)):
+        s.add(GoalContribution(member_id=mid, goal_id=reserve.id, kind=kind, amount=amount))
     for i in (0, 1, 2, 4, 5):
         s.add(
             HabitLog(

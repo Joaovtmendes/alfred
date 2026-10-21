@@ -16,19 +16,20 @@ import math
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.audit import audit
-from alfred.clock import now_local
+from alfred.clock import local_tz, now_local, today_local
 from alfred.models import Expense, Member, PendingAction, PendingBatch, Trip
 from alfred.parsing import to_amount
 from alfred.validation import MAX_AMOUNT
 
 TTL = timedelta(minutes=15)
 MAX_ITEMS = 10
+MAX_LIVE_RECEIPTS = 5  # F13-10: one draft per receipt, at most five waiting at once
 
 __all__ = [
     "STRINGS",
@@ -67,20 +68,34 @@ def _store(item: dict) -> dict:
         "category": item.get("category") or "overig",
         "description": item.get("description"),
         "days_ago": int(item.get("days_ago") or 0),
+        "pending_in_days": item.get("pending_in_days"),
+        **({"src": "receipt"} if item.get("src") == "receipt" else {}),
     }
+
+
+def _pending_tag(item: dict, lang: str) -> str:
+    """ " · a receber em 23/10" for an entry whose money only moves later, "" otherwise."""
+    days = item.get("pending_in_days")
+    if days is None:
+        return ""
+    from alfred.conversation import _t
+
+    due = today_local() + timedelta(days=int(days))
+    key = "pending_tag_recv" if item["type"] == "income" else "pending_tag_pay"
+    return " · " + _t(key, lang, due=f"{due:%d/%m}")
 
 
 def _name(item: dict) -> str:
     return item.get("merchant") or item.get("description") or item.get("category") or "?"
 
 
-def _lines(items: list[dict]) -> str:
+def _lines(items: list[dict], lang: str = "pt") -> str:
     from alfred.conversation import _fmt_eur
 
     out = []
     for i, it in enumerate(items, 1):
         sign = "+" if it["type"] == "income" else ""
-        out.append(f"{i}. {_name(it)}: {sign}{_fmt_eur(it['amount'])}")
+        out.append(f"{i}. {_name(it)}: {sign}{_fmt_eur(it['amount'])}{_pending_tag(it, lang)}")
     return "\n".join(out)
 
 
@@ -98,7 +113,7 @@ def _draft_text(items: list[dict], lang: str, title: str | None = None) -> str:
     from alfred.conversation import _t
 
     head = title or _t("batch_title", lang, n=len(items))
-    return f"{head}\n{_lines(items)}\n\n{_t('batch_ask', lang)}"
+    return f"{head}\n{_lines(items, lang)}\n\n{_t('batch_ask', lang)}"
 
 
 # ── storage ───────────────────────────────────────────────────────────────────
@@ -118,6 +133,62 @@ def clean_items(items: list[dict]) -> list[dict]:
     return [_store(i) for i in items if _valid(i)][:MAX_ITEMS]
 
 
+def _is_receipt(batch: PendingBatch) -> bool:
+    return bool(batch.items) and batch.items[0].get("src") == "receipt"
+
+
+def _same(a: dict, b: dict) -> bool:
+    """Same amount and same merchant (case-insensitive): probably the same receipt twice."""
+    return (
+        abs(float(a["amount"]) - float(b["amount"])) < 0.005
+        and (a.get("merchant") or "").strip().lower() == (b.get("merchant") or "").strip().lower()
+    )
+
+
+async def _looks_duplicate(
+    session: AsyncSession, member: Member, items: list[dict], live: list[PendingBatch]
+) -> bool:
+    """F13-11: the new receipt equals a waiting draft or an entry recorded in the last 3 days."""
+    if len(items) != 1:
+        return False
+    item = items[0]
+    if any(len(b.items) == 1 and _same(item, b.items[0]) for b in live):
+        return True
+    since = now_local() - timedelta(days=3)
+    rows = (
+        await session.execute(
+            select(Expense.amount, Expense.merchant).where(
+                Expense.member_id == member.id,
+                Expense.transaction_type == "expense",
+                Expense.expense_date >= since,
+                Expense.amount == item["amount"],
+            )
+        )
+    ).all()
+    return any(
+        (m or "").strip().lower() == (item.get("merchant") or "").strip().lower() for _a, m in rows
+    )
+
+
+async def live_receipts(session: AsyncSession, member_id: uuid.UUID) -> list[PendingBatch]:
+    rows = await session.scalars(
+        select(PendingBatch)
+        .where(PendingBatch.member_id == member_id, PendingBatch.expires_at > now_local())
+        .order_by(PendingBatch.created_at)
+    )
+    return [b for b in rows.all() if _is_receipt(b)]
+
+
+async def _others_note(session: AsyncSession, member_id: uuid.UUID, lang: str) -> str:
+    """ "Ainda há 2 comprovantes esperando" after one of several drafts is settled."""
+    from alfred.conversation import _t
+
+    n = len(await live_receipts(session, member_id))
+    if n == 0:
+        return ""
+    return "\n\n" + _t("batch_others_one" if n == 1 else "batch_others", lang, n=n)
+
+
 async def create_draft(
     session: AsyncSession,
     member: Member,
@@ -130,18 +201,51 @@ async def create_draft(
     """Store a draft and return the message to show; None when fewer than ``min_items`` remain.
 
     A receipt read from a photo uses ``min_items=1`` and its own ``title``: one entry, but still
-    only written after the member confirms.
+    only written after the member confirms. Each receipt keeps its own draft (at most five
+    waiting); a text list still replaces the previous text list.
     """
-    clean = clean_items(items)
+    from alfred.conversation import _t
+
+    receipt = title is not None
+    clean = clean_items([{**i, "src": "receipt"} if receipt else i for i in items])
     if len(clean) < min_items:
         return None
-    await session.execute(delete(PendingBatch).where(PendingBatch.member_id == member.id))
+    await session.execute(
+        delete(PendingBatch).where(
+            PendingBatch.member_id == member.id, PendingBatch.expires_at <= now_local()
+        )
+    )
+    live = await live_receipts(session, member.id)
+    if receipt:
+        if len(live) >= MAX_LIVE_RECEIPTS:
+            return BatchReply(_t("batch_limit", lang, n=MAX_LIVE_RECEIPTS))
+        dup = await _looks_duplicate(session, member, clean, live)
+    else:  # a text list replaces the older text list, never a receipt waiting for its tap
+        old_text = [b.id for b in await _all_live(session, member.id) if not _is_receipt(b)]
+        if old_text:
+            await session.execute(delete(PendingBatch).where(PendingBatch.id.in_(old_text)))
+        dup = False
     batch = PendingBatch(
         id=uuid.uuid4(), member_id=member.id, items=clean, expires_at=now_local() + TTL
     )
     session.add(batch)
     await session.flush()
-    return BatchReply(_draft_text(clean, lang, title), _buttons(batch.id, lang))
+    head = title
+    if receipt and live:
+        head = _t("batch_receipt_n", lang, n=len(live) + 1, m=len(live) + 1) + " · " + (title or "")
+    text = _draft_text(clean, lang, head)
+    if dup:
+        text += "\n\n" + _t("batch_dup", lang)
+    return BatchReply(text, _buttons(batch.id, lang))
+
+
+async def _all_live(session: AsyncSession, member_id: uuid.UUID) -> list[PendingBatch]:
+    rows = await session.scalars(
+        select(PendingBatch).where(
+            PendingBatch.member_id == member_id, PendingBatch.expires_at > now_local()
+        )
+    )
+    return list(rows.all())
 
 
 async def _take(session: AsyncSession, member_id: uuid.UUID, batch_id: uuid.UUID | None):
@@ -189,6 +293,15 @@ async def record_items(
         new_id = uuid.uuid4()
         if ids_out is not None:
             ids_out.append(new_id)
+        # "vou receber 300 em dois dias": a pending entry on its due day, out of the balance
+        pending_days = it.get("pending_in_days")
+        extra: dict = {}
+        if pending_days is not None:
+            due = today_local() + timedelta(days=int(pending_days))
+            extra = {
+                "expense_date": datetime.combine(due, time(12, 0), tzinfo=local_tz()),
+                "status": "to_receive" if it["type"] == "income" else "to_pay",
+            }
         session.add(
             Expense(
                 id=new_id,
@@ -200,17 +313,22 @@ async def record_items(
                 merchant=it["merchant"],
                 category=it["category"],
                 description=it["description"],
-                expense_date=now_local() - timedelta(days=it["days_ago"]),
+                **{"expense_date": now_local() - timedelta(days=it["days_ago"]), **extra},
                 trip_id=trip.id if trip else None,
                 shared=shared,
             )
         )
-        if it["amount"] >= settings.high_value_threshold and it["type"] != "income":
+        if (
+            it["amount"] >= settings.high_value_threshold
+            and it["type"] != "income"
+            and pending_days is None
+        ):
             any_high = True
     await session.flush()
     audit(session, "batch_confirmed", member.id)
     lines = [
         f"• {_name(it)}: {'+' if it['type'] == 'income' else ''}{_fmt_eur(it['amount'])}"
+        f"{_pending_tag(it, lang)}"
         for it in items
     ]
     reply = "\n".join([_t("multi_recorded_title", lang, n=len(items)), *lines])
@@ -320,8 +438,12 @@ async def handle_batch_button(
     if expired:
         return BatchReply(_t("batch_expired", lang))
     if action == "batch_cancel":
-        return BatchReply(_t("batch_cancelled", lang))
-    return await _recorded(session, member, items, lang)
+        return BatchReply(
+            _t("batch_cancelled", lang) + await _others_note(session, member.id, lang)
+        )
+    done = await _recorded(session, member, items, lang)
+    done.text += await _others_note(session, member.id, lang)
+    return done
 
 
 # ── text ──────────────────────────────────────────────────────────────────────
@@ -372,6 +494,24 @@ _CHANGE = re.compile(
 )  # fmt: skip
 
 
+_WHEN = re.compile(
+    r"^(?:ajustar|ajusta|muda|mudar|altera|alterar|adjust|change|pas aan|aanpassen|ajuste)?\s*"
+    r"(?P<who>.+?)\s+(?:para|pra|em|daqui a|daqui|in|over|dans|en|binnen|nach)\s+"
+    r"(?:(?:daqui\s+)?(?:a\s+)?|dentro de\s+)?(?P<n>\d{1,3}|um|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|zero)\s+"
+    r"(?:dias?|days?|dagen|jours?|tage?n?)$"
+)
+_NUM_WORDS = {"zero": 0, "um": 1, "dois": 2, "duas": 2, "tres": 3, "quatro": 4, "cinco": 5, "seis": 6,
+              "sete": 7, "oito": 8, "nove": 9, "dez": 10}  # fmt: skip
+
+
+def _plain(text: str) -> str:
+    import unicodedata
+
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text.lower()) if unicodedata.category(c) != "Mn"
+    )
+
+
 def _ordinal(token: str, count: int) -> int | None:
     """1-based index named by ``token`` ("segundo", "2", "2o", "last"), or None."""
     token = token.strip().strip(".")
@@ -402,7 +542,8 @@ async def handle_batch_text(
     is_no = key in _NO or key in _NO_PHRASES
     rm = _REMOVE.match(plain)
     ch = _CHANGE.match(plain)
-    if not (is_yes or is_no or rm or ch):
+    when = _WHEN.match(plain)
+    if not (is_yes or is_no or rm or ch or when):
         return None  # cheap exit: most messages never touch the database here
     batch = await pending_batch(session, member.id)
     if batch is None:
@@ -421,10 +562,25 @@ async def handle_batch_text(
         if expired:
             return BatchReply(_t("batch_expired", lang))
         if is_no:
-            return BatchReply(_t("batch_cancelled", lang))
-        return await _recorded(session, member, items, lang)
+            return BatchReply(
+                _t("batch_cancelled", lang) + await _others_note(session, member.id, lang)
+            )
+        done = await _recorded(session, member, items, lang)
+        done.text += await _others_note(session, member.id, lang)
+        return done
 
-    if rm:
+    if when and not (rm or ch):
+        who = when.group("who").strip()
+        idx = _ordinal(who, len(items))
+        if idx is None:
+            hits = [k for k, it in enumerate(items, 1) if who and who in _plain(_name(it))]
+            idx = hits[0] if len(hits) == 1 else None
+        if idx is None or not 1 <= idx <= len(items):
+            return None  # "ajustar ..." about something else
+        n = when.group("n")
+        days = int(n) if n.isdigit() else _NUM_WORDS[n]
+        items[idx - 1] = {**items[idx - 1], "pending_in_days": days, "days_ago": 0}
+    elif rm:
         idx = _ordinal(rm.group("ord"), len(items))
         if idx is None or not 1 <= idx <= len(items):
             return None  # "tira ..." about something else
@@ -470,6 +626,55 @@ STRINGS: dict[str, dict[str, str]] = {
         "Confirm and I'll add them. Nothing has been added yet.",
         "Tu confirmes ? Rien n'est encore ajouté.",
         "Soll ich sie übernehmen? Bisher steht nichts in deiner Übersicht.",
+    ),
+    "batch_receipt_n": _all(
+        "Comprovante {n} de {m}",
+        "Bon {n} van {m}",
+        "Receipt {n} of {m}",
+        "Reçu {n} sur {m}",
+        "Beleg {n} von {m}",
+    ),
+    "batch_limit": _all(
+        "Já há {n} comprovantes esperando sua confirmação. Confirme ou cancele algum antes de enviar outro.",
+        "Er wachten al {n} bonnen op je bevestiging. Bevestig of annuleer er eerst een voordat je een nieuwe stuurt.",
+        "{n} receipts are already waiting for your confirmation. Confirm or cancel one before sending another.",
+        "{n} reçus attendent déjà ta confirmation. Confirme ou annule-en un avant d'en envoyer un autre.",
+        "{n} Belege warten schon auf deine Bestätigung. Bestätige oder verwirf einen, bevor du einen neuen sendest.",
+    ),
+    "batch_dup": _all(
+        "⚠ Parece igual a um comprovante que já está aqui (mesmo valor e mesmo local). Se for outro, confirme; se não, cancele este.",
+        "⚠ Dit lijkt op een bon die al is vastgelegd of klaarstaat (zelfde bedrag en winkel). Is het een andere, bevestig dan; anders annuleer je deze.",
+        "⚠ This looks like a receipt that is already here (same amount and place). If it is another one, confirm; if not, cancel this one.",
+        "⚠ Cela ressemble à un reçu déjà présent (même montant et même lieu). Si c'est un autre, confirme ; sinon annule celui-ci.",
+        "⚠ Das sieht wie ein Beleg aus, der schon da ist (gleicher Betrag und Ort). Ist es ein anderer, bestätige; sonst verwirf diesen.",
+    ),
+    "batch_others": _all(
+        "Ainda há {n} comprovantes esperando. Responda aos botões de cada um.",
+        "Er wachten nog {n} bonnen. Gebruik de knoppen bij elk bericht.",
+        "{n} more receipts still waiting. Use the buttons on each message.",
+        "Il reste {n} reçus en attente. Utilise les boutons de chaque message.",
+        "Noch {n} Belege warten. Nutze die Buttons der jeweiligen Nachricht.",
+    ),
+    "batch_others_one": _all(
+        "Ainda há 1 comprovante esperando. Responda aos botões dele.",
+        "Er wacht nog 1 bon. Gebruik de knoppen bij dat bericht.",
+        "1 more receipt is still waiting. Use the buttons on that message.",
+        "Il reste 1 reçu en attente. Utilise les boutons de ce message.",
+        "Noch 1 Beleg wartet. Nutze die Buttons dieser Nachricht.",
+    ),
+    "pending_tag_recv": _all(
+        "a receber em {due}",
+        "te ontvangen op {due}",
+        "to receive on {due}",
+        "à recevoir le {due}",
+        "zu erhalten am {due}",
+    ),
+    "pending_tag_pay": _all(
+        "a pagar em {due}",
+        "te betalen op {due}",
+        "to pay on {due}",
+        "à payer le {due}",
+        "zu zahlen am {due}",
     ),
     "batch_btn_ok": _all("Confirmar", "Bevestigen", "Confirm", "Confirmer", "Bestätigen"),
     "batch_btn_edit": _all("Ajustar", "Aanpassen", "Adjust", "Ajuster", "Anpassen"),

@@ -144,13 +144,14 @@ async def test_cancel_saves_nothing(lab: Lab) -> None:
 
 
 @db
-async def test_a_second_receipt_replaces_the_first_draft(lab: Lab) -> None:
+async def test_a_second_receipt_gets_its_own_draft(lab: Lab) -> None:  # F13-10
     await lab.media("image", PHOTO, R(merchant="Jumbo"))
     await lab.media("image", PHOTO, R(merchant="Albert Heijn", total=12))
-    assert await lab.scalar(select(func.count()).select_from(PendingBatch)) == 1
+    assert await lab.scalar(select(func.count()).select_from(PendingBatch)) == 2
     await lab.tap(lab.buttons[-1][0][0])
     (row,) = await lab.rows(select(Expense.merchant).where(Expense.member_id == lab.member_id))
     assert row[0] == "Albert Heijn"
+    assert await lab.scalar(select(func.count()).select_from(PendingBatch)) == 1
 
 
 @db

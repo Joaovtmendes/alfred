@@ -22,6 +22,8 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
+from alfred import balance_view, bills, budgets, habits_ext, questions
+from alfred import goals as goals_view
 from alfred import google_calendar as _gcal
 from alfred.accounting import STRINGS as _ACCT_STRINGS
 from alfred.accounting import default_scope, handle_accounting_command
@@ -37,6 +39,7 @@ from alfred.budgets import STRINGS as _BUDGET_STRINGS
 from alfred.budgets import alert_after_expense, handle_budget_command
 from alfred.clock import (
     day_start,
+    local_tz,
     month_name,
     month_start,
     now_local,
@@ -49,6 +52,7 @@ from alfred.clock import (
 )
 from alfred.couple import STRINGS as _COUPLE_STRINGS
 from alfred.couple import (
+    Reply,
     active_link,
     handle_couple_button,
     handle_couple_command,
@@ -62,6 +66,8 @@ from alfred.followup import (
     handle_deeper_button,
     handle_feedback_button,
 )
+from alfred.goals import STRINGS as _GOALS_STRINGS
+from alfred.goals import handle_goal_command
 from alfred.google_calendar import STRINGS as _GCAL_STRINGS
 from alfred.home import STRINGS as _HOME_STRINGS
 from alfred.home import handle_home_button, handle_home_command
@@ -73,13 +79,14 @@ from alfred.iou import STRINGS as _IOU_STRINGS
 from alfred.iou import handle_iou_command
 from alfred.labels import activity_label as activity_name
 from alfred.labels import category_label
-from alfred.lang_cmd import STRINGS as _LANG_STRINGS
 from alfred.lang_cmd import (
+    LANG_ROWS,
     is_bare_language_name,
     is_language_menu_request,
     parse_language_choice,
     parse_language_command,
 )
+from alfred.lang_cmd import STRINGS as _LANG_STRINGS
 from alfred.ledger_status import STRINGS as _LEDGER_STRINGS
 from alfred.ledger_status import handle_ledger_command
 from alfred.llm import (
@@ -588,11 +595,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         ),
     },
     "health_unsupported": {
-        "pt": "Ainda não acompanho peso nem pressão, só medicação, humor, sono e água.",
-        "nl": "Gewicht en bloeddruk volg ik nog niet, alleen medicatie, stemming, slaap en water.",
-        "en": "I don't track weight or blood pressure yet, only medication, mood, sleep and water.",
-        "fr": "Je ne suis pas encore le poids ni la tension, seulement médicaments, humeur, sommeil et eau.",
-        "de": "Gewicht und Blutdruck verfolge ich noch nicht, nur Medikamente, Stimmung, Schlaf und Wasser.",
+        "pt": 'Ainda não acompanho pressão nem glicose. Peso eu guardo: diga, por exemplo, "peso 72,5 kg".',
+        "nl": 'Bloeddruk en glucose volg ik nog niet. Gewicht bewaar ik wel: zeg bijvoorbeeld "gewicht 72,5 kg".',
+        "en": 'I don\'t track blood pressure or glucose yet. I do keep weight: say, for example, "weight 72.5 kg".',
+        "fr": "Je ne suis pas encore la tension ni la glycémie. Le poids, oui : dis par exemple « poids 72,5 kg ».",
+        "de": 'Blutdruck und Blutzucker verfolge ich noch nicht. Gewicht speichere ich: sag zum Beispiel "Gewicht 72,5 kg".',
     },
     "health_consent_ask": {
         "pt": "Antes de guardar dados de saúde (sono, humor, remédios, água), preciso da sua autorização. Eles ficam só para você ver aqui e no painel, e você pode retirar quando quiser com *retirar consentimento de saúde*.",
@@ -710,11 +717,31 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         ),
     },
     "bare_yes": {
-        "pt": "Tudo certo, mas não tenho nada esperando confirmação. Quer registrar alguma coisa? Por exemplo: “Mercado 20”.",
-        "nl": "Prima! Maar er staat niets open om te bevestigen. Wil je iets vastleggen, zeg het gerust, bijvoorbeeld: “Jumbo 20”.",
-        "en": "Sure! But I don't have anything waiting for confirmation. To log something, just tell me, e.g. “Groceries 20”.",
-        "fr": "D'accord ! Mais rien n'attend de confirmation. Pour enregistrer quelque chose, dis-le-moi, par ex. « Courses 20 ».",
-        "de": "Alles klar! Es wartet aber nichts auf Bestätigung. Zum Erfassen sag mir einfach z. B. „Einkauf 20“.",
+        "pt": (
+            "Sim para quê? Não tenho nada esperando confirmação. Me diga o que quer registrar, por exemplo: “Mercado 20”.",
+            "Fico feliz com o sim, mas não há nada pendente. Para registrar algo, é só escrever, por exemplo: “Café 3,50”.",
+            "Não tenho nenhuma pergunta aberta. Quer anotar um gasto (“Mercado 20”), um treino (“corri 5 km”) ou ver o saldo?",
+        ),
+        "nl": (
+            "Ja, waarvoor? Er staat niets open om te bevestigen. Zeg wat je wilt vastleggen, bijvoorbeeld: “Jumbo 20”.",
+            "Fijn, maar er is niets in behandeling. Wil je iets noteren, schrijf bijvoorbeeld: “Koffie 3,50”.",
+            "Ik heb geen open vraag. Wil je een uitgave noteren (“Jumbo 20”), een training (“5 km gelopen”) of je saldo zien?",
+        ),
+        "en": (
+            "Yes to what? Nothing is waiting for confirmation. Tell me what to log, e.g. “Groceries 20”.",
+            "Glad to hear it, but nothing is pending. To log something, just write it, e.g. “Coffee 3.50”.",
+            "I have no open question. Want to log an expense (“Groceries 20”), a workout (“ran 5 km”) or see your balance?",
+        ),
+        "fr": (
+            "Oui à quoi ? Rien n'attend de confirmation. Dis-moi ce que tu veux noter, par ex. « Courses 20 ».",
+            "Bien noté, mais rien n'est en attente. Pour enregistrer quelque chose, écris-le, par ex. « Café 3,50 ».",
+            "Je n'ai aucune question ouverte. Tu veux noter une dépense (« Courses 20 »), un entraînement (« couru 5 km ») ou voir ton solde ?",
+        ),
+        "de": (
+            "Ja, wozu? Es wartet nichts auf Bestätigung. Sag mir, was ich erfassen soll, z. B. „Einkauf 20“.",
+            "Schön, aber es ist nichts offen. Zum Erfassen schreib es einfach, z. B. „Kaffee 3,50“.",
+            "Ich habe keine offene Frage. Möchtest du eine Ausgabe erfassen („Einkauf 20“), ein Training („5 km gelaufen“) oder dein Saldo sehen?",
+        ),
     },
     "expense_corrected": {
         "pt": "Corrigido: {name}, {old} → {amount}.",
@@ -1473,11 +1500,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Keine Stimmungseinträge diese Woche.",
     },
     "health_sleep_avg": {
-        "pt": "Você dorme em média *{avg}h* (últimos 7 dias, {n} registros).",
-        "nl": "Je slaapt gemiddeld *{avg} uur* (laatste 7 dagen, {n} registraties).",
-        "en": "You sleep an average of *{avg}h* (last 7 days, {n} entries).",
-        "fr": "Tu dors en moyenne *{avg}h* (7 derniers jours, {n} entrées).",
-        "de": "Du schläfst im Schnitt *{avg}h* (letzte 7 Tage, {n} Einträge).",
+        "pt": "Você dorme em média *{avg}h* (últimos 7 dias, {n}).",
+        "nl": "Je slaapt gemiddeld *{avg} uur* (laatste 7 dagen, {n}).",
+        "en": "You sleep an average of *{avg}h* (last 7 days, {n}).",
+        "fr": "Tu dors en moyenne *{avg}h* (7 derniers jours, {n}).",
+        "de": "Du schläfst im Schnitt *{avg}h* (letzte 7 Tage, {n}).",
     },
     "health_sleep_empty": {
         "pt": "Ainda não há registros de sono esta semana.",
@@ -1516,9 +1543,9 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
     },
     # ── M9 — extras ───────────────────────────────────────────────────────────
     "habit_already_today": {
-        "pt": "{activity} já está anotado hoje. Uma vez por dia conta.",
+        "pt": "{activity} já está anotado hoje, não precisa repetir.",
         "nl": "{activity} staat vandaag al genoteerd. Eén keer per dag telt.",
-        "en": "{activity} is already logged for today. Once a day counts.",
+        "en": "{activity} is already logged for today, no need to repeat it.",
         "fr": "{activity} est déjà noté aujourd'hui. Une fois par jour compte.",
         "de": "{activity} ist für heute schon eingetragen. Einmal pro Tag zählt.",
     },
@@ -1558,9 +1585,9 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "de": "Ich habe {day} noch kein *{activity}*. Schon erledigt? Schreib es ohne Fragezeichen.",
     },
     "goal_deleted": {
-        "pt": "Pronto, tirei a meta *{title}* da sua lista.",
+        "pt": "Pronto, tirei a meta *{title}* da sua lista. Os registros já feitos continuam guardados.",
         "nl": "Klaar, het doel *{title}* staat niet meer in je lijst.",
-        "en": "Done, I removed the goal *{title}* from your list.",
+        "en": "Done, I removed the goal *{title}* from your list. Logs you already made are kept.",
         "fr": "C'est fait, j'ai retiré l'objectif *{title}* de ta liste.",
         "de": "Erledigt, das Ziel *{title}* ist nicht mehr in deiner Liste.",
     },
@@ -1923,6 +1950,11 @@ _STRINGS.update(_FOLLOWUP_STRINGS)  # V2-20 / V2-23
 _STRINGS.update(_INVOICE_STRINGS)  # V2-12 part 2
 _STRINGS.update(_SERVICE_STRINGS)  # V2-36
 _STRINGS.update(_HOME_STRINGS)  # V2-27
+_STRINGS.update(_GOALS_STRINGS)
+_STRINGS.update(questions.STRINGS)
+_STRINGS.update(habits_ext.STRINGS)
+_STRINGS.update(balance_view.STRINGS)
+_STRINGS.update(bills.STRINGS)  # financial goals + week marks
 _STRINGS.update(_CAL_STRINGS)  # V2-21
 _STRINGS.update(_OUTBOX_STRINGS)  # V2-18
 _STRINGS.update(_LANG_STRINGS)  # language switch (hard test 01/10)
@@ -3345,6 +3377,12 @@ def _goal_for_activity(goals, activity: str):
     """The active goal a habit log belongs to: a shared word, or a shared stem of 5+ letters
     ("meditei" × "meditar todos os dias")."""
     words = [w for w in strip_accents((activity or "").lower()).split() if w]
+    for (
+        nouns
+    ) in _HABIT_NOUNS.values():  # "meditei" also reads as "meditação" (goals made by F10-11)
+        label = nouns.get((activity or "").strip().lower())
+        if label:
+            words += [w for w in strip_accents(label.lower()).split() if w]
     for g in goals:
         title = strip_accents(g.title.lower())
         title_words = re.findall(r"[a-z]+", title)
@@ -4310,9 +4348,14 @@ async def _build_recent(
     return "\n".join(lines)
 
 
-async def _build_saldo(member: Member, session: AsyncSession, window=None) -> str:
+async def _build_saldo(
+    member: Member, session: AsyncSession, window=None, *, short: bool = False
+) -> str:
     """Income/expense balance of the current month, or of the window the text named
-    ("saldo de setembro", "saldo em 2025")."""
+    ("saldo de setembro", "saldo em 2025").
+
+    ``short`` (F05-07): only the balance (and the pending line), for the current month; the
+    detail (income, expenses, note and the month-end estimate) is one button away."""
     lang = member.language or "en"
     now = now_local()
     if window is not None and window.kind not in ("current_month",):
@@ -4349,13 +4392,17 @@ async def _build_saldo(member: Member, session: AsyncSession, window=None) -> st
     sign = "+" if balance >= 0 else "-"
 
     month_label = label or month_name(now.date(), lang, year=True)
-    lines = [
-        f"{_t('saldo_title', lang, month=month_label)}\n",
-        _t("saldo_income", lang, amount=_fmt_eur(total_in)),
-        _t("saldo_expenses", lang, amount=_fmt_eur(total_out)),
-        _t("saldo_balance", lang, sign=sign, amount=_fmt_eur(abs(balance))),
-        _t("saldo_note", lang),  # A-70: it is the period's in minus out, not the bank balance
-    ]
+    lines = [f"{_t('saldo_title', lang, month=month_label)}\n"]
+    if not (short and window is None):
+        lines += [
+            _t("saldo_income", lang, amount=_fmt_eur(total_in)),
+            _t("saldo_expenses", lang, amount=_fmt_eur(total_out)),
+        ]
+    lines.append(_t("saldo_balance", lang, sign=sign, amount=_fmt_eur(abs(balance))))
+    if not (short and window is None):
+        lines.append(_t("saldo_note", lang))  # A-70: it is the period's in minus out, not the bank
+        if window is None and (guess := balance_view.projection(total_out, now.date())):
+            lines.append(_t("saldo_projection", lang, amount=_fmt_eur(guess)))
     from alfred.ledger_status import pending_summary
 
     pend = await pending_summary(session, member.id)
@@ -4411,12 +4458,10 @@ async def _build_comparison(member: Member, session: AsyncSession) -> str:
         pct = abs(diff) / prev_total * 100
         diff_str = f"_{_fmt_eur(diff)} (-{pct:.0f}%) vs {prev_label}_"
 
-    lines = [
-        f"{_t('comparison_title', lang)}\n",
-        f"• {prev_label}: {_fmt_eur(prev_total)} ({prev_n})",
-        f"• {cur_label}: {_fmt_eur(cur_total)} ({cur_n})",
-        f"\n{diff_str}",
-    ]
+    lines = [f"{_t('comparison_title', lang)}\n"]
+    if prev_n:  # F08-16: an empty month is said in words, not shown as "€0,00 (0)"
+        lines.append(f"• {prev_label}: {_fmt_eur(prev_total)} ({prev_n})")
+    lines += [f"• {cur_label}: {_fmt_eur(cur_total)} ({cur_n})", f"\n{diff_str}"]
     return "\n".join(lines)
 
 
@@ -4637,6 +4682,16 @@ async def handle_flow_onboarding(
     return True
 
 
+async def _send_reply(to: str, reply) -> None:
+    """Send a ``Reply`` (or a plain str): buttons (a list above three) or plain text."""
+    if isinstance(reply, str):
+        await send_text(to, reply)
+    elif reply.buttons:
+        await send_buttons(to, reply.text, reply.buttons)
+    else:
+        await send_text(to, reply.text)
+
+
 async def _handle_button_reply(
     member: Member,
     message: Message,
@@ -4649,11 +4704,28 @@ async def _handle_button_reply(
     The expense id only ever selects a row of THIS member, so a forged id does nothing.
     """
     interactive = (message.raw or {}).get("interactive") or {}
-    if interactive.get("type") != "button_reply":
+    if interactive.get("type") not in ("button_reply", "list_reply"):
         return False
-    button_id = str((interactive.get("button_reply") or {}).get("id") or "")
+    # A list row (more than 3 options) comes back like a button tap, with the row id.
+    button_id = str(
+        (interactive.get("button_reply") or interactive.get("list_reply") or {}).get("id") or ""
+    )
     action, _, raw_id = button_id.partition(":")
     to = member.wa_phone
+
+    if action == "bal_detail":  # F05-07: the full balance, one tap after the short one
+        reply = await _build_saldo(member, session)
+        await send_text(to, reply)
+        await _save_outbound(member, reply, session)
+        return True
+
+    if action == "fu":  # an answer to a follow-up question (questions.py)
+        fu_reply = await questions.on_button(session, member, lang, button_id, today_local())
+        if fu_reply is None:
+            fu_reply = Reply(_t("fu_gone", lang), [])
+        await _send_reply(to, fu_reply)
+        await _save_outbound(member, fu_reply.text, session)
+        return True
 
     if action == "keep":
         audit(session, "wipe_cancelled", member.id, ts=int(datetime.now(UTC).timestamp()))
@@ -4692,6 +4764,14 @@ async def _handle_button_reply(
             reply = _t("health_consent_refused", lang)
         await send_text(to, reply)
         await _save_outbound(member, reply, session)
+        return True
+
+    if action == "an_exp":  # F05-39 "Explicar" under an analysis answer
+        from alfred.analysis import explain_button
+
+        explained = await explain_button(raw_id, member, lang, session)
+        await send_text(to, explained)
+        await _save_outbound(member, explained, session)
         return True
 
     if action in ("dd_cat", "dd_top", "dd_bud"):  # V2-20 go deeper after a spending answer
@@ -4829,7 +4909,7 @@ async def _handle_button_reply(
         await _save_outbound(member, couple_btn.text, session)
         return True
 
-    if action in ("imp_ok", "imp_all", "imp_no"):  # V2-05 statement import preview
+    if action in ("imp_ok", "imp_all", "imp_no", "imp_force"):  # V2-05 statement import preview
         imp_btn = await handle_statement_button(action, raw_id, member, lang, session)
         await send_text(to, imp_btn.text)
         await _save_outbound(member, imp_btn.text, session)
@@ -5027,7 +5107,8 @@ async def handle_inbound(
     if member.consent_state == "rejected":
         # The data rights do not depend on having accepted: erase and export still work
         # after "stop" (the privacy policy tells people to use them in the chat).
-        tapped = ((message.raw or {}).get("interactive") or {}).get("button_reply") or {}
+        _inter = (message.raw or {}).get("interactive") or {}
+        tapped = _inter.get("button_reply") or _inter.get("list_reply") or {}
         if str(tapped.get("id") or "").split(":")[0] in ("wipe", "keep"):
             await _handle_button_reply(member, message, session, lang)
             return
@@ -5081,6 +5162,13 @@ async def handle_inbound(
             await _save_outbound(member, doc_out.text, session)
             return
 
+        # 4-0aaa. An open follow-up question ("Vence quando?"): typed answer or it is closed
+        fu_out = await questions.on_text(session, member, lang, body_plain, today_local())
+        if fu_out is not None:
+            await _send_reply(to, fu_out)
+            await _save_outbound(member, fu_out.text, session)
+            return
+
         # 4-0aa. V2-17 — answers to a draft of 2+ entries ("sim" / "cancela" / "tira o segundo")
         batch_out = await handle_batch_text(body, body_plain, member, lang, session)
         if batch_out is not None:
@@ -5116,8 +5204,8 @@ async def handle_inbound(
                     expires_at=datetime.now(UTC) + timedelta(minutes=EDIT_MINUTES),
                 )
             )
-            reply = _t("language_ask", lang)
-            await send_text(to, reply)
+            reply = _t("language_pick", lang)  # one tap on the list (a typed 1-5 still works)
+            await send_buttons(to, reply, LANG_ROWS)
             await _save_outbound(member, reply, session)
             return
         new_lang = parse_language_command(body)
@@ -5275,8 +5363,12 @@ async def handle_inbound(
 
         # 4b. Saldo command
         if _is_plain_command(body, _SALDO_WORDS) and not _SALDO_ELSEWHERE_RE.search(body_plain):
-            saldo = await _build_saldo(member, session, parse_period(body_plain, today_local()))
-            await send_text(to, saldo)
+            period = parse_period(body_plain, today_local())
+            saldo = await _build_saldo(member, session, period, short=True)
+            if period is None or period.kind == "current_month":
+                await send_buttons(to, saldo, [("bal_detail:x", _t("btn_balance_detail", lang))])
+            else:
+                await send_text(to, saldo)
             await _save_outbound(member, saldo, session)
             return
 
@@ -5460,8 +5552,12 @@ async def handle_inbound(
         # 4e-0f. V2-01 — budgets: "orçamento mercado 400" / "meus orçamentos" / "tira o orçamento de lazer"
         budget_reply = await handle_budget_command(body_plain, member, lang, session)
         if budget_reply is not None:
-            await send_text(to, budget_reply)
-            await _save_outbound(member, budget_reply, session)
+            await _send_reply(to, budget_reply)
+            await _save_outbound(
+                member,
+                budget_reply.text if hasattr(budget_reply, "text") else budget_reply,
+                session,
+            )
             return
 
         # 4e-0h. V2-04 — resumo mensal: "resumo mensal" / "sem resumo mensal" / "ativar resumo mensal"
@@ -5545,6 +5641,15 @@ async def handle_inbound(
             await _save_outbound(member, home_out.text, session)
             return
 
+        # 4e-0s4b. financial goals: "guardei 300 na reserva" / "já tenho 1200 na reserva" / "metas financeiras"
+        goal_out = await handle_goal_command(
+            message.body or "", body_plain, member, lang, session, today_local()
+        )
+        if goal_out is not None:
+            await send_text(to, goal_out.text)
+            await _save_outbound(member, goal_out.text, session)
+            return
+
         # 4e-0s5. V2-21 — Dutch deadlines: "prazos" / "prazo btw" / "ligar avisos de prazos"
         cal_out = await handle_calendar_command(body_plain, member, lang, session, today_local())
         if cal_out is not None:
@@ -5565,8 +5670,12 @@ async def handle_inbound(
         # 4e-0n. V2-16 — "luz 80 a pagar dia 5" / "paguei a luz" / "o que tenho a pagar"
         ledger_reply = await handle_ledger_command(body, body_plain, member, lang, session)
         if ledger_reply is not None:
-            await send_text(to, ledger_reply)
-            await _save_outbound(member, ledger_reply, session)
+            if isinstance(ledger_reply, Reply):
+                await _send_reply(to, ledger_reply)
+                await _save_outbound(member, ledger_reply.text, session)
+            else:
+                await send_text(to, ledger_reply)
+                await _save_outbound(member, ledger_reply, session)
             return
 
         # 4e-0g. V2-02 — contas fixas: "aluguel 1200 todo dia 1" / "paguei o aluguel" / "minhas contas fixas"
@@ -5899,8 +6008,11 @@ async def handle_inbound(
         if m_goal:
             goal_title = m_goal.group(1).strip()
             goal = Goal(id=uuid.uuid4(), member_id=member.id, title=goal_title, active=True)
+            goals_view.prepare_new_goal(goal, today_local())
             session.add(goal)
             reply = _t("goal_created", lang, title=goal_title)
+            if goals_view.is_money_goal(goal):
+                reply += "\n" + _t("goal_money_hint", lang)
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -5919,10 +6031,9 @@ async def handle_inbound(
             if not active_goals:
                 reply = _t("goals_list_empty", lang)
             else:
-                lines = [_t("goals_list_header", lang, n=len(active_goals))]
-                for g in active_goals:
-                    lines.append(_t("goals_list_row", lang, title=g.title))
-                reply = "\n".join(lines)
+                reply = await goals_view.render_goals(
+                    session, member, lang, today_local(), list(active_goals)
+                )
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -6149,6 +6260,14 @@ async def handle_inbound(
                 _sel(Goal).where(Goal.member_id == member.id).where(Goal.active.is_(True))
             )
             linked_goal = _goal_for_activity(res_hg.scalars().all(), habit_activity)
+            qty = habits_ext.parse_quantity(body_plain)
+            if qty is not None:  # F10-10: "li 30 páginas" keeps the 30; the week adds up
+                reply = await habits_ext.log_with_quantity(
+                    session, member, lang, habit_activity, linked_goal, *qty, today_local()
+                )
+                await send_text(to, reply)
+                await _save_outbound(member, reply, session)
+                return
             if await _habit_already_logged(session, member.id, habit_activity, today_local()):
                 reply = _t("habit_already_today", lang, activity=habit_activity)
                 await send_text(to, reply)
@@ -6165,11 +6284,17 @@ async def handle_inbound(
             if linked_goal:
                 reply = _t(
                     "habit_logged_with_goal", lang, activity=habit_activity, goal=linked_goal.title
+                ) + await goals_view.marks_line(session, member, linked_goal, lang, today_local())
+            else:  # F10-11/12: no goal yet → offer to create one (once per habit)
+                reply = await habits_ext.offer_goal(
+                    session,
+                    member,
+                    lang,
+                    habit_activity,
+                    _t("habit_logged", lang, activity=habit_activity),
                 )
-            else:
-                reply = _t("habit_logged", lang, activity=habit_activity)
-            await send_text(to, reply)
-            await _save_outbound(member, reply, session)
+            await _send_reply(to, reply)
+            await _save_outbound(member, getattr(reply, "text", reply), session)
             return
 
         # 4e-8b. M9 — log de hábito via LLM (free-form)
@@ -6226,17 +6351,40 @@ async def handle_inbound(
                 if linked_goal2:
                     reply = _t(
                         "habit_logged_with_goal", lang, activity=h_activity, goal=linked_goal2.title
+                    ) + await goals_view.marks_line(
+                        session, member, linked_goal2, lang, today_local()
                     )
                 else:
-                    reply = _t("habit_logged", lang, activity=h_activity)
-                await send_text(to, reply)
-                await _save_outbound(member, reply, session)
+                    reply = await habits_ext.offer_goal(
+                        session,
+                        member,
+                        lang,
+                        h_activity,
+                        _t("habit_logged", lang, activity=h_activity),
+                    )
+                await _send_reply(to, reply)
+                await _save_outbound(member, getattr(reply, "text", reply), session)
                 logger.info(
                     "conversation.habit_recorded_llm", member_id=str(member.id), activity=h_activity
                 )
                 return
 
         # 4e-9. M8 — health log: medicação, humor, sono, água
+        if habits_ext.is_weight_text(body_plain):  # F10-32: weight needs the health consent
+            if member.health_consent_at is None:
+                reply = _t("health_consent_ask", lang)
+                await send_buttons(
+                    to,
+                    reply,
+                    [("hc_yes:0", _t("btn_hc_yes", lang)), ("hc_no:0", _t("btn_hc_no", lang))],
+                )
+            else:
+                reply = await habits_ext.handle_weight(
+                    body_plain, member, lang, session, today_local()
+                )
+                await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
         if _PURCHASE_NO_PRICE_RE.match(body_plain.strip()):
             _is_health = False  # M-27: "comprei 2 kg de arroz" is shopping (asked below)
         if _is_health and _unsupported_health(body_plain):
@@ -6264,6 +6412,15 @@ async def handle_inbound(
                     from datetime import timedelta as _td
 
                     log_date = today_local() - _td(days=health_data["days_ago"])
+                if health_data["log_type"] == "mood":  # F10-22: a score above 10 is checked
+                    mv = habits_ext.mood_value(health_data["value"])
+                    if mv is not None and mv > 10:
+                        over = await habits_ext.ask_mood_over(
+                            session, member, lang, health_data, log_date
+                        )
+                        await _send_reply(to, over)
+                        await _save_outbound(member, over.text, session)
+                        return
                 hlog = HealthLog(
                     id=uuid.uuid4(),
                     member_id=member.id,
@@ -6279,7 +6436,12 @@ async def handle_inbound(
                 if lt == "medication":
                     reply = _t("health_saved_medication", lang, value=val)
                 elif lt == "mood":
-                    reply = _t("health_saved_mood", lang, value=val)
+                    mv = habits_ext.mood_value(health_data["value"])
+                    reply = (
+                        habits_ext.mood_reply(mv, lang)
+                        if mv is not None
+                        else _t("health_saved_mood", lang, value=val)
+                    )
                 elif lt == "sleep":
                     reply = _t("health_saved_sleep", lang, value=val)
                 else:
@@ -6336,7 +6498,12 @@ async def handle_inbound(
                     avg = round(total_h / len(sleep_rows), 1)
                 except (ValueError, ZeroDivisionError):
                     avg = 0.0
-                reply = _t("health_sleep_avg", lang, avg=_num(avg, lang), n=len(sleep_rows))
+                reply = _t(
+                    "health_sleep_avg",
+                    lang,
+                    avg=_num(avg, lang),
+                    n=habits_ext.count_word(len(sleep_rows), lang),
+                )
             await send_text(to, reply)
             await _save_outbound(member, reply, session)
             return
@@ -6398,6 +6565,15 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        # 4e-9z. F10-47 — "treinos de hoje / de ontem": a fixed command, straight from the table
+        day_workouts = await habits_ext.workouts_on(
+            body_plain, member, lang, session, today_local()
+        )
+        if day_workouts is not None:
+            await send_text(to, day_workouts)
+            await _save_outbound(member, day_workouts, session)
+            return
+
         # 4e-10. M7 — treino: "corri 30 min", "fiz yoga durante 20 minutos"
         if _is_workout_text(body):
             today = today_local()
@@ -6435,6 +6611,38 @@ async def handle_inbound(
                     activity=activity_name(workout_data["activity_type"], lang),
                     duration=detail,
                 )
+                reply += await habits_ext.compare_workout(session, member, lang, ws, today_local())
+                # the workout also ticks the routine goal it belongs to ("correr 10 km")
+                routine = (
+                    (
+                        await session.execute(
+                            select(Goal).where(Goal.member_id == member.id, Goal.active.is_(True))
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                wo_goal = goals_view.goal_for_workout(list(routine), workout_data["activity_type"])
+                if wo_goal is not None:
+                    if not await _habit_already_logged(
+                        session,
+                        member.id,
+                        activity_name(workout_data["activity_type"], lang),
+                        wo_date,
+                    ):
+                        session.add(
+                            HabitLog(
+                                id=uuid.uuid4(),
+                                member_id=member.id,
+                                goal_id=wo_goal.id,
+                                activity=activity_name(workout_data["activity_type"], lang),
+                                log_date=wo_date,
+                            )
+                        )
+                    reply += (
+                        f"\n{_t('goal_workout_line', lang, goal=wo_goal.title)}"
+                        + await goals_view.marks_line(session, member, wo_goal, lang, today_local())
+                    )
                 await send_text(to, reply)
                 await _save_outbound(member, reply, session)
                 logger.info(
@@ -6980,6 +7188,18 @@ async def handle_inbound(
             if not days_ago:  # "paguei 130 de seguro saúde, data 05/10": the date written
                 days_ago = _written_days_ago(body) or 0
             expense_date = now_local() - timedelta(days=days_ago)
+            pending_days = expense_data.get("pending_in_days")
+            pending_status = None
+            if (
+                pending_days is not None
+            ):  # "vou receber 300 em dois dias": due later, not in the balance
+                pending_status = "to_receive" if txn_type == "income" else "to_pay"
+                days_ago = 0
+                expense_date = datetime.combine(
+                    today_local() + timedelta(days=int(pending_days)),
+                    time(12, 0),
+                    tzinfo=local_tz(),
+                )
 
             # M14 — auto-tag with the active trip. Looked up BEFORE the expense is
             # created so it is inserted once, already tagged.
@@ -7004,8 +7224,10 @@ async def handle_inbound(
                 trip_id=active_trip.id if active_trip else None,
                 shared=shared_now,
                 scope=default_scope(member, expense_data["category"], txn_type),
+                **({"status": pending_status} if pending_status else {}),
             )
             session.add(expense)
+            limit_q = None
 
             name = (
                 expense_data["merchant"]
@@ -7014,19 +7236,33 @@ async def handle_inbound(
             )
             amt_fmt = _fmt_eur(expense_data["amount"])
             key = "income_recorded" if txn_type == "income" else "expense_recorded"
-            reply = _t(key, lang, amount=amt_fmt, name=name)
+            if pending_status:
+                reply = _t(
+                    "ledger_added_recv" if txn_type == "income" else "ledger_added_pay",
+                    lang,
+                    name=name,
+                    amount=amt_fmt,
+                    due=f"{expense_date:%d/%m}",
+                )
+            else:
+                reply = _t(key, lang, amount=amt_fmt, name=name)
             if shared_now:
                 reply += _t("home_auto_suffix", lang)
             if days_ago > 0:
                 reply += _t("days_ago_suffix", lang, n=days_ago)
-            if txn_type == "expense":
+            if txn_type == "expense" and not pending_status:
                 await session.flush()  # make the new row visible to the month total below
                 reply += await _month_category_context(
                     session, member, expense_date, expense_data.get("category"), lang
                 )
-                reply += await alert_after_expense(
+                alert_text = await alert_after_expense(
                     session, member, expense_data.get("category"), expense_date, lang
                 )
+                reply += alert_text
+                if alert_text:  # F06-31: at 100 % offer to raise the limit (second message)
+                    limit_q = await budgets.limit_question(
+                        session, member, expense_data.get("category"), lang
+                    )
             # BUG-07 fix: show cumulative trip total when expense tagged to trip
             if active_trip and txn_type == "expense":
                 from sqlalchemy import func as sa_func
@@ -7083,6 +7319,9 @@ async def handle_inbound(
                 expense_buttons.append((f"home:{expense.id}", _t("btn_home", lang)))
             await send_buttons(to, reply, expense_buttons)
             await _save_outbound(member, reply, session)
+            if limit_q is not None:
+                await _send_reply(to, limit_q)
+                await _save_outbound(member, limit_q.text, session)
             logger.info(
                 "conversation.expense_recorded",
                 member_id=str(member.id),
@@ -7110,8 +7349,11 @@ async def handle_inbound(
                 message.body or "", body_plain, member, lang, session
             )
             if analysis_first is not None:
-                await send_text(to, analysis_first)
-                await _save_outbound(member, analysis_first, session)
+                if analysis_first.buttons:  # F05-39
+                    await send_buttons(to, analysis_first.text, analysis_first.buttons)
+                else:
+                    await send_text(to, analysis_first.text)
+                await _save_outbound(member, analysis_first.text, session)
                 return
 
         # 4f. Try to classify as a financial query
@@ -7163,8 +7405,11 @@ async def handle_inbound(
             message.body or "", body_plain, member, lang, session
         )
         if analysis_reply is not None:
-            await send_text(to, analysis_reply)  # M-10: no 👍/👎 buttons any more
-            await _save_outbound(member, analysis_reply, session)
+            if analysis_reply.buttons:  # F05-39: "Explicar" (M-10: still no 👍/👎)
+                await send_buttons(to, analysis_reply.text, analysis_reply.buttons)
+            else:
+                await send_text(to, analysis_reply.text)
+            await _save_outbound(member, analysis_reply.text, session)
             return
 
             # 4g. General LLM reply with conversation history

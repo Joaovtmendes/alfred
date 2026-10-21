@@ -351,7 +351,7 @@ async def test_money_and_habits_card_order_is_the_approved_one() -> None:
             )
             assert dom == [
                 "transactions", "month_vs_month", "top_expenses", "categories", "budgets",
-                "fixed_variable", "owed", "daily", "recurring",
+                "money_goals", "fixed_variable", "owed", "daily", "recurring",
             ]  # fmt: skip
     finally:
         await _close(pwm, browser)
@@ -470,7 +470,7 @@ async def test_empty_cards_say_what_to_type_in_the_chat() -> None:
         assert await page.locator("#panel .hero").count() == 0  # no zeros dressed up as data
         await page.click('[data-tab="money"]')
         await page.wait_for_selector("[data-card=recurring]")
-        assert await page.locator("#panel [data-card]").count() == 9
+        assert await page.locator("#panel [data-card]").count() == 10
     finally:
         await _close(pwm, browser)
 
@@ -783,7 +783,7 @@ def _tab_handlers():
     ("tab", "cards"),
     [
         ("agenda", ["week", "load", "tasks", "deadlines", "month_map", "reminders", "notes"]),
-        ("health", ["goals", "workouts", "training", "water"]),
+        ("health", ["goals", "workouts", "training", "water", "weight"]),
         ("trips", ["trip", "packing", "itinerary", "plan_budget", "trips_past"]),
     ],
 )

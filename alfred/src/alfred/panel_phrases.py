@@ -308,6 +308,13 @@ PHRASES: dict[str, dict[str, str]] = {
         "fr": "Pas encore d'enregistrements d'eau sur les 7 derniers jours. Enregistre-les dans le chat.",
         "de": "Noch keine Wassereinträge in den letzten 7 Tagen. Erfasse sie im Chat.",
     },
+    "empty_weight": {
+        "pt": "Nenhum peso registrado ainda. Se quiser acompanhar, registre pelo chat.",
+        "nl": "Nog geen gewicht geregistreerd. Wil je het bijhouden, leg het dan vast in de chat.",
+        "en": "No weight logged yet. If you want to follow it, log it in the chat.",
+        "fr": "Aucun poids enregistré pour l'instant. Si tu veux le suivre, enregistre-le dans le chat.",
+        "de": "Noch kein Gewicht eingetragen. Wenn du es verfolgen möchtest, erfasse es im Chat.",
+    },
     "empty_workouts": {
         "pt": "Nenhum treino registrado nas últimas semanas. Registre pelo chat.",
         "nl": "Geen trainingen vastgelegd in de afgelopen weken. Leg ze vast in de chat.",
@@ -321,6 +328,13 @@ PHRASES: dict[str, dict[str, str]] = {
         "en": "You have no active goals yet. Create one in the chat.",
         "fr": "Tu n'as pas encore d'objectifs actifs. Crées-en un dans le chat.",
         "de": "Du hast noch keine aktiven Ziele. Lege im Chat eines an.",
+    },
+    "empty_money_goals": {
+        "pt": "Você ainda não tem metas financeiras. Crie uma pelo chat.",
+        "nl": "Je hebt nog geen financiële doelen. Maak er een via de chat.",
+        "en": "You have no financial goals yet. Create one in the chat.",
+        "fr": "Tu n'as pas encore d'objectifs financiers. Crées-en un dans le chat.",
+        "de": "Du hast noch keine finanziellen Ziele. Lege im Chat eines an.",
     },
     "empty_trips": {
         "pt": "Nenhuma viagem registrada. Crie uma pelo chat, com o orçamento se quiser.",
@@ -544,6 +558,13 @@ CHAT: dict[str, dict[str, str]] = {
         "fr": '"note: idée pour le week-end"',
         "de": '"Notiz: Idee fürs Wochenende"',
     },
+    "add_money_goal": {
+        "pt": '"meta: reserva de emergência 5000 até dezembro"',
+        "nl": '"doel: noodfonds 5000 tot december"',
+        "en": '"goal: emergency fund 5000 by December"',
+        "fr": "\"objectif: fonds d'urgence 5000 jusqu'en décembre\"",
+        "de": '"Ziel: Notgroschen 5000 bis Dezember"',
+    },
     "add_goal": {
         "pt": '"meta: treinar 3 vezes por semana"',
         "nl": '"doel: 3 keer per week sporten"',
@@ -571,6 +592,13 @@ CHAT: dict[str, dict[str, str]] = {
         "en": '"drank 0.5 L water"',
         "fr": '"bu 0,5 L d\'eau"',
         "de": '"0,5 Liter Wasser getrunken"',
+    },
+    "log_weight": {
+        "pt": '"peso 72,5 kg"',
+        "nl": '"gewicht 72,5 kg"',
+        "en": '"weight 72.5 kg"',
+        "fr": '"poids 72,5 kg"',
+        "de": '"Gewicht 72,5 kg"',
     },
     "log_workout": {
         "pt": '"corri 5 km em 30 minutos"',
@@ -1275,8 +1303,10 @@ EMPTY: dict[str, tuple[str, str]] = {
     "reminders": ("empty_reminders", "add_reminder"),
     "notes": ("empty_notes", "add_note"),
     "water": ("empty_water", "log_water"),
+    "weight": ("empty_weight", "log_weight"),
     "workouts": ("empty_workouts", "log_workout"),
     "goals": ("empty_goals", "add_goal"),
+    "money_goals": ("empty_money_goals", "add_money_goal"),
     "trips": ("empty_trips", "add_trip"),
     "training": ("empty_training", "add_plan"),
     "itinerary": ("empty_itinerary", "add_itinerary"),

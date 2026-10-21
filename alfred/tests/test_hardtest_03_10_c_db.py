@@ -99,5 +99,7 @@ async def test_meditei_counts_for_the_goal_and_a_savings_goal_has_no_day_bar(lab
     await lab.say("meditei hoje")
     items = {i["title"]: i for i in (await _cards(client, lab, "health"))["goals"]["items"]}
     assert items["meditar todos os dias"]["logs_7d"] == 1
-    assert items["meditar todos os dias"]["money"] is False
-    assert items["juntar 5000€"]["money"] is True
+    # the savings goal left Hábitos: it has its own card in Dinheiro now (B-073)
+    assert "juntar 5000€" not in items
+    money = {i["title"]: i for i in (await _cards(client, lab, "money"))["money_goals"]["items"]}
+    assert money["juntar 5000€"]["target_amount"] == 5000.0

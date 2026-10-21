@@ -73,6 +73,13 @@ _TRAILING_AMOUNT = re.compile(
     r"^(?P<txt>.*?[^\W\d_].*?)\s+(?:€\s*(?P<amt>\d[\d.,]*)|(?P<amt2>\d[\d.,]*)\s*(?:€|eur\b|euros?\b))$",
     re.I,
 )
+_BARE_TRAILING = re.compile(r"^(?P<txt>.*?[^\W\d_].*?)\s+(?P<amt>\d{1,6}(?:[.,]\d{1,2})?)$")
+_BARE_SERVICE = re.compile(
+    r"^(?:servico|service|dienst)\s*[:\-]?\s*(?:€\s*)?(?P<amt>\d[\d.,]*)\s*(?:€|eur|euros?)?$"
+)
+_EDIT_VALUE = re.compile(
+    r"^(?:valor|preco|price|amount|prijs|bedrag|prix|montant|preis|betrag)\s*[:\-]?\s*(?:€\s*)?(?P<amt>\d[\d.,]*)\s*(?:€|eur|euros?)?$"
+)
 _SPLIT = re.compile(r"\s*;\s*|,(?=\s|\D)")
 _MARKUP = re.compile(r"[*_~`]")
 
@@ -161,6 +168,14 @@ def parse_register(rest: str, today: date) -> dict | None:
                 m.group("amt") or m.group("amt2")
             )  # "eletricista 90 euros": the price, not the name
             if amount is None or amount > MAX_AMOUNT:
+                return None
+            out["amount"] = round(amount, 2)
+            texts.append(m.group("txt"))
+        elif (m := _BARE_TRAILING.match(part)) and out["amount"] is None:
+            amount = to_amount(
+                m.group("amt")
+            )  # "encanador Pedro 180": the last number is the price
+            if amount is None or not 0 < amount <= MAX_AMOUNT:
                 return None
             out["amount"] = round(amount, 2)
             texts.append(m.group("txt"))
@@ -267,7 +282,15 @@ async def _create_draft(
     )
     session.add(rec)
     await session.flush()
-    text = "\n".join([_t("svc_title", lang), *_lines(rec, lang, today), "", _t("svc_foot", lang)])
+    missing = []
+    if rec.amount is None:
+        missing.append(_t("svc_miss_amount", lang))
+    if rec.warranty_months is None:
+        missing.append(_t("svc_miss_warranty", lang))
+    parts = [_t("svc_title", lang), *_lines(rec, lang, today), ""]
+    if missing:
+        parts += [_t("svc_missing", lang, what=" · ".join(missing)), ""]
+    text = "\n".join([*parts, _t("svc_foot", lang)])
     buttons = [(f"svc_ok:{rec.id}", _t("btn_svc_ok", lang))]
     if rec.amount is not None:
         buttons.append((f"svc_exp:{rec.id}", _t("btn_svc_exp", lang)))
@@ -306,17 +329,65 @@ def _match(rows: list[ServiceRecord], ref: str) -> list[ServiceRecord]:
     ]
 
 
+def _warranty_of(text: str):
+    key = strip_accents(text).lower().strip(" .!?")
+    return next((m for p in _WARRANTY if (m := p.match(key))), None)
+
+
+async def _edit_draft(
+    text: str, member: Member, lang: str, session: AsyncSession, today: date
+) -> Reply | None:
+    """ "valor 180" / "garantia 12 meses" while a draft is waiting: change the draft, show it again."""
+    rec = await session.scalar(
+        select(ServiceRecord)
+        .where(ServiceRecord.member_id == member.id, ServiceRecord.status == "draft")
+        .order_by(ServiceRecord.created_at.desc())
+    )
+    if rec is None or rec.created_at < datetime.now(UTC) - DRAFT_TTL:
+        return None
+    fields = {
+        "provider": rec.provider, "description": rec.description, "amount": rec.amount,
+        "service_date": rec.service_date, "warranty_months": rec.warranty_months,
+    }  # fmt: skip
+    if m := _EDIT_VALUE.match(_key(text)):
+        amount = to_amount(m.group("amt"))
+        if amount is None or not 0 < amount <= MAX_AMOUNT:
+            return Reply(_t("svc_bad", lang))
+        fields["amount"] = round(amount, 2)
+    elif w := _warranty_of(text):
+        months = _months(w.group("n"), w.group("unit"))
+        if months is None:
+            return Reply(_t("svc_warranty_max", lang, n=MAX_WARRANTY_MONTHS // 12))
+        fields["warranty_months"] = months
+    else:
+        return None
+    return await _create_draft(fields, member, lang, session, today)
+
+
 async def handle_service_command(
     raw: str, body_plain: str, member: Member, lang: str, session: AsyncSession, today: date
 ) -> Reply | None:
     """None unless the message is clearly about service records (cheap exit first)."""
     plain = " ".join(body_plain.split()).strip(" .!?")
+    if len(plain) <= 40 and (_EDIT_VALUE.match(_key(plain)) or _warranty_of(plain)):
+        edited = await _edit_draft(plain, member, lang, session, today)
+        if edited is not None:
+            return edited
     if len(plain) > 200 or (plain not in _LIST and not _KEYS.search(plain)):
         return None
     raw_norm = unicodedata.normalize("NFC", " ".join(raw.split()).strip(" !?"))
 
     if plain in _LIST:
         return await _list(member, lang, session, today)
+    if m := _BARE_SERVICE.match(plain):  # "serviço: 180 €": a draft with a generic name
+        amount = to_amount(m.group("amt"))
+        if amount is None or not 0 < amount <= MAX_AMOUNT:
+            return Reply(_t("svc_bad", lang))
+        fields = {
+            "provider": _t("svc_generic", lang), "description": None, "amount": round(amount, 2),
+            "service_date": today, "warranty_months": None,
+        }  # fmt: skip
+        return await _create_draft(fields, member, lang, session, today)
     if m := _CREATE.match(raw_norm):
         fields = parse_register(m.group("rest"), today)
         if fields is None:
@@ -534,6 +605,16 @@ STRINGS: dict[str, dict[str, str]] = {
         "Here is the service I understood:",
         "Voici le service compris :",
         "Das habe ich verstanden:",
+    ),
+    "svc_generic": _all5("Serviço", "Dienst", "Service", "Service", "Dienst"),
+    "svc_miss_amount": _all5("valor", "bedrag", "amount", "montant", "Betrag"),
+    "svc_miss_warranty": _all5("garantia", "garantie", "warranty", "garantie", "Garantie"),
+    "svc_missing": _all5(
+        "Faltam: {what}. Se quiser, mande por exemplo *valor 180* ou *garantia 12 meses*.",
+        "Ontbreekt: {what}. Stuur bijvoorbeeld *bedrag 180* of *garantie 12 maanden*.",
+        "Missing: {what}. If you like, send for example *amount 180* or *warranty 12 months*.",
+        "Il manque : {what}. Envoie par exemple *montant 180* ou *garantie 12 mois*.",
+        "Es fehlt: {what}. Sende zum Beispiel *Betrag 180* oder *Garantie 12 Monate*.",
     ),
     "svc_foot": _all5(
         "Ainda não gravei nada. Para corrigir algo, mande de novo com os dados certos.",

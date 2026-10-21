@@ -526,8 +526,8 @@ CSV_HEADER = (
 )  # fmt: skip
 
 
-async def export_csv(session: AsyncSession, member: Member, year: int) -> str:
-    """The year's entries as CSV: business entries only in business mode, everything otherwise."""
+async def _export_entries(session: AsyncSession, member: Member, year: int) -> list[Expense]:
+    """The year's entries: business entries only in business mode, everything otherwise."""
     start, end = year_window(year)
     stmt = select(Expense).where(
         Expense.member_id == member.id,
@@ -536,9 +536,18 @@ async def export_csv(session: AsyncSession, member: Member, year: int) -> str:
     )
     if member.acct_mode == BUSINESS:
         stmt = stmt.where(Expense.scope == BUSINESS)
-    rows = (
-        await session.scalars(stmt.order_by(Expense.expense_date, Expense.id).limit(MAX_YEAR_ROWS))
-    ).all()
+    return list(
+        (
+            await session.scalars(
+                stmt.order_by(Expense.expense_date, Expense.id).limit(MAX_YEAR_ROWS)
+            )
+        ).all()
+    )
+
+
+async def export_csv(session: AsyncSession, member: Member, year: int) -> str:
+    """The year's entries as CSV: business entries only in business mode, everything otherwise."""
+    rows = await _export_entries(session, member, year)
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
     w.writerow(CSV_HEADER)
@@ -562,6 +571,53 @@ async def export_csv(session: AsyncSession, member: Member, year: int) -> str:
                 e.status,
             ]
         )
+    return out.getvalue()
+
+
+async def export_xlsx(session: AsyncSession, member: Member, year: int) -> bytes:
+    """F19-01: the same entries and columns as the CSV, one sheet per month (YYYY-MM)."""
+    from openpyxl import Workbook
+
+    rows = await _export_entries(session, member, year)
+    wb = Workbook()
+    wb.remove(wb.active)
+    sheets: dict[str, object] = {}
+    for e in rows:
+        day = to_local(e.expense_date).date()
+        key = f"{day:%Y-%m}"
+        ws = sheets.get(key)
+        if ws is None:
+            ws = wb.create_sheet(key)
+            ws.append(list(CSV_HEADER))
+            sheets[key] = ws
+        gross = _dec(e.amount)
+        rate = e.btw_rate
+        part = btw_part(gross, rate) if rate is not None else None
+        ws.append(
+            [
+                day,
+                e.transaction_type,
+                e.scope,
+                csv_cell(e.merchant),
+                csv_cell(e.category),
+                csv_cell(e.description),
+                float(gross),
+                rate,
+                None if part is None else float(part),
+                float(gross - part) if part is not None else float(gross),
+                "yes" if e.deductible else "no",
+                e.status,
+            ]
+        )
+    if not sheets:
+        ws = wb.create_sheet(str(year))
+        ws.append(list(CSV_HEADER))
+    for ws in wb.worksheets:
+        ws.freeze_panes = "A2"
+        for cell in ws["A"][1:]:
+            cell.number_format = "yyyy-mm-dd"
+    out = io.BytesIO()
+    wb.save(out)
     return out.getvalue()
 
 
@@ -627,7 +683,7 @@ _SUMMARY = {
 _EXPORT = re.compile(
     r"^(?:(?:exportar|export|exporteer|exporter|exportiere?)\s+(?:a |minha |my |mijn |ma |die |meine |de |la )?"
     r"(?:contabilidade|accounting|boekhouding|comptabilite|buchhaltung)"
-    r"|(?:boekhouding exporteren|buchhaltung exportieren))(?:\s+(\d{4}))?$"
+    r"|(?:boekhouding exporteren|buchhaltung exportieren))(?:\s+(\d{4}))?(?:\s+(xlsx|excel))?$"
 )
 
 
@@ -690,7 +746,7 @@ async def handle_accounting_command(
         return await _summary(member, lang, session, today)
     if m := _EXPORT.match(plain):
         year = int(m.group(1)) if m.group(1) else today.year
-        return await _export_link(member, lang, session, today, year)
+        return await _export_link(member, lang, session, today, year, xlsx=bool(m.group(2)))
     return None
 
 
@@ -839,7 +895,7 @@ async def _summary(member: Member, lang: str, session: AsyncSession, today: date
 
 
 async def _export_link(
-    member: Member, lang: str, session: AsyncSession, today: date, year: int
+    member: Member, lang: str, session: AsyncSession, today: date, year: int, *, xlsx: bool = False
 ) -> Reply:
     from alfred.panel_tokens import issue_export_token
     from alfred.settings import settings
@@ -851,8 +907,10 @@ async def _export_link(
         return Reply(_t("acct_export_bad_year", lang), [])
     token = await issue_export_token(session, member)
     audit(session, "accounting_export_link", member.id, year=year)
-    url = f"{base_url}/api/d/{token}/books-export?year={year}"
+    url = f"{base_url}/api/d/{token}/books-export?year={year}" + ("&format=xlsx" if xlsx else "")
     key = "acct_export_business" if member.acct_mode == BUSINESS else "acct_export_all"
+    if xlsx:
+        key += "_xlsx"
     return Reply(_t(key, lang, year=year, url=url, minutes=settings.export_token_ttl_minutes), [])
 
 
@@ -1059,6 +1117,20 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "CSV for {year} with the business entries only, for your accountant: {url}\nThe link works once and for {minutes} minutes.",
         "CSV de {year} avec les écritures pro seulement, pour ton comptable : {url}\nLe lien est valable une fois et {minutes} minutes.",
         "CSV für {year} nur mit den geschäftlichen Buchungen, für deinen Steuerberater: {url}\nDer Link gilt einmal und {minutes} Minuten.",
+    ),
+    "acct_export_business_xlsx": _all(
+        "Excel de {year} só com os lançamentos da empresa, uma aba por mês, para o seu contador: {url}\nO link vale uma vez e por {minutes} minutos.",
+        "Excel van {year} alleen met de zakelijke boekingen, een tabblad per maand, voor je boekhouder: {url}\nDe link werkt één keer en {minutes} minuten.",
+        "Excel for {year} with the business entries only, one sheet per month, for your accountant: {url}\nThe link works once and for {minutes} minutes.",
+        "Excel de {year} avec les écritures pro seulement, un onglet par mois, pour ton comptable : {url}\nLe lien est valable une fois et {minutes} minutes.",
+        "Excel für {year} nur mit den geschäftlichen Buchungen, ein Blatt pro Monat, für deinen Steuerberater: {url}\nDer Link gilt einmal und {minutes} Minuten.",
+    ),
+    "acct_export_all_xlsx": _all(
+        "Excel de {year} com todos os seus lançamentos, uma aba por mês: {url}\nO link vale uma vez e por {minutes} minutos.",
+        "Excel van {year} met al je boekingen, een tabblad per maand: {url}\nDe link werkt één keer en {minutes} minuten.",
+        "Excel for {year} with all your entries, one sheet per month: {url}\nThe link works once and for {minutes} minutes.",
+        "Excel de {year} avec toutes tes écritures, un onglet par mois : {url}\nLe lien est valable une fois et {minutes} minutes.",
+        "Excel für {year} mit allen deinen Buchungen, ein Blatt pro Monat: {url}\nDer Link gilt einmal und {minutes} Minuten.",
     ),
     "acct_export_all": _all(
         "CSV de {year} com todos os seus lançamentos: {url}\nO link vale uma vez e por {minutes} minutos.",

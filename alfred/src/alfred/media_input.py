@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from alfred import clock
 from alfred.audit import audit
 from alfred.home import home_reply
-from alfred.llm import read_member_file
+from alfred.llm import read_member_file, read_statement_text
 from alfred.models import AuditLog, Member
 from alfred.receipt import receipt_reply
 from alfred.services import service_reply
@@ -107,6 +107,11 @@ async def handle_media_file(
     if data is None:
         return Reply(_t("media_download_failed", lang))
 
+    if mime == PDF_MIME:
+        statement = await _statement_pdf(data, member, lang, session)
+        if statement is not None:
+            del data  # the file is never kept
+            return statement
     reading = await read_member_file(data, mime, lang)
     del data  # the file is never kept
     if not isinstance(reading, dict):
@@ -173,3 +178,24 @@ STRINGS: dict[str, dict[str, str]] = {
         "Du hast in dieser Stunde schon viele Dateien geschickt. Versuche es gleich noch einmal.",
     ),
 }
+
+
+async def _statement_pdf(
+    data: bytes, member: Member, lang: str, session: AsyncSession
+) -> Reply | None:
+    """F15-01: a PDF that looks like a bank statement is read as masked text; None = not one."""
+    from alfred import statement
+    from alfred import statement_pdf as spdf
+
+    info = spdf.read_pdf(data)
+    if info.broken or info.encrypted or not spdf.looks_like_statement(info.text):
+        return None  # a receipt, an invoice, a scan...: the usual reader decides
+    if len(data) > spdf.MAX_PDF_BYTES:
+        return Reply(_t("imp_pdf_too_big", lang))
+    if info.pages > spdf.MAX_PAGES:
+        return Reply(_t("imp_pdf_pages", lang))
+    reading = await read_statement_text(spdf.prepare(info.text), lang)
+    parsed = spdf.rows_from_reading(reading, clock.today_local())
+    if parsed.error:
+        return Reply(_t("imp_pdf_unreadable", lang))
+    return await statement.make_draft(member, lang, session, parsed, "extrato.pdf", from_pdf=True)

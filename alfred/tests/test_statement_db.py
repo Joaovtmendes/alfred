@@ -97,7 +97,7 @@ async def test_sending_the_same_file_again_imports_nothing(lab: Lab) -> None:
     await lab.doc("extrato.csv", ING)
     await lab.tap(f"imp_ok:{_batch_id(lab)}")
     reply = await lab.doc("extrato.csv", ING)
-    assert "nada novo" in reply and lab.buttons[-1] == []
+    assert "nada novo" in reply and len(lab.buttons[-1]) == 2  # F15-07: Ok / Importar mesmo assim
     assert len(await _expenses(lab)) == 3
 
 
@@ -285,7 +285,7 @@ async def test_not_a_csv_is_refused_without_downloading(lab: Lab) -> None:
         "type": "document",
         "document": {
             "id": "m1",
-            "filename": "extrato.xlsx",
+            "filename": "extrato.xls",
             "mime_type": "application/vnd.ms-excel",
         },
     }
@@ -294,7 +294,7 @@ async def test_not_a_csv_is_refused_without_downloading(lab: Lab) -> None:
     dl = AsyncMock(return_value=b"x")
     with patch("alfred.statement.download_media", dl):
         reply = await lab._run(make_message(body=None, raw=raw))
-    assert "não é um CSV" in reply
+    assert "não consigo ler" in reply
     dl.assert_not_awaited()
 
 

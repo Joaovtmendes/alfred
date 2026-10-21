@@ -96,7 +96,9 @@ async def test_create_update_and_remove_a_budget(lab: Lab) -> None:
 
 @db
 async def test_unknown_or_income_category_lists_the_valid_ones(lab: Lab) -> None:
-    reply = await lab.say("orçamento xyzzy 100")
+    ask = await lab.say("orçamento xyzzy 100")  # F06-04: offers to create it
+    assert "Quer criar" in ask
+    reply = await lab.tap(lab.buttons[-1][1][0])  # "Ver categorias"
     assert "Supermercado" in reply and "Renda" not in reply
     assert (
         await lab.scalar(
@@ -179,7 +181,7 @@ async def test_alert_at_80_then_100_once_each(lab: Lab) -> None:
     lab.expense.return_value = _exp(2)
     assert "⚠️" not in await lab.say("Jumbo 2")  # 87 %: already announced
     lab.expense.return_value = _exp(20)
-    r100 = await lab.say("Jumbo 20")  # 107 %
+    r100 = await lab.say("Jumbo 20", replies=2)  # 107 %: alert + "raise the limit?"
     assert "estourou" in r100
     lab.expense.return_value = _exp(5)
     assert "⚠️" not in await lab.say("Jumbo 5")  # 100 % announced once
@@ -189,7 +191,7 @@ async def test_alert_at_80_then_100_once_each(lab: Lab) -> None:
 async def test_a_single_expense_from_zero_past_100_announces_only_100(lab: Lab) -> None:
     await lab.say("orçamento mercado 100")
     lab.expense.return_value = _exp(130)
-    reply = await lab.say("Jumbo 130")
+    reply = await lab.say("Jumbo 130", replies=2)
     assert "estourou" in reply and "130" in reply
     assert reply.count("⚠️") == 1 and "usou" not in reply
 

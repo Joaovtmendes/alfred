@@ -31,6 +31,9 @@ from alfred.parsing import strip_accents
 
 MAX_BYTES = 1_000_000  # about 8,000 lines: a year of a busy account
 MAX_ROWS = 2000
+MAX_XLSX_ROWS = 5000  # F15-01: a year of a busy account, from a spreadsheet
+MAX_XLSX_BYTES = 3_000_000
+MAX_XLSX_UNPACKED = 40_000_000  # a zip bomb inside the workbook is refused before it is read
 MAX_TEXT = 120
 _IBAN = re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b")
 _FORMULA_LEAD = "=+@-\t\r  "
@@ -245,9 +248,15 @@ def _rows_of(text: str, delim: str) -> list[list[str]]:
     ]
 
 
-def parse_statement(raw: bytes, today: date | None = None) -> Parsed:
+def parse_statement(
+    raw: bytes,
+    today: date | None = None,
+    *,
+    max_rows: int = MAX_ROWS,
+    max_bytes: int = MAX_BYTES,
+) -> Parsed:
     """Read a statement file. ``Parsed.error`` is set when nothing usable was found."""
-    if len(raw) > MAX_BYTES:
+    if len(raw) > max_bytes:
         return Parsed(error="too_big")
     text = decode(raw)
     if text is None:
@@ -266,7 +275,7 @@ def parse_statement(raw: bytes, today: date | None = None) -> Parsed:
         and len(first[1].strip()) == 3
         and re.fullmatch(r"\d{8}", first[2].strip() or "")
     ):
-        return _read_abn_headerless(table, today)
+        return _read_abn_headerless(table, today, max_rows)
 
     header = [_norm(c) for c in first]
     bank = detect_bank(header)
@@ -285,7 +294,7 @@ def parse_statement(raw: bytes, today: date | None = None) -> Parsed:
     out = Parsed(bank=bank)
     seen: Counter[str] = Counter()
     for cells in table[1:]:
-        if len(out.rows) >= MAX_ROWS:
+        if len(out.rows) >= max_rows:
             return Parsed(error="too_many")
 
         def cell(i: int | None, _cells: list[str] = cells) -> str:
@@ -327,11 +336,81 @@ def parse_statement(raw: bytes, today: date | None = None) -> Parsed:
     return out
 
 
-def _read_abn_headerless(table: list[list[str]], today: date | None) -> Parsed:
+def _xlsx_cell(value: object) -> str:
+    from datetime import date as _date
+    from datetime import datetime as _datetime
+
+    if value is None:
+        return ""
+    if isinstance(value, _datetime):
+        return value.date().isoformat()
+    if isinstance(value, _date):
+        return value.isoformat()
+    if isinstance(value, bool):
+        return ""
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return f"{value:.2f}".replace(".", ",")
+    return str(value).replace("\r", " ").replace("\n", " ")
+
+
+def xlsx_to_csv(raw: bytes) -> tuple[bytes | None, str]:
+    """F15-01: the first sheet of a plain .xlsx as CSV bytes (formulas read as their last value).
+
+    Returns ``(csv, "")`` or ``(None, error)`` with error ``"xlsm"`` (macros), ``"too_big"``,
+    ``"too_many"`` or ``"format"``. Nothing is executed, linked or kept.
+    """
+    import zipfile
+
+    if len(raw) > MAX_XLSX_BYTES:
+        return None, "too_big"
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+            infos = zf.infolist()
+            names = {i.filename.lower() for i in infos}
+            if "xl/vbaproject.bin" in names:
+                return None, "xlsm"
+            if len(infos) > 200 or sum(i.file_size for i in infos) > MAX_XLSX_UNPACKED:
+                return None, "too_big"
+    except (zipfile.BadZipFile, OSError):
+        return None, "format"
+    try:
+        from openpyxl import load_workbook
+
+        wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+        ws = wb.worksheets[0]
+        out = io.StringIO()
+        writer = csv.writer(out, lineterminator="\n")
+        data_rows = 0
+        started = False
+        for n, row in enumerate(ws.iter_rows(values_only=True)):
+            if n > MAX_XLSX_ROWS * 2 + 50:
+                return None, "too_many"
+            cells = [_xlsx_cell(c) for c in row]
+            if sum(1 for c in cells if c.strip()) < 2 and not started:
+                continue  # title lines above the header
+            if not any(c.strip() for c in cells):
+                continue
+            if started:
+                data_rows += 1
+                if data_rows > MAX_XLSX_ROWS:
+                    return None, "too_many"
+            started = True
+            writer.writerow(cells)
+        wb.close()
+    except Exception:  # a damaged or exotic workbook: say "format", never crash
+        return None, "format"
+    return out.getvalue().encode("utf-8"), ""
+
+
+def _read_abn_headerless(
+    table: list[list[str]], today: date | None, max_rows: int = MAX_ROWS
+) -> Parsed:
     out = Parsed(bank="abn")
     seen: Counter[str] = Counter()
     for cells in table:
-        if len(out.rows) >= MAX_ROWS:
+        if len(out.rows) >= max_rows:
             return Parsed(error="too_many")
         if len(cells) < 8:
             out.skipped += 1

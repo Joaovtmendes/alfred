@@ -36,7 +36,11 @@ def test_trip_start_date_from_range() -> None:
 @pytest.mark.bug("H3009-1")
 async def test_bare_yes_is_neutral(lab: Lab, word: str) -> None:
     reply = await lab.say(word)
-    assert "nada esperando" in reply or "niets" in reply or "anything waiting" in reply
+    # three neutral phrasings per language (F02-11); none of them records anything
+    assert any(
+        w in reply
+        for w in ("para quê", "pendente", "pergunta aberta", "waarvoor", "niets", "open vraag")
+    ) or any(w in reply for w in ("Yes to what", "pending", "no open question"))
     assert "despesa por linha" not in reply
 
 
@@ -170,7 +174,7 @@ def test_number_formatting_is_localised() -> None:
 async def test_weight_and_pressure_are_not_recorded_or_confirmed(lab: Lab) -> None:
     lab.llm_reply.return_value = "Registrado: peso 75 kg, pressão 12/8."
     reply = await lab.say("peso 75kg pressão 12/8")
-    assert "Ainda não acompanho peso" in reply
+    assert "Ainda não acompanho pressão" in reply
     lab.llm_reply.assert_not_awaited()
     assert (
         await lab.scalar(

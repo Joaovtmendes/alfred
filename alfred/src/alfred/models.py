@@ -433,12 +433,33 @@ class HabitLog(Base):
     activity: Mapped[str] = mapped_column(String(255), nullable=False)
     log_date: Mapped[date] = mapped_column(Date, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quantity: Mapped[float | None] = mapped_column(Numeric(10, 2, asdecimal=False), nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(30), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     member: Mapped[Member] = relationship()
     goal: Mapped[Goal | None] = relationship(back_populates="habit_logs")
+
+
+class GoalContribution(Base):
+    """Money put aside for a financial goal: ``add`` (+ amount) or ``set`` (balance is amount)."""
+
+    __tablename__ = "goal_contribution"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True
+    )
+    goal_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("goal.id"), nullable=False, index=True
+    )
+    kind: Mapped[str] = mapped_column(String(3), nullable=False)  # add | set
+    amount: Mapped[float] = mapped_column(Numeric(12, 2, asdecimal=False), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 # ── M10 — Produtividade ──────────────────────────────────────────────────────

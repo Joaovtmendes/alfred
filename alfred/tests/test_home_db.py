@@ -195,7 +195,7 @@ async def test_empty_list_and_unrelated_text(lab: Lab) -> None:
 @db
 async def test_bad_text_gets_an_example(lab: Lab) -> None:
     out = await lab.say("contrato energia Vattenfall 120")
-    assert "até" in out and await _rows(lab) == []
+    assert "Quando termina" in out and await _rows(lab) == []  # F14-16: asks what is missing
 
 
 @db

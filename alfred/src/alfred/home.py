@@ -19,7 +19,8 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred.audit import audit
-from alfred.models import HomeContract, Member, Message
+from alfred.clock import today_local
+from alfred.models import HomeContract, Member, Message, RecurringItem
 from alfred.parsing import strip_accents, to_amount
 from alfred.receipt import _EURO, _text, _total
 from alfred.training import Reply
@@ -271,8 +272,14 @@ async def handle_home_command(
     if _CREATE.match(unicodedata.normalize("NFC", " ".join(raw.split()).strip(" !?"))):
         fields = parse_contract(raw, today)
         if fields is None:
+            part = _partial(raw, today)
+            why = _why_bad(raw, today)
+            if part is not None and (part["provider"] is None or why == "home_need_end"):
+                return await _ask_missing(part, member, lang, session, today)  # F14-16
             return Reply(_t(_why_bad(raw, today), lang))
         return await _create_draft(fields, member, lang, session, today)
+    if (part := _partial(raw, today)) is not None and part["provider"] is None:
+        return await _ask_missing(part, member, lang, session, today)  # bare "contrato energia"
     if m := _RENEW.match(plain):
         ends = _parse_end(m.group("date"), today)
         if ends is None:
@@ -361,6 +368,8 @@ async def handle_home_button(
     text = _t("home_saved", lang, line=_line(rec, lang, today))
     if replaced:  # M-22: the old one of the same type is gone; say so
         text += "\n" + _t("home_replaced", lang, old=replaced)
+    if rec.amount is not None:  # F14-31: a contract with a price is also a monthly bill
+        return await ask_billing_day(session, member, lang, rec, text)
     return Reply(text)
 
 
@@ -640,3 +649,188 @@ async def panel_cards(
             }
         )
     return cards
+
+
+# ── F14-16/17: ask only what is missing; F14-31: billing day → fixed bill ────
+
+STRINGS.update(
+    {
+        "home_fill_provider": _all5(
+            "Qual é o fornecedor do contrato de {kind}?",
+            "Wie is de aanbieder van het {kind}-contract?",
+            "Who is the provider of the {kind} contract?",
+            "Quel est le fournisseur du contrat {kind} ?",
+            "Wer ist der Anbieter des {kind}-Vertrags?",
+        ),
+        "home_fill_end": _all5(
+            "Quando termina o contrato de {kind}? Por exemplo: 31/12/2027.",
+            "Wanneer eindigt het {kind}-contract? Bijvoorbeeld: 31/12/2027.",
+            "When does the {kind} contract end? For example: 31/12/2027.",
+            "Quand le contrat {kind} se termine-t-il ? Par exemple : 31/12/2027.",
+            "Wann endet der {kind}-Vertrag? Zum Beispiel: 31.12.2027.",
+        ),
+        "home_day_ask": _all5(
+            "Em que dia do mês a cobrança acontece? Responda com o dia (1 a 31).",
+            "Op welke dag van de maand wordt er afgeschreven? Antwoord met de dag (1 tot 31).",
+            "On which day of the month is it charged? Reply with the day (1 to 31).",
+            "Quel jour du mois le prélèvement a-t-il lieu ? Réponds avec le jour (1 à 31).",
+            "An welchem Tag im Monat wird abgebucht? Antworte mit dem Tag (1 bis 31).",
+        ),
+        "btn_home_skip": _all5("Agora não", "Nu niet", "Not now", "Pas maintenant", "Jetzt nicht"),
+        "home_day_done": _all5(
+            "Pronto: {name} agora é uma conta fixa no dia {day}. Eu aviso antes do vencimento e do fim do contrato. A de {month} já foi paga?",
+            "Klaar: {name} is nu een vaste last op dag {day}. Ik waarschuw je voor de vervaldatum en het einde van het contract. Is die van {month} al betaald?",
+            "Done: {name} is now a fixed bill on day {day}. I'll warn you before the due date and before the contract ends. Is the {month} one already paid?",
+            "C'est fait : {name} est maintenant une charge fixe le {day}. Je te préviens avant l'échéance et la fin du contrat. Celle de {month} est-elle déjà payée ?",
+            "Erledigt: {name} ist jetzt eine Fixkostenposition am {day}. Ich erinnere dich vor Fälligkeit und Vertragsende. Ist die von {month} schon bezahlt?",
+        ),
+    }
+)
+
+
+def _partial(raw: str, today: date) -> dict | None:
+    """What the typed contract already says (kind always; provider, amount, end when present)."""
+    m = _CREATE.match(unicodedata.normalize("NFC", " ".join(raw.split()).strip(" !?")))
+    if not m:
+        bare = re.match(
+            rf"^(?:(?:guarda|guardar|novo|nova|save|add|new|bewaar|nieuw)\s+)?{_NOUN}\s+{_OF}(?P<kind>{_ANY_KIND})\s*$",
+            " ".join(raw.split()).strip(" !?"),
+            re.I,
+        )
+        kind = _kind_of(bare.group("kind")) if bare else None
+        return {"kind": kind, "provider": None, "amount": None, "ends_on": None} if kind else None
+    kind = _kind_of(m.group("kind"))
+    if kind is None:
+        return None
+    rest, ends = m.group("rest"), None
+    if until := _UNTIL.match(rest):
+        ends = _parse_end(until.group("date"), today)
+        rest = until.group("head")
+    provider = amount = None
+    rest = rest.strip()
+    if am := _AMOUNT.match(rest):
+        amount, provider = to_amount(am.group("amt")), _clean(am.group("prov"), 60)
+    elif re.fullmatch(r"(?:€\s*)?\d[\d.,]*\s*(?:€|eur|euros?)?", rest, re.I):
+        amount = to_amount(re.sub(r"[^\d.,]", "", rest))
+    else:
+        provider = _clean(rest, 60)
+    if amount is not None and not 0 < amount <= MAX_AMOUNT:
+        amount = None
+    return {"kind": kind, "provider": provider, "amount": amount, "ends_on": ends}
+
+
+async def _ask_missing(
+    fields: dict, member: Member, lang: str, session: AsyncSession, today: date
+) -> Reply:
+    from alfred import questions
+
+    if fields["provider"] is None:
+        step, key = "provider", "home_fill_provider"
+    elif fields["ends_on"] is None:
+        step, key = "end", "home_fill_end"
+    else:
+        return await _create_draft(
+            {**fields, "ends_on": fields["ends_on"]}, member, lang, session, today
+        )
+    data = {**fields, "ends_on": fields["ends_on"].isoformat() if fields["ends_on"] else None}
+    return await questions.ask(
+        session, member, "home_fill", {**data, "step": step}, _t(key, lang, kind=_kind_label(fields["kind"], lang).lower()), []
+    )  # fmt: skip
+
+
+def _parse_fill(text: str, data: dict) -> str | None:
+    plain = text.strip()
+    if data.get("step") == "end":
+        end = _parse_end(plain, today_local())
+        return f"d:{end.isoformat()}" if end else None
+    clean = _clean(plain, 60)
+    if clean is None or not any(c.isalpha() for c in clean) or len(plain) > 60:
+        return None
+    return f"p:{clean}"
+
+
+async def _on_fill(session, member, lang, data, choice, today) -> Reply:
+    fields = {
+        "kind": data["kind"],
+        "provider": data["provider"],
+        "amount": data["amount"],
+        "ends_on": date.fromisoformat(data["ends_on"]) if data["ends_on"] else None,
+    }
+    if choice.startswith("p:"):
+        fields["provider"] = choice[2:]
+    elif choice.startswith("d:"):
+        fields["ends_on"] = date.fromisoformat(choice[2:])
+    return await _ask_missing(fields, member, lang, session, today)
+
+
+async def ask_billing_day(session: AsyncSession, member: Member, lang: str, rec, text: str):
+    from alfred import questions
+
+    return await questions.ask(
+        session,
+        member,
+        "home_day",
+        {"id": str(rec.id)},
+        f"{text}\n\n{_t('home_day_ask', lang)}",
+        [("skip", _t("btn_home_skip", lang))],
+    )
+
+
+def _parse_day(text: str, data: dict) -> str | None:
+    m = re.fullmatch(r"\s*(?:dia\s+|day\s+|dag\s+|jour\s+|tag\s+)?(\d{1,2})\s*", text.lower())
+    return f"d:{int(m.group(1))}" if m and 1 <= int(m.group(1)) <= 31 else None
+
+
+async def _on_day(session, member, lang, data, choice, today) -> Reply:
+    from alfred import questions
+    from alfred import recurring as rec
+    from alfred.clock import month_name
+
+    if choice == "skip":
+        return Reply(_t("home_day_skipped", lang))
+    row = await session.get(HomeContract, uuid.UUID(data["id"]))
+    if row is None or row.member_id != member.id or row.amount is None:
+        return Reply(_t("button_used", lang))
+    day = int(choice[2:])
+    name = f"{_kind_label(row.kind, lang)} {row.provider}"[:60]
+    parsed = rec.Parsed(
+        name=name, amount=float(row.amount), frequency="monthly", due_day=day,
+        installments_total=None, category="wonen", kind="fixed",
+    )  # fmt: skip
+    out = await rec._create(parsed, member, lang, session)
+    item = await session.scalar(
+        select(RecurringItem).where(
+            RecurringItem.member_id == member.id, RecurringItem.name == name
+        )
+    )
+    if item is None:
+        return out if not isinstance(out, str) else Reply(out)
+    if item is not None:
+        item.end_date = row.ends_on
+        session.add(item)
+        await session.flush()
+        return await questions.ask(
+            session, member, "day_paid", {"id": str(item.id), "yes_no": True},
+            _t("home_day_done", lang, name=name, day=day, month=month_name(item.next_due_date, lang)),
+            [("yes", _t("btn_yes", lang)), ("no", _t("btn_no", lang))],
+        )  # fmt: skip
+    return Reply(_t("home_day_skipped", lang))
+
+
+STRINGS["home_day_skipped"] = _all5(
+    "Certo, não criei a conta fixa. Diga “conta fixa …” quando quiser.",
+    "Prima, geen vaste last aangemaakt. Zeg “vaste last …” wanneer je wilt.",
+    "Okay, no fixed bill created. Say “fixed bill …” whenever you like.",
+    "D'accord, aucune charge fixe créée. Dis « charge fixe … » quand tu veux.",
+    "Okay, keine Fixkosten angelegt. Sag „Fixkosten …“, wann du magst.",
+)
+
+
+def _register() -> None:
+    from alfred import questions
+
+    questions.register("home_fill", _on_fill, _parse_fill)
+    questions.register("home_day", _on_day, _parse_day)
+
+
+_register()

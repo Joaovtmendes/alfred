@@ -309,33 +309,78 @@ def _spec(data: dict) -> Spec:
     return Spec(**{k: data[k] for k in Spec.__dataclass_fields__})
 
 
-async def _save_draft(session: AsyncSession, member_id, data: dict) -> None:
+@dataclass
+class AnalysisReply:
+    text: str
+    buttons: list[tuple[str, str]]
+
+
+async def _save_draft(session: AsyncSession, member_id, data: dict) -> SavedView:
     await session.execute(
         delete(SavedView).where(SavedView.member_id == member_id, SavedView.name.is_(None))
     )
-    session.add(SavedView(member_id=member_id, name=None, spec=data))
+    view = SavedView(member_id=member_id, name=None, spec=data)
+    session.add(view)
     await session.flush()
+    return view
 
 
 async def handle_analysis_question(
     body: str, body_plain: str, member: Member, lang: str, session: AsyncSession
-) -> str | None:
+) -> AnalysisReply | None:
     from alfred.conversation import _t
 
     if not looks_like_analysis(body_plain):
         return None
     if await analyses_today(session, member.id) >= DAILY_LIMIT:
-        return _t("analysis_limit", lang, n=DAILY_LIMIT)
+        return AnalysisReply(_t("analysis_limit", lang, n=DAILY_LIMIT), [])
     raw = await extract_analysis_spec(body, lang)
     if raw is None:
         return None  # no model available: let the normal reply path handle it
     data = sanitize_analysis_spec(raw.get("spec")) if raw.get("supported") is not False else None
     if data is None:
-        return _t("analysis_unsupported", lang)
+        return AnalysisReply(_t("analysis_unsupported", lang), [])
     spec = _spec(data)
     res = await run(session, member.id, spec, today_local())
-    await _save_draft(session, member.id, data)
-    return format_result(spec, res, lang) + "\n" + _t("analysis_save_hint", lang)
+    view = await _save_draft(session, member.id, data)
+    text = format_result(spec, res, lang) + "\n" + _t("analysis_save_hint", lang)
+    return AnalysisReply(text, [(f"an_exp:{view.id}", _t("analysis_btn_explain", lang))])  # F05-39
+
+
+async def explain_button(raw_id: str, member: Member, lang: str, session: AsyncSession) -> str:
+    """F05-39: how the number was counted, and which panel topic shows the same thing."""
+    import uuid
+
+    from alfred.conversation import _t
+
+    try:
+        view = await session.scalar(
+            select(SavedView).where(
+                SavedView.id == uuid.UUID(raw_id), SavedView.member_id == member.id
+            )
+        )
+    except ValueError:
+        view = None
+    if view is None:
+        return _t("analysis_explain_gone", lang)
+    spec = _spec(view.spec)
+    win, prev = windows(spec, today_local())
+    lines = [
+        _t(f"analysis_explain_{spec.metric}", lang),
+        _t("analysis_explain_period", lang, when=win.label()),
+        _t("analysis_explain_settled", lang),
+    ]
+    if spec.category or spec.merchant:
+        what = " · ".join(
+            x
+            for x in (category_label(spec.category, lang) if spec.category else "", spec.merchant)
+            if x
+        )
+        lines.append(_t("analysis_explain_filter", lang, what=what))
+    if prev is not None:
+        lines.append(_t("analysis_explain_prev", lang, when=prev.label()))
+    lines.append(_t("analysis_explain_panel", lang))
+    return "\n".join(lines)
 
 
 # ── saved views ───────────────────────────────────────────────────────────────
@@ -444,6 +489,84 @@ def _all(pt: str, nl: str, en: str, fr: str, de: str) -> dict[str, str | tuple[s
 
 
 STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
+    "analysis_btn_explain": _all("Explicar", "Uitleg", "Explain", "Expliquer", "Erklären"),
+    "analysis_explain_gone": _all(
+        "Essa análise já não está guardada. Faça a pergunta de novo que eu explico.",
+        "Die analyse is niet meer bewaard. Stel de vraag opnieuw, dan leg ik het uit.",
+        "That analysis is no longer stored. Ask again and I'll explain it.",
+        "Cette analyse n'est plus conservée. Repose la question et je t'explique.",
+        "Diese Analyse ist nicht mehr gespeichert. Frag noch einmal, dann erkläre ich sie.",
+    ),
+    "analysis_explain_spent": _all(
+        "Somei as despesas do período (dinheiro que saiu).",
+        "Ik heb de uitgaven van de periode opgeteld (geld dat eruit ging).",
+        "I added up the spending of the period (money that went out).",
+        "J'ai additionné les dépenses de la période (l'argent sorti).",
+        "Ich habe die Ausgaben des Zeitraums addiert (Geld, das rausging).",
+    ),
+    "analysis_explain_income": _all(
+        "Somei as receitas do período (dinheiro que entrou).",
+        "Ik heb de inkomsten van de periode opgeteld (geld dat binnenkwam).",
+        "I added up the income of the period (money that came in).",
+        "J'ai additionné les revenus de la période (l'argent entré).",
+        "Ich habe die Einnahmen des Zeitraums addiert (Geld, das reinkam).",
+    ),
+    "analysis_explain_net": _all(
+        "Calculei receitas menos despesas do período.",
+        "Ik heb inkomsten min uitgaven van de periode berekend.",
+        "I calculated income minus spending for the period.",
+        "J'ai calculé revenus moins dépenses de la période.",
+        "Ich habe Einnahmen minus Ausgaben des Zeitraums berechnet.",
+    ),
+    "analysis_explain_count": _all(
+        "Contei quantos lançamentos há no período.",
+        "Ik heb geteld hoeveel boekingen er in de periode zijn.",
+        "I counted how many entries there are in the period.",
+        "J'ai compté combien d'écritures il y a sur la période.",
+        "Ich habe gezählt, wie viele Buchungen es im Zeitraum gibt.",
+    ),
+    "analysis_explain_average": _all(
+        "Dividi o total do período pelo número de lançamentos.",
+        "Ik heb het totaal van de periode gedeeld door het aantal boekingen.",
+        "I divided the period's total by the number of entries.",
+        "J'ai divisé le total de la période par le nombre d'écritures.",
+        "Ich habe die Summe des Zeitraums durch die Anzahl der Buchungen geteilt.",
+    ),
+    "analysis_explain_period": _all(
+        "Período: {when}.",
+        "Periode: {when}.",
+        "Period: {when}.",
+        "Période : {when}.",
+        "Zeitraum: {when}.",
+    ),
+    "analysis_explain_settled": _all(
+        "Só entram lançamentos já pagos ou recebidos; o que ainda está a pagar ou a receber fica de fora.",
+        "Alleen boekingen die al betaald of ontvangen zijn tellen mee; wat nog open staat telt niet mee.",
+        "Only entries already paid or received count; anything still to pay or to receive is left out.",
+        "Seules comptent les écritures déjà payées ou reçues ; ce qui reste à payer ou à recevoir est exclu.",
+        "Es zählen nur bereits bezahlte oder erhaltene Buchungen; Offenes bleibt außen vor.",
+    ),
+    "analysis_explain_filter": _all(
+        "Filtro: {what}.",
+        "Filter: {what}.",
+        "Filter: {what}.",
+        "Filtre : {what}.",
+        "Filter: {what}.",
+    ),
+    "analysis_explain_prev": _all(
+        "A comparação é com o período {when}, pela mesma regra.",
+        "De vergelijking gebruikt de periode {when}, met dezelfde regel.",
+        "The comparison uses the period {when}, with the same rule.",
+        "La comparaison utilise la période {when}, avec la même règle.",
+        "Der Vergleich nutzt den Zeitraum {when}, mit derselben Regel.",
+    ),
+    "analysis_explain_panel": _all(
+        "Para ver os lançamentos e gráficos, diga *painel* e abra a aba Dinheiro.",
+        "Om de boekingen en grafieken te zien, zeg je *dashboard* en open je het tabblad Geld.",
+        "To see the entries and charts, say *panel* and open the Money tab.",
+        "Pour voir les écritures et les graphiques, dis *tableau de bord* et ouvre l'onglet Argent.",
+        "Um die Buchungen und Diagramme zu sehen, sag *Dashboard* und öffne den Tab Geld.",
+    ),
     "analysis_metric_spent": _all("Gastos", "Uitgaven", "Spending", "Dépenses", "Ausgaben"),
     "analysis_metric_income": _all("Receitas", "Inkomsten", "Income", "Revenus", "Einnahmen"),
     "analysis_metric_net": _all("Saldo", "Saldo", "Balance", "Solde", "Saldo"),

@@ -243,12 +243,15 @@ async def send_payment_reminders(now_local: datetime) -> tuple[int, int]:
 async def send_bill_reminders(now_local: datetime) -> tuple[int, int]:
     """A-46 — a bill "a pagar" on its due day and the day after; a fixed bill the day after its
     due date when it was not paid. Plain text inside the 24 h window only (no template yet)."""
+    from alfred.bills import income_reminders
     from alfred.db import AsyncSessionLocal
     from alfred.ledger_status import bill_reminders, mark_bill_reminded
     from alfred.whatsapp import send_text
 
     async with AsyncSessionLocal() as session:
         reminders = await bill_reminders(session, now_local)
+        reminders += await income_reminders(session, now_local)  # F06-33: fixed incomes
+        await session.commit()
 
     sent = errors = 0
     for r in reminders:

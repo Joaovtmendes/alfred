@@ -79,8 +79,8 @@ async def test_apaga_isso_asks_to_delete_the_last_entry(lab: Lab) -> None:
 @pytest.mark.bug("B-063")
 async def test_blood_pressure_medication_is_not_refused_as_blood_pressure(lab: Lab) -> None:
     out = await lab.say("tomei o remédio da pressão")
-    assert "peso nem pressão" not in out
-    assert "peso nem pressão" in await lab.say("pressão 12 por 8")
+    assert "pressão nem glicose" not in out
+    assert "pressão nem glicose" in await lab.say("pressão 12 por 8")
 
 
 @db

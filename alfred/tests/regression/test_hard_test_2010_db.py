@@ -554,7 +554,7 @@ async def test_an_empty_or_placeholder_service_is_refused(lab: Lab, text: str) -
 @pytest.mark.bug("B-048")
 async def test_a_contract_with_an_end_date_in_the_past_says_so(lab: Lab) -> None:
     assert await lab.say("contrato energia Vattenfall até 01/01/2020") == _t("home_past", "pt")
-    assert await lab.say("contrato energia Vattenfall 120 por mês") == _t("home_need_end", "pt")
+    assert "Quando termina" in await lab.say("contrato energia Vattenfall 120 por mês")  # F14-16
 
 
 @db
@@ -635,9 +635,15 @@ async def test_m03_m04_language_is_confirmed_or_chosen_from_the_menu(lab: Lab) -
     await lab.say("inglês")
     assert await lab.scalar(select(Member.language).where(Member.id == lab.member_id)) == "pt"
     assert lab.buttons[-1][0][0] == "lang_set:en"
-    out = await lab.say("mudar idioma")
-    assert "1 · Português" in out
-    await lab.say("3")
+    await lab.say("mudar idioma")  # F02-33: a list with one row per language
+    assert [r[1] for r in lab.buttons[-1]] == [
+        "Português",
+        "Nederlands",
+        "English",
+        "Français",
+        "Deutsch",
+    ]
+    await lab.say("3")  # a typed number still works
     assert await lab.scalar(select(Member.language).where(Member.id == lab.member_id)) == "en"
 
 

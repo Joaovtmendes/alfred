@@ -224,8 +224,21 @@ _ASK = (
     "(1–5)"
 )
 
+_PICK = (
+    "Qual idioma você prefere? · Welke taal? · Which language? · Quelle langue ? · Welche Sprache?"
+)
+# The list rows: each language written in itself (row title <= 24 characters).
+LANG_ROWS = [
+    ("lang_set:pt", "Português"),
+    ("lang_set:nl", "Nederlands"),
+    ("lang_set:en", "English"),
+    ("lang_set:fr", "Français"),
+    ("lang_set:de", "Deutsch"),
+]
+
 STRINGS: dict[str, dict[str, str]] = {
     "language_ask": _all(_ASK, _ASK, _ASK, _ASK, _ASK),
+    "language_pick": _all(_PICK, _PICK, _PICK, _PICK, _PICK),
     "lang_confirm": _all(
         "Quer que eu passe a falar português com você?",
         "Zal ik voortaan Nederlands met je praten?",

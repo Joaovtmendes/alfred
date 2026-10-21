@@ -70,10 +70,16 @@ _RECURRING_RE = re.compile(
 # First words that make the line a purchase or an income, never a fixed bill.
 _NOT_A_BILL = {
     "gastei", "gasto", "gastamos", "paguei", "pago", "pagamos", "comprei", "compramos", "recebi",
-    "recebo", "ganhei", "ganho", "salario", "renda", "receita", "freela", "spent", "spend", "paid",
-    "pay", "bought", "received", "earned", "salary", "income", "uitgegeven", "betaald", "gekocht",
-    "ontvangen", "salaris", "inkomen", "depense", "paye", "achete", "recu", "salaire", "bezahlt",
-    "gekauft", "erhalten", "gehalt", "einkommen",
+    "recebo", "ganhei", "ganho", "spent", "spend", "paid",
+    "pay", "bought", "received", "earned", "uitgegeven", "betaald", "gekocht",
+    "ontvangen", "depense", "paye", "achete", "recu", "bezahlt",
+    "gekauft", "erhalten",
+}  # fmt: skip
+
+# F06-33: "salário 3000 todo dia 25" is a fixed income, not a bill
+_INCOME_WORDS = {
+    "salario", "renda", "receita", "freela", "salary", "income", "salaris", "inkomen", "salaire",
+    "gehalt", "einkommen", "pensao", "pensioen",
 }  # fmt: skip
 
 _CATEGORY_HINTS: tuple[tuple[tuple[str, ...], str], ...] = (
@@ -141,6 +147,10 @@ def parse_recurring(body: str, body_plain: str) -> Parsed | None:
     name = name[0].upper() + name[1:]
     cat = guess_category(m.group("name"))
     kind = "installment" if total else "subscription" if cat == "abonnement" else "fixed"
+    if first in _INCOME_WORDS:
+        if total or frequency != "monthly":
+            return None
+        kind, cat = "income", "inkomen"
     return Parsed(
         name, amount, frequency, due_day if frequency == "monthly" else None, total, cat, kind
     )
@@ -259,6 +269,13 @@ _PAID_RE = re.compile(
     r"^(?:(?:ja\s+)?paguei|pago|paid|i\s+paid|betaald|j'ai\s+paye|ich\s+habe|bezahlt)\s+"
     r"(?:(?:a|o|as|os|the|de|het|le|la|l'|die|der|das|my|meu|minha)\s+)?(?P<name>[a-z][a-z '\-]{1,60}?)(?:\s+bezahlt)?\s*[.!]*$"
 )  # fmt: skip
+# F06-23: "paguei 3 parcelas do celular" — several instalments at once
+_PAID_MANY_RE = re.compile(
+    r"^(?:(?:ja\s+)?paguei|pago|paid|i\s+paid|betaald|ik\s+heb|bezahlt|j'ai\s+paye)\s+(?P<n>\d{1,2})\s+"
+    r"(?:parcelas?|installments?|instalments?|termijnen|raten|echeances?|mensualites?)\s+"
+    r"(?:(?:do|da|de|dos|das|of|van|des|der|the|my|meu|minha|het|de)\s+)?"
+    r"(?P<name>[a-z][a-z '\-]{1,60}?)(?:\s+betaald)?\s*[.!]*$"
+)  # fmt: skip
 _PAID_NL_RE = re.compile(
     r"^ik\s+heb\s+(?:de\s+|het\s+)?(?P<name>[a-z][a-z '\-]{1,60}?)\s+betaald\s*[.!]*$"
 )
@@ -277,18 +294,17 @@ def _fmt_date(d: date) -> str:
     return f"{d.day:02d}/{d.month:02d}"
 
 
-async def _active_items(session: AsyncSession, member_id: uuid.UUID) -> list[RecurringItem]:
-    return list(
-        (
-            await session.execute(
-                select(RecurringItem)
-                .where(RecurringItem.member_id == member_id, RecurringItem.active.is_(True))
-                .order_by(RecurringItem.next_due_date, RecurringItem.name)
-            )
-        )
-        .scalars()
-        .all()
+async def _active_items(
+    session: AsyncSession, member_id: uuid.UUID, *, income: bool = False
+) -> list[RecurringItem]:
+    """Active fixed bills; ``income=True`` also returns the fixed incomes (F06-33)."""
+    stmt = select(RecurringItem).where(
+        RecurringItem.member_id == member_id, RecurringItem.active.is_(True)
     )
+    if not income:
+        stmt = stmt.where(RecurringItem.kind != "income")
+    stmt = stmt.order_by(RecurringItem.next_due_date, RecurringItem.name)
+    return list((await session.execute(stmt)).scalars().all())
 
 
 async def handle_recurring_command(
@@ -305,6 +321,18 @@ async def handle_recurring_command(
     if parsed is not None:
         return await _create(parsed, member, lang, session)
 
+    m_many = _PAID_MANY_RE.match(plain)
+    if m_many:
+        from alfred import bills
+
+        items = [i for i in await _active_items(session, member.id) if i.installments_total]
+        hits = match_items(m_many.group("name"), items, loose=True)
+        if len(hits) == 1:
+            return await bills.ask_pay_many(session, member, lang, hits[0], int(m_many.group("n")))
+        if len(hits) > 1:
+            return _t("recurring_ambiguous", lang, names=", ".join(h.name for h in hits))
+        return _t("pay_many_none", lang, name=m_many.group("name").strip())
+
     m_paid = _PAID_RE.match(plain) or _PAID_NL_RE.match(plain)
     if m_paid and not any(c.isdigit() for c in plain):
         items = await _active_items(session, member.id)
@@ -317,7 +345,7 @@ async def handle_recurring_command(
 
     m_cancel = _CANCEL_RE.match(plain)
     if m_cancel:
-        items = await _active_items(session, member.id)
+        items = await _active_items(session, member.id, income=True)
         hits = match_items(m_cancel.group("name"), items, loose=False)
         if len(hits) == 1:
             name = hits[0].name
@@ -331,7 +359,9 @@ async def handle_recurring_command(
     return None
 
 
-async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -> str | Reply:
+async def _create(
+    p: Parsed, member: Member, lang: str, session: AsyncSession, first: date | None = None
+) -> str | Reply:
     from alfred.conversation import _fmt_eur, _t
 
     count = await session.scalar(
@@ -343,10 +373,24 @@ async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -
         return _t("recurring_limit", lang, n=MAX_ACTIVE_ITEMS)
     if p.due_day == ASK_DAY:
         return _t("recurring_ask_day", lang, name=p.name, amount=_fmt_eur(p.amount))
-    same = [i for i in await _active_items(session, member.id) if i.name.lower() == p.name.lower()]
+    same = [
+        i
+        for i in await _active_items(session, member.id, income=True)
+        if i.name.lower() == p.name.lower()
+    ]
     if same:  # a second "Aluguel" would make "paguei o aluguel" ambiguous for good
         old = same[0]
         if abs(float(old.amount) - p.amount) < 0.005:
+            if (
+                p.due_day
+                and p.due_day != ASK_DAY
+                and p.frequency == "monthly"
+                and old.due_day != p.due_day
+                and first is None
+            ):  # F06-18: same bill, another day → confirm the change
+                from alfred import bills
+
+                return await bills.ask_day_change(session, member, lang, old, p.due_day)
             return _t("recurring_exists_same", lang, name=old.name, amount=_fmt_eur(p.amount))
         cents = int(round(p.amount * 100))
         return Reply(  # B-018: offer the update instead of "delete it and add it again"
@@ -363,7 +407,7 @@ async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -
             ],
         )
     today = today_local()
-    due = first_due(p.frequency, p.due_day, today)
+    due = first or first_due(p.frequency, p.due_day, today)
     session.add(
         RecurringItem(
             id=uuid.uuid4(),
@@ -382,6 +426,15 @@ async def _create(p: Parsed, member: Member, lang: str, session: AsyncSession) -
     )
     await session.flush()
     audit(session, "recurring_created", member.id)
+    if p.kind == "income":
+        return _t(
+            "recurring_income_created",
+            lang,
+            name=p.name,
+            amount=_fmt_eur(p.amount),
+            day=p.due_day or due.day,
+            due=_fmt_date(due),
+        )
     if p.installments_total:
         return _t(
             "recurring_created_installments",
@@ -560,6 +613,7 @@ async def pending_reminders(session: AsyncSession, now: datetime) -> list[Remind
             .join(Member, RecurringItem.member_id == Member.id)
             .where(
                 RecurringItem.active.is_(True),
+                RecurringItem.kind != "income",
                 Member.consent_state == "accepted",
                 (RecurringItem.last_reminded_for.is_(None))
                 | (RecurringItem.last_reminded_for != RecurringItem.next_due_date),
@@ -621,6 +675,13 @@ STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         "en": ("Noted: {name}, {amount} ({freq}). Next due: {due}. I'll remind you 3 days before.", "Done: {name} at {amount} ({freq}). Due on {due}; I'll remind you 3 days before."),
         "fr": ("C'est noté : {name}, {amount} ({freq}). Prochaine échéance : {due}. Je te préviens 3 jours avant.", "Parfait : {name} de {amount} ({freq}). Échéance le {due} ; je te préviens 3 jours avant."),
         "de": ("Notiert: {name}, {amount} ({freq}). Nächste Fälligkeit: {due}. Ich erinnere dich 3 Tage vorher.", "Erledigt: {name} über {amount} ({freq}). Fällig am {due}; ich erinnere dich 3 Tage vorher."),
+    },
+    "recurring_income_created": {
+        "pt": "Anotado: {name}, {amount} todo mês, dia {day}. Próximo: {due}. No dia eu pergunto se já caiu.",
+        "nl": "Genoteerd: {name}, {amount} elke maand, dag {day}. Volgende: {due}. Op die dag vraag ik of het binnen is.",
+        "en": "Noted: {name}, {amount} every month, day {day}. Next: {due}. On the day I'll ask whether it arrived.",
+        "fr": "C'est noté : {name}, {amount} chaque mois, le {day}. Prochain : {due}. Ce jour-là, je demande si c'est arrivé.",
+        "de": "Notiert: {name}, {amount} jeden Monat, Tag {day}. Nächste: {due}. Am Tag frage ich, ob es angekommen ist.",
     },
     "recurring_created_installments": {
         "pt": "Anotado: {name} em {n}x de {amount}. Primeira parcela: {due}. Aviso 3 dias antes de cada uma.",

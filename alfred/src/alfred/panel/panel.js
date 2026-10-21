@@ -201,8 +201,8 @@
     month_vs_month: "title_mom", fixed_variable: "title_fixed", daily: "title_daily",
     recurring: "title_recurring",
     week: "title_week", load: "title_load", deadlines: "title_deadlines", tasks: "title_tasks", reminders: "title_reminders", month_map: "title_map", notes: "title_notes",
-    water: "title_water", workouts: "title_workouts",
-    goals: "title_goals", trip: "title_trip",
+    water: "title_water", weight: "title_weight", workouts: "title_workouts",
+    goals: "title_goals", money_goals: "title_money_goals", trip: "title_trip",
     training: "title_training", itinerary: "title_itinerary", packing: "title_packing", plan_budget: "title_planbudget",
     home_balance: "title_home_balance", home_entries: "title_home_entries",
     home_contracts: "title_home_contracts", home_cost: "title_home_cost",
@@ -214,11 +214,11 @@
   const SPANS = {
     summary: { balance: "s7", categories: "s5", goals: "s5", week: "s7", upcoming: "s12" },
     agenda: { week: "s7", tasks: "s5", month_map: "s7", reminders: "s5", notes: "s12" },
-    health: { goals: "s7", workouts: "s5", training: "s12", water: "s12" },
+    health: { goals: "s7", workouts: "s5", training: "s12", water: "s7", weight: "s5" },
     trips: { trip: "s7", packing: "s5", itinerary: "s7", plan_budget: "s5", trips_past: "s12" },
     home: { home_contracts: "s7", home_cost: "s5", home_balance: "s5", home_entries: "s7" },
     books: { books_year: "s7", books_categories: "s5", books_fixed: "s5", books_emergency: "s7", books_pl: "s7", books_btw: "s5", books_deductible: "s5", books_reserve: "s7", books_receivables: "s12" },
-    money: { transactions: "s7", month_vs_month: "s5", top_expenses: "s5", categories: "s7", budgets: "s7", fixed_variable: "s5", owed: "s5", daily: "s7", recurring: "s12" },
+    money: { transactions: "s7", month_vs_month: "s5", top_expenses: "s5", categories: "s7", budgets: "s7", money_goals: "s5", fixed_variable: "s5", owed: "s5", daily: "s7", recurring: "s12" },
   };
 
   function emptyCard(card, span) {
@@ -995,6 +995,23 @@
       return c;
     },
 
+    weight(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_weight, span);
+      const hero = el("div", "hero", fmt1.format(v.latest) + " kg");
+      const sub = v.change_30d === null ? "" : (v.change_30d > 0 ? "+" : "") + fmt1.format(v.change_30d) + " kg " + T.weight_change;
+      c.append(hero);
+      if (sub) c.append(el("div", "sub", sub));
+      const list = el("div", "list");
+      for (const p of card.points.slice().reverse()) {
+        const row = el("div", "item");
+        row.append(el("div", "t", dayShort(p.date)), el("div", "amt", fmt1.format(p.kg) + " kg"));
+        list.append(row);
+      }
+      c.append(list);
+      return c;
+    },
+
     workouts(card, span) {
       const v = card.values;
       const c = cardShell(card, T.title_workouts, span);
@@ -1020,14 +1037,38 @@
         const b = el("div", "brow");
         const h = el("div", "h");
         h.append(el("span", "n", it.title));
-        if (!it.money) h.append(el("span", "v", fmt(T.goal_days, { n: Math.min(it.logs_7d, 7) })));
+        h.append(el("span", "v", fmt(T.goal_days, { n: Math.min(it.logs_7d, 7) })));
         b.append(h);
-        if (!it.money) b.append(track((Math.min(it.logs_7d, 7) / 7) * 100, ""));
-        else if (it.saved !== undefined) {
-          h.append(el("span", "v", fmt(T.goal_saved, { saved: money0(it.saved), target: money0(it.target_amount) })));
-          b.append(track(it.saved_pct, ""));
-        }
+        const wk = el("div", "weekdots");
+        wk.setAttribute("role", "img");
+        wk.setAttribute("aria-label", T.goal_week_aria + ": " + it.week.filter((x) => x === "done").length + "/7");
+        for (const st of it.week) wk.append(el("span", "wd " + st));
+        b.append(wk);
         const sub = [it.target, it.deadline ? fmt(T.goal_until, { date: dayShort(it.deadline) }) : null].filter(Boolean).join(" · ");
+        if (sub) b.append(el("div", "cap", sub));
+        rows.append(b);
+      }
+      c.append(rows);
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    money_goals(card, span) {
+      const c = cardShell(card, T.title_money_goals, span);
+      const rows = el("div", "rows");
+      for (const it of card.items) {
+        const b = el("div", "brow");
+        const h = el("div", "h");
+        h.append(el("span", "n", it.title));
+        if (it.target_amount) h.append(el("span", "v", fmt(T.goal_saved, { saved: money0(it.saved), target: money0(it.target_amount) })));
+        else h.append(el("span", "v", money0(it.saved)));
+        b.append(h);
+        if (it.target_amount) b.append(track(it.saved_pct, ""));
+        const sub = [
+          it.done ? T.goal_reached : null,
+          it.per_month ? fmt(T.goal_per_month, { amount: money0(it.per_month) }) : null,
+          it.deadline ? fmt(T.goal_until, { date: dayShort(it.deadline) }) : null,
+        ].filter(Boolean).join(" · ");
         if (sub) b.append(el("div", "cap", sub));
         rows.append(b);
       }
