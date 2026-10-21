@@ -40,7 +40,7 @@ CATEGORIES = {
     "others": None,
     "compare": {"start": "2026-09-01", "end": "2026-09-15"},
     "phrase": phrase(
-        "Restaurantes é o que mais cresceu: € 51 a mais que em setembro. Transporte caiu € 33.",
+        "Restaurantes é o que mais cresceu: €51 a mais que em setembro. Transporte caiu €33.",
         '"maiores gastos de restaurantes este mês"',
         key="categories_rise",
     ),
@@ -113,7 +113,7 @@ SUMMARY: dict[str, Any] = {
                 "history_days": 45,
             },
             "phrase": phrase(
-                "Se as contas marcadas acontecerem e o gasto seguir o seu ritmo, você fecha outubro com cerca de € 1.120. A faixa é uma estimativa, não uma garantia.",
+                "Se as contas marcadas acontecerem e o gasto seguir o seu ritmo, você fecha outubro com cerca de €1.120. A faixa é uma estimativa, não uma garantia.",
                 '"como fica meu mês?"',
                 key="balance_projection",
             ),
@@ -137,7 +137,7 @@ SUMMARY: dict[str, Any] = {
             ],
             "more": 0,
             "phrase": phrase(
-                "Três contas somam € 298,00 até o fim do mês. Nada está atrasado.", '"energia paga"'
+                "Três contas somam €298,00 até o fim do mês. Nada está atrasado.", '"energia paga"'
             ),
         },
         copy.deepcopy(CATEGORIES),
@@ -301,7 +301,7 @@ MONEY: dict[str, Any] = {
                 },
             ],
             "phrase": phrase(
-                "23 lançamentos em outubro. O maior gasto foi o aluguel, € 1.150,00.",
+                "23 lançamentos em outubro. O maior gasto foi o aluguel, €1.150,00.",
                 '"mostre meus gastos de outubro"',
             ),
         },
@@ -341,7 +341,7 @@ MONEY: dict[str, Any] = {
             "compare": {"start": "2026-09-01", "end": "2026-10-01"},
             "drivers": [{"category": "restaurant", "label": "Restaurantes", "delta": 52.0}],
             "phrase": phrase(
-                "Restaurantes subiram € 52 e explicam quase tudo da diferença.",
+                "Restaurantes subiram €52 e explicam quase tudo da diferença.",
                 '"compare outubro com setembro"',
             ),
         },
@@ -350,7 +350,7 @@ MONEY: dict[str, Any] = {
             "empty": False,
             "values": {"fixed": 1238.0, "variable": 760.0, "total": 1998.0, "fixed_pct": 62},
             "phrase": phrase(
-                "Dá para mexer em € 760 do mês; o resto já está comprometido.",
+                "Dá para mexer em €760 do mês; o resto já está comprometido.",
                 '"quanto é fixo e quanto é variável?"',
             ),
         },

@@ -490,7 +490,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "Annulé : 1 opération supprimée.",
         "Rückgängig: 1 Buchung gelöscht.",
     ),
-    "batch_btn_cancel": _all("Desfazer", "Ongedaan maken", "Undo", "Annuler", "Rückgängig"),
+    "batch_btn_cancel": _all("Cancelar", "Annuleren", "Cancel", "Annuler", "Abbrechen"),
     "batch_edit_hint": _all(
         'Diga o que mudar: "tira o segundo" ou "o primeiro foi 4". Depois confirme.',
         'Zeg wat er moet veranderen: "haal de tweede weg" of "de eerste was 4". Bevestig daarna.',

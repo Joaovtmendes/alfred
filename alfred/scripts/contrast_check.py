@@ -34,11 +34,14 @@ PAIRS = [  # (foreground, background, minimum ratio)
     ("ink", "warm-soft", TEXT),
     ("warm", "surface", TEXT),  # delta text such as "up 8%"
     ("good", "surface", TEXT),
+    ("neg", "surface", TEXT),  # money out, over budget, late
+    ("neg", "bg", TEXT),
     ("accent", "bg", GRAPHIC),  # bars, focus ring, active-tab underline
     ("accent", "surface", GRAPHIC),
     ("accent", "surface2", GRAPHIC),  # bar fill over its track
     ("warm", "surface2", GRAPHIC),
     ("good", "surface2", GRAPHIC),
+    ("neg", "surface2", GRAPHIC),
     ("line", "surface", 1.0),  # decorative divider, no minimum
 ]
 

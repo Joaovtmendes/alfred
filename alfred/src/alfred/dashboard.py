@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from alfred import panel
 from alfred.audit import audit
+from alfred.clock import use_member_timezone
 from alfred.dashboard_i18n import normalize_lang, ui
 from alfred.db import get_session
 from alfred.models import Member
@@ -48,6 +49,7 @@ async def _get_member(token_str: str, session: AsyncSession) -> Member:
     member = await _find_member(token_str, session)
     if member is None or token_expired(member):
         raise HTTPException(status_code=404, detail="Dashboard not found") from None
+    use_member_timezone(member.timezone)  # A-66: the panel's "today" is the person's own
     return member
 
 

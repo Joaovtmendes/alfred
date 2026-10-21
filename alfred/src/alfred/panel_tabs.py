@@ -10,6 +10,10 @@ Agenda cards
 ------------
 ``week``       values {count, days}; days [{date, weekday (0 = Monday), items [{time "HH:MM", title,
                notes|null}]}] for today and the next 6 days; ``more`` = items not shown (20 shown).
+``load``       "Respiro e pico". values {count, free_days, peak_day|null, peak_count}; days [{date, weekday,
+               count, peak, free}] for today and the next 6 days (7 entries, always).
+``deadlines``  "Prazos da semana". values {count}; days [{date, weekday, items [{body}]}] for tasks that fall due
+               from today to the next 6 days (10 items shown); ``more`` = tasks not shown.
 ``tasks``      values {open, overdue, due_week, no_due, done_week}; items [{body, due|null, days|null,
                kind: "overdue"|"due"}] (overdue first, oldest first; then due in 7 days; 6 at most).
 ``reminders``  values {count}; items [{kind, text|null, time "HH:MM", days: [0..6], every_day}] (8 at most).
@@ -79,6 +83,7 @@ from alfred.panel_calc import _local_day, dec, money
 
 _WEEK_ITEMS = 20
 _TASK_ITEMS = 6
+_DEADLINE_ITEMS = 10
 _REMINDER_ITEMS = 8
 _NOTE_ITEMS = 5
 _NOTE_CHARS = 200
@@ -177,6 +182,81 @@ async def week_card(ctx) -> dict[str, Any]:
             pp.rule_agenda_week({d.weekday(): len(v) for d, v in by_day.items()}, ctx.lang)
         )
     return card
+
+
+async def load_card(ctx) -> dict[str, Any]:
+    """How busy each of the next 7 days is: the quiet ones and the peak. Describes, never advises."""
+    rows = await _appointments(ctx, ctx.today, 7)
+    per_day: Counter[date] = Counter(day for day, _ in rows)
+    span = [ctx.today + timedelta(days=i) for i in range(7)]
+    counts = [(d.weekday(), per_day.get(d, 0)) for d in span]
+    top = max((n for _, n in counts), default=0)
+    peak_day = next((d for d in span if top >= 2 and per_day.get(d, 0) == top), None)
+    unique_peak = sum(1 for d in span if per_day.get(d, 0) == top) == 1
+    days = [
+        {
+            "date": d.isoformat(),
+            "weekday": d.weekday(),
+            "count": per_day.get(d, 0),
+            "peak": bool(unique_peak and peak_day == d),
+            "free": per_day.get(d, 0) == 0,
+        }
+        for d in span
+    ]
+    card = _card(
+        "load",
+        not rows,
+        {
+            "count": len(rows),
+            "free_days": sum(1 for d in days if d["free"]),
+            "peak_day": peak_day.isoformat() if peak_day and unique_peak else None,
+            "peak_count": top if unique_peak and top >= 2 else 0,
+        },
+        ctx,
+        "agenda",
+        days=days,
+    )
+    if rows:
+        card["phrase"] = _phrase(pp.rule_agenda_breath(counts, ctx.lang))
+    return card
+
+
+async def deadlines_card(ctx) -> dict[str, Any]:
+    """Open tasks that fall due from today to the next 6 days, grouped by day."""
+    last = ctx.today + timedelta(days=6)
+    rows = (
+        await ctx.session.execute(
+            select(Task.body, Task.due_date)
+            .where(
+                Task.member_id == ctx.mid,
+                Task.done_at.is_(None),
+                Task.due_date >= ctx.today,
+                Task.due_date <= last,
+            )
+            .order_by(Task.due_date, Task.created_at)
+            .limit(200)
+        )
+    ).all()
+    by_day: dict[date, list[str]] = defaultdict(list)
+    shown = 0
+    for r in rows:
+        if shown >= _DEADLINE_ITEMS:
+            break
+        shown += 1
+        by_day[r.due_date].append(r.body[:120])
+    days = [
+        {"date": d.isoformat(), "weekday": d.weekday(), "items": [{"body": b} for b in items]}
+        for d, items in sorted(by_day.items())
+    ]
+    return _card(
+        "deadlines",
+        not rows,
+        {"count": len(rows)},
+        ctx,
+        "tasks",
+        days=days,
+        more=max(len(rows) - shown, 0),
+    )
 
 
 async def tasks_card(ctx) -> dict[str, Any]:

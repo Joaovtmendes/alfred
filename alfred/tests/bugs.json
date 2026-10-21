@@ -625,16 +625,17 @@
       "area": "Política",
       "source": "Leitura de código 07/10",
       "legacy": true,
-      "reason": "Depende de variáveis de produção (PRIVACY_CONTACT_EMAIL) e de tradução jurídica da política."
+      "reason": "E-mail de contato agora padrão support@jofie.nl (21/10). Falta a tradução jurídica fr/de da política: o texto vive no site (jofie.nl/privacy), não neste repositório, e precisa de revisão de advogado."
     },
     {
       "id": "A-58",
       "title": "Chat e painel formatam o dinheiro de jeitos diferentes",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Painel: dinheiro",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-59",
@@ -710,22 +711,23 @@
     },
     {
       "id": "A-66",
-      "title": "Todos os horários são de Amsterdã, mesmo para quem está no Brasil",
-      "status": "manual",
+      "title": "Todos os horários eram de Amsterdã, mesmo para quem está no Brasil (agora: comando 'fuso horário X'; chat, painel e lembretes agendados seguem o fuso da pessoa)",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Fuso horário",
       "source": "Leitura de código 07/10",
       "legacy": true,
-      "reason": "Decisão de produto (fuso por membro). Só se confirma viajando; sem teste automático útil até haver o desenho."
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-67",
       "title": "Dois botões chamados Desfazer; mensagem 'já tinha sido apagado' em casos sem relação",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Botões",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-68",
@@ -790,11 +792,12 @@
     {
       "id": "A-74",
       "title": "Palavras isoladas disparam módulos",
-      "status": "open",
+      "status": "fixed",
       "severity": "baixa",
       "area": "Palavras soltas",
       "source": "Leitura de código 07/10",
-      "legacy": true
+      "legacy": true,
+      "fixed": "2026-10-21"
     },
     {
       "id": "A-75",
@@ -1669,6 +1672,17 @@
       "step": "print do WhatsApp 21/10",
       "status": "fixed",
       "source": "Print enviado pelo usuário 21/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "F10-19",
+      "title": "Consentimento de saúde: o 1º remédio de quem não marcou no cadastro pergunta antes de guardar (não reproduzido no hard test; agora travado por teste)",
+      "severity": "media",
+      "area": "saúde",
+      "step": "F10-19",
+      "status": "fixed",
+      "source": "Hard test 18-20/10 (não reproduzido)",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
     }

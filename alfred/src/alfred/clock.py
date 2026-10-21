@@ -11,14 +11,30 @@ Storage stays UTC (``timestamptz``); only day boundaries are local.
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from datetime import UTC, date, datetime, time, timedelta
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from alfred.settings import settings
 
+# A-66: the timezone of the person being served (one inbound message, one panel request).
+# Unset = the server default, so jobs and tests that never set it behave as before.
+_member_tz: ContextVar[ZoneInfo | None] = ContextVar("member_tz", default=None)
+
+
+def use_member_timezone(name: object) -> None:
+    """From here on, "today" for this message/request follows ``name`` (an IANA name)."""
+    zone = None
+    if isinstance(name, str) and name:
+        try:
+            zone = ZoneInfo(name)
+        except (ZoneInfoNotFoundError, ValueError, OSError):
+            zone = None
+    _member_tz.set(zone)
+
 
 def local_tz() -> ZoneInfo:
-    return ZoneInfo(settings.timezone)
+    return _member_tz.get() or ZoneInfo(settings.timezone)
 
 
 def now_local() -> datetime:

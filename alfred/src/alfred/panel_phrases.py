@@ -203,6 +203,13 @@ PHRASES: dict[str, dict[str, str]] = {
         "fr": "{count} rendez-vous dans les 7 prochains jours ; {day} est le jour le plus chargé, avec {top}.",
         "de": "{count} Termine in den nächsten 7 Tagen; {day} ist der vollste Tag, mit {top}.",
     },
+    "agenda_breath": {
+        "pt": "Mais livre: {free}. Mais cheio: {day}, com {top}.",
+        "nl": "Rustigste dag: {free}. Drukste dag: {day}, met {top}.",
+        "en": "Quietest day: {free}. Busiest day: {day}, with {top}.",
+        "fr": "Jour le plus calme : {free}. Jour le plus chargé : {day}, avec {top}.",
+        "de": "Ruhigster Tag: {free}. Vollster Tag: {day}, mit {top}.",
+    },
     "agenda_map": {
         "pt": "Os compromissos se concentram em {day}: {top} de {count} nas próximas 4 semanas.",
         "nl": "De afspraken concentreren zich op {day}: {top} van {count} in de komende 4 weken.",
@@ -729,13 +736,13 @@ def _lang(lang: str | None) -> str:
 
 
 def fmt_eur(value: float | Decimal, lang: str) -> str:
-    """European money in every language: ``€ 1.234,56``; negatives ``− € 5,00``.
+    """European money in every language, as in the chat: ``€1.234,56``; negatives ``-€5,00``.
 
     ``lang`` is accepted for symmetry with the rules; the format is the same in all five.
     """
     rounded = round(float(value), 2)
     cents = f"{abs(rounded):,.2f}".replace(",", "§").replace(".", ",").replace("§", ".")
-    return f"{'− ' if rounded < 0 else ''}€ {cents}"
+    return f"{'-' if rounded < 0 else ''}€{cents}"
 
 
 def unit(kind: str, n: int, lang: str) -> str:
@@ -1112,6 +1119,25 @@ def rule_agenda_week(by_weekday: dict[int, int], lang: str) -> Phrase | None:
     return render(
         "agenda_week", lang, chat_key="agenda",
         count=total, day=weekday_word(peak[0], lang), top=peak[1],
+    )  # fmt: skip
+
+
+def rule_agenda_breath(counts: list[tuple[int, int]], lang: str) -> Phrase | None:
+    """Rule 13b. ``counts`` = (weekday, appointments) for the next 7 days, in date order.
+
+    Names the quietest day (the first with the fewest) and the one busiest day, only when they
+    differ and the busiest holds at least 2.
+    """
+    if sum(n for _, n in counts) < MIN_AGENDA_WEEK:
+        return None
+    peak = _unique_peak({wd: n for wd, n in counts})
+    low = min(n for _, n in counts)
+    if peak is None or peak[1] < 2 or peak[1] == low:
+        return None
+    free = next(wd for wd, n in counts if n == low)
+    return render(
+        "agenda_breath", lang, chat_key="agenda",
+        free=weekday_word(free, lang), day=weekday_word(peak[0], lang), top=peak[1],
     )  # fmt: skip
 
 

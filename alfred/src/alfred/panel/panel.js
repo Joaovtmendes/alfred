@@ -8,13 +8,14 @@
   const LANG = { pt: "pt-BR", nl: "nl-NL", en: "en-GB", fr: "fr-FR", de: "de-DE" }[cfg.lang] || "en-GB";
   const fmtNum = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtInt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
-  const money = (v) => (v < 0 ? "− " : "") + "€ " + fmtNum.format(Math.abs(v));
-  const money0 = (v) => (v < 0 ? "− " : "") + "€ " + fmtInt.format(Math.abs(v));
-  const signed = (v) => (v > 0 ? "+ " + money(v) : money(v));
+  // Same shape as the chat: "€1.234,56" and "-€133,60" (A-58)
+  const money = (v) => (v < 0 ? "-" : "") + "€" + fmtNum.format(Math.abs(v));
+  const money0 = (v) => (v < 0 ? "-" : "") + "€" + fmtInt.format(Math.abs(v));
+  const signed = (v) => (v > 0 ? "+" + money(v) : money(v));
   const NS = "http://www.w3.org/2000/svg";
   const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // A sign, the euro mark and the number never split across lines: "− € 5,00" is one word.
+  // Old no-break pairs kept for text that still carries a space after the euro sign.
   const nb = (t) => t.replace(/([−+]) €/g, "$1\u00a0€").replace(/€ (?=\d)/g, "€\u00a0");
   function el(tag, cls, text) {
     const n = document.createElement(tag);
@@ -199,7 +200,7 @@
     owed: "title_owed", transactions: "title_tx", top_expenses: "title_top",
     month_vs_month: "title_mom", fixed_variable: "title_fixed", daily: "title_daily",
     recurring: "title_recurring",
-    week: "title_week", tasks: "title_tasks", reminders: "title_reminders", month_map: "title_map", notes: "title_notes",
+    week: "title_week", load: "title_load", deadlines: "title_deadlines", tasks: "title_tasks", reminders: "title_reminders", month_map: "title_map", notes: "title_notes",
     water: "title_water", workouts: "title_workouts",
     goals: "title_goals", trip: "title_trip",
     training: "title_training", itinerary: "title_itinerary", packing: "title_packing", plan_budget: "title_planbudget",
@@ -281,7 +282,7 @@
       if (withProj) {
         const parts = [{ label: T.leg_realized, value: Math.max(v.balance, 0), text: money(proj.realized) }];
         if (proj.committed > 0) parts.push({ label: T.leg_committed, value: proj.committed, text: money(-proj.committed), tone: "warm" });
-        if (proj.scheduled_in > 0) parts.push({ label: T.leg_incoming, value: proj.scheduled_in, text: "+ " + money(proj.scheduled_in), tone: "good" });
+        if (proj.scheduled_in > 0) parts.push({ label: T.leg_incoming, value: proj.scheduled_in, text: "+" + money(proj.scheduled_in), tone: "good" });
         if (estimate && proj.variable > 0) parts.push({ label: T.leg_variable, value: proj.variable, text: money(-proj.variable), tone: "hatch" });
         stackedBar(c, parts, estimate ? { total: { cls: "mob", label: T.proj_total, note: rangeText, text: "~ " + money0(proj.projected) } } : null);
       }
@@ -310,7 +311,7 @@
         const s = el("div", "s", it.due_text);
         if (it.source === "recurring") s.append(el("span", "dsk", " · " + T.recurring));
         body.append(s);
-        row.append(tile, body, el("div", "amt", recv ? "+ " + money(it.amount) : money(it.amount)));
+        row.append(tile, body, el("div", "amt", recv ? "+" + money(it.amount) : money(it.amount)));
         list.append(row);
       }
       c.append(list);
@@ -693,7 +694,7 @@
           const body = el("div");
           body.append(el("div", "t", e.merchant || T.no_merchant));
           body.append(el("div", "s", [e.label, lc(T["st_" + e.status] || e.status)].filter(Boolean).join(" · ")));
-          row.append(body, el("div", "amt " + (e.kind === "income" ? "pos" : "neg") + (e.settled ? "" : " pending"), e.kind === "income" ? "+ " + money(e.amount) : money(-e.amount)));
+          row.append(body, el("div", "amt " + (e.kind === "income" ? "pos" : "neg") + (e.settled ? "" : " pending"), e.kind === "income" ? "+" + money(e.amount) : money(-e.amount)));
           list.append(row);
         }
         g.append(list);
@@ -867,6 +868,44 @@
       if (card.more) c.append(el("div", "cap", fmt(T.more_items, { n: card.more })));
       const rows = [];
       for (const d of card.days) for (const it of d.items) rows.push([dm(d.date), it.time, it.title]);
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    // ── Agenda: Respiro e pico — seven day columns, taller = more appointments
+    load(card, span) {
+      const c = cardShell(card, T.title_load, span);
+      const wk = dtf({ weekday: "short" });
+      const top = Math.max(1, ...card.days.map((d) => d.count));
+      const row = el("div", "loadbars");
+      row.setAttribute("role", "img");
+      row.setAttribute("aria-label", T.title_load + ": " + card.days.map((d) => cap1(wk.format(day(d.date))) + " " + d.count).join(", "));
+      for (const d of card.days) {
+        const col = el("div", "lcol" + (d.peak ? " peak" : "") + (d.free ? " free" : ""));
+        const bar = el("i");
+        bar.style.height = Math.max(d.count ? 14 : 4, Math.round((d.count / top) * 64)) + "px";
+        col.append(el("b", "num", String(d.count)), bar, el("span", "", cap1(wk.format(day(d.date)))));
+        row.append(col);
+      }
+      c.append(row);
+      c.append(el("div", "cap", fmtN("load_free_days", card.values.free_days)));
+      phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    // ── Agenda: Prazos da semana — tasks falling due in the next 7 days, by day
+    deadlines(card, span, ctx) {
+      const c = cardShell(card, T.title_deadlines, span);
+      const today = ctx.body.today, tomorrow = shiftDay(today, 1);
+      const wd = dtf({ weekday: "long" });
+      for (const d of card.days) {
+        const head = el("div", "day-head");
+        const name = d.date === today ? T.day_today : (d.date === tomorrow ? T.day_tomorrow : cap1(wd.format(day(d.date))));
+        head.append(el("span", "", name), el("span", "", dayShort(d.date)));
+        c.append(head);
+        for (const it of d.items) c.append(el("div", "deadline-item", it.body));
+      }
+      if (card.more) c.append(el("div", "cap", fmt(T.more_items, { n: card.more })));
       phraseBlock(c, card.phrase);
       return c;
     },

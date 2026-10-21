@@ -22,7 +22,7 @@ import asyncio
 import os
 import sys
 from datetime import UTC, datetime, time, timedelta
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # Ensure src/ is on the path when run from the repo root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -59,6 +59,16 @@ def due_at(time_of_day: str, day: datetime) -> datetime | None:
         return day.replace(hour=hh, minute=mm, second=0, microsecond=0, fold=0)
     except (ValueError, AttributeError):
         return None
+
+
+def _in_member_zone(now_local: datetime, name: str | None) -> datetime:
+    """``now_local`` seen from the member's own timezone (unchanged when none is set/valid)."""
+    if not name:
+        return now_local
+    try:
+        return now_local.astimezone(ZoneInfo(name))
+    except (ZoneInfoNotFoundError, ValueError, OSError):
+        return now_local
 
 
 def is_job_due(
@@ -537,6 +547,7 @@ async def run_cron() -> int:
                     ScheduledJob.last_sent_at,
                     Member.wa_phone,
                     Member.language,
+                    Member.timezone,
                 )
                 .join(Member, ScheduledJob.member_id == Member.id)
                 .where(ScheduledJob.active.is_(True), Member.consent_state == "accepted")
@@ -563,7 +574,7 @@ async def run_cron() -> int:
             r.time_of_day,
             r.days_mask,
             r.last_sent_at,
-            now_local,
+            _in_member_zone(now_local, r.timezone),  # A-66: 08:00 means 08:00 where they live
             day_of_month=(r.payload or {}).get("day_of_month"),
         ):
             continue

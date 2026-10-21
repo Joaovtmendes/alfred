@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     timezone: str = "Europe/Amsterdam"
 
     # Dashboard / public pages
-    privacy_contact_email: str = ""  # shown on /privacy
+    privacy_contact_email: str = "support@jofie.nl"  # shown on /terms and in the policy text
     base_url: str = ""  # e.g. https://alfred.up.railway.app
     dashboard_token_ttl_days: int = 7  # panel link; sliding renewal (panel_tokens)
     export_token_ttl_minutes: int = 15  # single-use export link

@@ -832,7 +832,9 @@ async def agenda(
     ctx = _Ctx(session, member, f, today_local())
     cards = [
         await pt.week_card(ctx),
+        await pt.load_card(ctx),
         await pt.tasks_card(ctx),
+        await pt.deadlines_card(ctx),
         await pt.month_map_card(ctx),
         await pt.reminders_card(ctx),
         await pt.notes_card(ctx),

@@ -80,6 +80,8 @@ class Member(Base):
     # Art. 9 GDPR: explicit consent before any health data (sleep, mood, medication, water) is
     # stored. Set by the chat button (and, later, by the sign-up page); cleared on withdrawal.
     health_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # A-66: IANA name ("Europe/Lisbon"); NULL = the server default (Europe/Amsterdam)
+    timezone: Mapped[str | None] = mapped_column(String(64))
     # Sign-up page (mandatory): a single-use secret link, 30 minutes; cleared on use
     signup_token: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True, unique=True, default=None

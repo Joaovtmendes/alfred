@@ -230,7 +230,7 @@ def test_portuguese_llm_prompts_are_brazilian_and_formal() -> None:
 def test_draft_buttons_say_undo_not_cancel() -> None:
     from alfred.batch import STRINGS
 
-    assert STRINGS["batch_btn_cancel"]["pt"] == "Desfazer"
+    assert STRINGS["batch_btn_cancel"]["pt"] == "Cancelar"
     assert all(len(v) <= 20 for v in STRINGS["batch_btn_cancel"].values())  # Meta button limit
 
 

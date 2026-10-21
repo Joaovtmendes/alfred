@@ -75,7 +75,7 @@ def _appt(lab, title, day, hour, minute=0, **kw) -> Appointment:
 @pytest.mark.parametrize(
     ("tab", "ids"),
     [
-        ("agenda", ["week", "tasks", "month_map", "reminders", "notes"]),
+        ("agenda", ["week", "load", "tasks", "deadlines", "month_map", "reminders", "notes"]),
         ("health", ["goals", "workouts", "training", "water"]),
         ("trips", ["trip"]),
     ],
@@ -662,3 +662,103 @@ async def test_trip_plan_cards_exist_only_with_a_trip_and_compare_planned_with_s
     (line,) = cards["plan_budget"]["lines"]
     assert line["over"] is True and line["spent"] == 330 and line["plan"] == 300
     assert "passou do planejado" in cards["plan_budget"]["phrase"]["text"]
+
+
+@db
+async def test_load_names_the_quietest_and_the_busiest_day(lab, client) -> None:
+    peak = TODAY + timedelta(days=2)
+    await lab.add(
+        _appt(lab, "A", TODAY, 9),
+        _appt(lab, "B", peak, 9),
+        _appt(lab, "C", peak, 11),
+        _appt(lab, "D", peak, 15),
+        _appt(lab, "Cancelada", TODAY + timedelta(days=4), 9, status="cancelled"),
+        _appt(lab, "Longe", TODAY + timedelta(days=9), 9),
+    )
+    load = (await _cards(client, lab, "agenda"))["load"]
+    assert load["empty"] is False
+    assert [d["count"] for d in load["days"]] == [1, 0, 3, 0, 0, 0, 0]
+    assert load["values"] == {
+        "count": 4,
+        "free_days": 5,
+        "peak_day": peak.isoformat(),
+        "peak_count": 3,
+    }
+    assert [d["peak"] for d in load["days"]].count(True) == 1 and load["days"][2]["peak"]
+    assert "Mais livre" in load["phrase"]["text"] and "com 3" in load["phrase"]["text"]
+
+
+@db
+async def test_load_with_a_tie_for_the_busiest_day_has_no_peak(lab, client) -> None:
+    await lab.add(
+        _appt(lab, "A", TODAY, 9),
+        _appt(lab, "B", TODAY, 10),
+        _appt(lab, "C", TODAY + timedelta(days=1), 9),
+        _appt(lab, "D", TODAY + timedelta(days=1), 10),
+    )
+    load = (await _cards(client, lab, "agenda"))["load"]
+    assert load["values"]["peak_day"] is None and load["phrase"] is None
+    assert not any(d["peak"] for d in load["days"])
+
+
+@db
+async def test_deadlines_group_open_tasks_due_in_the_next_seven_days(lab, client) -> None:
+    from alfred.models import Task
+
+    done_at = datetime.now(UTC)
+    await lab.add(
+        Task(member_id=lab.member_id, body="Hoje", due_date=TODAY),
+        Task(
+            member_id=lab.member_id,
+            body="Em 3 dias",
+            due_date=TODAY + timedelta(days=3),
+        ),
+        Task(
+            member_id=lab.member_id,
+            body="Atrasada",
+            due_date=TODAY - timedelta(days=1),
+        ),
+        Task(
+            member_id=lab.member_id,
+            body="Longe",
+            due_date=TODAY + timedelta(days=7),
+        ),
+        Task(
+            member_id=lab.member_id,
+            body="Feita",
+            due_date=TODAY + timedelta(days=1),
+            done_at=done_at,
+        ),
+        Task(member_id=lab.member_id, body="Sem prazo"),
+    )
+    dl = (await _cards(client, lab, "agenda"))["deadlines"]
+    assert dl["empty"] is False and dl["values"] == {"count": 2}
+    assert [(d["date"], [i["body"] for i in d["items"]]) for d in dl["days"]] == [
+        (TODAY.isoformat(), ["Hoje"]),
+        ((TODAY + timedelta(days=3)).isoformat(), ["Em 3 dias"]),
+    ]
+
+
+@db
+async def test_deadlines_of_another_member_never_show(lab, client) -> None:
+    from alfred.models import Task
+
+    async with AsyncSessionLocal() as sess:
+        other = Member(
+            household_id=lab.household_id,
+            wa_phone="3161" + uuid.uuid4().hex[:7],
+            consent_state="accepted",
+            language="pt",
+        )
+        sess.add(other)
+        await sess.commit()
+        other_id = other.id
+    try:
+        await lab.add(Task(member_id=other_id, body="Dele", due_date=TODAY))
+        dl = (await _cards(client, lab, "agenda"))["deadlines"]
+        assert dl["empty"] is True and "Dele" not in str(dl)
+    finally:
+        async with AsyncSessionLocal() as sess:
+            await sess.execute(delete(Task).where(Task.member_id == other_id))
+            await sess.execute(delete(Member).where(Member.id == other_id))
+            await sess.commit()
