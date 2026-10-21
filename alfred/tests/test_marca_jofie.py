@@ -39,7 +39,7 @@ def test_no_alfred_in_user_facing_strings():
 
 def test_legal_text_names_jofie_and_bumps_version():
     assert legal.POLICY_VERSION == "2.3"
-    assert legal.POLICY_DATE == "2026-10-18"
+    assert legal.POLICY_DATE == "2026-10-21"
 
 
 def test_brand_block_is_wordmark_only():

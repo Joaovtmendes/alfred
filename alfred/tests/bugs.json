@@ -1927,6 +1927,50 @@
       "source": "Hard test 20/10",
       "opened": "2026-10-21",
       "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-094",
+      "title": "contrato sem fornecedor ou data fim vira pergunta, não erro",
+      "severity": "media",
+      "area": "casa",
+      "step": "hard test F14-17",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-095",
+      "title": "contrato confirmado pergunta o dia de cobrança e cria conta fixa com fim",
+      "severity": "media",
+      "area": "casa",
+      "step": "hard test F14-31/F13-20",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-096",
+      "title": "serviço: preço sem € e 'serviço: 180 €' viram rascunho; 'faltam…' e edição valor/garantia",
+      "severity": "media",
+      "area": "casa",
+      "step": "hard test F14-16/36",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
+    },
+    {
+      "id": "B-097",
+      "title": "termos/política sem a cláusula de que o Jofie não substitui nota fiscal",
+      "severity": "baixa",
+      "area": "legal",
+      "step": "hard test F14-19",
+      "status": "fixed",
+      "source": "Hard test 20/10",
+      "opened": "2026-10-21",
+      "fixed": "2026-10-21"
     }
   ]
 }

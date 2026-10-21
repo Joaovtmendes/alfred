@@ -554,7 +554,7 @@ async def test_an_empty_or_placeholder_service_is_refused(lab: Lab, text: str) -
 @pytest.mark.bug("B-048")
 async def test_a_contract_with_an_end_date_in_the_past_says_so(lab: Lab) -> None:
     assert await lab.say("contrato energia Vattenfall até 01/01/2020") == _t("home_past", "pt")
-    assert await lab.say("contrato energia Vattenfall 120 por mês") == _t("home_need_end", "pt")
+    assert "Quando termina" in await lab.say("contrato energia Vattenfall 120 por mês")  # F14-16
 
 
 @db
