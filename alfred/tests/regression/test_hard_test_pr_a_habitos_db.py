@@ -52,7 +52,7 @@ def test_mood_answers_by_range_with_an_emoji() -> None:
 @pytest.mark.bug("B-084")
 async def test_a_habit_without_a_goal_offers_one_and_creates_it(lab: Lab) -> None:
     out = await lab.say("meditei hoje")
-    assert "Anotei" in out and "meta" in out
+    assert "meditei" in out and "meta de *meditação*" in out
     assert [b[1] for b in lab.buttons[-1]] == ["Todo dia", "3x por semana", "Outra"]
     created = await lab.tap(lab.buttons[-1][1][0])
     assert "Meta criada" in created

@@ -308,6 +308,13 @@ PHRASES: dict[str, dict[str, str]] = {
         "fr": "Pas encore d'enregistrements d'eau sur les 7 derniers jours. Enregistre-les dans le chat.",
         "de": "Noch keine Wassereinträge in den letzten 7 Tagen. Erfasse sie im Chat.",
     },
+    "empty_weight": {
+        "pt": "Nenhum peso registrado ainda. Se quiser acompanhar, registre pelo chat.",
+        "nl": "Nog geen gewicht geregistreerd. Wil je het bijhouden, leg het dan vast in de chat.",
+        "en": "No weight logged yet. If you want to follow it, log it in the chat.",
+        "fr": "Aucun poids enregistré pour l'instant. Si tu veux le suivre, enregistre-le dans le chat.",
+        "de": "Noch kein Gewicht eingetragen. Wenn du es verfolgen möchtest, erfasse es im Chat.",
+    },
     "empty_workouts": {
         "pt": "Nenhum treino registrado nas últimas semanas. Registre pelo chat.",
         "nl": "Geen trainingen vastgelegd in de afgelopen weken. Leg ze vast in de chat.",
@@ -585,6 +592,13 @@ CHAT: dict[str, dict[str, str]] = {
         "en": '"drank 0.5 L water"',
         "fr": '"bu 0,5 L d\'eau"',
         "de": '"0,5 Liter Wasser getrunken"',
+    },
+    "log_weight": {
+        "pt": '"peso 72,5 kg"',
+        "nl": '"gewicht 72,5 kg"',
+        "en": '"weight 72.5 kg"',
+        "fr": '"poids 72,5 kg"',
+        "de": '"Gewicht 72,5 kg"',
     },
     "log_workout": {
         "pt": '"corri 5 km em 30 minutos"',
@@ -1289,6 +1303,7 @@ EMPTY: dict[str, tuple[str, str]] = {
     "reminders": ("empty_reminders", "add_reminder"),
     "notes": ("empty_notes", "add_note"),
     "water": ("empty_water", "log_water"),
+    "weight": ("empty_weight", "log_weight"),
     "workouts": ("empty_workouts", "log_workout"),
     "goals": ("empty_goals", "add_goal"),
     "money_goals": ("empty_money_goals", "add_money_goal"),

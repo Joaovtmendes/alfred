@@ -763,6 +763,20 @@ SHELL.update(
             "Eau",
             "Wasser",
         ),
+        "title_weight": _t(
+            "Peso",
+            "Gewicht",
+            "Weight",
+            "Poids",
+            "Gewicht",
+        ),
+        "weight_change": _t(
+            "em 30 dias",
+            "in 30 dagen",
+            "over 30 days",
+            "sur 30 jours",
+            "in 30 Tagen",
+        ),
         "title_workouts": _t(
             "Treinos",
             "Trainingen",

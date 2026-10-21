@@ -174,7 +174,7 @@ def test_number_formatting_is_localised() -> None:
 async def test_weight_and_pressure_are_not_recorded_or_confirmed(lab: Lab) -> None:
     lab.llm_reply.return_value = "Registrado: peso 75 kg, pressão 12/8."
     reply = await lab.say("peso 75kg pressão 12/8")
-    assert "Ainda não acompanho peso" in reply
+    assert "Ainda não acompanho pressão" in reply
     lab.llm_reply.assert_not_awaited()
     assert (
         await lab.scalar(

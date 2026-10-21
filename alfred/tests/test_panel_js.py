@@ -783,7 +783,7 @@ def _tab_handlers():
     ("tab", "cards"),
     [
         ("agenda", ["week", "load", "tasks", "deadlines", "month_map", "reminders", "notes"]),
-        ("health", ["goals", "workouts", "training", "water"]),
+        ("health", ["goals", "workouts", "training", "water", "weight"]),
         ("trips", ["trip", "packing", "itinerary", "plan_budget", "trips_past"]),
     ],
 )

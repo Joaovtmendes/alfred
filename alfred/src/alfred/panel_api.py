@@ -819,6 +819,7 @@ async def health(
         await pt.workouts_card(ctx),
         await pt.training_card(ctx),
         await pt.water_card(ctx),
+        await pt.weight_card(ctx),
     ]
     return _envelope("health", member, f, cards, ctx.today)
 

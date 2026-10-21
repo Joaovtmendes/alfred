@@ -201,7 +201,7 @@
     month_vs_month: "title_mom", fixed_variable: "title_fixed", daily: "title_daily",
     recurring: "title_recurring",
     week: "title_week", load: "title_load", deadlines: "title_deadlines", tasks: "title_tasks", reminders: "title_reminders", month_map: "title_map", notes: "title_notes",
-    water: "title_water", workouts: "title_workouts",
+    water: "title_water", weight: "title_weight", workouts: "title_workouts",
     goals: "title_goals", money_goals: "title_money_goals", trip: "title_trip",
     training: "title_training", itinerary: "title_itinerary", packing: "title_packing", plan_budget: "title_planbudget",
     home_balance: "title_home_balance", home_entries: "title_home_entries",
@@ -214,7 +214,7 @@
   const SPANS = {
     summary: { balance: "s7", categories: "s5", goals: "s5", week: "s7", upcoming: "s12" },
     agenda: { week: "s7", tasks: "s5", month_map: "s7", reminders: "s5", notes: "s12" },
-    health: { goals: "s7", workouts: "s5", training: "s12", water: "s12" },
+    health: { goals: "s7", workouts: "s5", training: "s12", water: "s7", weight: "s5" },
     trips: { trip: "s7", packing: "s5", itinerary: "s7", plan_budget: "s5", trips_past: "s12" },
     home: { home_contracts: "s7", home_cost: "s5", home_balance: "s5", home_entries: "s7" },
     books: { books_year: "s7", books_categories: "s5", books_fixed: "s5", books_emergency: "s7", books_pl: "s7", books_btw: "s5", books_deductible: "s5", books_reserve: "s7", books_receivables: "s12" },
@@ -992,6 +992,23 @@
       c.append(h, el("div", "sub", T.water_today + " · " + fmtL(v.average) + " " + T.water_avg_l));
       miniBars(c, card.points.map((p) => ({ date: p.date, value: p.litres })), T.title_water);
       phraseBlock(c, card.phrase);
+      return c;
+    },
+
+    weight(card, span) {
+      const v = card.values;
+      const c = cardShell(card, T.title_weight, span);
+      const hero = el("div", "hero", fmt1.format(v.latest) + " kg");
+      const sub = v.change_30d === null ? "" : (v.change_30d > 0 ? "+" : "") + fmt1.format(v.change_30d) + " kg " + T.weight_change;
+      c.append(hero);
+      if (sub) c.append(el("div", "sub", sub));
+      const list = el("div", "list");
+      for (const p of card.points.slice().reverse()) {
+        const row = el("div", "item");
+        row.append(el("div", "t", dayShort(p.date)), el("div", "amt", fmt1.format(p.kg) + " kg"));
+        list.append(row);
+      }
+      c.append(list);
       return c;
     },
 

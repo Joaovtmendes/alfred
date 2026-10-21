@@ -24,6 +24,8 @@ Agenda cards
 Hábitos cards
 -------------
 ``water``      values {today, average, days}; points [{date, litres}] for the last 7 days (litres 0 = nothing logged).
+``weight``     values {latest|null, change_30d|null, entries}; points [{date, kg}] the last 6 entries
+               (90 days). Never a phrase or a target: weight is shown without judgement.
 ``workouts``   values {this_week, last_week, km_week, minutes_week}; weeks [{start, count}] (4, oldest
                first); activities [{activity, count}] this week.
 ``goals``      values {count}; items [{title, target|null, deadline|null, logs_7d, logs_30d}] (6).
@@ -474,6 +476,24 @@ async def water_card(ctx) -> dict[str, Any]:
     if logged:
         card["phrase"] = _phrase(pp.rule_water(avg, len(logged), ctx.lang))
     return card
+
+
+async def weight_card(ctx) -> dict[str, Any]:
+    """Weight in kg: the last value, the change over 30 days and the last 90 days. No judgement."""
+    rows = [
+        (d, _num(raw))
+        for d, raw, _u in await _health(ctx, "weight", ctx.today - timedelta(days=89))
+    ]
+    points = [(d, kg) for d, kg in rows if kg is not None and 20 <= kg <= 400]
+    latest = points[-1][1] if points else None
+    month_ago = ctx.today - timedelta(days=30)
+    older = [kg for d, kg in points if d <= month_ago]
+    change = round(latest - older[-1], 1) if latest is not None and older else None
+    values = {"latest": latest, "change_30d": change, "entries": len(points)}
+    return _card(
+        "weight", not points, values, ctx, "weight",
+        points=[{"date": d.isoformat(), "kg": kg} for d, kg in points[-6:]],
+    )  # fmt: skip
 
 
 async def workouts_card(ctx) -> dict[str, Any]:

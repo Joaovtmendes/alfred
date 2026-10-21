@@ -595,11 +595,11 @@ _STRINGS: dict[str, dict[str, str | tuple[str, ...]]] = {
         ),
     },
     "health_unsupported": {
-        "pt": "Ainda não acompanho peso nem pressão, só medicação, humor, sono e água.",
-        "nl": "Gewicht en bloeddruk volg ik nog niet, alleen medicatie, stemming, slaap en water.",
-        "en": "I don't track weight or blood pressure yet, only medication, mood, sleep and water.",
-        "fr": "Je ne suis pas encore le poids ni la tension, seulement médicaments, humeur, sommeil et eau.",
-        "de": "Gewicht und Blutdruck verfolge ich noch nicht, nur Medikamente, Stimmung, Schlaf und Wasser.",
+        "pt": 'Ainda não acompanho pressão nem glicose. Peso eu guardo: diga, por exemplo, "peso 72,5 kg".',
+        "nl": 'Bloeddruk en glucose volg ik nog niet. Gewicht bewaar ik wel: zeg bijvoorbeeld "gewicht 72,5 kg".',
+        "en": 'I don\'t track blood pressure or glucose yet. I do keep weight: say, for example, "weight 72.5 kg".',
+        "fr": "Je ne suis pas encore la tension ni la glycémie. Le poids, oui : dis par exemple « poids 72,5 kg ».",
+        "de": 'Blutdruck und Blutzucker verfolge ich noch nicht. Gewicht speichere ich: sag zum Beispiel "Gewicht 72,5 kg".',
     },
     "health_consent_ask": {
         "pt": "Antes de guardar dados de saúde (sono, humor, remédios, água), preciso da sua autorização. Eles ficam só para você ver aqui e no painel, e você pode retirar quando quiser com *retirar consentimento de saúde*.",
@@ -6364,6 +6364,21 @@ async def handle_inbound(
                 return
 
         # 4e-9. M8 — health log: medicação, humor, sono, água
+        if habits_ext.is_weight_text(body_plain):  # F10-32: weight needs the health consent
+            if member.health_consent_at is None:
+                reply = _t("health_consent_ask", lang)
+                await send_buttons(
+                    to,
+                    reply,
+                    [("hc_yes:0", _t("btn_hc_yes", lang)), ("hc_no:0", _t("btn_hc_no", lang))],
+                )
+            else:
+                reply = await habits_ext.handle_weight(
+                    body_plain, member, lang, session, today_local()
+                )
+                await send_text(to, reply)
+            await _save_outbound(member, reply, session)
+            return
         if _PURCHASE_NO_PRICE_RE.match(body_plain.strip()):
             _is_health = False  # M-27: "comprei 2 kg de arroz" is shopping (asked below)
         if _is_health and _unsupported_health(body_plain):
@@ -6544,6 +6559,15 @@ async def handle_inbound(
             await _save_outbound(member, reply, session)
             return
 
+        # 4e-9z. F10-47 — "treinos de hoje / de ontem": a fixed command, straight from the table
+        day_workouts = await habits_ext.workouts_on(
+            body_plain, member, lang, session, today_local()
+        )
+        if day_workouts is not None:
+            await send_text(to, day_workouts)
+            await _save_outbound(member, day_workouts, session)
+            return
+
         # 4e-10. M7 — treino: "corri 30 min", "fiz yoga durante 20 minutos"
         if _is_workout_text(body):
             today = today_local()
@@ -6581,6 +6605,7 @@ async def handle_inbound(
                     activity=activity_name(workout_data["activity_type"], lang),
                     duration=detail,
                 )
+                reply += await habits_ext.compare_workout(session, member, lang, ws, today_local())
                 # the workout also ticks the routine goal it belongs to ("correr 10 km")
                 routine = (
                     (

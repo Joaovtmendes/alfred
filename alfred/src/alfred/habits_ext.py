@@ -356,3 +356,314 @@ async def log_with_quantity(
     await session.flush()
     week = await week_total(session, member.id, activity, unit, today)
     return _t(key, lang, activity=activity, qty=fmt_qty(qty, unit), week=fmt_qty(week, unit))
+
+
+# ── F10-32: weight, no pressure ───────────────────────────────────────────────
+
+_NUM = r"(\d{1,3}(?:[.,]\d{1,2})?)"
+_KG = r"(?:\s*(?:kg|quilos?|kilos?|kilo's))?"
+_WEIGHT_RE = re.compile(
+    r"^(?:peso|weight|gewicht|poids)(?:\s+(?:de\s+)?(?:hoje|today|vandaag|aujourdhui|heute))?[:\s]+"
+    + _NUM
+    + _KG
+    + r"\s*[.!]*$"
+    r"|^(?:pesei|estou\s+com|eu\s+peso|i\s+weigh|i\s+weighed|ik\s+weeg|je\s+pese|ich\s+wiege)\s+"
+    + _NUM
+    + _KG
+    + r"\s*[.!]*$"
+)
+_WEIGHT_DEL_RE = re.compile(
+    r"^(?:apaga|apagar|apague|remove|remover|tira|delete|verwijder|supprime|supprimer|loesche|loeschen)\s+"
+    r"(?:(?:o|os|meu|meus|my|mijn|mon|mes|mein|meine)\s+)?(?:peso|pesos|weight|weights|gewicht|poids)\s*[.!]*$"
+)
+STRINGS.update(
+    {
+        "weight_saved": _all(
+            "Anotado: {kg} kg.{change}",
+            "Genoteerd: {kg} kg.{change}",
+            "Noted: {kg} kg.{change}",
+            "Noté : {kg} kg.{change}",
+            "Notiert: {kg} kg.{change}",
+        ),
+        "weight_change_less": _all(
+            " São {delta} kg a menos desde {date}.",
+            " Dat is {delta} kg minder dan op {date}.",
+            " That is {delta} kg less than on {date}.",
+            " C'est {delta} kg de moins que le {date}.",
+            " Das sind {delta} kg weniger als am {date}.",
+        ),
+        "weight_change_more": _all(
+            " São {delta} kg a mais desde {date}.",
+            " Dat is {delta} kg meer dan op {date}.",
+            " That is {delta} kg more than on {date}.",
+            " C'est {delta} kg de plus que le {date}.",
+            " Das sind {delta} kg mehr als am {date}.",
+        ),
+        "weight_change_same": _all(
+            " Igual a {date}.",
+            " Gelijk aan {date}.",
+            " Same as on {date}.",
+            " Identique au {date}.",
+            " Gleich wie am {date}.",
+        ),
+        "weight_bad_value": _all(
+            'Esse peso não parece certo. Diga por exemplo "peso 72,5 kg".',
+            'Dat gewicht lijkt niet te kloppen. Zeg bijvoorbeeld "gewicht 72,5 kg".',
+            'That weight doesn\'t look right. Say, for example, "weight 72.5 kg".',
+            "Ce poids ne semble pas correct. Dis par exemple « poids 72,5 kg ».",
+            'Dieses Gewicht scheint nicht zu stimmen. Sag zum Beispiel "Gewicht 72,5 kg".',
+        ),
+        "weight_deleted": _all(
+            "Pronto, apaguei seus registros de peso.",
+            "Klaar, ik heb je gewichtsregistraties gewist.",
+            "Done, I deleted your weight entries.",
+            "C'est fait, j'ai supprimé tes enregistrements de poids.",
+            "Erledigt, ich habe deine Gewichtseinträge gelöscht.",
+        ),
+        "weight_none": _all(
+            "Você não tem registros de peso.",
+            "Je hebt geen gewichtsregistraties.",
+            "You have no weight entries.",
+            "Tu n'as aucun enregistrement de poids.",
+            "Du hast keine Gewichtseinträge.",
+        ),
+    }
+)
+
+
+def _kg(value: float, lang: str) -> str:
+    text = f"{value:.2f}".rstrip("0").rstrip(".")
+    return text.replace(".", ",") if lang in ("pt", "nl", "fr", "de") else text
+
+
+def is_weight_text(body_plain: str) -> bool:
+    plain = re.sub(r"\s+", " ", body_plain).strip()
+    return bool(_WEIGHT_RE.match(plain) or _WEIGHT_DEL_RE.match(plain))
+
+
+async def handle_weight(
+    body_plain: str, member: Member, lang: str, session: AsyncSession, today: date
+) -> str | None:
+    """ "peso 75 kg" / "apaga peso". The health consent is asked by the caller before this."""
+    from alfred.models import HealthLog
+
+    plain = re.sub(r"\s+", " ", body_plain).strip()
+    if _WEIGHT_DEL_RE.match(plain):
+        rows = (
+            (
+                await session.execute(
+                    select(HealthLog).where(
+                        HealthLog.member_id == member.id, HealthLog.log_type == "weight"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if not rows:
+            return _t("weight_none", lang)
+        for r in rows:
+            await session.delete(r)
+        audit(session, "weight_deleted", member.id)
+        return _t("weight_deleted", lang)
+    m = _WEIGHT_RE.match(plain)
+    if not m:
+        return None
+    kg = float((m.group(1) or m.group(2)).replace(",", "."))
+    if not 20 <= kg <= 400:
+        return _t("weight_bad_value", lang)
+    prev = (
+        await session.execute(
+            select(HealthLog)
+            .where(HealthLog.member_id == member.id, HealthLog.log_type == "weight")
+            .order_by(HealthLog.log_date.desc(), HealthLog.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    session.add(
+        HealthLog(
+            id=uuid.uuid4(),
+            member_id=member.id,
+            log_type="weight",
+            value=f"{kg:g}",
+            unit="kg",
+            log_date=today,
+        )
+    )
+    change = ""
+    if prev is not None:
+        try:
+            delta = round(kg - float(str(prev.value).replace(",", ".")), 1)
+        except ValueError:
+            delta = None
+        if delta is not None:
+            key = (
+                "weight_change_same"
+                if delta == 0
+                else "weight_change_less"
+                if delta < 0
+                else "weight_change_more"
+            )
+            change = _t(key, lang, delta=_kg(abs(delta), lang), date=f"{prev.log_date:%d/%m}")
+    return _t("weight_saved", lang, kg=_kg(kg, lang), change=change)
+
+
+# ── F10-39: compare a workout with the last one of the same activity ─────────
+
+_CMP = {
+    "pace_faster": _all(
+        "{delta} min mais rápido que em {date}.",
+        "{delta} min sneller dan op {date}.",
+        "{delta} min faster than on {date}.",
+        "{delta} min plus rapide que le {date}.",
+        "{delta} min schneller als am {date}.",
+    ),
+    "pace_slower": _all(
+        "{delta} min mais lento que em {date}.",
+        "{delta} min langzamer dan op {date}.",
+        "{delta} min slower than on {date}.",
+        "{delta} min plus lent que le {date}.",
+        "{delta} min langsamer als am {date}.",
+    ),
+    "dur_more": _all(
+        "{delta} min a mais que em {date}.",
+        "{delta} min langer dan op {date}.",
+        "{delta} min longer than on {date}.",
+        "{delta} min de plus que le {date}.",
+        "{delta} min länger als am {date}.",
+    ),
+    "dur_less": _all(
+        "{delta} min a menos que em {date}.",
+        "{delta} min korter dan op {date}.",
+        "{delta} min shorter than on {date}.",
+        "{delta} min de moins que le {date}.",
+        "{delta} min kürzer als am {date}.",
+    ),
+    "dist_more": _all(
+        "{delta} km a mais que em {date}.",
+        "{delta} km verder dan op {date}.",
+        "{delta} km farther than on {date}.",
+        "{delta} km de plus que le {date}.",
+        "{delta} km weiter als am {date}.",
+    ),
+    "dist_less": _all(
+        "{delta} km a menos que em {date}.",
+        "{delta} km minder dan op {date}.",
+        "{delta} km less than on {date}.",
+        "{delta} km de moins que le {date}.",
+        "{delta} km weniger als am {date}.",
+    ),
+}
+STRINGS.update({f"workout_cmp_{k}": v for k, v in _CMP.items()})
+
+
+def _round_str(x: float, lang: str) -> str:
+    return _kg(round(x, 1), lang)
+
+
+async def compare_workout(session: AsyncSession, member: Member, lang: str, ws, today: date) -> str:
+    """One neutral line against the last session of the same activity ("" when none/too close)."""
+    from alfred.models import WorkoutSession
+
+    prev = (
+        await session.execute(
+            select(WorkoutSession)
+            .where(
+                WorkoutSession.member_id == member.id,
+                WorkoutSession.activity_type == ws.activity_type,
+                WorkoutSession.id != ws.id,
+                WorkoutSession.workout_date <= ws.workout_date,
+            )
+            .order_by(WorkoutSession.workout_date.desc(), WorkoutSession.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if prev is None:
+        return ""
+    date_s = f"{prev.workout_date:%d/%m}"
+    if ws.distance_km and prev.distance_km and ws.duration_minutes and prev.duration_minutes:
+        pace_now = ws.duration_minutes / ws.distance_km
+        pace_prev = prev.duration_minutes / prev.distance_km
+        gain = (pace_prev - pace_now) * ws.distance_km
+        if abs(gain) >= 1:
+            key = "pace_faster" if gain > 0 else "pace_slower"
+            return "\n" + _t(
+                f"workout_cmp_{key}", lang, delta=_round_str(abs(gain), lang), date=date_s
+            )
+    if ws.duration_minutes and prev.duration_minutes:
+        d = ws.duration_minutes - prev.duration_minutes
+        if abs(d) >= 1:
+            return "\n" + _t(
+                "workout_cmp_dur_more" if d > 0 else "workout_cmp_dur_less",
+                lang, delta=abs(d), date=date_s,
+            )  # fmt: skip
+    if ws.distance_km and prev.distance_km:
+        d = ws.distance_km - prev.distance_km
+        if abs(d) >= 0.1:
+            return "\n" + _t(
+                "workout_cmp_dist_more" if d > 0 else "workout_cmp_dist_less",
+                lang, delta=_round_str(abs(d), lang), date=date_s,
+            )  # fmt: skip
+    return ""
+
+
+# ── F10-47: "treinos de hoje / de ontem / da semana" ─────────────────────────
+
+_WORKOUTS_DAY_RE = re.compile(
+    r"^(?:treinos?|workouts?|trainingen|training|entrainements?|trainings?)\s+"
+    r"(?:de\s+|of\s+|van\s+|d'|du\s+|vom\s+|von\s+|am\s+)?"
+    r"(?P<day>hoje|ontem|today|yesterday|vandaag|gisteren|aujourdhui|hier|heute|gestern)\s*[.!?]*$"
+)
+_YESTERDAY = {"ontem", "yesterday", "gisteren", "hier", "gestern"}
+
+
+async def workouts_on(
+    body_plain: str, member: Member, lang: str, session: AsyncSession, today: date
+) -> str | None:
+    from alfred.labels import activity_label as activity_name
+    from alfred.models import WorkoutSession
+
+    m = _WORKOUTS_DAY_RE.match(re.sub(r"\s+", " ", body_plain).strip())
+    if not m:
+        return None
+    day = today - timedelta(days=1) if m.group("day") in _YESTERDAY else today
+    rows = (
+        (
+            await session.execute(
+                select(WorkoutSession)
+                .where(WorkoutSession.member_id == member.id, WorkoutSession.workout_date == day)
+                .order_by(WorkoutSession.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    from alfred.conversation import _workout_dur
+
+    if not rows:
+        return _t("workouts_day_empty", lang, day=f"{day:%d/%m}")
+    lines = [_t("workouts_day_header", lang, day=f"{day:%d/%m}", n=len(rows))]
+    for w in rows:
+        dur = _workout_dur(w.duration_minutes, w.distance_km, lang).strip()
+        lines.append(f"• {activity_name(w.activity_type, lang)}" + (f", {dur}" if dur else ""))
+    return "\n".join(lines)
+
+
+STRINGS.update(
+    {
+        "workouts_day_empty": _all(
+            "Nenhum treino registrado em {day}.",
+            "Geen training geregistreerd op {day}.",
+            "No workout logged on {day}.",
+            "Aucun entraînement enregistré le {day}.",
+            "Kein Training am {day} eingetragen.",
+        ),
+        "workouts_day_header": _all(
+            "Treinos de {day} ({n}):",
+            "Trainingen van {day} ({n}):",
+            "Workouts on {day} ({n}):",
+            "Entraînements du {day} ({n}) :",
+            "Trainings am {day} ({n}):",
+        ),
+    }
+)
