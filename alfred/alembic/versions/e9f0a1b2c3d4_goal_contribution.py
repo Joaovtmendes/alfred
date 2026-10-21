@@ -22,11 +22,17 @@ def upgrade() -> None:
     op.create_table(
         "goal_contribution",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("member_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("member.id"), nullable=False),
-        sa.Column("goal_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("goal.id"), nullable=False),
+        sa.Column(
+            "member_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("member.id"), nullable=False
+        ),
+        sa.Column(
+            "goal_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("goal.id"), nullable=False
+        ),
         sa.Column("kind", sa.String(3), nullable=False),
         sa.Column("amount", sa.Numeric(12, 2), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     op.create_index("ix_goal_contribution_member_id", "goal_contribution", ["member_id"])
     op.create_index("ix_goal_contribution_goal_id", "goal_contribution", ["goal_id"])
